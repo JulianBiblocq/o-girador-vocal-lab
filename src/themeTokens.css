@@ -1,0 +1,82 @@
+﻿:root {
+  /* Dark mode is default */
+  --cordel-bg: #1a1a1a;
+  --cordel-text: #f4ecd8;
+  --cordel-border: #f4ecd8;
+  --cordel-wood: #8b2a1a;
+  --cordel-wood-light: #ab3a26;
+  --cordel-accent: #d4af37;
+  --cordel-muted: rgba(244, 236, 216, 0.6);
+  --cordel-faint: rgba(244, 236, 216, 0.15);
+  --cordel-shadow-color: rgba(0, 0, 0, 0.55);
+}
+
+[data-theme='light'] {
+  --cordel-bg: #f4ecd8;
+  --cordel-text: #1a1a1a;
+  --cordel-border: #1a1a1a;
+  --cordel-wood: #8b2a1a;
+  --cordel-wood-light: #ab3a26;
+  --cordel-accent: #b8860b;
+  --cordel-muted: rgba(26, 26, 26, 0.6);
+  --cordel-faint: rgba(26, 26, 26, 0.12);
+  --cordel-shadow-color: rgba(26, 26, 26, 0.25);
+}
+
+/* Utilitaires Cordel sémantiques */
+.bg-theme-bg { background-color: var(--cordel-bg); }
+.text-theme-ink { color: var(--cordel-text); }
+.border-theme-border { border-color: var(--cordel-border); }
+.bg-theme-wood { background-color: var(--cordel-wood); }
+.text-theme-accent { color: var(--cordel-accent); }
+.bg-theme-accent { background-color: var(--cordel-accent); }
+.border-theme-accent { border-color: var(--cordel-accent); }
+
+/* Effet gravure sur bois (Cordel woodcut) */
+.cordel-card {
+  background-color: var(--cordel-bg);
+  color: var(--cordel-text);
+  border: 3px solid var(--cordel-border);
+  box-shadow: 4px 4px 0px var(--cordel-border);
+}
+
+.cordel-card-sm {
+  background-color: var(--cordel-bg);
+  color: var(--cordel-text);
+  border: 2px solid var(--cordel-border);
+  box-shadow: 2px 2px 0px var(--cordel-border);
+}
+
+.cordel-btn {
+  background-color: var(--cordel-bg);
+  color: var(--cordel-text);
+  border: 2px solid var(--cordel-border);
+  box-shadow: 3px 3px 0px var(--cordel-border);
+  font-weight: 700;
+  transition: all 0.15s ease-in-out;
+}
+
+.cordel-btn:hover {
+  background-color: var(--cordel-text);
+  color: var(--cordel-bg);
+}
+
+.cordel-btn-primary {
+  background-color: var(--cordel-wood);
+  color: var(--cordel-text);
+  border: 2px solid var(--cordel-border);
+  box-shadow: 3px 3px 0px var(--cordel-border);
+  font-weight: 800;
+  transition: all 0.15s ease-in-out;
+}
+
+.cordel-btn-primary:hover {
+  background-color: var(--cordel-wood-light);
+  transform: translate(-1px, -1px);
+  box-shadow: 4px 4px 0px var(--cordel-border);
+}
+
+.cordel-btn-primary:active {
+  transform: translate(1px, 1px);
+  box-shadow: 1px 1px 0px var(--cordel-border);
+}
