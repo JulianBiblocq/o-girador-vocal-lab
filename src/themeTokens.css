@@ -4,7 +4,10 @@
   --cordel-text: #f4ecd8;
   --cordel-border: #f4ecd8;
   --cordel-wood: #8b2a1a;
-  --cordel-wood-light: #ab3a26;
+  --cordel-wood-light: #a83820;
+  --cordel-primary: var(--cordel-wood);
+  --cordel-terracotta: var(--cordel-wood);
+  --cordel-on-primary: #ffffff;
   --cordel-accent: #d4af37;
   --cordel-accent-text: #fbbf24;
   --cordel-secondary-text: rgba(244, 236, 216, 0.7);
@@ -13,15 +16,18 @@
   --cordel-shadow-color: #57534e;
   --cordel-shadow: 4px 4px 0px #57534e;
   --cordel-shadow-sm: 2px 2px 0px #57534e;
-  --cordel-btn-primary-text: #f4ecd8;
+  --cordel-btn-primary-text: #ffffff;
 }
 
 [data-theme='light'] {
   --cordel-bg: #f4ecd8;
   --cordel-text: #1a1a1a;
   --cordel-border: #1a1a1a;
-  --cordel-wood: #df6d4e;
-  --cordel-wood-light: #eb7f61;
+  --cordel-wood: #8b2a1a;
+  --cordel-wood-light: #a83820;
+  --cordel-primary: var(--cordel-wood);
+  --cordel-terracotta: var(--cordel-wood);
+  --cordel-on-primary: #ffffff;
   --cordel-accent: #9a3412;
   --cordel-accent-text: #9a3412;
   --cordel-secondary-text: #57534e;
@@ -30,18 +36,19 @@
   --cordel-shadow-color: #8c857b;
   --cordel-shadow: 4px 4px 0px #8c857b;
   --cordel-shadow-sm: 2px 2px 0px #8c857b;
-  --cordel-btn-primary-text: #1a1a1a;
+  --cordel-btn-primary-text: #ffffff;
 }
 
 /* Utilitaires Cordel sémantiques */
 .bg-theme-bg { background-color: var(--cordel-bg); }
 .text-theme-ink { color: var(--cordel-text); }
 .border-theme-border { border-color: var(--cordel-border); }
-.bg-theme-wood { background-color: var(--cordel-wood); }
+.bg-theme-wood { background-color: var(--cordel-wood) !important; }
 .text-theme-accent { color: var(--cordel-accent-text); }
 .bg-theme-accent { background-color: var(--cordel-accent); }
 .border-theme-accent { border-color: var(--cordel-accent); }
 .text-theme-secondary { color: var(--cordel-secondary-text); }
+.text-theme-on-primary { color: var(--cordel-on-primary) !important; }
 
 /* Effet gravure sur bois (Cordel woodcut) : coins carrés stricts (zéro pilule) */
 .cordel-card {
@@ -76,8 +83,8 @@
 }
 
 .cordel-btn-primary {
-  background-color: var(--cordel-wood);
-  color: var(--cordel-btn-primary-text);
+  background-color: var(--cordel-wood) !important;
+  color: var(--cordel-on-primary) !important;
   border: 2px solid var(--cordel-border);
   box-shadow: var(--cordel-shadow);
   font-weight: 800;
@@ -86,7 +93,7 @@
 }
 
 .cordel-btn-primary:hover {
-  background-color: var(--cordel-wood-light);
+  background-color: var(--cordel-wood-light) !important;
   transform: translate(-1px, -1px);
 }
 

@@ -50,7 +50,7 @@ export const PianoRollToolPalette: React.FC<PianoRollToolPaletteProps> = ({ x, y
     <div
       ref={paletteRef}
       style={{ left: `${clampedX}px`, top: `${clampedY}px` }}
-      className="fixed z-50 p-1.5 bg-stone-900/95 backdrop-blur-md border border-amber-500/50 rounded-xl shadow-2xl flex items-center gap-1 animate-in fade-in zoom-in-95 duration-100"
+      className="fixed z-50 p-1.5 bg-stone-900/95 backdrop-blur-md border border-theme-border/60 rounded-none shadow-2xl flex items-center gap-1 animate-in fade-in zoom-in-95 duration-100"
     >
       {PALETTE_TOOLS.map((t) => {
         const Icon = t.icon;
@@ -61,13 +61,13 @@ export const PianoRollToolPalette: React.FC<PianoRollToolPaletteProps> = ({ x, y
             type="button"
             title={t.title}
             onClick={() => { onSelectTool(t.id); onClose(); }}
-            className={`w-9 h-9 rounded-lg flex items-center justify-center transition-all ${
+            className={`w-9 h-9 rounded-none flex items-center justify-center transition-all ${
               isActive
-                ? 'bg-amber-600 text-white shadow-md border border-amber-400/60'
+                ? 'bg-theme-wood text-white shadow-md border border-theme-border/60'
                 : 'bg-white/5 text-stone-200 hover:bg-white/15 hover:text-white'
             }`}
           >
-            <Icon className="w-4 h-4" />
+            <Icon className="w-4 h-4 text-current" />
           </button>
         );
       })}

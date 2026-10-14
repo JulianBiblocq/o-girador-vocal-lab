@@ -67,7 +67,7 @@ export const PreviewControls: React.FC<PreviewControlsProps> = ({
         <button
           type="button" disabled={disabled} onClick={onTogglePlay}
           className={`py-2 px-3 flex items-center justify-center gap-1.5 text-xs font-bold transition-all cursor-pointer ${
-            isPlaying ? 'bg-red-900 text-theme-ink border-2 border-theme-border' : 'cordel-btn-primary'
+            isPlaying ? 'bg-red-900 text-white border-2 border-theme-border' : 'cordel-btn-primary'
           }`}
         >
           {isPlaying ? (
@@ -90,7 +90,7 @@ export const PreviewControls: React.FC<PreviewControlsProps> = ({
           }`}
           title={t('clickWitness')}
         >
-          {clickEnabled ? <Volume2 className="w-4 h-4 text-theme-accent" /> : <VolumeX className="w-4 h-4" />}
+          {clickEnabled ? <Volume2 className="w-4 h-4 text-white" /> : <VolumeX className="w-4 h-4" />}
           <span>{t('clickWitness')}</span>
         </button>
 

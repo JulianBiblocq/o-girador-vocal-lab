@@ -106,7 +106,7 @@ export const LetraEditorPanel: React.FC<LetraEditorPanelProps> = ({ allSteps, on
                   type="button"
                   onClick={() => handleToggleTrailingSpace(st.stepIndex)}
                   className={`mt-1 px-1 py-0.5 text-[8.5px] font-mono w-full transition-all rounded-none cursor-pointer ${
-                    hasSpace ? 'bg-theme-wood text-theme-ink border border-theme-border font-bold' : 'bg-white/5 text-theme-ink/60 hover:bg-white/10'
+                    hasSpace ? 'bg-theme-wood text-white border border-theme-border font-bold' : 'bg-white/5 text-theme-ink/60 hover:bg-white/10'
                   }`}
                   title={hasSpace ? t('letraSpaceTooltip') : t('letraTiedTooltip')}
                 >

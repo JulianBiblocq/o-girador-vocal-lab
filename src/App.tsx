@@ -23,8 +23,8 @@ const AppContent: React.FC = () => {
     <div className="min-h-screen bg-theme-bg text-theme-ink flex flex-col p-2.5 sm:p-4 md:p-6 transition-colors duration-200">
       <header className="w-full max-w-none mb-4 cordel-card p-3 sm:p-4 flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <div className="p-2 cordel-card-sm bg-theme-wood text-theme-ink shrink-0">
-            <Mic className="w-5 h-5 sm:w-6 sm:h-6 text-theme-accent" />
+          <div className="p-2 cordel-card-sm bg-theme-wood text-white shrink-0">
+            <Mic className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
           </div>
           <div>
             <h1 className="text-base sm:text-lg md:text-xl font-black tracking-widest uppercase m-0 leading-tight">
@@ -44,7 +44,7 @@ const AppContent: React.FC = () => {
               onClick={() => setLocale('fr')}
               className={`h-full px-2.5 font-bold transition-all flex items-center justify-center cursor-pointer ${
                 locale === 'fr'
-                  ? 'bg-theme-wood text-theme-ink font-black shadow-sm'
+                  ? 'bg-theme-wood text-white font-black shadow-sm'
                   : 'opacity-60 hover:opacity-100 text-theme-ink'
               }`}
               title="Français"
@@ -56,7 +56,7 @@ const AppContent: React.FC = () => {
               onClick={() => setLocale('br')}
               className={`h-full px-2.5 font-bold transition-all flex items-center justify-center cursor-pointer ${
                 locale === 'br'
-                  ? 'bg-theme-wood text-theme-ink font-black shadow-sm'
+                  ? 'bg-theme-wood text-white font-black shadow-sm'
                   : 'opacity-60 hover:opacity-100 text-theme-ink'
               }`}
               title="Português Brasileiro"

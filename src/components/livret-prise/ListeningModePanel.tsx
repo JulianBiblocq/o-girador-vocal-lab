@@ -45,15 +45,15 @@ export const ListeningModePanel: React.FC<ListeningModePanelProps> = ({
         <div className="grid grid-cols-2 gap-2">
           <button
             type="button" disabled={disabled} onClick={() => onListeningModeChange('headphones')}
-            className={`p-2 flex flex-col items-center justify-center gap-1 text-xs font-bold cursor-pointer ${listeningMode === 'headphones' ? 'cordel-btn-primary' : 'cordel-btn opacity-70'}`}
+            className={`p-2 flex flex-col items-center justify-center gap-1 text-xs font-bold cursor-pointer ${listeningMode === 'headphones' ? 'cordel-btn-primary text-white' : 'cordel-btn opacity-70'}`}
           >
-            <div className="flex items-center gap-1.5"><Headphones className="w-4 h-4" /><span>{t('modeHeadphones')}</span></div>
+            <div className="flex items-center gap-1.5"><Headphones className="w-4 h-4 text-current" /><span>{t('modeHeadphones')}</span></div>
           </button>
           <button
             type="button" disabled={disabled} onClick={() => onListeningModeChange('speakers')}
-            className={`p-2 flex flex-col items-center justify-center gap-1 text-xs font-bold cursor-pointer ${listeningMode === 'speakers' ? 'cordel-btn-primary' : 'cordel-btn opacity-70'}`}
+            className={`p-2 flex flex-col items-center justify-center gap-1 text-xs font-bold cursor-pointer ${listeningMode === 'speakers' ? 'cordel-btn-primary text-white' : 'cordel-btn opacity-70'}`}
           >
-            <div className="flex items-center gap-1.5"><VolumeX className="w-4 h-4" /><span>{t('modeVisual')}</span></div>
+            <div className="flex items-center gap-1.5"><VolumeX className="w-4 h-4 text-current" /><span>{t('modeVisual')}</span></div>
           </button>
         </div>
       </div>
