@@ -1,7 +1,7 @@
 ﻿/**
  * MetronomeEngine.ts
- * Moteur d'horloge Web Audio temps réel haute précision (60 FPS sync).
- * Respect strict de la Règle 6.C (nettoyage des nœuds, pas de fuite mémoire).
+ * Moteur d horloge Web Audio temps reel haute precision (60 FPS sync).
+ * Respect strict de la Regle 6.C (nettoyage des noeuds, pas de fuite memoire).
  */
 import type { TimeSignatureString } from '../types/vocalPack.types';
 
@@ -60,27 +60,35 @@ export class MetronomeEngine {
   private startTime = 0;
   private totalDurationSec = 0;
   private beatDurationSec = 0;
-  private totalBeats = 0;
   private beatsPerMeasure = 4;
-  private measuresCount = 1;
-  private activeNodes: AudioNode[] = [];
+  private measuresCount = 2;
+  private totalBeats = 12;
   private completionTimerId: number | null = null;
   private onCompleteCallback: (() => void) | null = null;
+  private activeNodes: (AudioNode | AudioScheduledSourceNode)[] = [];
+  private currentOutputDeviceId: string = '';
+
+  public async setOutputDevice(deviceId: string): Promise<void> {
+    this.currentOutputDeviceId = deviceId;
+    if (this.ctx && 'setSinkId' in this.ctx && typeof (this.ctx as any).setSinkId === 'function') {
+      try {
+        await (this.ctx as any).setSinkId(deviceId);
+      } catch (err) {
+        console.warn('setSinkId non supporte ou refuse :', err);
+      }
+    }
+  }
 
   public async initContext(outputDeviceId?: string): Promise<AudioContext> {
-    if (!this.ctx || this.ctx.state === 'closed') {
-      const AudioCtxClass = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-      this.ctx = new AudioCtxClass();
+    if (!this.ctx) {
+      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+      this.ctx = new AudioContextClass();
+    }
+    if (outputDeviceId && outputDeviceId !== this.currentOutputDeviceId) {
+      await this.setOutputDevice(outputDeviceId);
     }
     if (this.ctx.state !== 'running') {
       await this.ctx.resume();
-    }
-    if (outputDeviceId && 'setSinkId' in this.ctx && typeof (this.ctx as any).setSinkId === 'function') {
-      try {
-        await (this.ctx as any).setSinkId(outputDeviceId);
-      } catch (err) {
-        console.warn('setSinkId non supporté ou refusé :', err);
-      }
     }
     return this.ctx;
   }
@@ -96,7 +104,7 @@ export class MetronomeEngine {
   ): Promise<number> {
     this.stop();
 
-    const ctx = await this.initContext(config.outputDeviceId);
+    const ctx = await this.initContext();
     this.onCompleteCallback = onComplete ?? null;
     this.isRunning = true;
     this.measuresCount = Math.max(1, Math.min(4, config.measuresCount));
@@ -108,7 +116,7 @@ export class MetronomeEngine {
     this.totalBeats = anacrusisBeats + singingBeats;
     this.totalDurationSec = this.totalBeats * this.beatDurationSec;
 
-    this.startTime = externalStartTime ?? (ctx.currentTime + 0.05);
+    this.startTime = externalStartTime ?? (ctx.currentTime + 0.08);
 
     if (config.listeningMode === 'headphones') {
       this.scheduleHeadphoneAudio(ctx, this.startTime, config);
@@ -158,9 +166,9 @@ export class MetronomeEngine {
     filter.frequency.setValueAtTime(1600, now);
 
     gain.gain.setValueAtTime(0.0001, now);
-    gain.gain.exponentialRampToValueAtTime(0.35, now + 0.05);
-    gain.gain.setValueAtTime(0.35, now + durationSec - 0.1);
-    gain.gain.exponentialRampToValueAtTime(0.0001, now + durationSec);
+    gain.gain.linearRampToValueAtTime(0.2, now + 0.03);
+    gain.gain.setValueAtTime(0.2, now + durationSec - 0.05);
+    gain.gain.linearRampToValueAtTime(0.0001, now + durationSec);
 
     osc.connect(filter);
     filter.connect(gain);
@@ -246,7 +254,8 @@ export class MetronomeEngine {
     osc.frequency.setValueAtTime(startFreq, time);
     osc.frequency.exponentialRampToValueAtTime(endFreq, time + duration);
 
-    gain.gain.setValueAtTime(isMajor ? 0.6 : 0.35, time);
+    gain.gain.setValueAtTime(0.0001, time);
+    gain.gain.linearRampToValueAtTime(isMajor ? 0.6 : 0.35, time + 0.002);
     gain.gain.exponentialRampToValueAtTime(0.0001, time + duration);
 
     osc.connect(gain);
@@ -278,9 +287,9 @@ export class MetronomeEngine {
     filter.frequency.setValueAtTime(1400, startTime);
 
     gain.gain.setValueAtTime(0.0001, startTime);
-    gain.gain.exponentialRampToValueAtTime(0.28, startTime + 0.04);
-    gain.gain.setValueAtTime(0.28, startTime + durationSec - 0.03);
-    gain.gain.exponentialRampToValueAtTime(0.0001, startTime + durationSec);
+    gain.gain.linearRampToValueAtTime(0.15, startTime + 0.03);
+    gain.gain.setValueAtTime(0.15, startTime + durationSec - 0.03);
+    gain.gain.linearRampToValueAtTime(0.0001, startTime + durationSec);
 
     osc.connect(filter);
     filter.connect(gain);

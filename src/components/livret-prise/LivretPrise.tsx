@@ -1,8 +1,8 @@
 ﻿import React, { useState, useMemo, useCallback } from 'react';
-import { Mic, Square } from 'lucide-react';
 import { MetronomeEngine, getBeatsPerMeasure, type ListeningMode } from '../../audio/MetronomeEngine';
 import { VocalRecorderEngine } from '../../audio/VocalRecorderEngine';
 import { PendulumVisualizer } from '../PendulumVisualizer';
+import { RecordActionButton } from './RecordActionButton';
 import { DeviceSelector } from './DeviceSelector';
 import { MetricConfigPanel } from './MetricConfigPanel';
 import { ListeningModePanel } from './ListeningModePanel';
@@ -40,19 +40,22 @@ export const LivretPrise: React.FC = () => {
       return;
     }
 
-    const ctx = await engine.initContext(selectedOutputDeviceId);
+    const ctx = await engine.initContext();
     const sampleRate = await recorder.prepare(ctx, selectedDeviceId);
     setRecordedSampleRate(sampleRate);
 
+    // Pause de stabilisation materielle (WASAPI / carte son externe)
+    await new Promise((resolve) => setTimeout(resolve, 180));
+
     const beatDuration = 60 / bpm;
     const totalDurationSec = (beatsPerMeasure + measuresCount * beatsPerMeasure) * beatDuration;
-    const syncStartTime = ctx.currentTime + 0.05;
+    const syncStartTime = ctx.currentTime + 0.08;
 
     recorder.start(syncStartTime, totalDurationSec);
     setIsCycleActive(true);
 
     await engine.startCycle(
-      { bpm, timeSignature, measuresCount, referencePitch, listeningMode, outputDeviceId: selectedOutputDeviceId },
+      { bpm, timeSignature, measuresCount, referencePitch, listeningMode },
       () => {
         const pcm = recorder.stop();
         setRecordedPCM(pcm);
@@ -60,7 +63,7 @@ export const LivretPrise: React.FC = () => {
       },
       syncStartTime
     );
-  }, [engine, recorder, isCycleActive, selectedDeviceId, selectedOutputDeviceId, bpm, timeSignature, measuresCount, referencePitch, listeningMode, beatsPerMeasure]);
+  }, [engine, recorder, isCycleActive, selectedDeviceId, bpm, timeSignature, measuresCount, referencePitch, listeningMode, beatsPerMeasure]);
 
   return (
     <div className="flex flex-col gap-4 max-w-2xl mx-auto w-full">
@@ -90,27 +93,11 @@ export const LivretPrise: React.FC = () => {
         </div>
       ) : (
         <div key="record-button-block">
-          <button
-            type="button"
-            onClick={handleToggleRecord}
-            className={`w-full py-3.5 px-6 cordel-btn-primary text-sm tracking-widest uppercase cursor-pointer transition-colors ${
-              isCycleActive ? 'bg-red-900 hover:bg-red-800' : ''
-            }`}
-          >
-            <div className="flex items-center justify-center gap-2">
-              {isCycleActive ? (
-                <>
-                  <Square className="w-5 h-5 fill-current" />
-                  <span>ARRÊTER LA PRISE</span>
-                </>
-              ) : (
-                <>
-                  <Mic className="w-5 h-5 text-red-500 fill-current animate-pulse" />
-                  <span>ENREGISTRER LA VOIX (1 M ÉLAN + {measuresCount} M CHANT)</span>
-                </>
-              )}
-            </div>
-          </button>
+          <RecordActionButton
+            isCycleActive={isCycleActive}
+            measuresCount={measuresCount}
+            onToggleRecord={handleToggleRecord}
+          />
         </div>
       )}
 
@@ -142,7 +129,10 @@ export const LivretPrise: React.FC = () => {
               selectedDeviceId={selectedDeviceId}
               onDeviceChange={setSelectedDeviceId}
               selectedOutputDeviceId={selectedOutputDeviceId}
-              onOutputDeviceChange={setSelectedOutputDeviceId}
+              onOutputDeviceChange={(id) => {
+                setSelectedOutputDeviceId(id);
+                engine.setOutputDevice(id);
+              }}
               disabled={isCycleActive}
             />
           </div>
