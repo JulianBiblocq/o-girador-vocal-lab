@@ -1,11 +1,17 @@
 /**
  * PianoRollEditor.tsx
- * Conteneur défilable et gestionnaire d'édition des notes du Piano Roll.
+ * Conteneur du Piano Roll combinant Toolbar, Clavier vertical sticky,
+ * Canvas zoomable 1x..8x et saisie flottante directe des syllabes.
  */
 import React, { useRef, useState, useEffect, useMemo, useCallback } from 'react';
 import type { PitchCurvePoint, VocalStepData } from '../../types/vocalPack.types';
-import { PianoRollCanvas } from './PianoRollCanvas';
+import type { ScaleType } from '../../audio/scaleQuantizer';
 import { calculateTessitura, midiToNoteName } from '../../utils/noteUtils';
+import { PianoRollToolbar } from './PianoRollToolbar';
+import { PianoRollKeyboard } from './PianoRollKeyboard';
+import { PianoRollCanvas } from './PianoRollCanvas';
+import { FloatingSyllableInput } from './FloatingSyllableInput';
+import type { PianoRollTool } from './pianoRollInteractions';
 
 interface PianoRollEditorProps {
   allSteps: VocalStepData[];
@@ -14,82 +20,109 @@ interface PianoRollEditorProps {
   anacrusisDurationSec: number;
   playheadSec: number;
   isPlaying: boolean;
+  tonic: string;
+  scaleType: ScaleType;
+  smoothingLevel: number;
+  onSetTonic: (t: string) => void;
+  onSetScaleType: (st: ScaleType) => void;
+  onSetSmoothingLevel: (lvl: number) => void;
   onUpdateSteps: (newSteps: VocalStepData[]) => void;
   onPlayNotePreview: (midi: number) => void;
 }
 
-export const PianoRollEditor: React.FC<PianoRollEditorProps> = (props) => {
-  const { allSteps, pitchCurve, totalDurationSec, anacrusisDurationSec, playheadSec, isPlaying, onUpdateSteps, onPlayNotePreview } = props;
+const ROW_HEIGHT = 20;
 
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [containerWidth, setContainerWidth] = useState<number>(600);
+export const PianoRollEditor: React.FC<PianoRollEditorProps> = (props) => {
+  const { allSteps, pitchCurve, totalDurationSec, anacrusisDurationSec, playheadSec, isPlaying, tonic, scaleType, smoothingLevel, onSetTonic, onSetScaleType, onSetSmoothingLevel, onUpdateSteps, onPlayNotePreview } = props;
+
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [baseWidth, setBaseWidth] = useState<number>(640);
+  const [zoomLevel, setZoomLevel] = useState<number>(1);
+  const [activeTool, setActiveTool] = useState<PianoRollTool>('pointer');
+  const [textInput, setTextInput] = useState<{ stepIndex: number; rect: { x: number; y: number; w: number; h: number } } | null>(null);
 
   useEffect(() => {
-    const el = containerRef.current;
+    const el = scrollRef.current;
     if (!el) return;
     const obs = new ResizeObserver(([entry]) => {
-      if (entry) setContainerWidth(Math.max(300, Math.floor(entry.contentRect.width)));
+      if (entry) setBaseWidth(Math.max(320, Math.floor(entry.contentRect.width) - 66));
     });
     obs.observe(el);
     return () => obs.disconnect();
   }, []);
 
+  // Zoom avec Ctrl + Molette
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const handleWheel = (e: WheelEvent) => {
+      if (e.ctrlKey) {
+        e.preventDefault();
+        setZoomLevel((prev) => Math.max(1, Math.min(8, prev * (e.deltaY < 0 ? 1.25 : 0.8))));
+      }
+    };
+    el.addEventListener('wheel', handleWheel, { passive: false });
+    return () => el.removeEventListener('wheel', handleWheel);
+  }, []);
+
   const activeMidis = useMemo(() => allSteps.filter((s) => s.active && s.midiNumber > 0).map((s) => s.midiNumber), [allSteps]);
   const { minMidi, maxMidi } = useMemo(() => calculateTessitura(activeMidis), [activeMidis]);
+  const totalSemitones = Math.max(1, maxMidi - minMidi + 1);
+  const canvasHeight = totalSemitones * ROW_HEIGHT;
+  const gridWidth = Math.round(baseWidth * zoomLevel);
 
-  const handleStepClick = useCallback((stepIndex: number, midi: number) => {
-    const current = allSteps[stepIndex];
-    if (!current) return;
+  const handleConfirmText = useCallback((text: string, jumpNext: boolean) => {
+    if (!textInput) return;
+    const currentIdx = textInput.stepIndex;
+    const nextSteps = allSteps.map((st, i) => (i === currentIdx ? { ...st, syllable: text } : st));
+    onUpdateSteps(nextSteps);
 
-    const next = [...allSteps];
-    if (!current.active) {
-      next[stepIndex] = { ...current, active: true, midiNumber: midi, note: midiToNoteName(midi) };
-      onPlayNotePreview(midi);
-    } else if (current.midiNumber !== midi) {
-      next[stepIndex] = { ...current, active: true, midiNumber: midi, note: midiToNoteName(midi) };
-      onPlayNotePreview(midi);
-    } else if (current.note !== '───') {
-      next[stepIndex] = { ...current, note: '───' };
-    } else {
-      next[stepIndex] = { ...current, active: false, note: '', midiNumber: 0 };
+    if (jumpNext) {
+      const nextActiveIdx = nextSteps.findIndex((st, i) => i > currentIdx && st.active && st.note !== '───');
+      if (nextActiveIdx !== -1) {
+        const stepW = gridWidth / nextSteps.length;
+        const noteMidi = nextSteps[nextActiveIdx].midiNumber;
+        const y = (maxMidi - noteMidi) * ROW_HEIGHT;
+        setTextInput({ stepIndex: nextActiveIdx, rect: { x: nextActiveIdx * stepW, y, w: stepW * 2, h: ROW_HEIGHT } });
+        return;
+      }
     }
-    onUpdateSteps(next);
-  }, [allSteps, onPlayNotePreview, onUpdateSteps]);
-
-  const canvasHeight = Math.max(160, Math.min(260, (maxMidi - minMidi + 1) * 14));
+    setTextInput(null);
+  }, [textInput, allSteps, gridWidth, maxMidi, onUpdateSteps]);
 
   return (
     <div className="flex flex-col gap-1.5 w-full">
+      <PianoRollToolbar
+        activeTool={activeTool} onSelectTool={setActiveTool} zoomLevel={zoomLevel} onSetZoom={setZoomLevel}
+        tonic={tonic} onSetTonic={onSetTonic} scaleType={scaleType} onSetScaleType={onSetScaleType}
+        smoothingLevel={smoothingLevel} onSetSmoothingLevel={onSetSmoothingLevel}
+      />
+
       <div className="flex items-center justify-between text-[11px] font-mono text-theme-ink/80 px-1">
-        <span className="font-semibold text-amber-400">
-          🎹 PIANO ROLL • {midiToNoteName(minMidi)} ➔ {midiToNoteName(maxMidi)}
-        </span>
-        <span className="text-[10px] text-emerald-400/90 hidden sm:inline">
-          🟢 Justesse ≤ 35 cents • 🟡 Écart toléré • Zéro Rouge
-        </span>
+        <span className="font-semibold text-amber-400">🎹 PIANO ROLL • {midiToNoteName(minMidi)} ➔ {midiToNoteName(maxMidi)} ({zoomLevel.toFixed(1)}x)</span>
+        <span className="text-[10px] text-emerald-400/90 hidden sm:inline">Double-clic sur brique = texte • Clic droit = gomme</span>
       </div>
 
-      <div ref={containerRef} className="w-full cordel-card overflow-hidden select-none bg-stone-950/70 border border-theme-border/60">
-        <div className="w-full overflow-x-auto overflow-y-hidden cordel-scrollbar">
-          <PianoRollCanvas
-            width={containerWidth}
-            height={canvasHeight}
-            minMidi={minMidi}
-            maxMidi={maxMidi}
-            allSteps={allSteps}
-            pitchCurve={pitchCurve}
-            totalDurationSec={totalDurationSec}
-            anacrusisDurationSec={anacrusisDurationSec}
-            playheadSec={playheadSec}
-            isPlaying={isPlaying}
-            onStepClick={handleStepClick}
-          />
+      <div ref={scrollRef} className="w-full cordel-card overflow-x-auto overflow-y-auto cordel-scrollbar bg-stone-950/80 border border-theme-border/60 max-h-[380px]">
+        <div className="flex relative" style={{ width: `${64 + gridWidth}px`, height: `${canvasHeight}px` }}>
+          <PianoRollKeyboard minMidi={minMidi} maxMidi={maxMidi} rowHeight={ROW_HEIGHT} onPlayNote={onPlayNotePreview} />
+          <div className="relative" style={{ width: `${gridWidth}px`, height: `${canvasHeight}px` }}>
+            <PianoRollCanvas
+              width={gridWidth} height={canvasHeight} minMidi={minMidi} maxMidi={maxMidi} rowHeight={ROW_HEIGHT}
+              allSteps={allSteps} pitchCurve={pitchCurve} totalDurationSec={totalDurationSec} anacrusisDurationSec={anacrusisDurationSec}
+              playheadSec={playheadSec} isPlaying={isPlaying} activeTool={activeTool} onUpdateSteps={onUpdateSteps}
+              onPlayNotePreview={onPlayNotePreview} onOpenTextInput={(idx, rect) => setTextInput({ stepIndex: idx, rect })}
+            />
+            {textInput && (
+              <FloatingSyllableInput
+                initialText={allSteps[textInput.stepIndex]?.syllable ?? ''}
+                x={textInput.rect.x} y={textInput.rect.y} width={textInput.rect.w} height={textInput.rect.h}
+                onConfirm={handleConfirmText} onCancel={() => setTextInput(null)}
+              />
+            )}
+          </div>
         </div>
       </div>
-
-      <p className="text-[10px] font-mono text-theme-ink/60 text-center leading-snug">
-        💡 Cliquez sur une case pour ajouter/déplacer une note (re-cliquez pour lier en tenue ─── ou rendre silencieux).
-      </p>
     </div>
   );
 };
