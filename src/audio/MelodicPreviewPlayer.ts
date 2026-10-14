@@ -1,7 +1,7 @@
 /**
  * MelodicPreviewPlayer.ts
- * Lecteur d'écoute comparative à 3 états ('voice', 'synth', 'duo')
- * avec bascule de gains en direct et playhead synchrone 60 FPS.
+ * Lecteur d'écoute comparative 3-états ('voice', 'synth', 'duo')
+ * avec support du Seek temporel et playhead synchrone 60 FPS.
  */
 import type { VocalStepData } from '../types/vocalPack.types';
 import { getSharedAudioContext, setSharedSinkId } from './sharedAudioContext';
@@ -19,6 +19,7 @@ export interface MelodicPlayOptions {
   beatsPerMeasure: number;
   playMode: MelodicPlayMode;
   clickEnabled: boolean;
+  seekStartSec?: number;
   outputDeviceId?: string;
   onEnded?: () => void;
 }
@@ -33,7 +34,9 @@ export class MelodicPreviewPlayer {
   private activeClickNodes: AudioNode[] = [];
   private isPlaying = false;
   private playbackContextStartTime = 0;
-  private playDuration = 0;
+  private totalDuration = 0;
+  private seekStartSec = 0;
+  private playRemainingDuration = 0;
   private stopTimerId: number | null = null;
 
   public async play(options: MelodicPlayOptions): Promise<void> {
@@ -42,20 +45,19 @@ export class MelodicPreviewPlayer {
     if (options.outputDeviceId) await setSharedSinkId(options.outputDeviceId);
 
     const { cleanPCM, sampleRate, totalDurationSec, allSteps, bpm, beatsPerMeasure, playMode, clickEnabled, onEnded } = options;
-    this.playDuration = totalDurationSec;
+    this.totalDuration = totalDurationSec;
+    this.seekStartSec = Math.max(0, Math.min(totalDurationSec - 0.05, options.seekStartSec || 0));
+    this.playRemainingDuration = totalDurationSec - this.seekStartSec;
 
-    // Gain nodes pour routage 3-états
     this.voiceGainNode = this.ctx.createGain();
     this.synthGainNode = this.ctx.createGain();
     this.clickGainNode = this.ctx.createGain();
-
     this.applyGains(playMode, clickEnabled);
 
     this.voiceGainNode.connect(this.ctx.destination);
     this.synthGainNode.connect(this.ctx.destination);
     this.clickGainNode.connect(this.ctx.destination);
 
-    // Buffer Voix
     const audioBuffer = this.ctx.createBuffer(1, cleanPCM.length, sampleRate);
     audioBuffer.getChannelData(0).set(cleanPCM);
     this.sourceNode = this.ctx.createBufferSource();
@@ -65,26 +67,24 @@ export class MelodicPreviewPlayer {
     const now = this.ctx.currentTime + 0.03;
     this.playbackContextStartTime = now;
     this.isPlaying = true;
-    this.sourceNode.start(now);
+    this.sourceNode.start(now, this.seekStartSec, this.playRemainingDuration);
 
-    // Synthétiseur pour la mélodie
     const beatDuration = 60 / bpm;
-    const stepDuration = beatDuration / 4; // Résolution nominale de base
-    this.synthNodes = scheduleMelodySteps(this.ctx, this.synthGainNode, allSteps, stepDuration, now);
+    const stepDuration = beatDuration / 4;
+    this.synthNodes = scheduleMelodySteps(this.ctx, this.synthGainNode, allSteps, stepDuration, now, this.seekStartSec);
 
-    // Clic métronome
     const totalBeats = Math.ceil(totalDurationSec / beatDuration);
     for (let b = 0; b < totalBeats; b++) {
       const beatGridTime = b * beatDuration;
-      if (beatGridTime < totalDurationSec - 0.01) {
-        this.scheduleClick(this.ctx, now + beatGridTime, b % beatsPerMeasure === 0);
+      if (beatGridTime >= this.seekStartSec && beatGridTime < totalDurationSec - 0.01) {
+        this.scheduleClick(this.ctx, now + (beatGridTime - this.seekStartSec), b % beatsPerMeasure === 0);
       }
     }
 
     this.stopTimerId = window.setTimeout(() => {
       this.stop();
       if (onEnded) onEnded();
-    }, (this.playDuration + 0.05) * 1000);
+    }, (this.playRemainingDuration + 0.05) * 1000);
   }
 
   public setPlayMode(mode: MelodicPlayMode, clickEnabled = true): void {
@@ -106,18 +106,18 @@ export class MelodicPreviewPlayer {
 
   public stop(): void {
     if (this.stopTimerId !== null) { window.clearTimeout(this.stopTimerId); this.stopTimerId = null; }
-    if (this.sourceNode) { try { this.sourceNode.stop(); this.sourceNode.disconnect(); } catch { /* ignore */ } this.sourceNode = null; }
+    if (this.sourceNode) { try { this.sourceNode.stop(); this.sourceNode.disconnect(); } catch {} this.sourceNode = null; }
     for (const node of this.synthNodes) { node.stop(); node.disconnect(); }
     this.synthNodes = [];
-    for (const node of this.activeClickNodes) { try { (node as any).stop?.(); node.disconnect(); } catch { /* ignore */ } }
+    for (const node of this.activeClickNodes) { try { (node as any).stop?.(); node.disconnect(); } catch {} }
     this.activeClickNodes = [];
     this.isPlaying = false;
   }
 
   public getCurrentPlayheadSec(): number {
-    if (!this.isPlaying || !this.ctx) return 0;
+    if (!this.isPlaying || !this.ctx) return this.seekStartSec;
     const elapsed = this.ctx.currentTime - this.playbackContextStartTime;
-    return elapsed < 0 ? 0 : Math.min(this.playDuration, elapsed);
+    return elapsed < 0 ? this.seekStartSec : Math.min(this.totalDuration, this.seekStartSec + elapsed);
   }
 
   public getIsPlaying(): boolean { return this.isPlaying; }

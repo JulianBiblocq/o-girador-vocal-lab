@@ -1,7 +1,7 @@
 /**
  * PianoRollEditor.tsx
- * Conteneur du Piano Roll combinant Toolbar, Clavier vertical sticky,
- * Canvas zoomable 1x..8x et saisie flottante directe des syllabes.
+ * Conteneur du Piano Roll combinant Toolbar, Clavier vertical,
+ * Règle cliquable, Canvas zoomable et saisie flottante.
  */
 import React, { useRef, useState, useEffect, useMemo, useCallback } from 'react';
 import type { PitchCurvePoint, VocalStepData } from '../../types/vocalPack.types';
@@ -11,6 +11,7 @@ import { PianoRollToolbar } from './PianoRollToolbar';
 import { PianoRollKeyboard } from './PianoRollKeyboard';
 import { PianoRollCanvas } from './PianoRollCanvas';
 import { FloatingSyllableInput } from './FloatingSyllableInput';
+import { RULER_HEIGHT } from './pianoRollDrawer';
 import type { PianoRollTool } from './pianoRollInteractions';
 
 interface PianoRollEditorProps {
@@ -18,11 +19,20 @@ interface PianoRollEditorProps {
   pitchCurve: PitchCurvePoint[];
   totalDurationSec: number;
   anacrusisDurationSec: number;
-  playheadSec: number;
+  beatsPerMeasure: number;
+  beatResolutions: number[];
+  seekStartSec: number;
   isPlaying: boolean;
   tonic: string;
   scaleType: ScaleType;
   smoothingLevel: number;
+  canUndo?: boolean;
+  canRedo?: boolean;
+  historyCount?: number;
+  getPlayheadSec?: () => number;
+  onSeek: (sec: number) => void;
+  onUndo?: () => void;
+  onRedo?: () => void;
   onSetTonic: (t: string) => void;
   onSetScaleType: (st: ScaleType) => void;
   onSetSmoothingLevel: (lvl: number) => void;
@@ -33,7 +43,7 @@ interface PianoRollEditorProps {
 const ROW_HEIGHT = 20;
 
 export const PianoRollEditor: React.FC<PianoRollEditorProps> = (props) => {
-  const { allSteps, pitchCurve, totalDurationSec, anacrusisDurationSec, playheadSec, isPlaying, tonic, scaleType, smoothingLevel, onSetTonic, onSetScaleType, onSetSmoothingLevel, onUpdateSteps, onPlayNotePreview } = props;
+  const { allSteps, pitchCurve, totalDurationSec, anacrusisDurationSec, beatsPerMeasure, beatResolutions, seekStartSec, isPlaying, tonic, scaleType, smoothingLevel, canUndo, canRedo, historyCount, getPlayheadSec, onSeek, onUndo, onRedo, onSetTonic, onSetScaleType, onSetSmoothingLevel, onUpdateSteps, onPlayNotePreview } = props;
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const [baseWidth, setBaseWidth] = useState<number>(640);
@@ -51,7 +61,6 @@ export const PianoRollEditor: React.FC<PianoRollEditorProps> = (props) => {
     return () => obs.disconnect();
   }, []);
 
-  // Zoom avec Ctrl + Molette
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
@@ -67,8 +76,7 @@ export const PianoRollEditor: React.FC<PianoRollEditorProps> = (props) => {
 
   const activeMidis = useMemo(() => allSteps.filter((s) => s.active && s.midiNumber > 0).map((s) => s.midiNumber), [allSteps]);
   const { minMidi, maxMidi } = useMemo(() => calculateTessitura(activeMidis), [activeMidis]);
-  const totalSemitones = Math.max(1, maxMidi - minMidi + 1);
-  const canvasHeight = totalSemitones * ROW_HEIGHT;
+  const canvasHeight = RULER_HEIGHT + Math.max(1, maxMidi - minMidi + 1) * ROW_HEIGHT;
   const gridWidth = Math.round(baseWidth * zoomLevel);
 
   const handleConfirmText = useCallback((text: string, jumpNext: boolean) => {
@@ -81,8 +89,7 @@ export const PianoRollEditor: React.FC<PianoRollEditorProps> = (props) => {
       const nextActiveIdx = nextSteps.findIndex((st, i) => i > currentIdx && st.active && st.note !== '───');
       if (nextActiveIdx !== -1) {
         const stepW = gridWidth / nextSteps.length;
-        const noteMidi = nextSteps[nextActiveIdx].midiNumber;
-        const y = (maxMidi - noteMidi) * ROW_HEIGHT;
+        const y = RULER_HEIGHT + (maxMidi - nextSteps[nextActiveIdx].midiNumber) * ROW_HEIGHT;
         setTextInput({ stepIndex: nextActiveIdx, rect: { x: nextActiveIdx * stepW, y, w: stepW * 2, h: ROW_HEIGHT } });
         return;
       }
@@ -96,11 +103,12 @@ export const PianoRollEditor: React.FC<PianoRollEditorProps> = (props) => {
         activeTool={activeTool} onSelectTool={setActiveTool} zoomLevel={zoomLevel} onSetZoom={setZoomLevel}
         tonic={tonic} onSetTonic={onSetTonic} scaleType={scaleType} onSetScaleType={onSetScaleType}
         smoothingLevel={smoothingLevel} onSetSmoothingLevel={onSetSmoothingLevel}
+        canUndo={canUndo} canRedo={canRedo} historyCount={historyCount} onUndo={onUndo} onRedo={onRedo}
       />
 
       <div className="flex items-center justify-between text-[11px] font-mono text-theme-ink/80 px-1">
         <span className="font-semibold text-amber-400">🎹 PIANO ROLL • {midiToNoteName(minMidi)} ➔ {midiToNoteName(maxMidi)} ({zoomLevel.toFixed(1)}x)</span>
-        <span className="text-[10px] text-emerald-400/90 hidden sm:inline">Double-clic sur brique = texte • Clic droit = gomme</span>
+        <span className="text-[10px] text-sky-400/90 hidden sm:inline">Règle cliquable = Seek • Ctrl+Molette = Zoom • Espace = Lecture</span>
       </div>
 
       <div ref={scrollRef} className="w-full cordel-card overflow-x-auto overflow-y-auto cordel-scrollbar bg-stone-950/80 border border-theme-border/60 max-h-[380px]">
@@ -109,9 +117,10 @@ export const PianoRollEditor: React.FC<PianoRollEditorProps> = (props) => {
           <div className="relative" style={{ width: `${gridWidth}px`, height: `${canvasHeight}px` }}>
             <PianoRollCanvas
               width={gridWidth} height={canvasHeight} minMidi={minMidi} maxMidi={maxMidi} rowHeight={ROW_HEIGHT}
-              allSteps={allSteps} pitchCurve={pitchCurve} totalDurationSec={totalDurationSec} anacrusisDurationSec={anacrusisDurationSec}
-              playheadSec={playheadSec} isPlaying={isPlaying} activeTool={activeTool} onUpdateSteps={onUpdateSteps}
-              onPlayNotePreview={onPlayNotePreview} onOpenTextInput={(idx, rect) => setTextInput({ stepIndex: idx, rect })}
+              beatsPerMeasure={beatsPerMeasure} beatResolutions={beatResolutions} allSteps={allSteps} pitchCurve={pitchCurve}
+              totalDurationSec={totalDurationSec} anacrusisDurationSec={anacrusisDurationSec} seekStartSec={seekStartSec}
+              isPlaying={isPlaying} activeTool={activeTool} getPlayheadSec={getPlayheadSec} onSeek={onSeek}
+              onUpdateSteps={onUpdateSteps} onPlayNotePreview={onPlayNotePreview} onOpenTextInput={(idx, rect) => setTextInput({ stepIndex: idx, rect })}
             />
             {textInput && (
               <FloatingSyllableInput

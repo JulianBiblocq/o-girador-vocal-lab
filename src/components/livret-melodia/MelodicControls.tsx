@@ -1,17 +1,18 @@
 /**
  * MelodicControls.tsx
- * Barre de contrôle de pré-écoute comparative 3-états ('voice', 'synth', 'duo')
- * et actions principales du Livret 2.
+ * Barre de contrôle de transport centré :
+ * Revenir au début [⏮ Début], Play/Stop, Sélecteur 3-états et Clic métronome.
  */
 import React from 'react';
 import type { MelodicPlayMode } from '../../audio/MelodicPreviewPlayer';
-import { Play, Square, Volume2, ArrowLeft, Download } from 'lucide-react';
+import { Play, Square, Volume2, ArrowLeft, Download, SkipBack } from 'lucide-react';
 
 interface MelodicControlsProps {
   isPlaying: boolean;
   playMode: MelodicPlayMode;
   clickEnabled: boolean;
   onTogglePlay: () => void;
+  onResetSeek?: () => void;
   onSetPlayMode: (mode: MelodicPlayMode) => void;
   onToggleClick: () => void;
   onBackToPrise: () => void;
@@ -19,12 +20,12 @@ interface MelodicControlsProps {
 }
 
 export const MelodicControls: React.FC<MelodicControlsProps> = (props) => {
-  const { isPlaying, playMode, clickEnabled, onTogglePlay, onSetPlayMode, onToggleClick, onBackToPrise, onDownloadPack } = props;
+  const { isPlaying, playMode, clickEnabled, onTogglePlay, onResetSeek, onSetPlayMode, onToggleClick, onBackToPrise, onDownloadPack } = props;
 
   return (
-    <div className="flex flex-col gap-2 w-full pt-1">
-      {/* 1. Sélecteur 3-États d'Écoute Comparative */}
-      <div className="flex flex-wrap items-center justify-between gap-1.5 p-1.5 bg-black/40 border border-theme-border/50 rounded-xl">
+    <div className="flex flex-col gap-1.5 w-full py-1">
+      {/* 1. Sélecteur 3-États d'Écoute Comparative & Clic */}
+      <div className="flex flex-wrap items-center justify-between gap-1.5 p-1.5 bg-black/50 border border-theme-border/50 rounded-xl">
         <span className="text-[11px] font-mono font-bold text-theme-ink/70 px-1">ÉCOUTE :</span>
         <div className="flex items-center gap-1">
           <button
@@ -77,7 +78,7 @@ export const MelodicControls: React.FC<MelodicControlsProps> = (props) => {
         </button>
       </div>
 
-      {/* 2. Commandes de Transport et Téléchargement */}
+      {/* 2. Commandes de Transport Centré et Téléchargement */}
       <div className="flex flex-wrap items-center justify-between gap-2">
         <button
           type="button"
@@ -89,12 +90,25 @@ export const MelodicControls: React.FC<MelodicControlsProps> = (props) => {
         </button>
 
         <div className="flex items-center gap-2">
+          {onResetSeek && (
+            <button
+              type="button"
+              onClick={onResetSeek}
+              className="cordel-btn px-2.5 py-1.5 text-xs font-mono flex items-center gap-1 bg-white/5 hover:bg-white/10 text-theme-ink/80"
+              title="Revenir au tout début (0:00)"
+            >
+              <SkipBack className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Début</span>
+            </button>
+          )}
+
           <button
             type="button"
             onClick={onTogglePlay}
             className={`cordel-btn px-4 py-1.5 text-xs font-mono font-bold flex items-center gap-1.5 shadow-md ${
               isPlaying ? 'bg-amber-600 text-white' : 'bg-theme-accent text-white'
             }`}
+            title="Lancer / Stopper la lecture (ou barre d'Espace)"
           >
             {isPlaying ? <Square className="w-4 h-4 fill-current" /> : <Play className="w-4 h-4 fill-current" />}
             <span>{isPlaying ? 'Arrêter' : 'Écouter'}</span>

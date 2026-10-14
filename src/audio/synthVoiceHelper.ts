@@ -1,7 +1,8 @@
 /**
  * synthVoiceHelper.ts
  * Synthétiseur Web Audio doux style Pífano / Flûte guide.
- * Déclenchement d'une enveloppe continue unifiée sur les notes tenues ('───').
+ * Déclenchement d'une enveloppe continue unifiée sur les notes tenues ('───')
+ * avec support du décalage temporel (seekStartSec).
  */
 import type { VocalStepData } from '../types/vocalPack.types';
 import { midiToFrequency } from '../utils/noteUtils';
@@ -58,7 +59,8 @@ export function scheduleMelodySteps(
   dest: AudioNode,
   steps: VocalStepData[],
   stepDurationSec: number,
-  startTime: number
+  startTime: number,
+  seekStartSec = 0
 ): SynthScheduledNode[] {
   const nodes: SynthScheduledNode[] = [];
   let i = 0;
@@ -66,16 +68,26 @@ export function scheduleMelodySteps(
   while (i < steps.length) {
     const step = steps[i];
     if (step.active && step.note !== '───' && step.midiNumber > 0) {
-      // Compter le nombre de pas consécutifs liés ('───')
       let tieCount = 0;
       while (i + 1 + tieCount < steps.length && steps[i + 1 + tieCount].note === '───') {
         tieCount++;
       }
-      const noteStartTime = startTime + i * stepDurationSec;
-      const totalDuration = stepDurationSec * (1 + tieCount);
+      const noteStartTime = i * stepDurationSec;
+      const noteEndTime = (i + 1 + tieCount) * stepDurationSec;
 
-      const node = playSingleSynthNote(ctx, dest, step.midiNumber, noteStartTime, totalDuration);
-      nodes.push(node);
+      if (noteEndTime > seekStartSec + 0.005) {
+        let actualStart = startTime;
+        let actualDuration = noteEndTime - noteStartTime;
+
+        if (noteStartTime >= seekStartSec) {
+          actualStart = startTime + (noteStartTime - seekStartSec);
+        } else {
+          actualDuration = noteEndTime - seekStartSec;
+        }
+
+        const node = playSingleSynthNote(ctx, dest, step.midiNumber, actualStart, actualDuration);
+        nodes.push(node);
+      }
 
       i += 1 + tieCount;
     } else {

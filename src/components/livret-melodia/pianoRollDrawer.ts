@@ -1,9 +1,12 @@
 /**
  * pianoRollDrawer.ts
- * Rendu Canvas 2D haute performance de la grille MIDI, des briques et de la courbe Zéro Rouge.
- * Les coordonnées X démarrent à 0 (le clavier est déporté en colonne sticky).
+ * Rendu Canvas 2D : Règle temporelle (28px), Subdivisions (doubles/triolets),
+ * Beat Shading, Briques MIDI et Playhead/Seek synchrone.
  */
 import type { PitchCurvePoint, VocalStepData } from '../../types/vocalPack.types';
+
+export const RULER_HEIGHT = 28;
+const BLACK_KEYS = new Set([1, 3, 6, 8, 10]);
 
 export interface DrawGridOptions {
   width: number;
@@ -12,114 +15,121 @@ export interface DrawGridOptions {
   minMidi: number;
   maxMidi: number;
   rowHeight: number;
+  beatsPerMeasure: number;
+  beatResolutions: number[];
   allSteps: VocalStepData[];
   pitchCurve: PitchCurvePoint[];
   totalDurationSec: number;
   anacrusisDurationSec: number;
+  seekStartSec: number;
   playheadSec: number;
   isPlaying: boolean;
 }
 
-const BLACK_KEYS = new Set([1, 3, 6, 8, 10]);
-
 export function drawPianoRollGrid(ctx: CanvasRenderingContext2D, opts: DrawGridOptions): void {
-  const { width, height, dpr, minMidi, maxMidi, rowHeight, allSteps, pitchCurve, totalDurationSec, anacrusisDurationSec, playheadSec, isPlaying } = opts;
+  const { width, height, dpr, minMidi, maxMidi, rowHeight, beatsPerMeasure, beatResolutions, allSteps, pitchCurve, totalDurationSec, anacrusisDurationSec, seekStartSec, playheadSec, isPlaying } = opts;
 
   ctx.save();
   ctx.scale(dpr, dpr);
   ctx.clearRect(0, 0, width, height);
 
-  // 1. Fond des rangées de notes (alternance touches blanches / noires façon DAW)
+  const beatDur = beatsPerMeasure > 0 ? anacrusisDurationSec / beatsPerMeasure : 0.6;
+  const totalBeats = Math.round(totalDurationSec / beatDur);
+
+  // 1. Fond des rangées de notes sous la règle de 28 px
   for (let midi = maxMidi; midi >= minMidi; midi--) {
-    const rowIdx = maxMidi - midi;
-    const y = rowIdx * rowHeight;
-    const semitone = ((midi % 12) + 12) % 12;
-    const isBlack = BLACK_KEYS.has(semitone);
-    const isC = semitone === 0;
-
-    ctx.fillStyle = isBlack ? 'rgba(0, 0, 0, 0.42)' : isC ? 'rgba(212, 175, 55, 0.06)' : 'rgba(255, 255, 255, 0.035)';
+    const y = RULER_HEIGHT + (maxMidi - midi) * rowHeight;
+    const isBlack = BLACK_KEYS.has(((midi % 12) + 12) % 12);
+    ctx.fillStyle = isBlack ? 'rgba(0, 0, 0, 0.42)' : midi % 12 === 0 ? 'rgba(212, 175, 55, 0.06)' : 'rgba(255, 255, 255, 0.035)';
     ctx.fillRect(0, y, width, rowHeight);
-
-    ctx.strokeStyle = isC ? 'rgba(212, 175, 55, 0.25)' : 'rgba(255, 255, 255, 0.05)';
-    ctx.lineWidth = 1;
+    ctx.strokeStyle = midi % 12 === 0 ? 'rgba(212, 175, 55, 0.25)' : 'rgba(255, 255, 255, 0.05)';
     ctx.beginPath(); ctx.moveTo(0, y + rowHeight); ctx.lineTo(width, y + rowHeight); ctx.stroke();
   }
 
-  // 2. Grille temporelle (Zone Anacrouse et Ligne Temps 1)
-  const xTemps1 = (anacrusisDurationSec / totalDurationSec) * width;
-  ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
-  ctx.fillRect(0, 0, xTemps1, height);
+  // 2. Grille temporelle : Beat Shading, Subdivisions pointillées et Lignes de mesure
+  for (let b = 0; b < totalBeats; b++) {
+    const xStart = ((b * beatDur) / totalDurationSec) * width;
+    const xEnd = (((b + 1) * beatDur) / totalDurationSec) * width;
+    ctx.fillStyle = b % 2 === 0 ? 'rgba(255, 255, 255, 0.015)' : 'rgba(0, 0, 0, 0.12)';
+    ctx.fillRect(xStart, RULER_HEIGHT, xEnd - xStart, height - RULER_HEIGHT);
 
-  ctx.strokeStyle = '#d4af37';
-  ctx.lineWidth = 2;
-  ctx.beginPath(); ctx.moveTo(xTemps1, 0); ctx.lineTo(xTemps1, height); ctx.stroke();
+    const res = beatResolutions[b % beatsPerMeasure] || 4;
+    const sDur = beatDur / res;
+    ctx.strokeStyle = 'rgba(245, 240, 230, 0.12)';
+    ctx.setLineDash([2, 3]);
+    for (let s = 1; s < res; s++) {
+      const xs = ((b * beatDur + s * sDur) / totalDurationSec) * width;
+      ctx.beginPath(); ctx.moveTo(xs, RULER_HEIGHT); ctx.lineTo(xs, height); ctx.stroke();
+    }
+    ctx.setLineDash([]);
 
-  // 3. Briques MIDI fusionnées avec étiquette Note + Syllabe
-  const stepWidth = allSteps.length > 0 ? width / allSteps.length : 0;
-  let i = 0;
-  while (i < allSteps.length) {
+    const isT1 = b === beatsPerMeasure;
+    ctx.lineWidth = isT1 ? 2.5 : b % beatsPerMeasure === 0 ? 1.5 : 1;
+    ctx.strokeStyle = isT1 ? '#d4af37' : b % beatsPerMeasure === 0 ? 'rgba(245, 240, 230, 0.45)' : 'rgba(245, 240, 230, 0.22)';
+    ctx.beginPath(); ctx.moveTo(xStart, 0); ctx.lineTo(xStart, height); ctx.stroke();
+  }
+
+  // 3. Règle Temporelle Supérieure (28 px)
+  ctx.fillStyle = 'rgba(18, 16, 15, 0.95)';
+  ctx.fillRect(0, 0, width, RULER_HEIGHT);
+  ctx.strokeStyle = 'rgba(245, 240, 230, 0.2)';
+  ctx.beginPath(); ctx.moveTo(0, RULER_HEIGHT); ctx.lineTo(width, RULER_HEIGHT); ctx.stroke();
+
+  for (let b = 0; b < totalBeats; b++) {
+    const x = ((b * beatDur) / totalDurationSec) * width;
+    const m = Math.floor(b / beatsPerMeasure);
+    const bm = b % beatsPerMeasure;
+    const isT1 = b === beatsPerMeasure;
+    ctx.font = isT1 ? 'bold 10px monospace' : '9px monospace';
+    ctx.fillStyle = isT1 ? '#d4af37' : m === 0 ? '#fbbf24' : 'rgba(245, 240, 230, 0.7)';
+    ctx.fillText(m === 0 && bm === 0 ? 'ÉLAN (M-1)' : isT1 ? '★ M1 · T1' : bm === 0 ? `M${m} · T1` : `T${bm + 1}`, x + 4, 18);
+  }
+
+  // 4. Briques MIDI fusionnées
+  const stepW = allSteps.length > 0 ? width / allSteps.length : 0;
+  for (let i = 0; i < allSteps.length; i++) {
     const step = allSteps[i];
     if (step.active && step.note !== '───' && step.midiNumber >= minMidi && step.midiNumber <= maxMidi) {
       let ties = 0;
       while (i + 1 + ties < allSteps.length && allSteps[i + 1 + ties].note === '───') ties++;
-
-      const x = i * stepWidth;
-      const w = Math.max(4, stepWidth * (1 + ties) - 2);
-      const rowIdx = maxMidi - step.midiNumber;
-      const y = rowIdx * rowHeight + 1.5;
-      const h = Math.max(4, rowHeight - 3);
-
-      // Corps de la brique terracotta
-      ctx.fillStyle = '#b45309';
-      ctx.strokeStyle = '#f59e0b';
-      ctx.lineWidth = 1.5;
+      const x = i * stepW, w = Math.max(4, stepW * (1 + ties) - 2);
+      const y = RULER_HEIGHT + (maxMidi - step.midiNumber) * rowHeight + 1.5, h = Math.max(4, rowHeight - 3);
+      ctx.fillStyle = '#b45309'; ctx.strokeStyle = '#f59e0b'; ctx.lineWidth = 1.5;
       ctx.beginPath(); ctx.roundRect(x, y, w, h, 3); ctx.fill(); ctx.stroke();
-
-      // Grip poignée étirement droite
-      if (w > 12) {
-        ctx.fillStyle = '#fde68a';
-        ctx.fillRect(x + w - 3, y + 2, 1.5, h - 4);
-      }
-
-      // Texte note et syllabe
-      ctx.fillStyle = '#ffffff';
-      ctx.font = 'bold 9.5px sans-serif';
-      const label = step.syllable?.trim() ? `${step.note} • ${step.syllable.trim()}` : step.note;
-      ctx.fillText(label, x + 4, y + h / 2 + 3.5);
-
-      i += 1 + ties;
-    } else {
-      i++;
+      if (w > 12) { ctx.fillStyle = '#fde68a'; ctx.fillRect(x + w - 3, y + 2, 1.5, h - 4); }
+      ctx.fillStyle = '#ffffff'; ctx.font = 'bold 9.5px sans-serif';
+      ctx.fillText(step.syllable?.trim() ? `${step.note} • ${step.syllable.trim()}` : step.note, x + 4, y + h / 2 + 3.5);
+      i += ties;
     }
   }
 
-  // 4. Courbe de pitch « Zéro Rouge » (Vert feuillage ou Ocre soleil)
+  // 5. Courbe de pitch « Zéro Rouge »
   if (pitchCurve.length > 1) {
     ctx.lineWidth = 2.5;
     for (let p = 0; p < pitchCurve.length - 1; p++) {
-      const p1 = pitchCurve[p];
-      const p2 = pitchCurve[p + 1];
+      const p1 = pitchCurve[p], p2 = pitchCurve[p + 1];
       if (Math.abs(p2.timeSec - p1.timeSec) > 0.04) continue;
-
-      const x1 = (p1.timeSec / totalDurationSec) * width;
-      const y1 = (maxMidi - p1.midiFloat) * rowHeight + rowHeight / 2;
-      const x2 = (p2.timeSec / totalDurationSec) * width;
-      const y2 = (maxMidi - p2.midiFloat) * rowHeight + rowHeight / 2;
-
-      const nearestInt = Math.round(p1.midiFloat);
-      const isClose = Math.abs(p1.midiFloat - nearestInt) <= 0.35;
-      ctx.strokeStyle = isClose ? '#10b981' : '#f59e0b';
-
+      const x1 = (p1.timeSec / totalDurationSec) * width, y1 = RULER_HEIGHT + (maxMidi - p1.midiFloat) * rowHeight + rowHeight / 2;
+      const x2 = (p2.timeSec / totalDurationSec) * width, y2 = RULER_HEIGHT + (maxMidi - p2.midiFloat) * rowHeight + rowHeight / 2;
+      ctx.strokeStyle = Math.abs(p1.midiFloat - Math.round(p1.midiFloat)) <= 0.35 ? '#10b981' : '#f59e0b';
       ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
     }
   }
 
-  // 5. Tête de lecture 60 FPS
+  // 6. Marqueur de Seek & Playhead
+  if (seekStartSec > 0 && (!isPlaying || playheadSec < 0)) {
+    const xs = (seekStartSec / totalDurationSec) * width;
+    ctx.strokeStyle = '#38bdf8'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(xs, 0); ctx.lineTo(xs, height); ctx.stroke();
+    ctx.fillStyle = '#38bdf8';
+    ctx.beginPath(); ctx.moveTo(xs - 4, 0); ctx.lineTo(xs + 4, 0); ctx.lineTo(xs, 7); ctx.fill();
+  }
   if (isPlaying && playheadSec >= 0) {
-    const xPlay = (playheadSec / totalDurationSec) * width;
-    ctx.strokeStyle = '#ffffff';
-    ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.moveTo(xPlay, 0); ctx.lineTo(xPlay, height); ctx.stroke();
+    const xp = (playheadSec / totalDurationSec) * width;
+    ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(xp, 0); ctx.lineTo(xp, height); ctx.stroke();
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath(); ctx.moveTo(xp - 5, 0); ctx.lineTo(xp + 5, 0); ctx.lineTo(xp, 8); ctx.fill();
   }
   ctx.restore();
 }

@@ -1,7 +1,7 @@
 /**
  * PianoRollKeyboard.tsx
  * Clavier vertical 64 px fixe à gauche (touches ivoire / ébène en relief).
- * Chaque demi-ton correspond exactement à la hauteur de ligne de la grille.
+ * Avec en-tête de 28 px parfaitement synchronisé sur la règle temporelle.
  */
 import React from 'react';
 import { midiToNoteName } from '../../utils/noteUtils';
@@ -25,7 +25,7 @@ export const PianoRollKeyboard: React.FC<PianoRollKeyboardProps> = ({ minMidi, m
     const isBlack = BLACK_SEMITONES.has(semitone);
     const noteName = midiToNoteName(midi);
     const isC = semitone === 0;
-    const isBorderBoundary = semitone === 4 || semitone === 11; // E ou B
+    const isBorderBoundary = semitone === 4 || semitone === 11;
 
     if (isBlack) {
       rows.push(
@@ -36,9 +36,7 @@ export const PianoRollKeyboard: React.FC<PianoRollKeyboardProps> = ({ minMidi, m
           title={`Note ${noteName}`}
           className="relative w-full cursor-pointer select-none group"
         >
-          {/* Fond de la touche blanche sous-jacente */}
           <div className="absolute inset-0 bg-[#e8e0d0] border-b border-black/15" />
-          {/* Touche noire en relief sur 60% gauche */}
           <div className="absolute left-0 top-0 bottom-0 w-[38px] bg-gradient-to-r from-[#1c1917] to-[#292524] border-t border-b border-r border-black shadow-md z-10 flex items-center px-1 group-hover:from-black group-hover:to-amber-950/80 transition-colors">
             <span className="text-[7.5px] font-mono font-bold text-amber-200/70 tracking-tighter truncate">
               {noteName}
@@ -70,6 +68,9 @@ export const PianoRollKeyboard: React.FC<PianoRollKeyboardProps> = ({ minMidi, m
       style={{ width: `${KEYBOARD_WIDTH}px` }}
       className="sticky left-0 z-20 shrink-0 bg-[#1c1917] border-r-2 border-black/80 flex flex-col shadow-lg"
     >
+      <div style={{ height: '28px' }} className="w-full bg-[#141210] border-b border-white/10 flex items-center justify-center">
+        <span className="text-[8px] font-mono font-bold text-amber-400/80 tracking-wider">NOTES</span>
+      </div>
       {rows}
     </div>
   );
