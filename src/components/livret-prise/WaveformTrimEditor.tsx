@@ -2,9 +2,11 @@
 import { WaveformGridCanvas } from './WaveformGridCanvas';
 import { WaveformOverlayCanvas } from './WaveformOverlayCanvas';
 import { PreviewControls } from './PreviewControls';
+import { LatencyNudgeBar } from './LatencyNudgeBar';
 import { PreviewPlayer } from '../../audio/PreviewPlayer';
 import { computeAlignmentMeta } from '../../utils/alignmentMath';
 import { generateVocalPack } from '../../utils/packGenerator';
+import { getSavedLatencyOffsetMs } from '../../utils/latencyStorage';
 import type { TimeSignatureString, VocalPackExport } from '../../types/vocalPack.types';
 
 interface WaveformTrimEditorProps {
@@ -36,6 +38,7 @@ export const WaveformTrimEditor: React.FC<WaveformTrimEditorProps> = ({
 
   const [trimStartSec, setTrimStartSec] = useState<number>(0);
   const [trimEndSec, setTrimEndSec] = useState<number>(totalDurationSec);
+  const [latencyOffsetMs, setLatencyOffsetMs] = useState<number>(getSavedLatencyOffsetMs);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const [playheadSec, setPlayheadSec] = useState<number>(-1);
   const [clickEnabled, setClickEnabled] = useState<boolean>(true);
@@ -72,20 +75,20 @@ export const WaveformTrimEditor: React.FC<WaveformTrimEditorProps> = ({
     if (isPlaying) { player.stop(); setIsPlaying(false); return; }
     setIsPlaying(true);
     await player.play(rawPCM, sampleRate, {
-      trimStartSec, trimEndSec, bpm, beatsPerMeasure, totalDurationSec,
+      trimStartSec, trimEndSec, latencyOffsetMs, bpm, beatsPerMeasure, totalDurationSec,
       clickEnabled, outputDeviceId, onEnded: () => setIsPlaying(false),
     });
-  }, [player, isPlaying, rawPCM, sampleRate, trimStartSec, trimEndSec, bpm, beatsPerMeasure, totalDurationSec, clickEnabled, outputDeviceId]);
+  }, [player, isPlaying, rawPCM, sampleRate, trimStartSec, trimEndSec, latencyOffsetMs, bpm, beatsPerMeasure, totalDurationSec, clickEnabled, outputDeviceId]);
 
   const handleProceed = useCallback(() => {
     player.stop();
     setIsPlaying(false);
     const pack = generateVocalPack({
-      rawPCM, sampleRate, trimStartSec, trimEndSec, bpm, timeSignature,
+      rawPCM, sampleRate, trimStartSec, trimEndSec, latencyOffsetMs, bpm, timeSignature,
       measuresCount, beatsPerMeasure, beatResolutions, referencePitch, alignment,
     });
     onPackReady(pack);
-  }, [player, rawPCM, sampleRate, trimStartSec, trimEndSec, bpm, timeSignature, measuresCount, beatsPerMeasure, beatResolutions, referencePitch, alignment, onPackReady]);
+  }, [player, rawPCM, sampleRate, trimStartSec, trimEndSec, latencyOffsetMs, bpm, timeSignature, measuresCount, beatsPerMeasure, beatResolutions, referencePitch, alignment, onPackReady]);
 
   return (
     <div className="flex flex-col gap-3 w-full">
@@ -98,10 +101,18 @@ export const WaveformTrimEditor: React.FC<WaveformTrimEditorProps> = ({
         <WaveformOverlayCanvas
           rawPCM={rawPCM} sampleRate={sampleRate} width={containerWidth} height={144}
           totalDurationSec={totalDurationSec} trimStartSec={trimStartSec} trimEndSec={trimEndSec}
+          latencyOffsetMs={latencyOffsetMs}
           onTrimChange={(s, e) => { setTrimStartSec(s); setTrimEndSec(e); }}
+          onLatencyOffsetChange={setLatencyOffsetMs}
           playheadSec={playheadSec} isPlaying={isPlaying}
         />
       </div>
+
+      <LatencyNudgeBar
+        latencyOffsetMs={latencyOffsetMs}
+        onChange={setLatencyOffsetMs}
+        disabled={isPlaying}
+      />
 
       <PreviewControls
         isPlaying={isPlaying} onTogglePlay={handleTogglePlay}

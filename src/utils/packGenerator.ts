@@ -1,12 +1,13 @@
 ﻿import type { TimeSignatureString, VocalPackExport } from '../types/vocalPack.types';
 import type { AlignmentResult } from './alignmentMath';
-import { applyTrimWithFades, audioBufferToWavBase64 } from './wavEncoder';
+import { extractCompensatedSlice, audioBufferToWavBase64 } from './wavEncoder';
 
 export interface PackGeneratorParams {
   rawPCM: Float32Array;
   sampleRate: number;
   trimStartSec: number;
   trimEndSec: number;
+  latencyOffsetMs: number;
   bpm: number;
   timeSignature: TimeSignatureString;
   measuresCount: number;
@@ -18,12 +19,13 @@ export interface PackGeneratorParams {
 
 export function generateVocalPack(params: PackGeneratorParams): VocalPackExport {
   const {
-    rawPCM, sampleRate, trimStartSec, trimEndSec,
+    rawPCM, sampleRate, trimStartSec, trimEndSec, latencyOffsetMs,
     bpm, timeSignature, measuresCount, beatsPerMeasure,
     beatResolutions, referencePitch, alignment,
   } = params;
 
-  const cleanPCM = applyTrimWithFades(rawPCM, sampleRate, trimStartSec, trimEndSec);
+  // Découpe physique avec intégration directe de la compensation de latence
+  const cleanPCM = extractCompensatedSlice(rawPCM, sampleRate, trimStartSec, trimEndSec, latencyOffsetMs);
   const audioBase64 = audioBufferToWavBase64(cleanPCM, sampleRate);
 
   return {
@@ -39,7 +41,7 @@ export function generateVocalPack(params: PackGeneratorParams): VocalPackExport 
     alignment: {
       startOffsetSec: alignment.startOffsetSec,
       anacrusis: alignment.anacrusis,
-      nudgeMs: 0,
+      nudgeMs: 0, // 0 car la latence matérielle est déjà compensée dans le fichier WAV exporté
     },
     grid: {
       steps: [],

@@ -1,7 +1,7 @@
 ﻿/**
  * VocalRecorderEngine.ts
  * Moteur de capture audio PCM synchrone calé sur l'horloge Web Audio à T0.
- * Zéro monitoring logiciel (aucun retour micro) & libération matérielle stricte.
+ * Buffer réduit à 1024 samples pour diviser la latence d'entrée par 4 (~23ms).
  */
 
 export class VocalRecorderEngine {
@@ -18,9 +18,6 @@ export class VocalRecorderEngine {
   private chunks: Float32Array[] = [];
   private totalSamplesRecorded = 0;
 
-  /**
-   * Étape 1 : Initialise le micro et les nœuds en mémoire AVANT de lancer l'horloge.
-   */
   public async prepare(ctx: AudioContext, deviceId?: string): Promise<number> {
     this.cleanup();
     this.ctx = ctx;
@@ -38,10 +35,9 @@ export class VocalRecorderEngine {
     this.stream = await navigator.mediaDevices.getUserMedia(constraints);
     this.sourceNode = ctx.createMediaStreamSource(this.stream);
 
-    // Buffer de 4096 échantillons (~92ms à 44.1kHz) pour capture continue
-    this.processorNode = ctx.createScriptProcessor(4096, 1, 1);
+    // Buffer optimisé à 1024 échantillons (~23ms à 44.1kHz) pour une réactivité maximale
+    this.processorNode = ctx.createScriptProcessor(1024, 1, 1);
 
-    // Gain silencieux à 0 pour maintenir l'arbre Web Audio actif sans aucun monitoring (zéro larsen)
     this.muteGain = ctx.createGain();
     this.muteGain.gain.setValueAtTime(0, ctx.currentTime);
 
@@ -51,13 +47,9 @@ export class VocalRecorderEngine {
 
     this.chunks = [];
     this.totalSamplesRecorded = 0;
-
     return this.sampleRate;
   }
 
-  /**
-   * Étape 2 : Démarre la capture de façon 100% synchrone sur le timestamp T0 de l'horloge.
-   */
   public start(syncStartTime: number, totalDurationSec: number): void {
     this.syncStartTime = syncStartTime;
     this.totalDurationSec = totalDurationSec;
@@ -71,15 +63,8 @@ export class VocalRecorderEngine {
       if (!this.isCapturing || !this.ctx) return;
 
       const currentTime = this.ctx.currentTime;
-      // Attendre exactement l'instant T0 (start de la mesure d'élan)
-      if (currentTime < this.syncStartTime) {
-        return;
-      }
-
-      // Si la durée totale est atteinte (punch-out), cesser d'accumuler
-      if (currentTime >= this.syncStartTime + this.totalDurationSec + 0.05) {
-        return;
-      }
+      if (currentTime < this.syncStartTime) return;
+      if (currentTime >= this.syncStartTime + this.totalDurationSec + 0.05) return;
 
       const input = e.inputBuffer.getChannelData(0);
       const copy = new Float32Array(input.length);
@@ -89,13 +74,9 @@ export class VocalRecorderEngine {
     };
   }
 
-  /**
-   * Étape 3 : Arrêt immédiat, libération de la carte son et retour du buffer consolidé.
-   */
   public stop(): Float32Array {
     this.isCapturing = false;
 
-    // Déconnexion et arrêt immédiat de toutes les pistes micro (libération carte son)
     if (this.stream) {
       this.stream.getTracks().forEach((track) => track.stop());
       this.stream = null;
@@ -117,7 +98,6 @@ export class VocalRecorderEngine {
       this.muteGain = null;
     }
 
-    // Consolidation des blocs en un seul Float32Array calibré
     const targetLength = Math.max(1, Math.floor(this.totalDurationSec * this.sampleRate));
     const merged = new Float32Array(targetLength);
     let offset = 0;

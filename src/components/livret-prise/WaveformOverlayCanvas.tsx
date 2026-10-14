@@ -9,25 +9,27 @@ interface WaveformOverlayCanvasProps {
   totalDurationSec: number;
   trimStartSec: number;
   trimEndSec: number;
+  latencyOffsetMs: number;
   onTrimChange: (start: number, end: number) => void;
+  onLatencyOffsetChange?: (offsetMs: number) => void;
   playheadSec: number;
   isPlaying: boolean;
 }
 
 export const WaveformOverlayCanvas: React.FC<WaveformOverlayCanvasProps> = ({
-  rawPCM, width, height, totalDurationSec,
-  trimStartSec, trimEndSec, onTrimChange, playheadSec, isPlaying,
+  rawPCM, width, height, totalDurationSec, trimStartSec, trimEndSec,
+  latencyOffsetMs, onTrimChange, onLatencyOffsetChange, playheadSec, isPlaying,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const peaksCacheRef = useRef<Float32Array | null>(null);
-  const draggingHandleRef = useRef<'start' | 'end' | null>(null);
+  const dragModeRef = useRef<'start' | 'end' | 'wave' | null>(null);
+  const dragStartXRef = useRef<number>(0);
+  const initialOffsetMsRef = useRef<number>(0);
 
-  // 1. Mise en cache des pics avec normalisation dynamique (75% hauteur)
   useEffect(() => {
     peaksCacheRef.current = extractNormalizedPeaks(rawPCM, 600);
   }, [rawPCM]);
 
-  // 2. Rendu graphique 60 FPS du waveform et des poignées
   const draw = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas || width <= 0 || height <= 0) return;
@@ -45,6 +47,8 @@ export const WaveformOverlayCanvas: React.FC<WaveformOverlayCanvasProps> = ({
     ctx.scale(dpr, dpr);
     ctx.clearRect(0, 0, width, height);
 
+    const offsetSec = latencyOffsetMs / 1000;
+    const xOffset = (offsetSec / totalDurationSec) * width;
     const xTrimStart = Math.max(0, (trimStartSec / totalDurationSec) * width);
     const xTrimEnd = Math.min(width, (trimEndSec / totalDurationSec) * width);
     const cy = height / 2;
@@ -54,7 +58,8 @@ export const WaveformOverlayCanvas: React.FC<WaveformOverlayCanvasProps> = ({
       const bins = peaks.length;
       const barWidth = width / bins;
       for (let i = 0; i < bins; i++) {
-        const x = i * barWidth;
+        const x = (i * barWidth) + xOffset;
+        if (x < -barWidth || x > width) continue;
         const amp = peaks[i] * (height / 2);
         const isInTrim = x >= xTrimStart && x <= xTrimEnd;
         ctx.fillStyle = isInTrim ? '#ab3a26' : 'rgba(244, 236, 216, 0.2)';
@@ -68,33 +73,29 @@ export const WaveformOverlayCanvas: React.FC<WaveformOverlayCanvasProps> = ({
     ctx.fillRect(xTrimEnd, 0, width - xTrimEnd, height);
 
     // Poignées Début & Fin
-    ctx.strokeStyle = '#38bdf8'; // Cyan
+    ctx.strokeStyle = '#38bdf8';
     ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(xTrimStart, 0); ctx.lineTo(xTrimStart, height); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(xTrimStart, 0); ctx.lineTo(xTrimStart, height); ctx.stroke();
     ctx.fillStyle = '#38bdf8';
     ctx.fillRect(xTrimStart - 4, 0, 8, 14); ctx.fillRect(xTrimStart - 4, height - 14, 8, 14);
 
-    ctx.strokeStyle = '#f87171'; // Rouge corail
-    ctx.beginPath();
-    ctx.moveTo(xTrimEnd, 0); ctx.lineTo(xTrimEnd, height); ctx.stroke();
+    ctx.strokeStyle = '#f87171';
+    ctx.beginPath(); ctx.moveTo(xTrimEnd, 0); ctx.lineTo(xTrimEnd, height); ctx.stroke();
     ctx.fillStyle = '#f87171';
     ctx.fillRect(xTrimEnd - 4, 0, 8, 14); ctx.fillRect(xTrimEnd - 4, height - 14, 8, 14);
 
-    // Aiguille de lecture
+    // Tête de lecture temps réel calée sur l'axe de la grille
     if (isPlaying && playheadSec >= 0) {
       const xPlay = (playheadSec / totalDurationSec) * width;
       ctx.strokeStyle = '#ffffff';
       ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(xPlay, 0); ctx.lineTo(xPlay, height); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(xPlay, 0); ctx.lineTo(xPlay, height); ctx.stroke();
     }
     ctx.restore();
-  }, [width, height, totalDurationSec, trimStartSec, trimEndSec, playheadSec, isPlaying]);
+  }, [width, height, totalDurationSec, trimStartSec, trimEndSec, latencyOffsetMs, playheadSec, isPlaying]);
 
   useEffect(() => { draw(); }, [draw]);
 
-  // 3. Glisser-déposer des poignées
   const handlePointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
     const x = e.clientX - rect.left;
@@ -102,30 +103,38 @@ export const WaveformOverlayCanvas: React.FC<WaveformOverlayCanvasProps> = ({
     const xEnd = (trimEndSec / totalDurationSec) * width;
 
     if (Math.abs(x - xStart) <= 18) {
-      draggingHandleRef.current = 'start';
-      e.currentTarget.setPointerCapture(e.pointerId);
+      dragModeRef.current = 'start';
     } else if (Math.abs(x - xEnd) <= 18) {
-      draggingHandleRef.current = 'end';
-      e.currentTarget.setPointerCapture(e.pointerId);
+      dragModeRef.current = 'end';
+    } else if (onLatencyOffsetChange) {
+      dragModeRef.current = 'wave';
+      dragStartXRef.current = e.clientX;
+      initialOffsetMsRef.current = latencyOffsetMs;
     }
+    e.currentTarget.setPointerCapture(e.pointerId);
   };
 
   const handlePointerMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
-    if (!draggingHandleRef.current) return;
+    if (!dragModeRef.current) return;
     const rect = e.currentTarget.getBoundingClientRect();
     const x = Math.max(0, Math.min(width, e.clientX - rect.left));
     const timeAtX = (x / width) * totalDurationSec;
 
-    if (draggingHandleRef.current === 'start') {
+    if (dragModeRef.current === 'start') {
       onTrimChange(Math.min(trimEndSec - 0.05, Math.max(0, timeAtX)), trimEndSec);
-    } else if (draggingHandleRef.current === 'end') {
+    } else if (dragModeRef.current === 'end') {
       onTrimChange(trimStartSec, Math.max(trimStartSec + 0.05, Math.min(totalDurationSec, timeAtX)));
+    } else if (dragModeRef.current === 'wave' && onLatencyOffsetChange) {
+      const deltaPx = e.clientX - dragStartXRef.current;
+      const deltaSec = (deltaPx / width) * totalDurationSec;
+      const deltaMs = Math.round(deltaSec * 1000);
+      onLatencyOffsetChange(initialOffsetMsRef.current + deltaMs);
     }
   };
 
   const handlePointerUp = (e: React.PointerEvent<HTMLCanvasElement>) => {
-    if (draggingHandleRef.current) {
-      draggingHandleRef.current = null;
+    if (dragModeRef.current) {
+      dragModeRef.current = null;
       try { e.currentTarget.releasePointerCapture(e.pointerId); } catch { /* ignore */ }
     }
   };

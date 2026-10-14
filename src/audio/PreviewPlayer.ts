@@ -1,12 +1,13 @@
 ﻿/**
  * PreviewPlayer.ts
- * Lecteur de pré-écoute locale avec micro-fondus (10ms/30ms), clic témoin calé et kill-switch.
+ * Lecteur de pré-écoute calé sur la grille absolue avec compensation de latence matérielle.
  */
-import { applyTrimWithFades } from '../utils/wavEncoder';
+import { extractCompensatedSlice } from '../utils/wavEncoder';
 
 export interface PreviewOptions {
   trimStartSec: number;
   trimEndSec: number;
+  latencyOffsetMs: number;
   bpm: number;
   beatsPerMeasure: number;
   totalDurationSec: number;
@@ -46,8 +47,9 @@ export class PreviewPlayer {
       }
     }
 
-    const { trimStartSec, trimEndSec, bpm, beatsPerMeasure, clickEnabled, onEnded } = options;
-    const cleanPCM = applyTrimWithFades(rawPCM, sampleRate, trimStartSec, trimEndSec);
+    const { trimStartSec, trimEndSec, latencyOffsetMs, bpm, beatsPerMeasure, clickEnabled, onEnded } = options;
+    const cleanPCM = extractCompensatedSlice(rawPCM, sampleRate, trimStartSec, trimEndSec, latencyOffsetMs);
+
     this.playDuration = Math.max(0.05, trimEndSec - trimStartSec);
     this.playheadStartCycleTime = trimStartSec;
 
@@ -59,20 +61,22 @@ export class PreviewPlayer {
     this.sourceNode.connect(this.ctx.destination);
     this.activeNodes.push(this.sourceNode);
 
-    const now = this.ctx.currentTime + 0.02;
+    const now = this.ctx.currentTime + 0.03;
     this.playbackContextStartTime = now;
     this.isPlaying = true;
 
+    // 1. Démarrage de la voix alignée sur la grille
     this.sourceNode.start(now);
 
+    // 2. Clic témoin strictement synchronisé sur les temps absolus de la grille
     if (clickEnabled) {
       const beatDuration = 60 / bpm;
       const totalBeats = Math.ceil(options.totalDurationSec / beatDuration);
 
       for (let b = 0; b < totalBeats; b++) {
-        const beatCycleTime = b * beatDuration;
-        if (beatCycleTime >= trimStartSec - 0.001 && beatCycleTime <= trimEndSec + 0.001) {
-          const delayFromStart = beatCycleTime - trimStartSec;
+        const beatGridTime = b * beatDuration;
+        if (beatGridTime >= trimStartSec - 0.001 && beatGridTime <= trimEndSec + 0.001) {
+          const delayFromStart = beatGridTime - trimStartSec;
           const clickTime = now + delayFromStart;
           const isMajor = b % beatsPerMeasure === 0;
           this.scheduleClick(this.ctx, clickTime, isMajor);
