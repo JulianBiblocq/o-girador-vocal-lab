@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useRef, useCallback } from 'react';
+import React, { useEffect, useRef, useCallback } from 'react';
 import { extractNormalizedPeaks } from '../../utils/peaksExtractor';
 import { drawWaveformOverlay } from './waveformOverlayDrawer';
 
@@ -28,8 +28,8 @@ export const WaveformOverlayCanvas: React.FC<WaveformOverlayCanvasProps> = ({
   const initialOffsetMsRef = useRef<number>(0);
 
   useEffect(() => {
-    peaksCacheRef.current = extractNormalizedPeaks(rawPCM, 600);
-  }, [rawPCM]);
+    peaksCacheRef.current = extractNormalizedPeaks(rawPCM, Math.min(rawPCM.length, Math.max(600, width * 2)));
+  }, [rawPCM, width]);
 
   const draw = useCallback(() => {
     const canvas = canvasRef.current;

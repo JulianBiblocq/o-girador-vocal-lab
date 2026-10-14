@@ -1,4 +1,4 @@
-﻿/**
+/**
  * wavEncoder.ts
  * Utilitaires purs de decoupe avec compensation de latence, filtre coupe-bas,
  * normalisation vocale intelligente -16 dBFS et encodage WAV 16-bit PCM mono.
@@ -32,35 +32,44 @@ export function extractCompensatedSlice(
     result.set(rawPCM.subarray(sourceStart, sourceStart + copyLength), destStart);
   }
 
-  // 1. Filtre coupe-bas studio 90 Hz anti-rumble (in-place)
-  if (highPassFilterEnabled) {
-    applyHighPass90Hz(result, sampleRate);
-  }
+  if (highPassFilterEnabled) applyHighPass90Hz(result, sampleRate);
+  if (normalizeRMS) normalizeActiveRMS(result, sampleRate);
 
-  // 2. Normalisation vocale intelligente Gated RMS -16 dBFS + Soft-Knee Limiter -1 dBFS
-  if (normalizeRMS) {
-    normalizeActiveRMS(result, sampleRate);
-  }
-
-  // 3. Micro-fondu d entrée de 10 ms
   const fadeInSamples = Math.min(targetSamples, Math.floor(0.01 * sampleRate));
-  for (let i = 0; i < fadeInSamples; i++) {
-    result[i] *= (i / fadeInSamples);
-  }
+  for (let i = 0; i < fadeInSamples; i++) result[i] *= (i / fadeInSamples);
 
-  // 4. Micro-fondu de sortie de 30 ms
   const fadeOutSamples = Math.min(targetSamples, Math.floor(0.03 * sampleRate));
   for (let i = 0; i < fadeOutSamples; i++) {
-    const idx = targetSamples - 1 - i;
-    result[idx] *= (i / fadeOutSamples);
+    result[targetSamples - 1 - i] *= (i / fadeOutSamples);
   }
 
   return result;
 }
 
+export function createPaddedPreviewBuffer(
+  rawPCM: Float32Array,
+  sampleRate: number,
+  totalDurationSec: number,
+  trimStartSec: number,
+  trimEndSec: number,
+  latencyOffsetMs: number,
+  highPassFilterEnabled = true,
+  normalizeRMS = true
+): Float32Array {
+  const totalSamples = Math.floor(totalDurationSec * sampleRate);
+  const fullBuffer = new Float32Array(totalSamples);
+  const activeSlice = extractCompensatedSlice(
+    rawPCM, sampleRate, trimStartSec, trimEndSec,
+    latencyOffsetMs, highPassFilterEnabled, normalizeRMS
+  );
+  const startSample = Math.max(0, Math.floor(trimStartSec * sampleRate));
+  const copyLen = Math.min(activeSlice.length, Math.max(0, totalSamples - startSample));
+  if (copyLen > 0) fullBuffer.set(activeSlice.subarray(0, copyLen), startSample);
+  return fullBuffer;
+}
+
 export function audioBufferToWavBase64(pcm: Float32Array, sampleRate: number): string {
-  const numChannels = 1;
-  const bitsPerSample = 16;
+  const numChannels = 1, bitsPerSample = 16;
   const byteRate = sampleRate * numChannels * (bitsPerSample / 8);
   const blockAlign = numChannels * (bitsPerSample / 8);
   const dataSize = pcm.length * (bitsPerSample / 8);
@@ -68,9 +77,7 @@ export function audioBufferToWavBase64(pcm: Float32Array, sampleRate: number): s
   const view = new DataView(buffer);
 
   function writeString(offset: number, str: string) {
-    for (let i = 0; i < str.length; i++) {
-      view.setUint8(offset + i, str.charCodeAt(i));
-    }
+    for (let i = 0; i < str.length; i++) view.setUint8(offset + i, str.charCodeAt(i));
   }
 
   writeString(0, 'RIFF');
@@ -78,7 +85,7 @@ export function audioBufferToWavBase64(pcm: Float32Array, sampleRate: number): s
   writeString(8, 'WAVE');
   writeString(12, 'fmt ');
   view.setUint32(16, 16, true);
-  view.setUint16(20, 1, true); // PCM format
+  view.setUint16(20, 1, true);
   view.setUint16(22, numChannels, true);
   view.setUint32(24, sampleRate, true);
   view.setUint32(28, byteRate, true);
@@ -96,9 +103,8 @@ export function audioBufferToWavBase64(pcm: Float32Array, sampleRate: number): s
 
   const bytes = new Uint8Array(buffer);
   let binary = '';
-  const chunkSize = 8192;
-  for (let i = 0; i < bytes.length; i += chunkSize) {
-    binary += String.fromCharCode.apply(null, Array.from(bytes.subarray(i, i + chunkSize)));
+  for (let i = 0; i < bytes.length; i += 8192) {
+    binary += String.fromCharCode.apply(null, Array.from(bytes.subarray(i, i + 8192)));
   }
   return btoa(binary);
 }

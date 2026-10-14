@@ -1,9 +1,11 @@
-﻿import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { WaveformGridCanvas } from './WaveformGridCanvas';
 import { WaveformOverlayCanvas } from './WaveformOverlayCanvas';
+import { WaveformZoomBar } from './WaveformZoomBar';
 import { PreviewControls } from './PreviewControls';
 import { LatencyNudgeBar } from './LatencyNudgeBar';
 import { PreviewPlayer } from '../../audio/PreviewPlayer';
+import { useWaveformZoom } from '../../hooks/useWaveformZoom';
 import { computeAlignmentMeta } from '../../utils/alignmentMath';
 import { generateVocalPack } from '../../utils/packGenerator';
 import { getSavedLatencyOffsetMs } from '../../utils/latencyStorage';
@@ -23,14 +25,12 @@ interface WaveformTrimEditorProps {
   onPackReady: (pack: VocalPackExport) => void;
 }
 
-export const WaveformTrimEditor: React.FC<WaveformTrimEditorProps> = ({
-  rawPCM, sampleRate, bpm, timeSignature, measuresCount,
-  beatsPerMeasure, beatResolutions, referencePitch, outputDeviceId,
-  onReset, onPackReady,
-}) => {
+export const WaveformTrimEditor: React.FC<WaveformTrimEditorProps> = (props) => {
+  const { rawPCM, sampleRate, bpm, timeSignature, measuresCount, beatsPerMeasure, beatResolutions, referencePitch, outputDeviceId, onReset, onPackReady } = props;
   const containerRef = useRef<HTMLDivElement>(null);
   const [containerWidth, setContainerWidth] = useState<number>(600);
   const player = useMemo(() => new PreviewPlayer(), []);
+  const { zoomLevel, setZoom, zoomIn, zoomOut, scrollToSec, scrollContainerRef } = useWaveformZoom(1.0);
 
   const beatDuration = 60 / bpm;
   const anacrusisDurationSec = beatsPerMeasure * beatDuration;
@@ -47,9 +47,7 @@ export const WaveformTrimEditor: React.FC<WaveformTrimEditorProps> = ({
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
-    const obs = new ResizeObserver((entries) => {
-      for (const entry of entries) setContainerWidth(Math.max(200, Math.floor(entry.contentRect.width)));
-    });
+    const obs = new ResizeObserver(([entry]) => { if (entry) setContainerWidth(Math.max(200, Math.floor(entry.contentRect.width))); });
     obs.observe(el);
     return () => obs.disconnect();
   }, []);
@@ -68,9 +66,7 @@ export const WaveformTrimEditor: React.FC<WaveformTrimEditorProps> = ({
     return () => cancelAnimationFrame(animId);
   }, [isPlaying, player]);
 
-  const alignment = useMemo(() => {
-    return computeAlignmentMeta(anacrusisDurationSec, trimStartSec, trimEndSec, bpm);
-  }, [anacrusisDurationSec, trimStartSec, trimEndSec, bpm]);
+  const alignment = useMemo(() => computeAlignmentMeta(anacrusisDurationSec, trimStartSec, trimEndSec, bpm), [anacrusisDurationSec, trimStartSec, trimEndSec, bpm]);
 
   const handleTogglePlay = useCallback(async () => {
     if (isPlaying) { player.stop(); setIsPlaying(false); return; }
@@ -83,48 +79,50 @@ export const WaveformTrimEditor: React.FC<WaveformTrimEditorProps> = ({
   }, [player, isPlaying, rawPCM, sampleRate, trimStartSec, trimEndSec, latencyOffsetMs, bpm, beatsPerMeasure, totalDurationSec, clickEnabled, highPassEnabled, outputDeviceId]);
 
   const handleToggleClick = useCallback(() => {
-    setClickEnabled((prev) => {
-      const next = !prev;
-      player.setClickEnabled(next);
-      return next;
-    });
+    setClickEnabled((prev) => { const next = !prev; player.setClickEnabled(next); return next; });
   }, [player]);
 
   const handleProceed = useCallback(() => {
     player.stop();
     setIsPlaying(false);
-    const pack = generateVocalPack({
+    onPackReady(generateVocalPack({
       rawPCM, sampleRate, trimStartSec, trimEndSec, latencyOffsetMs, bpm, timeSignature,
       measuresCount, beatsPerMeasure, beatResolutions, referencePitch, alignment,
       highPassFilterEnabled: highPassEnabled, normalizeRMS: true,
-    });
-    onPackReady(pack);
+    }));
   }, [player, rawPCM, sampleRate, trimStartSec, trimEndSec, latencyOffsetMs, bpm, timeSignature, measuresCount, beatsPerMeasure, beatResolutions, referencePitch, alignment, highPassEnabled, onPackReady]);
 
+  const zoomedWidth = Math.max(containerWidth, Math.round(containerWidth * zoomLevel));
+
   return (
-    <div className="flex flex-col gap-2.5 w-full">
-      <div ref={containerRef} className="w-full h-36 relative cordel-card overflow-hidden select-none bg-black/40">
-        <WaveformGridCanvas
-          width={containerWidth} height={144} totalDurationSec={totalDurationSec}
-          anacrusisDurationSec={anacrusisDurationSec} measuresCount={measuresCount}
-          beatsPerMeasure={beatsPerMeasure} beatResolutions={beatResolutions}
-        />
-        <WaveformOverlayCanvas
-          rawPCM={rawPCM} sampleRate={sampleRate} width={containerWidth} height={144}
-          totalDurationSec={totalDurationSec} trimStartSec={trimStartSec} trimEndSec={trimEndSec}
-          latencyOffsetMs={latencyOffsetMs}
-          onTrimChange={(s, e) => { setTrimStartSec(s); setTrimEndSec(e); }}
-          onLatencyOffsetChange={setLatencyOffsetMs}
-          playheadSec={playheadSec} isPlaying={isPlaying}
-        />
+    <div className="flex flex-col gap-2 w-full">
+      <WaveformZoomBar
+        zoomLevel={zoomLevel} onSetZoom={setZoom} onZoomIn={zoomIn} onZoomOut={zoomOut}
+        onSeeStart={() => scrollToSec(trimStartSec, totalDurationSec, containerWidth)}
+        onSeeEnd={() => scrollToSec(trimEndSec, totalDurationSec, containerWidth)}
+      />
+      <div ref={containerRef} className="w-full cordel-card overflow-hidden select-none bg-black/40">
+        <div ref={scrollContainerRef} className="w-full h-36 overflow-x-auto overflow-y-hidden relative cordel-scrollbar">
+          <div style={{ width: `${zoomedWidth}px`, height: '144px', position: 'relative' }}>
+            <WaveformGridCanvas
+              width={zoomedWidth} height={144} totalDurationSec={totalDurationSec}
+              anacrusisDurationSec={anacrusisDurationSec} measuresCount={measuresCount}
+              beatsPerMeasure={beatsPerMeasure} beatResolutions={beatResolutions}
+            />
+            <WaveformOverlayCanvas
+              rawPCM={rawPCM} sampleRate={sampleRate} width={zoomedWidth} height={144}
+              totalDurationSec={totalDurationSec} trimStartSec={trimStartSec} trimEndSec={trimEndSec}
+              latencyOffsetMs={latencyOffsetMs} playheadSec={playheadSec} isPlaying={isPlaying}
+              onTrimChange={(s, e) => { setTrimStartSec(s); setTrimEndSec(e); }}
+              onLatencyOffsetChange={setLatencyOffsetMs}
+            />
+          </div>
+        </div>
       </div>
-
       <p className="text-[11px] font-mono text-theme-ink/80 text-center leading-snug px-1">
-        ✂️ Glissez les poignées Début (bleue) et Fin (rouge) pour couper les respirations : votre calage rythmique sur le Temps 1 reste 100 % verrouillé.
+        ✂️ Glissez les poignées Début (bleue) et Fin (rouge) pour couper les respirations : votre calage rythmique reste 100 % verrouillé.
       </p>
-
       <LatencyNudgeBar latencyOffsetMs={latencyOffsetMs} onChange={setLatencyOffsetMs} disabled={isPlaying} />
-
       <PreviewControls
         isPlaying={isPlaying} onTogglePlay={handleTogglePlay}
         clickEnabled={clickEnabled} onToggleClick={handleToggleClick}

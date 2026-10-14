@@ -1,8 +1,8 @@
-﻿/**
+/**
  * PreviewPlayer.ts
- * Lecteur de pre-ecoute synchrone avec clickGainNode temps reel et normalisation RMS.
+ * Lecteur de pre-ecoute synchrone sur le cycle complet (M-1 -> MN) avec masquage hors-trim.
  */
-import { extractCompensatedSlice } from '../utils/wavEncoder';
+import { createPaddedPreviewBuffer } from '../utils/wavEncoder';
 import { getSharedAudioContext, setSharedSinkId } from './sharedAudioContext';
 import { getSavedClickVolume } from '../utils/clickVolumeStorage';
 
@@ -26,7 +26,6 @@ export class PreviewPlayer {
   private clickGainNode: GainNode | null = null;
   private activeNodes: AudioNode[] = [];
   private isPlaying = false;
-  private playheadStartCycleTime = 0;
   private playbackContextStartTime = 0;
   private playDuration = 0;
   private stopTimerId: number | null = null;
@@ -36,11 +35,10 @@ export class PreviewPlayer {
     this.ctx = await getSharedAudioContext();
     if (options.outputDeviceId) await setSharedSinkId(options.outputDeviceId);
 
-    const { trimStartSec, trimEndSec, latencyOffsetMs, bpm, beatsPerMeasure, clickEnabled, highPassFilterEnabled, normalizeRMS, onEnded } = options;
-    const cleanPCM = extractCompensatedSlice(rawPCM, sampleRate, trimStartSec, trimEndSec, latencyOffsetMs, highPassFilterEnabled !== false, normalizeRMS !== false);
+    const { trimStartSec, trimEndSec, latencyOffsetMs, bpm, beatsPerMeasure, totalDurationSec, clickEnabled, highPassFilterEnabled, normalizeRMS, onEnded } = options;
+    const cleanPCM = createPaddedPreviewBuffer(rawPCM, sampleRate, totalDurationSec, trimStartSec, trimEndSec, latencyOffsetMs, highPassFilterEnabled !== false, normalizeRMS !== false);
 
-    this.playDuration = Math.max(0.05, trimEndSec - trimStartSec);
-    this.playheadStartCycleTime = trimStartSec;
+    this.playDuration = totalDurationSec;
 
     const audioBuffer = this.ctx.createBuffer(1, cleanPCM.length, sampleRate);
     audioBuffer.getChannelData(0).set(cleanPCM);
@@ -61,7 +59,6 @@ export class PreviewPlayer {
     }
     this.activeNodes.push(this.sourceNode);
 
-    // Routage du clic tmoin via un gain commutable en direct
     this.clickGainNode = this.ctx.createGain();
     this.clickGainNode.gain.setValueAtTime(clickEnabled ? 1 : 0, this.ctx.currentTime);
     this.clickGainNode.connect(this.ctx.destination);
@@ -73,11 +70,11 @@ export class PreviewPlayer {
     this.sourceNode.start(now);
 
     const beatDuration = 60 / bpm;
-    const totalBeats = Math.ceil(options.totalDurationSec / beatDuration);
+    const totalBeats = Math.ceil(totalDurationSec / beatDuration);
     for (let b = 0; b < totalBeats; b++) {
       const beatGridTime = b * beatDuration;
-      if (beatGridTime >= trimStartSec - 0.001 && beatGridTime <= trimEndSec + 0.001) {
-        this.scheduleClick(this.ctx, now + (beatGridTime - trimStartSec), b % beatsPerMeasure === 0);
+      if (beatGridTime < totalDurationSec - 0.01) {
+        this.scheduleClick(this.ctx, now + beatGridTime, b % beatsPerMeasure === 0);
       }
     }
 
@@ -110,9 +107,9 @@ export class PreviewPlayer {
   }
 
   public getCurrentPlayheadSec(): number {
-    if (!this.isPlaying || !this.ctx) return this.playheadStartCycleTime;
+    if (!this.isPlaying || !this.ctx) return 0;
     const elapsed = this.ctx.currentTime - this.playbackContextStartTime;
-    return elapsed < 0 ? this.playheadStartCycleTime : Math.min(this.playheadStartCycleTime + this.playDuration, this.playheadStartCycleTime + elapsed);
+    return elapsed < 0 ? 0 : Math.min(this.playDuration, elapsed);
   }
 
   public getIsPlaying(): boolean { return this.isPlaying; }
