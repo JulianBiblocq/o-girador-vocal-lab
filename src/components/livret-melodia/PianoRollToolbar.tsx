@@ -1,9 +1,6 @@
 /**
  * PianoRollToolbar.tsx
- * Barre d'outils du Piano Roll unifiée sur 1 seule ligne :
- * Gauche : Outils + [ ↶ | ↷ ] jumelés
- * Centre : Gamme / Tonique + Lissage
- * Droite : Zoom horizontal 1x..8x
+ * Barre d'outils du Piano Roll unifiée sur 1 seule ligne avec support bilingue FR/PT.
  */
 import React from 'react';
 import type { PianoRollTool } from './pianoRollInteractions';
@@ -30,9 +27,20 @@ interface PianoRollToolbarProps {
   onRedo?: () => void;
 }
 
+const SCALE_LABELS_PT: Record<ScaleType, string> = {
+  chromatic: 'Cromática (Livre)',
+  major: 'Maior',
+  natural_minor: 'Menor Natural',
+  mixolydian: 'Mixolídio / Nordeste (7ª menor)',
+  dorian: 'Dórico',
+  pentatonic_minor: 'Pentatônica Menor',
+  pentatonic_major: 'Pentatônica Maior',
+};
+
 export const PianoRollToolbar: React.FC<PianoRollToolbarProps> = (props) => {
   const { activeTool, onSelectTool, zoomLevel, onSetZoom, tonic, onSetTonic, scaleType, onSetScaleType, smoothingLevel, onSetSmoothingLevel, canUndo, canRedo, historyCount, onUndo, onRedo } = props;
-  const { t } = useLanguage();
+  const { t, locale } = useLanguage();
+  const isPt = locale === 'pt';
 
   const tools: { id: PianoRollTool; label: string; icon: React.FC<{ className?: string }> }[] = [
     { id: 'pointer', label: t('toolPointer'), icon: MousePointer },
@@ -64,7 +72,6 @@ export const PianoRollToolbar: React.FC<PianoRollToolbarProps> = (props) => {
           })}
         </div>
 
-        {/* Bloc jumelé collé Undo / Redo */}
         <div className="flex items-center border border-theme-border/60">
           <button
             type="button" onClick={onUndo} disabled={!canUndo} title={t('undo')}
@@ -94,15 +101,19 @@ export const PianoRollToolbar: React.FC<PianoRollToolbarProps> = (props) => {
             {NOTE_NAMES.map((n) => <option key={n} value={n} className="bg-theme-bg text-theme-ink">{n}</option>)}
           </select>
           <select value={scaleType} onChange={(e) => onSetScaleType(e.target.value as ScaleType)} className="px-1.5 py-0.5 bg-black/40 border border-theme-border/50 text-theme-accent font-bold outline-none rounded-none cursor-pointer">
-            {Object.entries(SCALE_DEFINITIONS).map(([key, def]) => <option key={key} value={key} className="bg-theme-bg text-theme-ink">{def.label}</option>)}
+            {Object.entries(SCALE_DEFINITIONS).map(([key, def]) => (
+              <option key={key} value={key} className="bg-theme-bg text-theme-ink">
+                {isPt ? SCALE_LABELS_PT[key as ScaleType] ?? def.label : def.label}
+              </option>
+            ))}
           </select>
         </div>
 
         <div className="flex items-center gap-1.5">
           <span className="text-theme-ink/75 font-bold">{t('smoothingLabel')} :</span>
-          <span className="text-[10px] text-theme-ink/50">Fin</span>
+          <span className="text-[10px] text-theme-ink/50">{t('smoothingFine')}</span>
           <input type="range" min={0} max={1} step={0.1} value={smoothingLevel} onChange={(e) => onSetSmoothingLevel(parseFloat(e.target.value))} className="w-16 accent-[var(--cordel-wood)] cursor-pointer" />
-          <span className="text-[10px] text-theme-ink/50">Large</span>
+          <span className="text-[10px] text-theme-ink/50">{t('smoothingWide')}</span>
         </div>
       </div>
 

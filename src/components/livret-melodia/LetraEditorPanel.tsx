@@ -1,7 +1,6 @@
 /**
  * LetraEditorPanel.tsx
- * Éditeur « Letra da Toada » avec alignement automatique, ruban de pastilles,
- * bouton de bascule [ ␣ Espace ] / [ - Lié ], mémo mélismes/élisions et aperçu.
+ * Éditeur « Letra da Toada » avec alignement automatique, ruban de pastilles bilingue FR/PT.
  * Style 100% Cordel : coins carrés (rounded-none), icônes vectorielles SVG.
  */
 import React, { useState, useMemo } from 'react';
@@ -17,7 +16,8 @@ interface LetraEditorPanelProps {
 }
 
 export const LetraEditorPanel: React.FC<LetraEditorPanelProps> = ({ allSteps, onUpdateSteps }) => {
-  const { t } = useLanguage();
+  const { t, locale } = useLanguage();
+  const isPt = locale === 'pt';
   const [rawText, setRawText] = useState<string>('Eu vou vadiar');
 
   const handleAlign = () => {
@@ -88,7 +88,9 @@ export const LetraEditorPanel: React.FC<LetraEditorPanelProps> = ({ allSteps, on
       {/* Ruban des pastilles syllabiques (coins carrés) */}
       <div className="flex items-center gap-1.5 overflow-x-auto py-1 cordel-scrollbar">
         {activeSteps.length === 0 ? (
-          <span className="text-[11px] font-mono text-theme-ink/50 italic">Aucune note active détectée.</span>
+          <span className="text-[11px] font-mono text-theme-ink/50 italic">
+            {isPt ? 'Nenhuma nota ativa detectada.' : 'Aucune note active détectée.'}
+          </span>
         ) : (
           activeSteps.map((st) => {
             const hasSpace = (st.syllable ?? '').endsWith(' ');
@@ -107,9 +109,9 @@ export const LetraEditorPanel: React.FC<LetraEditorPanelProps> = ({ allSteps, on
                   className={`mt-1 px-1 py-0.5 text-[8.5px] font-mono w-full transition-all rounded-none cursor-pointer ${
                     hasSpace ? 'bg-theme-wood text-theme-ink border border-theme-border font-bold' : 'bg-white/5 text-theme-ink/60 hover:bg-white/10'
                   }`}
-                  title={hasSpace ? 'Mot terminé (espace)' : 'Syllabe liée au mot suivant'}
+                  title={hasSpace ? (isPt ? 'Palavra terminada (espaço)' : 'Mot terminé (espace)') : (isPt ? 'Sílaba ligada à próxima' : 'Syllabe liée au mot suivant')}
                 >
-                  {hasSpace ? '␣ Espace' : '- Lié'}
+                  {hasSpace ? (isPt ? '␣ Espaço' : '␣ Espace') : (isPt ? '- Ligado' : '- Lié')}
                 </button>
                 <div className="flex items-center justify-between w-full mt-1 px-0.5">
                   <button type="button" onClick={() => handleShiftSyllable(st.stepIndex, -1)} className="p-0.5 hover:bg-white/10 rounded-none cursor-pointer">
@@ -126,9 +128,9 @@ export const LetraEditorPanel: React.FC<LetraEditorPanelProps> = ({ allSteps, on
       </div>
 
       <div className="flex items-center gap-2 pt-1 border-t border-theme-border/30 text-[11px] font-mono">
-        <span className="text-theme-ink/70">Mots :</span>
+        <span className="text-theme-ink/70">{isPt ? 'Palavras :' : 'Mots :'}</span>
         <span className="text-theme-accent font-bold italic bg-black/30 px-2 py-0.5 border border-theme-border/30 rounded-none">
-          {reconstructedWords ? `« ${reconstructedWords} »` : '(vide)'}
+          {reconstructedWords ? `« ${reconstructedWords} »` : (isPt ? '(vazio)' : '(vide)')}
         </span>
       </div>
     </div>

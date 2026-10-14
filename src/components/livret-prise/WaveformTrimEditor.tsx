@@ -9,6 +9,7 @@ import { useWaveformZoom } from '../../hooks/useWaveformZoom';
 import { computeAlignmentMeta } from '../../utils/alignmentMath';
 import { generateVocalPack } from '../../utils/packGenerator';
 import { getSavedLatencyOffsetMs } from '../../utils/latencyStorage';
+import { useLanguage } from '../../i18n/LanguageContext';
 import type { TimeSignatureString, VocalPackExport } from '../../types/vocalPack.types';
 
 interface WaveformTrimEditorProps {
@@ -27,6 +28,7 @@ interface WaveformTrimEditorProps {
 
 export const WaveformTrimEditor: React.FC<WaveformTrimEditorProps> = (props) => {
   const { rawPCM, sampleRate, bpm, timeSignature, measuresCount, beatsPerMeasure, beatResolutions, referencePitch, outputDeviceId, onReset, onPackReady } = props;
+  const { t } = useLanguage();
   const containerRef = useRef<HTMLDivElement>(null);
   const [containerWidth, setContainerWidth] = useState<number>(600);
   const player = useMemo(() => new PreviewPlayer(), []);
@@ -120,7 +122,7 @@ export const WaveformTrimEditor: React.FC<WaveformTrimEditorProps> = (props) => 
         </div>
       </div>
       <p className="text-[11px] font-mono text-theme-ink/80 text-center leading-snug px-1">
-        ✂️ Glissez les poignées Début (bleue) et Fin (rouge) pour couper les respirations : votre calage rythmique reste 100 % verrouillé.
+        {t('trimHelpNotice')}
       </p>
       <LatencyNudgeBar latencyOffsetMs={latencyOffsetMs} onChange={setLatencyOffsetMs} disabled={isPlaying} />
       <PreviewControls

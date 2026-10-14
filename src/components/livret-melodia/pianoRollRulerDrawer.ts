@@ -1,6 +1,6 @@
 /**
  * pianoRollRulerDrawer.ts
- * Rendu Canvas 2D de la règle temporelle supérieure (42 px : Mesures / Temps + indicateurs).
+ * Rendu Canvas 2D de la règle temporelle supérieure (42 px : Mesures / Temps + indicateurs) bilingue.
  */
 export const RULER_HEIGHT = 42;
 
@@ -46,7 +46,7 @@ export function drawRulerBar(ctx: CanvasRenderingContext2D, opts: DrawRulerOptio
 
       ctx.font = isT1 ? 'bold 10px monospace' : 'bold 9.5px monospace';
       ctx.fillStyle = isT1 ? '#d4af37' : m === 0 ? '#fbbf24' : 'rgba(245, 240, 230, 0.85)';
-      const elanLabel = isPt ? 'IMPULSO (M-1)' : 'ÉLAN (M-1)';
+      const elanLabel = isPt ? 'ANACRUSE (C-1)' : 'ÉLAN (M-1)';
       const m1Label = isPt ? '★ C1' : '★ M1';
       const mLabel = isPt ? `C${m}` : `M${m}`;
       ctx.fillText(m === 0 ? elanLabel : isT1 ? m1Label : mLabel, x + 6, 14.5);

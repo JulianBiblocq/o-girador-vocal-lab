@@ -1,9 +1,10 @@
 /**
  * DeviceSelector.tsx
- * Sélecteur d'entrées et de sorties audio (Carte Son / Micro / Casque) avec flex-1.
+ * Sélecteur d'entrées et de sorties audio (Carte Son / Micro / Casque) bilingue FR/PT.
  */
 import React, { useState, useEffect, useCallback } from 'react';
 import { Mic, Headphones, RefreshCw, CheckCircle2 } from 'lucide-react';
+import { useLanguage } from '../../i18n/LanguageContext';
 
 interface DeviceSelectorProps {
   selectedDeviceId: string;
@@ -17,6 +18,8 @@ export const DeviceSelector: React.FC<DeviceSelectorProps> = ({
   selectedDeviceId, onDeviceChange, selectedOutputDeviceId,
   onOutputDeviceChange, disabled = false,
 }) => {
+  const { t, locale } = useLanguage();
+  const isPt = locale === 'pt';
   const [inputDevices, setInputDevices] = useState<MediaDeviceInfo[]>([]);
   const [outputDevices, setOutputDevices] = useState<MediaDeviceInfo[]>([]);
   const [hasPermission, setHasPermission] = useState(false);
@@ -25,7 +28,6 @@ export const DeviceSelector: React.FC<DeviceSelectorProps> = ({
   const requestPermissionAndEnumerate = useCallback(async () => {
     if (!navigator.mediaDevices?.enumerateDevices) return;
     setIsLoading(true);
-
     try {
       const tempStream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const allDevices = await navigator.mediaDevices.enumerateDevices();
@@ -35,7 +37,6 @@ export const DeviceSelector: React.FC<DeviceSelectorProps> = ({
       const outputs = allDevices.filter((d) => d.kind === 'audiooutput');
       setInputDevices(inputs);
       setOutputDevices(outputs);
-
       setHasPermission(inputs.some((d) => d.label && d.label.trim().length > 0));
 
       if (inputs.length > 0 && (!selectedDeviceId || !inputs.some((d) => d.deviceId === selectedDeviceId))) {
@@ -75,11 +76,11 @@ export const DeviceSelector: React.FC<DeviceSelectorProps> = ({
     <div className="cordel-card p-3 flex-1 flex flex-col justify-between gap-2.5">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-theme-ink">
-          <span>Carte Son & Périphériques</span>
+          <span>{t('soundCardDevices')}</span>
           {hasPermission && (
             <span className="text-[10px] text-emerald-400 font-mono tracking-normal flex items-center gap-1">
               <CheckCircle2 className="w-3 h-3" />
-              <span>Connecté</span>
+              <span>{t('connected')}</span>
             </span>
           )}
         </div>
@@ -88,10 +89,9 @@ export const DeviceSelector: React.FC<DeviceSelectorProps> = ({
           onClick={requestPermissionAndEnumerate}
           disabled={disabled || isLoading}
           className="cordel-btn px-2 py-0.5 flex items-center gap-1.5 text-xs cursor-pointer"
-          title="Détecter les entrées et sorties de la carte son externe"
         >
           <RefreshCw className={`w-3 h-3 ${isLoading ? 'animate-spin' : ''}`} />
-          <span>{hasPermission ? 'Actualiser' : 'Autoriser Audio'}</span>
+          <span>{hasPermission ? t('refresh') : t('authorizeAudio')}</span>
         </button>
       </div>
 
@@ -99,7 +99,7 @@ export const DeviceSelector: React.FC<DeviceSelectorProps> = ({
       <div className="flex flex-col gap-1">
         <label className="text-[11px] font-mono text-theme-ink/80 flex items-center gap-1">
           <Mic className="w-3 h-3 text-theme-accent" />
-          <span>Entrée Micro (Pure Direct)</span>
+          <span>{t('micInputPureDirect')}</span>
         </label>
         <select
           value={selectedDeviceId}
@@ -110,10 +110,10 @@ export const DeviceSelector: React.FC<DeviceSelectorProps> = ({
         >
           {inputDevices.map((dev, idx) => (
             <option key={dev.deviceId || idx} value={dev.deviceId} className="bg-theme-bg text-theme-ink">
-              {dev.label || `Microphone ${idx + 1}`}
+              {dev.label || `${isPt ? 'Microfone' : 'Microphone'} ${idx + 1}`}
             </option>
           ))}
-          {inputDevices.length === 0 && <option value="">Cliquez sur « Autoriser Audio »</option>}
+          {inputDevices.length === 0 && <option value="">{t('clickAuthorizeAudio')}</option>}
         </select>
       </div>
 
@@ -122,7 +122,7 @@ export const DeviceSelector: React.FC<DeviceSelectorProps> = ({
         <div className="flex flex-col gap-1 pt-1 border-t border-theme-border/20">
           <label className="text-[11px] font-mono text-theme-ink/80 flex items-center gap-1">
             <Headphones className="w-3 h-3 text-theme-accent" />
-            <span>Sortie Casque / Écoute (Routing direct)</span>
+            <span>{t('headphonesOutputDirect')}</span>
           </label>
           <select
             value={selectedOutputDeviceId}
@@ -132,7 +132,7 @@ export const DeviceSelector: React.FC<DeviceSelectorProps> = ({
           >
             {outputDevices.map((dev, idx) => (
               <option key={dev.deviceId || idx} value={dev.deviceId} className="bg-theme-bg text-theme-ink">
-                {dev.label || `Sortie audio ${idx + 1}`}
+                {dev.label || `${isPt ? 'Saída de áudio' : 'Sortie audio'} ${idx + 1}`}
               </option>
             ))}
           </select>

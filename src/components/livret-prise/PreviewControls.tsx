@@ -1,6 +1,7 @@
-﻿import React from 'react';
+import React from 'react';
 import { Play, Square, Volume2, VolumeX, RotateCcw, ArrowRight, Filter, Zap } from 'lucide-react';
 import type { AlignmentResult } from '../../utils/alignmentMath';
+import { useLanguage } from '../../i18n/LanguageContext';
 
 interface PreviewControlsProps {
   isPlaying: boolean;
@@ -20,23 +21,26 @@ export const PreviewControls: React.FC<PreviewControlsProps> = ({
   highPassEnabled, onToggleHighPass, onReset, onProceedToExtraction,
   alignment, disabled = false,
 }) => {
+  const { t, locale } = useLanguage();
+  const isPt = locale === 'pt';
+
   return (
     <div className="cordel-card p-3 flex flex-col gap-2.5">
-      {/* 1. Métadonnées d alignement et d anacrouse */}
+      {/* 1. Métadonnées d'alignement et d'anacrouse */}
       <div className="flex items-center justify-between text-xs font-mono bg-black/30 p-2 border border-theme-border/30">
         <div className="flex items-center gap-1.5">
-          <span className="opacity-70">Décalage T1 :</span>
+          <span className="opacity-70">{t('offsetMeasure1')}</span>
           <span className={`font-bold ${alignment.startOffsetSec < 0 ? 'text-theme-accent' : 'text-emerald-400'}`}>
             {alignment.startOffsetSec >= 0 ? '+' : ''}{alignment.startOffsetSec.toFixed(3)}s
           </span>
           {alignment.anacrusis.hasAnacrusis && (
             <span className="text-[10px] text-theme-accent border border-theme-accent/50 px-1 py-0.5">
-              Anacrouse ({alignment.anacrusis.beats.toFixed(1)} tps)
+              {t('anacrusisLabel')} ({alignment.anacrusis.beats.toFixed(1)} {isPt ? 'pulsos' : 'tps'})
             </span>
           )}
         </div>
         <div className="flex items-center gap-1.5">
-          <span className="opacity-70">Durée utile :</span>
+          <span className="opacity-70">{t('cleanDurationLabel')}</span>
           <span className="font-bold text-theme-ink">{alignment.cleanDurationSec.toFixed(2)}s</span>
         </div>
       </div>
@@ -50,16 +54,16 @@ export const PreviewControls: React.FC<PreviewControlsProps> = ({
           />
           <span className="flex items-center gap-1.5">
             <Filter className="w-3.5 h-3.5 text-theme-accent" />
-            <span>Coupe-bas (90 Hz)</span>
+            <span>{t('lowCutStudio')}</span>
           </span>
         </label>
         <span className="text-[10px] text-emerald-400 font-mono flex items-center gap-1">
           <Zap className="w-3 h-3 text-amber-400" />
-          <span>Volume normalise (-16 LUFS)</span>
+          <span>{t('normalizedVolume')}</span>
         </span>
       </div>
 
-      {/* 3. Barre d actions de pré-écoute & Clic */}
+      {/* 3. Barre d'actions de pré-écoute & Clic */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1 border-t border-theme-border/20">
         <button
           type="button" disabled={disabled} onClick={onTogglePlay}
@@ -70,12 +74,12 @@ export const PreviewControls: React.FC<PreviewControlsProps> = ({
           {isPlaying ? (
             <>
               <Square className="w-4 h-4 fill-current" />
-              <span>Stop</span>
+              <span>{t('stopTake')}</span>
             </>
           ) : (
             <>
               <Play className="w-4 h-4 fill-current" />
-              <span>Reecouter</span>
+              <span>{t('listenTakeAgain')}</span>
             </>
           )}
         </button>
@@ -85,10 +89,10 @@ export const PreviewControls: React.FC<PreviewControlsProps> = ({
           className={`py-2 px-3 flex items-center justify-center gap-1.5 text-xs font-bold transition-all cursor-pointer ${
             clickEnabled ? 'cordel-btn-primary' : 'cordel-btn opacity-70'
           }`}
-          title="Activer/Desactiver le clic temoin en direct"
+          title={isPt ? 'Ativar/Desativar clique guia' : 'Activer/Désactiver le clic témoin'}
         >
           {clickEnabled ? <Volume2 className="w-4 h-4 text-theme-accent" /> : <VolumeX className="w-4 h-4" />}
-          <span>Clic Temoin</span>
+          <span>{t('clickWitness')}</span>
         </button>
 
         <button
@@ -96,14 +100,14 @@ export const PreviewControls: React.FC<PreviewControlsProps> = ({
           className="cordel-btn py-2 px-3 flex items-center justify-center gap-1.5 text-xs font-bold cursor-pointer opacity-80 hover:opacity-100"
         >
           <RotateCcw className="w-3.5 h-3.5" />
-          <span>Refaire</span>
+          <span>{t('rerecordTake')}</span>
         </button>
 
         <button
           type="button" disabled={disabled || isPlaying} onClick={onProceedToExtraction}
           className="cordel-btn-primary py-2 px-3 flex items-center justify-center gap-1.5 text-xs font-bold cursor-pointer bg-emerald-800 hover:bg-emerald-700"
         >
-          <span>Extraire</span>
+          <span>{t('extractMelodyAndLyrics')}</span>
           <ArrowRight className="w-4 h-4" />
         </button>
       </div>

@@ -1,4 +1,5 @@
-﻿import React from 'react';
+import React from 'react';
+import { useLanguage } from '../../i18n/LanguageContext';
 
 interface BeatImpactBarProps {
   beatsPerMeasure: number;
@@ -13,6 +14,8 @@ export const BeatImpactBar: React.FC<BeatImpactBarProps> = ({
   padRefs,
   recBadgeRef,
 }) => {
+  const { t } = useLanguage();
+
   return (
     <div className="w-full flex flex-col gap-1.5 pt-0.5 select-none">
       {/* 1. Statut REC & Tête de mesure */}
@@ -23,7 +26,7 @@ export const BeatImpactBar: React.FC<BeatImpactBarProps> = ({
           className="text-[10px] font-bold font-mono tracking-wider"
         />
         <span className="text-[10px] font-mono opacity-60">
-          Impact synchrone
+          {t('synchronousImpact')}
         </span>
       </div>
 

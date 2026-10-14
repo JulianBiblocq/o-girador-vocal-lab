@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import type { MetronomeEngine } from '../audio/MetronomeEngine';
 import { BeatImpactBar } from './pendulum/BeatImpactBar';
 import { applyPhaseStyles } from './pendulum/pendulumStyleHelper';
+import { useLanguage } from '../i18n/LanguageContext';
 
 interface PendulumVisualizerProps {
   engine: MetronomeEngine;
@@ -13,6 +14,11 @@ interface PendulumVisualizerProps {
 export const PendulumVisualizer: React.FC<PendulumVisualizerProps> = ({
   engine, isActive, measuresCount, beatsPerMeasure = 4,
 }) => {
+  const { locale } = useLanguage();
+  const isPt = locale === 'pt';
+  const isPtRef = useRef(isPt);
+  useEffect(() => { isPtRef.current = isPt; }, [isPt]);
+
   const cardRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const shuttleRef = useRef<HTMLDivElement>(null);
@@ -34,15 +40,19 @@ export const PendulumVisualizer: React.FC<PendulumVisualizerProps> = ({
     return () => obs.disconnect();
   }, []);
 
+  const resetIdle = (label: HTMLSpanElement | null, badge: HTMLSpanElement | null) => {
+    if (label) label.textContent = isPtRef.current ? 'AGUARDANDO CICLO DE GRAVAÇÃO' : 'EN ATTENTE DU CYCLE DE PRISE';
+    if (badge) {
+      badge.textContent = isPtRef.current ? '● EM ESPERA' : '● VEILLE';
+      badge.style.color = 'var(--cordel-secondary-text, #57534e)';
+    }
+  };
+
   useEffect(() => {
     if (leftBumperRef.current) leftBumperRef.current.textContent = beatsPerMeasure === 4 ? '◄ T1/T3' : '◄ T1';
     if (rightBumperRef.current) rightBumperRef.current.textContent = beatsPerMeasure === 4 ? 'T2/T4 ►' : 'T2 ►';
-    if (phaseLabelRef.current && !isActive) phaseLabelRef.current.textContent = 'EN ATTENTE DU CYCLE DE PRISE';
-    if (recBadgeRef.current && !isActive) {
-      recBadgeRef.current.textContent = '● VEILLE';
-      recBadgeRef.current.style.color = 'var(--cordel-secondary-text, #57534e)';
-    }
-  }, [beatsPerMeasure, isActive]);
+    if (!isActive) resetIdle(phaseLabelRef.current, recBadgeRef.current);
+  }, [beatsPerMeasure, isActive, isPt]);
 
   useEffect(() => {
     let animId: number;
@@ -57,20 +67,13 @@ export const PendulumVisualizer: React.FC<PendulumVisualizerProps> = ({
       const recBadge = recBadgeRef.current;
       const card = cardRef.current;
 
-      if (!shuttle || !phaseLabel) {
-        animId = requestAnimationFrame(updateFrame);
-        return;
-      }
+      if (!shuttle || !phaseLabel) { animId = requestAnimationFrame(updateFrame); return; }
 
       const status = engine.getCycleStatus();
 
       if (!isActive || status.phase === 'idle') {
         shuttle.style.transform = 'translate3d(0px, 0, 0)';
-        phaseLabel.textContent = 'EN ATTENTE DU CYCLE DE PRISE';
-        if (recBadge) {
-          recBadge.textContent = '● VEILLE';
-          recBadge.style.color = 'var(--cordel-secondary-text, #57534e)';
-        }
+        resetIdle(phaseLabel, recBadge);
         if (card) { card.style.borderColor = ''; card.style.backgroundColor = ''; card.style.boxShadow = ''; }
         if (progressBar) progressBar.style.transform = 'scaleX(0)';
         if (leftBumper) { leftBumper.style.opacity = '0.4'; leftBumper.style.transform = 'scale(1)'; }
@@ -80,21 +83,17 @@ export const PendulumVisualizer: React.FC<PendulumVisualizerProps> = ({
         return;
       }
 
-      // 1. Barre verte bidirectionnelle
       if (progressBar) {
         progressBar.style.transformOrigin = (status.currentBeat % 2 === 0) ? 'left center' : 'right center';
         progressBar.style.transform = `scaleX(${status.beatProgress.toFixed(3)})`;
       }
 
-      // 2. Trajectoire du balancier
       const h = 0.5 * (1 - Math.cos(Math.PI * status.beatProgress));
       const currentX = (status.currentBeat % 2 === 0) ? h * railWidthRef.current : (1 - h) * railWidthRef.current;
       shuttle.style.transform = `translate3d(${currentX.toFixed(2)}px, 0, 0)`;
 
-      // 3. Bascule visuelle rouge dès M-1 et pendant le Chant
-      applyPhaseStyles(card, recBadge, phaseLabel, status, measuresCount);
+      applyPhaseStyles(card, recBadge, phaseLabel, status, measuresCount, isPtRef.current);
 
-      // 4. Flash d'impact des temps
       const isImpact = status.beatProgress < 0.18;
       const isRec = status.phase === 'anacrusis' || status.phase === 'singing';
       padRefs.current.forEach((pad, idx) => {

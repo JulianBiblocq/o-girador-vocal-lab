@@ -1,11 +1,6 @@
-/**
- * MetricConfigPanel.tsx
- * Panneau de configuration métrique (Signature, BPM, Mesures, Subdivisions) bilingue.
- */
 import React from 'react';
-import { Gauge, Music2, Grid, Clock } from 'lucide-react';
+import { Sliders, Clock, Music2, Grid } from 'lucide-react';
 import type { TimeSignatureString } from '../../types/vocalPack.types';
-import { getDefaultBeatResolutions } from '../../utils/alignmentMath';
 import { useLanguage } from '../../i18n/LanguageContext';
 
 interface MetricConfigPanelProps {
@@ -20,44 +15,42 @@ interface MetricConfigPanelProps {
   disabled?: boolean;
 }
 
-const SUPPORTED_SIGNATURES: TimeSignatureString[] = ['4/4', '2/4', '3/4', '6/8', '12/8'];
-
 export const MetricConfigPanel: React.FC<MetricConfigPanelProps> = ({
   timeSignature, onTimeSignatureChange, bpm, onBpmChange,
   measuresCount, onMeasuresCountChange, beatResolutions,
   onBeatResolutionsChange, disabled = false,
 }) => {
-  const { t } = useLanguage();
+  const { t, locale } = useLanguage();
+  const isPt = locale === 'pt';
+  const unit = isPt ? 'C' : 'M';
 
-  const handleSignatureSelect = (sig: TimeSignatureString) => {
-    if (disabled) return;
-    onTimeSignatureChange(sig);
-    onBeatResolutionsChange(getDefaultBeatResolutions(sig));
-  };
-
-  const toggleBeatResolution = (beatIndex: number) => {
-    if (disabled) return;
+  const toggleBeatResolution = (idx: number) => {
     const next = [...beatResolutions];
-    next[beatIndex] = next[beatIndex] === 4 ? 3 : 4;
+    next[idx] = next[idx] === 4 ? 3 : 4;
     onBeatResolutionsChange(next);
   };
 
   return (
-    <div className="cordel-card p-3 h-full flex flex-col justify-between gap-3">
+    <div className="cordel-card p-3 h-full flex flex-col justify-between gap-2.5">
       {/* 1. Signature Rythmique */}
       <div className="flex flex-col gap-1.5">
         <div className="flex items-center justify-between text-xs font-bold uppercase text-theme-ink">
           <span className="flex items-center gap-1.5">
-            <Clock className="w-3.5 h-3.5 text-theme-accent" />
+            <Sliders className="w-3.5 h-3.5 text-theme-accent" />
             {t('timeSignature')}
           </span>
-          <span className="font-mono text-theme-accent font-bold">{timeSignature}</span>
+          <span className="font-mono text-theme-accent text-xs">{timeSignature}</span>
         </div>
-        <div className="grid grid-cols-5 gap-1">
-          {SUPPORTED_SIGNATURES.map((sig) => (
+        <div className="grid grid-cols-4 gap-1">
+          {(['2/4', '3/4', '4/4', '6/8'] as TimeSignatureString[]).map((sig) => (
             <button
-              key={sig} type="button" disabled={disabled} onClick={() => handleSignatureSelect(sig)}
-              className={`py-1 text-xs font-mono font-bold transition-all cursor-pointer ${timeSignature === sig ? 'cordel-btn-primary' : 'cordel-btn'}`}
+              key={sig}
+              type="button"
+              disabled={disabled}
+              onClick={() => onTimeSignatureChange(sig)}
+              className={`py-1 text-xs font-mono font-bold transition-all cursor-pointer ${
+                timeSignature === sig ? 'cordel-btn-primary' : 'cordel-btn'
+              }`}
             >
               {sig}
             </button>
@@ -65,17 +58,17 @@ export const MetricConfigPanel: React.FC<MetricConfigPanelProps> = ({
         </div>
       </div>
 
-      {/* 2. Tempo & Mesures Chant */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1 border-t border-theme-border/20">
-        <div className="flex flex-col gap-1.5">
-          <div className="flex items-center justify-between">
-            <span className="flex items-center gap-1.5 text-xs font-bold uppercase text-theme-ink">
-              <Gauge className="w-3.5 h-3.5 text-theme-accent" />
-              {t('tempoBpm')}
+      {/* 2. Tempo & Mesures de chant */}
+      <div className="grid grid-cols-2 gap-3 pt-1 border-t border-theme-border/20">
+        <div className="flex flex-col gap-1">
+          <div className="flex items-center justify-between text-xs font-bold uppercase text-theme-ink">
+            <span className="flex items-center gap-1.5">
+              <Clock className="w-3.5 h-3.5 text-theme-accent" />
+              BPM
             </span>
             <input
               type="number" min={30} max={240} value={bpm} disabled={disabled}
-              onChange={(e) => onBpmChange(Math.max(30, Math.min(240, Number(e.target.value) || 100)))}
+              onChange={(e) => onBpmChange(Math.max(30, Math.min(240, Number(e.target.value))))}
               className="w-14 bg-black/30 border border-theme-border text-center font-mono font-bold text-xs p-1 focus:outline-none focus:border-theme-accent"
             />
           </div>
@@ -97,7 +90,7 @@ export const MetricConfigPanel: React.FC<MetricConfigPanelProps> = ({
                 key={count} type="button" disabled={disabled} onClick={() => onMeasuresCountChange(count)}
                 className={`py-1 text-xs font-bold transition-all cursor-pointer ${measuresCount === count ? 'cordel-btn-primary' : 'cordel-btn'}`}
               >
-                {count} M
+                {count} {unit}
               </button>
             ))}
           </div>
