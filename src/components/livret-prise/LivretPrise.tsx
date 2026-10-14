@@ -1,6 +1,6 @@
 /**
  * LivretPrise.tsx
- * Livret 1 : Prise vocale cale, matrice de declinaisons & asservissement dynamique.
+ * Livret 1 : Prise vocale calée, matrice de déclinaisons & asservissement dynamique.
  */
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import type { TimeSignatureString, VocalPackExport, PitchCurvePoint, VocalStepData } from '../../types/vocalPack.types';
@@ -14,10 +14,11 @@ import { PendulumVisualizer } from '../PendulumVisualizer';
 import { WaveformTrimEditor } from './WaveformTrimEditor';
 import { RecordActionButton } from './RecordActionButton';
 import { CuePatternSelector } from './CuePatternSelector';
-import { LivretTabsBar } from './LivretTabsBar';
+import { LivretTabsBar, type LivretTabType } from './LivretTabsBar';
 import { PriseConfigGrid } from './PriseConfigGrid';
 import { PatternVariantSelector } from './PatternVariantSelector';
 import { LivretMelodia } from '../livret-melodia/LivretMelodia';
+import { LivretTreino } from '../livret-treino/LivretTreino';
 import { useToadaProject } from '../../context/ToadaProjectContext';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { getBeatsPerMeasure, transposePitchNote } from '../../utils/musicalMath';
@@ -33,10 +34,10 @@ export const LivretPrise: React.FC = () => {
   const recorder = useMemo(() => new VocalRecorderEngine(), []);
   const cueHandleRef = useRef<CuePlaybackHandle | null>(null);
 
-  const [activeLivret, setActiveLivret] = useState<'prise' | 'melodia'>('prise');
+  const [activeLivret, setActiveLivret] = useState<LivretTabType>('prise');
   const [selectedDeviceId, setSelectedDeviceId] = useState(''); const [selectedOutputDeviceId, setSelectedOutputDeviceId] = useState('');
-  const [timeSignature, setTimeSignature] = useState<TimeSignatureString>(project.timeSignature);
-  const [bpm, setBpm] = useState(project.bpm); const [beatResolutions, setBeatResolutions] = useState<number[]>(() => getDefaultBeatResolutions('4/4'));
+  const [timeSignature, setTimeSignature] = useState<TimeSignatureString>(project.timeSignature); const [bpm, setBpm] = useState(project.bpm);
+  const [beatResolutions, setBeatResolutions] = useState<number[]>(() => getDefaultBeatResolutions('4/4'));
   const [listeningMode, setListeningMode] = useState<ListeningMode>('headphones'); const [referencePitch, setReferencePitch] = useState('C4');
   const [isCycleActive, setIsCycleActive] = useState(false); const [recordedSampleRate, setRecordedSampleRate] = useState(44100);
   const [melodicData, setMelodicData] = useState<{ pitchCurve: PitchCurvePoint[]; allSteps: VocalStepData[]; pack: VocalPackExport; cleanPCM: Float32Array } | null>(null);
@@ -64,17 +65,13 @@ export const LivretPrise: React.FC = () => {
     const sampleRate = await recorder.prepare(ctx, selectedDeviceId);
     setRecordedSampleRate(sampleRate);
     await new Promise((r) => setTimeout(r, 180));
-
     const countdownSec = beatsPerMeasure * beatDuration;
     const singingSec = (1 + measuresCount) * beatsPerMeasure * beatDuration;
     const cycleStart = ctx.currentTime + 0.08;
     const sig = buildDeviceSignature(selectedDeviceId, selectedOutputDeviceId, sampleRate);
     const captureStart = cycleStart + countdownSec - (getSavedLatencyOffsetMs(sig) / 1000);
-
     const cue = cueMode === 'none' ? null : cueMode === 'auto_previous' ? getPreviousConductorPattern() : project.patterns.find((p) => p.id === cueMode);
-    if (cue && listeningMode === 'headphones') {
-      cueHandleRef.current = scheduleCuePatternAudio(ctx, cue, cycleStart, beatsPerMeasure, beatDuration);
-    }
+    if (cue && listeningMode === 'headphones') cueHandleRef.current = scheduleCuePatternAudio(ctx, cue, cycleStart, beatsPerMeasure, beatDuration);
     recorder.start(captureStart, singingSec);
     setIsCycleActive(true);
     await engine.startCycle(
@@ -101,13 +98,16 @@ export const LivretPrise: React.FC = () => {
 
   return (
     <div className="flex flex-col gap-3.5 w-full max-w-none">
-      {melodicData && <LivretTabsBar activeLivret={activeLivret} onSelectLivret={setActiveLivret} />}
-      {activeLivret === 'melodia' && melodicData ? (
+      <LivretTabsBar activeLivret={activeLivret} onSelectLivret={setActiveLivret} canAccessMelodia={!!melodicData || !!activePattern.pack} />
+      {activeLivret === 'treino' ? (
+        <LivretTreino />
+      ) : activeLivret === 'melodia' && (melodicData || activePattern.pack) ? (
         <LivretMelodia
-          initialPack={melodicData.pack} cleanPCM={melodicData.cleanPCM} sampleRate={recordedSampleRate}
-          totalDurationSec={totalDurationSec} anacrusisDurationSec={anacrusisDurationSec} beatsPerMeasure={beatsPerMeasure}
-          measuresCount={measuresCount} pitchCurve={melodicData.pitchCurve} initialSteps={melodicData.allSteps}
-          outputDeviceId={selectedOutputDeviceId} onBackToPrise={() => setActiveLivret('prise')}
+          initialPack={melodicData?.pack ?? activePattern.pack!} cleanPCM={melodicData?.cleanPCM ?? recordedPCM ?? new Float32Array(0)}
+          sampleRate={recordedSampleRate} totalDurationSec={totalDurationSec} anacrusisDurationSec={anacrusisDurationSec}
+          beatsPerMeasure={beatsPerMeasure} measuresCount={measuresCount} pitchCurve={melodicData?.pitchCurve ?? []}
+          initialSteps={melodicData?.allSteps ?? activePattern.mainSteps} outputDeviceId={selectedOutputDeviceId}
+          onBackToPrise={() => setActiveLivret('prise')}
           onPackUpdated={(p) => { setMelodicData((prev) => (prev ? { ...prev, pack: p } : null)); updatePattern(activePattern.id, { pack: p }); }}
         />
       ) : (
@@ -119,8 +119,7 @@ export const LivretPrise: React.FC = () => {
               rawPCM={recordedPCM} sampleRate={recordedSampleRate} bpm={effectiveBpm} timeSignature={timeSignature}
               measuresCount={measuresCount} beatsPerMeasure={beatsPerMeasure} beatResolutions={beatResolutions}
               referencePitch={effectivePitch} outputDeviceId={selectedOutputDeviceId}
-              onReset={() => { updateVariant(activePattern.id, activeVariant.variantKey, { recordingResult: null }); }}
-              onPackReady={handlePackReady}
+              onReset={() => { updateVariant(activePattern.id, activeVariant.variantKey, { recordingResult: null }); }} onPackReady={handlePackReady}
             />
           ) : (
             <div className="flex flex-col gap-2.5">
@@ -135,15 +134,11 @@ export const LivretPrise: React.FC = () => {
               <RecordActionButton isCycleActive={isCycleActive} measuresCount={measuresCount} onToggleRecord={handleToggleRecord} />
               <CuePatternSelector disabled={isCycleActive} />
               <PriseConfigGrid
-                timeSignature={timeSignature} onTimeSignatureChange={setTimeSignature} bpm={bpm} onBpmChange={setBpm}
-                measuresCount={measuresCount} onMeasuresCountChange={(c) => updatePattern(activePattern.id, { measuresCount: c as 1|2|3|4 })}
-                beatResolutions={beatResolutions} onBeatResolutionsChange={setBeatResolutions}
-                listeningMode={listeningMode} onListeningModeChange={setListeningMode}
-                referencePitch={referencePitch} onReferencePitchChange={setReferencePitch}
-                engine={engine} selectedDeviceId={selectedDeviceId} onSelectedDeviceChange={setSelectedDeviceId}
-                selectedOutputDeviceId={selectedOutputDeviceId} onSelectedOutputDeviceChange={setSelectedOutputDeviceId}
-                recordedSampleRate={recordedSampleRate} isCycleActive={isCycleActive}
+                timeSignature={timeSignature} onTimeSignatureChange={setTimeSignature} bpm={bpm} onBpmChange={setBpm} measuresCount={measuresCount} onMeasuresCountChange={(c) => updatePattern(activePattern.id, { measuresCount: c as 1|2|3|4 })}
+                beatResolutions={beatResolutions} onBeatResolutionsChange={setBeatResolutions} listeningMode={listeningMode} onListeningModeChange={setListeningMode} referencePitch={referencePitch} onReferencePitchChange={setReferencePitch}
+                engine={engine} selectedDeviceId={selectedDeviceId} onSelectedDeviceChange={setSelectedDeviceId} selectedOutputDeviceId={selectedOutputDeviceId} onSelectedOutputDeviceChange={setSelectedOutputDeviceId} recordedSampleRate={recordedSampleRate} isCycleActive={isCycleActive}
               />
+
             </div>
           )}
         </>

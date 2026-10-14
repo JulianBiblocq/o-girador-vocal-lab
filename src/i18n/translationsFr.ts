@@ -9,7 +9,7 @@ export const translationsFr: VocalLabTranslations = {
   appTitle: 'O Girador - Atelier Vocal',
   appSubtitle: 'Horloge 60 FPS - Metronome Accorde - Balancier Cinematique',
   themeToggle: 'Changer de theme (Clair / Sombre)',
-  tabLivret1: 'Livret 1 : Prise', tabLivret2: 'Livret 2 : Melodia & Letra',
+  tabLivret1: 'Livret 1 : Prise', tabLivret2: 'Livret 2 : Melodia & Letra', tabLivret3: 'Livret 3 : Entrainement',
 
   // Jalon 4.A : Bibliotheque & Conducteur de Toada
   patternLibraryTitle: 'BIBLIOTHEQUE DES PATTERNS (TOADA)',
@@ -24,7 +24,7 @@ export const translationsFr: VocalLabTranslations = {
   cueAutoPrevious: 'Pattern precedent du Conducteur', cueCustomPrefix: 'Pattern :', cueReadyBadge: 'Pret ({measures} M)',
 
   // Jalon 4.B : Matrice de Declinaisons Audio
-  pattern_variants_title: 'DECLINAISONS AUDIO DU PATTERN (ANTI-DISTORCAO)',
+  pattern_variants_title: 'DECLINAISONS AUDIO DU PATTERN (ANTI-DISTORSION)',
   variant_speed_nominal: '100 % Nominal (87-115 %)', variant_speed_slow: '74 % Ralenti (60-87 %)',
   variant_speed_extra: '55 % Ultra-lent (45-60 %)', variant_add_speed_3: '+ 3e vitesse (55 %)',
   variant_pitch_nominal: 'Ton 0 (-2 a +2 tons)', variant_pitch_low: '-4 tons (-8 dt)',
@@ -34,6 +34,20 @@ export const translationsFr: VocalLabTranslations = {
   variant_pitch_banner: 'Hauteur nominale : {nominal} -> Guide transpose a {effective} ({semitones} dt)',
   export_toada_pack: 'Telecharger Pack Toada JSON',
   export_toada_pack_success: 'Pack Toada multi-declinaisons pret pour Sequenciad\'Or !',
+
+  // Jalon 4.C : Livret 3 - Entrainement Vocal & Karaoke
+  trainer_scope_pattern: 'Motif actif', trainer_scope_toada: 'Toada complete (Regie)',
+  trainer_role_coro: 'Je chante : CORO', trainer_role_puxador: 'Je chante : PUXADOR', trainer_role_all: 'Je chante : TOUT',
+  trainer_guide_accompanied: 'Accompagne (Voix + Synthe)', trainer_guide_voice_only: 'Voix originale seule',
+  trainer_guide_autonomous: 'Autonome (Appel-Reponse pur)',
+  trainer_speed_nominal: '100 % (Nominal)', trainer_speed_slow: '74 % (Ralenti)',
+  karaoke_your_turn: 'A VOUS DE CHANTER !', karaoke_listen_guide: 'ECOUTEZ LE GUIDE',
+  karaoke_no_lyrics: '(Pas de paroles sur cette mesure)',
+  btn_start_training: "Lancer l'entrainement", btn_stop_training: 'Arreter',
+  btn_listen_student_duo: 'Ma voix + Guide', btn_listen_student_solo: 'Ma voix seule',
+  trainer_accuracy_badge: 'Justesse : {score} % ({ok}/{total} notes dans la cible)',
+  export_student_report: 'Exporter Bilan Eleve (.json)',
+  student_report_filename: 'bilan_entrainement_vocal',
 
   // Balancier & Cycle de Prise
   pendulumIdleTitle: 'EN ATTENTE DU CYCLE DE PRISE', pendulumStatusIdle: 'VEILLE',

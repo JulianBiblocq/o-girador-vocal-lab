@@ -10,7 +10,7 @@ export type TranslationParams = Record<string, string | number>;
 export interface VocalLabTranslations {
   // En-tete
   appTitle: string; appSubtitle: string; themeToggle: string;
-  tabLivret1: string; tabLivret2: string;
+  tabLivret1: string; tabLivret2: string; tabLivret3: string;
 
   // Jalon 4.A : Bibliotheque & Conducteur de Toada
   patternLibraryTitle: string; addPuxadorPattern: string; addCoroPattern: string;
@@ -27,6 +27,16 @@ export interface VocalLabTranslations {
   variant_status_recorded: string; variant_status_pending: string;
   variant_tempo_banner: string; variant_pitch_banner: string;
   export_toada_pack: string; export_toada_pack_success: string;
+
+  // Jalon 4.C : Livret 3 - Entrainement Vocal & Karaoke
+  trainer_scope_pattern: string; trainer_scope_toada: string;
+  trainer_role_coro: string; trainer_role_puxador: string; trainer_role_all: string;
+  trainer_guide_accompanied: string; trainer_guide_voice_only: string; trainer_guide_autonomous: string;
+  trainer_speed_nominal: string; trainer_speed_slow: string;
+  karaoke_your_turn: string; karaoke_listen_guide: string; karaoke_no_lyrics: string;
+  btn_start_training: string; btn_stop_training: string;
+  btn_listen_student_duo: string; btn_listen_student_solo: string;
+  trainer_accuracy_badge: string; export_student_report: string; student_report_filename: string;
 
   // Balancier & Cycle de Prise
   pendulumIdleTitle: string; pendulumStatusIdle: string;

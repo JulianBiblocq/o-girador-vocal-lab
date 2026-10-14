@@ -448,5 +448,35 @@
     "es": "La transposición en tonos",
     "de": "Die Ganzton-Transposition",
     "it": "La trasposizione in toni"
+  },
+  {
+    "id": "treino_vocal",
+    "category": "estudio",
+    "br": "O treino vocal (karaokê pedagógico)",
+    "fr": "L'entraînement vocal (karaoké pédagogique)",
+    "en": "The vocal trainer (pedagogical karaoke)",
+    "es": "El entrenamiento vocal",
+    "de": "Das Gesangstraining",
+    "it": "L'allenamento vocale"
+  },
+  {
+    "id": "karaoke_chamada_resposta",
+    "category": "estudio",
+    "br": "O karaokê chamada-resposta",
+    "fr": "Le karaoké appel-réponse",
+    "en": "The call-and-response karaoke",
+    "es": "El karaoke llamada-respuesta",
+    "de": "Das Ruf- und Antwort-Karaoke",
+    "it": "Il karaoke chiamata-risposta"
+  },
+  {
+    "id": "avaliacao_justeza",
+    "category": "estudio",
+    "br": "A avaliação de afinação zero-vermelho",
+    "fr": "L'évaluation de justesse zéro-rouge",
+    "en": "The zero-red pitch accuracy evaluation",
+    "es": "La evaluación de afinación",
+    "de": "Die Null-Rot Intonationsbewertung",
+    "it": "La valutazione di intonazione"
   }
 ]

@@ -9,7 +9,7 @@ export const translationsBr: VocalLabTranslations = {
   appTitle: 'O Girador - Oficina Vocal',
   appSubtitle: 'Relogio 60 FPS - Metronomo Afinado - Balancim Cinematico',
   themeToggle: 'Alternar tema (Claro / Escuro)',
-  tabLivret1: 'Livreto 1 : Gravacao', tabLivret2: 'Livreto 2 : Melodia e Letra',
+  tabLivret1: 'Livreto 1 : Gravacao', tabLivret2: 'Livreto 2 : Melodia e Letra', tabLivret3: 'Livreto 3 : Treino Vocal',
 
   // Jalon 4.A : Biblioteca & Regencia de Toada
   patternLibraryTitle: 'BIBLIOTECA DE PADROES (TOADA)',
@@ -34,6 +34,20 @@ export const translationsBr: VocalLabTranslations = {
   variant_pitch_banner: 'Tom nominal: {nominal} -> Guia transposto para {effective} ({semitones} st)',
   export_toada_pack: 'Baixar Pack Toada JSON',
   export_toada_pack_success: 'Pack Toada multi-declinacoes pronto para Sequenciad\'Or !',
+
+  // Jalon 4.C : Livret 3 - Entrainement Vocal & Karaoke
+  trainer_scope_pattern: 'Padrao ativo', trainer_scope_toada: 'Toada completa (Regencia)',
+  trainer_role_coro: 'Eu canto : CORO', trainer_role_puxador: 'Eu canto : PUXADOR', trainer_role_all: 'Eu canto : TUDO',
+  trainer_guide_accompanied: 'Acompanhado (Voz + Synth)', trainer_guide_voice_only: 'Apenas voz original',
+  trainer_guide_autonomous: 'Autonomo (Chamada-Resposta pura)',
+  trainer_speed_nominal: '100 % (Nominal)', trainer_speed_slow: '74 % (Reduzido)',
+  karaoke_your_turn: 'SUA VEZ DE CANTAR !', karaoke_listen_guide: 'ESCUTE O GUIA',
+  karaoke_no_lyrics: '(Sem letra neste compasso)',
+  btn_start_training: 'Iniciar treino', btn_stop_training: 'Parar',
+  btn_listen_student_duo: 'Minha voz + Guia', btn_listen_student_solo: 'Minha voz apenas',
+  trainer_accuracy_badge: 'Afinacao : {score} % ({ok}/{total} notas no alvo)',
+  export_student_report: 'Exportar Relatorio do Aluno (.json)',
+  student_report_filename: 'relatorio_treino_vocal',
 
   // Balancim & Ciclo de Gravacao
   pendulumIdleTitle: 'AGUARDANDO CICLO DE GRAVACAO', pendulumStatusIdle: 'EM ESPERA',
