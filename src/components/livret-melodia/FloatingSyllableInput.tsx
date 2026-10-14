@@ -1,6 +1,7 @@
 /**
  * FloatingSyllableInput.tsx
  * Champ de saisie direct sur une brique de note avec navigation Tab / Entrée.
+ * Style Cordel : rounded-none, bordure franche.
  */
 import React, { useState, useEffect, useRef } from 'react';
 
@@ -52,7 +53,7 @@ export const FloatingSyllableInput: React.FC<FloatingSyllableInputProps> = (prop
         height: `${height}px`,
       }}
       placeholder="Syllabe..."
-      className="absolute z-30 px-1 py-0 bg-stone-900 border-2 border-amber-400 rounded text-amber-200 font-mono text-[11px] font-bold text-center shadow-xl outline-none"
+      className="absolute z-30 px-1 py-0 bg-stone-900 border-2 border-theme-accent rounded-none text-theme-ink font-mono text-[11px] font-bold text-center shadow-xl outline-none"
     />
   );
 };

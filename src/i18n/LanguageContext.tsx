@@ -1,7 +1,6 @@
 /**
  * LanguageContext.tsx
- * Contexte React i18n pour O Girador • Vocal Lab.
- * Permet de basculer instantanément entre FR et PT avec persistance dans localStorage.
+ * Contexte React i18n pour O Girador • Vocal Lab avec fallback sécurisé HMR.
  */
 import React, { createContext, useContext, useState, useCallback, useMemo } from 'react';
 import { translationsFr, type TranslationKey } from './translationsFr';
@@ -55,7 +54,11 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 export function useLanguage(): LanguageContextValue {
   const context = useContext(LanguageContext);
   if (!context) {
-    throw new Error('useLanguage must be used within a LanguageProvider');
+    return {
+      locale: 'fr',
+      setLocale: () => {},
+      t: (key: TranslationKey) => translationsFr[key] ?? key,
+    };
   }
   return context;
 }

@@ -1,7 +1,7 @@
 /**
  * LivretPrise.tsx
  * Conteneur du Livret 1 (Prise & Balancier) avec navigation Livret 1/2,
- * grille 3 colonnes Desktop parfaitement alignée horizontalement et support bilingue.
+ * icônes vectorielles Cordel, grille 3 colonnes Desktop et coins carrés francs.
  */
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { MetronomeEngine, getBeatsPerMeasure, type ListeningMode } from '../../audio/MetronomeEngine';
@@ -21,6 +21,7 @@ import { createPaddedPreviewBuffer } from '../../utils/wavEncoder';
 import { getDefaultBeatResolutions } from '../../utils/alignmentMath';
 import { buildDeviceSignature } from '../../utils/deviceSignature';
 import { getSavedLatencyOffsetMs } from '../../utils/latencyStorage';
+import { CordelMic, CordelNote } from '../common/CordelIcons';
 import { useLanguage } from '../../i18n/LanguageContext';
 import type { TimeSignatureString, VocalPackExport, PitchCurvePoint, VocalStepData } from '../../types/vocalPack.types';
 
@@ -85,12 +86,26 @@ export const LivretPrise: React.FC = () => {
   return (
     <div className="flex flex-col gap-3.5 w-full max-w-none">
       {melodicData && (
-        <div className="flex items-center justify-center gap-2 border-b border-theme-border/40 pb-2">
-          <button type="button" onClick={() => setActiveLivret('prise')} className={`px-3 py-1 text-xs font-mono rounded-lg transition-all ${activeLivret === 'prise' ? 'bg-amber-500/20 text-amber-300 font-bold border border-amber-500/40' : 'text-theme-ink/60 hover:text-theme-ink'}`}>
-            {t('tabLivret1')}
+        <div className="flex items-center justify-center gap-3 border-b border-theme-border/40 pb-2">
+          <button
+            type="button"
+            onClick={() => setActiveLivret('prise')}
+            className={`px-3.5 py-1.5 text-xs font-mono font-bold flex items-center gap-1.5 transition-all rounded-none cursor-pointer ${
+              activeLivret === 'prise' ? 'cordel-btn-primary' : 'cordel-btn opacity-60 hover:opacity-100'
+            }`}
+          >
+            <CordelMic className="w-3.5 h-3.5" />
+            <span>{t('tabLivret1')}</span>
           </button>
-          <button type="button" onClick={() => setActiveLivret('melodia')} className={`px-3 py-1 text-xs font-mono rounded-lg transition-all ${activeLivret === 'melodia' ? 'bg-amber-500/20 text-amber-300 font-bold border border-amber-500/40' : 'text-theme-ink/60 hover:text-theme-ink'}`}>
-            {t('tabLivret2')}
+          <button
+            type="button"
+            onClick={() => setActiveLivret('melodia')}
+            className={`px-3.5 py-1.5 text-xs font-mono font-bold flex items-center gap-1.5 transition-all rounded-none cursor-pointer ${
+              activeLivret === 'melodia' ? 'cordel-btn-primary' : 'cordel-btn opacity-60 hover:opacity-100'
+            }`}
+          >
+            <CordelNote className="w-3.5 h-3.5" />
+            <span>{t('tabLivret2')}</span>
           </button>
         </div>
       )}

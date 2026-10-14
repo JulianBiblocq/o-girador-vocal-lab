@@ -1,7 +1,9 @@
 /**
  * PianoRollToolbar.tsx
- * Barre d'outils du Piano Roll : Outils MIDI, Annuler/Rétablir (Ctrl+Z/Y),
- * Zoom horizontal, Gamme / Tonique et Lissage des tenues bilingues.
+ * Barre d'outils du Piano Roll unifiée sur 1 seule ligne :
+ * Gauche : Outils + [ ↶ | ↷ ] jumelés
+ * Centre : Gamme / Tonique + Lissage
+ * Droite : Zoom horizontal 1x..8x
  */
 import React from 'react';
 import type { PianoRollTool } from './pianoRollInteractions';
@@ -41,77 +43,82 @@ export const PianoRollToolbar: React.FC<PianoRollToolbarProps> = (props) => {
   ];
 
   return (
-    <div className="flex flex-col gap-1.5 p-2 bg-black/60 border border-theme-border/60 rounded-xl">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center gap-1 bg-black/40 p-1 rounded-lg border border-white/5">
+    <div className="cordel-card p-2 w-full flex flex-wrap items-center justify-between gap-3 bg-black/60 rounded-none">
+      {/* 1. Gauche : 5 Outils + Bloc jumelé Undo/Redo */}
+      <div className="flex items-center gap-2">
+        <div className="flex items-center border border-theme-border/60">
           {tools.map((item) => {
             const Icon = item.icon;
             const isActive = activeTool === item.id;
             return (
               <button
                 key={item.id} type="button" onClick={() => onSelectTool(item.id)} title={item.label}
-                className={`px-2 py-1 rounded text-xs font-mono flex items-center gap-1 transition-all ${
-                  isActive ? 'bg-amber-600 text-white font-bold shadow-sm' : 'text-theme-ink/70 hover:bg-white/10 hover:text-theme-ink'
+                className={`px-2 py-1 text-xs font-mono flex items-center gap-1 border-r last:border-r-0 border-theme-border/40 transition-all rounded-none cursor-pointer ${
+                  isActive ? 'bg-theme-wood text-theme-ink font-bold' : 'text-theme-ink/75 hover:bg-white/10 hover:text-theme-ink'
                 }`}
               >
                 <Icon className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">{item.label}</span>
+                <span className="hidden xl:inline">{item.label}</span>
               </button>
             );
           })}
+        </div>
 
-          <div className="h-4 w-px bg-white/10 mx-0.5" />
+        {/* Bloc jumelé collé Undo / Redo */}
+        <div className="flex items-center border border-theme-border/60">
           <button
             type="button" onClick={onUndo} disabled={!canUndo} title={t('undo')}
-            className={`px-1.5 py-1 rounded text-xs font-mono flex items-center gap-1 transition-all ${
-              canUndo ? 'text-amber-200 hover:bg-white/10' : 'text-stone-600 cursor-not-allowed opacity-50'
+            className={`px-2 py-1 text-xs font-mono flex items-center gap-1 border-r border-theme-border/40 transition-all rounded-none cursor-pointer ${
+              canUndo ? 'text-theme-ink hover:bg-white/10' : 'text-stone-600 cursor-not-allowed opacity-40'
             }`}
           >
             <Undo2 className="w-3.5 h-3.5" />
-            {historyCount !== undefined && historyCount > 0 && <span className="text-[10px] text-amber-400 font-bold">({historyCount})</span>}
+            {historyCount !== undefined && historyCount > 0 && <span className="text-[10px] text-theme-accent font-bold">({historyCount})</span>}
           </button>
           <button
             type="button" onClick={onRedo} disabled={!canRedo} title={t('redo')}
-            className={`px-1.5 py-1 rounded text-xs font-mono flex items-center gap-1 transition-all ${
-              canRedo ? 'text-amber-200 hover:bg-white/10' : 'text-stone-600 cursor-not-allowed opacity-50'
+            className={`px-2 py-1 text-xs font-mono flex items-center gap-1 transition-all rounded-none cursor-pointer ${
+              canRedo ? 'text-theme-ink hover:bg-white/10' : 'text-stone-600 cursor-not-allowed opacity-40'
             }`}
           >
             <Redo2 className="w-3.5 h-3.5" />
           </button>
         </div>
-
-        <div className="flex items-center gap-1 bg-black/40 p-1 rounded-lg border border-white/5">
-          <ZoomIn className="w-3.5 h-3.5 text-theme-ink/50 ml-1" />
-          {[1, 2, 4, 8].map((z) => (
-            <button
-              key={z} type="button" onClick={() => onSetZoom(z)}
-              className={`px-1.5 py-0.5 rounded text-[11px] font-mono transition-all ${
-                zoomLevel === z ? 'bg-amber-500/30 text-amber-300 font-bold border border-amber-500/40' : 'text-theme-ink/60 hover:text-theme-ink'
-              }`}
-            >
-              {z}x
-            </button>
-          ))}
-        </div>
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-white/5 text-[11px] font-mono">
-        <div className="flex items-center gap-2">
-          <span className="text-theme-ink/60">{t('scaleLabel')} :</span>
-          <select value={tonic} onChange={(e) => onSetTonic(e.target.value)} className="px-1.5 py-0.5 bg-black/50 border border-theme-border/40 rounded text-amber-300 outline-none">
-            {NOTE_NAMES.map((n) => <option key={n} value={n}>{n}</option>)}
+      {/* 2. Centre : Gamme & Lissage */}
+      <div className="flex items-center gap-3 text-[11px] font-mono">
+        <div className="flex items-center gap-1.5">
+          <span className="text-theme-ink/75 font-bold">{t('scaleLabel')} :</span>
+          <select value={tonic} onChange={(e) => onSetTonic(e.target.value)} className="px-1.5 py-0.5 bg-black/40 border border-theme-border/50 text-theme-accent font-bold outline-none rounded-none cursor-pointer">
+            {NOTE_NAMES.map((n) => <option key={n} value={n} className="bg-theme-bg text-theme-ink">{n}</option>)}
           </select>
-          <select value={scaleType} onChange={(e) => onSetScaleType(e.target.value as ScaleType)} className="px-1.5 py-0.5 bg-black/50 border border-theme-border/40 rounded text-amber-300 outline-none">
-            {Object.entries(SCALE_DEFINITIONS).map(([key, def]) => <option key={key} value={key}>{def.label}</option>)}
+          <select value={scaleType} onChange={(e) => onSetScaleType(e.target.value as ScaleType)} className="px-1.5 py-0.5 bg-black/40 border border-theme-border/50 text-theme-accent font-bold outline-none rounded-none cursor-pointer">
+            {Object.entries(SCALE_DEFINITIONS).map(([key, def]) => <option key={key} value={key} className="bg-theme-bg text-theme-ink">{def.label}</option>)}
           </select>
         </div>
 
         <div className="flex items-center gap-1.5">
-          <span className="text-theme-ink/60">{t('smoothingLabel')} :</span>
-          <span className="text-[10px] text-theme-ink/40">Fin</span>
-          <input type="range" min={0} max={1} step={0.1} value={smoothingLevel} onChange={(e) => onSetSmoothingLevel(parseFloat(e.target.value))} className="w-20 accent-amber-500 cursor-pointer" />
-          <span className="text-[10px] text-theme-ink/40">Large</span>
+          <span className="text-theme-ink/75 font-bold">{t('smoothingLabel')} :</span>
+          <span className="text-[10px] text-theme-ink/50">Fin</span>
+          <input type="range" min={0} max={1} step={0.1} value={smoothingLevel} onChange={(e) => onSetSmoothingLevel(parseFloat(e.target.value))} className="w-16 accent-[var(--cordel-wood)] cursor-pointer" />
+          <span className="text-[10px] text-theme-ink/50">Large</span>
         </div>
+      </div>
+
+      {/* 3. Droite : Zoom */}
+      <div className="flex items-center border border-theme-border/60">
+        <span className="px-1.5 py-0.5 text-xs text-theme-ink/60 border-r border-theme-border/40"><ZoomIn className="w-3.5 h-3.5" /></span>
+        {[1, 2, 4, 8].map((z) => (
+          <button
+            key={z} type="button" onClick={() => onSetZoom(z)}
+            className={`px-2 py-0.5 text-[11px] font-mono border-r last:border-r-0 border-theme-border/40 transition-all rounded-none cursor-pointer ${
+              zoomLevel === z ? 'bg-theme-wood text-theme-ink font-bold' : 'text-theme-ink/70 hover:bg-white/10'
+            }`}
+          >
+            {z}x
+          </button>
+        ))}
       </div>
     </div>
   );

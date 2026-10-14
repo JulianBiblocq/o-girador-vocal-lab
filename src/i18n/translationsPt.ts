@@ -1,6 +1,6 @@
 /**
  * translationsPt.ts
- * Dicionário de tradução Português do Brasil para O Girador • Laboratório Vocal.
+ * Dicionário de tradução Português do Brasil para O Girador • Laboratório Vocal (sem emojis).
  */
 import type { TranslationKey } from './translationsFr';
 
@@ -9,26 +9,23 @@ export const translationsPt: Record<TranslationKey, string> = {
   appTitle: 'O Girador • Laboratório Vocal',
   appSubtitle: 'Relógio 60 FPS • Metrônomo Afinado • Balancim Cinemático',
   themeToggle: 'Alternar tema (Claro / Escuro)',
-  viewFullWidth: 'Tela Cheia',
-  viewCompact: 'Compacto',
-  tabLivret1: '🎙️ Livreto 1 : Gravação',
-  tabLivret2: '🎵 Livreto 2 : Melodia e Letra',
-  port: 'Porta 5177',
+  tabLivret1: 'Livreto 1 : Gravação',
+  tabLivret2: 'Livreto 2 : Melodia e Letra',
 
   // Livreto 1 - Métrica
   metricTitle: 'Métrica e Andamento',
   timeSignature: 'Fórmula de Compasso',
   tempoBpm: 'Andamento (BPM)',
-  measuresCount: 'Compassos',
+  measuresCount: 'Compassos Canto',
   subdivisions: 'Subdivisões',
   elanAnacrusis: 'Anacruse / Impulso (M-1)',
   measure1: 'C1 (★ T1)',
 
   // Livreto 1 - Escuta & Referência
   listeningModeTitle: 'Modo de Escuta e Referência',
-  modeHeadphones: 'Modo Fone (Clique + Guia)',
-  modeVisual: 'Modo Visual (Silencioso)',
-  referencePitch: 'Nota de Referência',
+  modeHeadphones: 'Com Fone (Clique + Guia)',
+  modeVisual: 'Sem Fone (Silencioso)',
+  referencePitch: 'Nota de Referência (Diapaso)',
   octave: 'Oitava',
   testPitch: 'Testar',
 
@@ -71,10 +68,10 @@ export const translationsPt: Record<TranslationKey, string> = {
   modeDuo: 'Duo (Voz + Synth)',
   metronomeClick: 'Clique metrônomo',
   backToRecording: 'Voltar à Gravação',
-  downloadPack: 'Baixar Pack JSON',
+  downloadPack: 'Pack JSON',
 
   // Livreto 2 - Letra da Toada
-  letraTitle: 'Letra da Toada (Texto e Alinhamento)',
+  letraTitle: 'LETRA DA TOADA (Texto e Alinhamento)',
   alignBtn: 'Alinhar',
   syllableCount: 'sílabas detectadas',
   syntaxGuide: 'Sintaxe: hífen (-) ou (--) para melisma, apóstrofo (\') ou (_) para elisão.',

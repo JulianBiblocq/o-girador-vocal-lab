@@ -1,11 +1,14 @@
 /**
  * MelodicControls.tsx
- * Barre de contrôle de transport centré bilingue :
- * Revenir au début, Play/Stop, Modes d'écoute et Clic métronome.
+ * Barre de contrôle de transport et écoute unifiée sur 1 seule ligne Cordel :
+ * Gauche : [ ⬅ Retour à la Prise ]
+ * Centre : Groupe d'écoute [ Voix | Synthé | Duo ] + Clic
+ * Droite : [ ⏮ 0:00 ] + [ ▶ Play ] + [ ⬇ Pack JSON ]
  */
 import React from 'react';
 import type { MelodicPlayMode } from '../../audio/MelodicPreviewPlayer';
-import { Play, Square, Volume2, ArrowLeft, Download, SkipBack } from 'lucide-react';
+import { Play, Square, ArrowLeft, Download, SkipBack } from 'lucide-react';
+import { CordelMic, CordelPiano, CordelSpeaker } from '../common/CordelIcons';
 import { useLanguage } from '../../i18n/LanguageContext';
 
 interface MelodicControlsProps {
@@ -25,105 +28,110 @@ export const MelodicControls: React.FC<MelodicControlsProps> = (props) => {
   const { t } = useLanguage();
 
   return (
-    <div className="flex flex-col gap-1.5 w-full py-1">
-      {/* 1. Modes d'Écoute Comparative & Clic */}
-      <div className="flex flex-wrap items-center justify-between gap-1.5 p-1.5 bg-black/50 border border-theme-border/50 rounded-xl">
-        <div className="flex items-center gap-1">
+    <div className="cordel-card p-2 w-full flex flex-wrap items-center justify-between gap-3 bg-black/60 rounded-none select-none">
+      {/* 1. Gauche : Retour à la Prise */}
+      <button
+        type="button"
+        onClick={onBackToPrise}
+        className="cordel-btn px-3 py-1.5 text-xs font-mono flex items-center gap-1.5 rounded-none cursor-pointer"
+      >
+        <ArrowLeft className="w-3.5 h-3.5 text-theme-accent" />
+        <span>{t('backToRecording')}</span>
+      </button>
+
+      {/* 2. Centre : Groupe d'Écoute (Voix / Synthé / Duo) + Clic */}
+      <div className="flex items-center gap-2">
+        <div className="flex items-center border border-theme-border/60">
           <button
             type="button"
             onClick={() => onSetPlayMode('voice')}
-            className={`px-2.5 py-1 rounded-lg text-xs font-mono transition-all ${
+            className={`px-2.5 py-1 text-xs font-mono flex items-center gap-1.5 border-r border-theme-border/40 transition-all rounded-none cursor-pointer ${
               playMode === 'voice'
-                ? 'bg-sky-500/30 text-sky-300 font-bold border border-sky-400/50 shadow-sm'
-                : 'bg-white/5 text-theme-ink/80 hover:bg-white/10'
+                ? 'bg-theme-wood text-theme-ink font-bold shadow-sm'
+                : 'text-theme-ink/75 hover:bg-white/10'
             }`}
           >
-            🎙️ {t('modeIsolatedVoice')}
+            <CordelMic className="w-3.5 h-3.5" />
+            <span>{t('modeIsolatedVoice')}</span>
           </button>
           <button
             type="button"
             onClick={() => onSetPlayMode('synth')}
-            className={`px-2.5 py-1 rounded-lg text-xs font-mono transition-all ${
+            className={`px-2.5 py-1 text-xs font-mono flex items-center gap-1.5 border-r border-theme-border/40 transition-all rounded-none cursor-pointer ${
               playMode === 'synth'
-                ? 'bg-amber-500/30 text-amber-300 font-bold border border-amber-400/50 shadow-sm'
-                : 'bg-white/5 text-theme-ink/80 hover:bg-white/10'
+                ? 'bg-theme-wood text-theme-ink font-bold shadow-sm'
+                : 'text-theme-ink/75 hover:bg-white/10'
             }`}
           >
-            🎹 {t('modeSynthesizer')}
+            <CordelPiano className="w-3.5 h-3.5" />
+            <span>{t('modeSynthesizer')}</span>
           </button>
           <button
             type="button"
             onClick={() => onSetPlayMode('duo')}
-            className={`px-2.5 py-1 rounded-lg text-xs font-mono transition-all ${
+            className={`px-2.5 py-1 text-xs font-mono flex items-center gap-1.5 transition-all rounded-none cursor-pointer ${
               playMode === 'duo'
-                ? 'bg-emerald-500/30 text-emerald-300 font-bold border border-emerald-400/50 shadow-sm'
-                : 'bg-white/5 text-theme-ink/80 hover:bg-white/10'
+                ? 'bg-theme-wood text-theme-ink font-bold shadow-sm'
+                : 'text-theme-ink/75 hover:bg-white/10'
             }`}
           >
-            🎙️+🎹 {t('modeDuo')}
+            <div className="flex items-center gap-0.5">
+              <CordelMic className="w-3 h-3" />
+              <CordelPiano className="w-3 h-3" />
+            </div>
+            <span>{t('modeDuo')}</span>
           </button>
         </div>
 
         <button
           type="button"
           onClick={onToggleClick}
-          className={`px-2.5 py-1 rounded-lg text-xs font-mono transition-all flex items-center gap-1 ${
+          className={`px-2.5 py-1 text-xs font-mono flex items-center gap-1 border border-theme-border/60 transition-all rounded-none cursor-pointer ${
             clickEnabled
-              ? 'bg-amber-950/60 border border-amber-500/50 text-amber-300'
-              : 'bg-white/5 text-theme-ink/40'
+              ? 'bg-theme-wood text-theme-ink font-bold'
+              : 'text-theme-ink/40 hover:bg-white/5'
           }`}
           title={t('metronomeClick')}
         >
-          <Volume2 className="w-3.5 h-3.5" />
+          <CordelSpeaker className="w-3.5 h-3.5" />
           <span>{t('metronomeClick')}</span>
         </button>
       </div>
 
-      {/* 2. Transport et Téléchargement */}
-      <div className="flex flex-wrap items-center justify-between gap-2">
+      {/* 3. Droite : Transport & Téléchargement Pack */}
+      <div className="flex items-center gap-2">
+        {onResetSeek && (
+          <button
+            type="button"
+            onClick={onResetSeek}
+            className="cordel-btn px-2.5 py-1.5 text-xs font-mono flex items-center gap-1 rounded-none cursor-pointer"
+            title="0:00"
+          >
+            <SkipBack className="w-3.5 h-3.5 text-theme-accent" />
+            <span>0:00</span>
+          </button>
+        )}
+
         <button
           type="button"
-          onClick={onBackToPrise}
-          className="cordel-btn px-3 py-1.5 text-xs font-mono flex items-center gap-1.5 opacity-80 hover:opacity-100"
+          onClick={onTogglePlay}
+          className={`cordel-btn px-3.5 py-1.5 text-xs font-mono font-bold flex items-center gap-1.5 rounded-none cursor-pointer ${
+            isPlaying ? 'bg-red-800 text-white' : 'bg-theme-wood text-theme-ink'
+          }`}
         >
-          <ArrowLeft className="w-3.5 h-3.5" />
-          <span>{t('backToRecording')}</span>
+          {isPlaying ? <Square className="w-4 h-4 fill-current" /> : <Play className="w-4 h-4 fill-current text-theme-accent" />}
+          <span>{isPlaying ? t('recordBtnStop') : 'Play'}</span>
         </button>
 
-        <div className="flex items-center gap-2">
-          {onResetSeek && (
-            <button
-              type="button"
-              onClick={onResetSeek}
-              className="cordel-btn px-2.5 py-1.5 text-xs font-mono flex items-center gap-1 bg-white/5 hover:bg-white/10 text-theme-ink/80"
-              title="0:00"
-            >
-              <SkipBack className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">0:00</span>
-            </button>
-          )}
-
-          <button
-            type="button"
-            onClick={onTogglePlay}
-            className={`cordel-btn px-4 py-1.5 text-xs font-mono font-bold flex items-center gap-1.5 shadow-md ${
-              isPlaying ? 'bg-amber-600 text-white' : 'bg-theme-accent text-white'
-            }`}
-          >
-            {isPlaying ? <Square className="w-4 h-4 fill-current" /> : <Play className="w-4 h-4 fill-current" />}
-            <span>{isPlaying ? t('recordBtnStop') : 'Play'}</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={onDownloadPack}
-            className="cordel-btn px-3.5 py-1.5 text-xs font-mono font-bold bg-emerald-700 text-white flex items-center gap-1.5 hover:bg-emerald-600 shadow-md"
-            title="VocalPackExport JSON"
-          >
-            <Download className="w-3.5 h-3.5" />
-            <span>{t('downloadPack')}</span>
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={onDownloadPack}
+          className="cordel-btn-primary px-3 py-1.5 text-xs font-mono font-bold flex items-center gap-1.5 rounded-none cursor-pointer"
+          title="Pack JSON VocalPackExport"
+        >
+          <Download className="w-3.5 h-3.5" />
+          <span>{t('downloadPack')}</span>
+        </button>
       </div>
     </div>
   );

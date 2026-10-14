@@ -1,32 +1,29 @@
 /**
  * translationsFr.ts
- * Dictionnaire de traduction Français pour O Girador • Vocal Lab.
+ * Dictionnaire de traduction Français pour O Girador • Vocal Lab (sans emojis système).
  */
 export const translationsFr = {
   // En-tête
   appTitle: 'O Girador • Vocal Lab',
   appSubtitle: 'Horloge 60 FPS • Métronome Accordé • Balancier Cinématique',
   themeToggle: 'Changer de thème (Clair / Sombre)',
-  viewFullWidth: 'Plein écran',
-  viewCompact: 'Compact',
-  tabLivret1: '🎙️ Livret 1 : Prise',
-  tabLivret2: '🎵 Livret 2 : Melodia & Letra',
-  port: 'Port 5177',
+  tabLivret1: 'Livret 1 : Prise',
+  tabLivret2: 'Livret 2 : Melodia & Letra',
 
   // Livret 1 - Métrique
   metricTitle: 'Métrique & Tempo',
-  timeSignature: 'Signature',
+  timeSignature: 'Signature Rythmique',
   tempoBpm: 'Tempo (BPM)',
-  measuresCount: 'Mesures',
+  measuresCount: 'Mesures Chant',
   subdivisions: 'Subdivisions',
   elanAnacrusis: 'Élan (M-1)',
   measure1: 'M1 (★ T1)',
 
   // Livret 1 - Écoute & Repère
   listeningModeTitle: "Mode d'écoute & Repère",
-  modeHeadphones: 'Mode Casque (Clic + Guide)',
-  modeVisual: 'Mode Visuel (Silencieux)',
-  referencePitch: 'Note de repère',
+  modeHeadphones: 'Avec Casque (Clic + Guide)',
+  modeVisual: 'Sans Casque (Silencieux)',
+  referencePitch: 'Note de repère (Diapason)',
   octave: 'Octave',
   testPitch: 'Tester',
 
@@ -46,11 +43,11 @@ export const translationsFr = {
   waveformTitle: "Éditeur de Forme d'Onde & Normalisation",
   listenTake: 'Écouter Tomada',
   highpassFilter: 'Coupure des graves (90 Hz)',
-  extractMelody: 'Extrair Melodia',
+  extractMelody: 'Extraire Melodia',
   rerecord: 'Réenregistrer',
 
   // Livret 2 - Outils Piano Roll
-  toolPointer: 'Mover / Escrever',
+  toolPointer: 'Déplacer / Écrire',
   toolGlue: 'Coller',
   toolCut: 'Couper',
   toolErase: 'Gomme',
@@ -64,16 +61,16 @@ export const translationsFr = {
   pianoRollHint: "Clic Droit = Palette d'outils • Règle cliquable = Seek",
 
   // Livret 2 - Transport & Modes de lecture
-  modeIsolatedVoice: 'Voz Isolada',
-  modeSynthesizer: 'Sintetizador',
-  modeDuo: 'Duo (Voz + Synth)',
+  modeIsolatedVoice: 'Voix seule',
+  modeSynthesizer: 'Synthé seul',
+  modeDuo: 'Duo (Voix + Synth)',
   metronomeClick: 'Clic métronome',
   backToRecording: 'Retour à la Prise',
-  downloadPack: 'Baixar Pack JSON',
+  downloadPack: 'Pack JSON',
 
   // Livret 2 - Letra da Toada
-  letraTitle: 'Letra da Toada (Paroles & Alignement)',
-  alignBtn: 'Alinhar',
+  letraTitle: 'LETRA DA TOADA (Paroles & Alignement)',
+  alignBtn: 'Aligner',
   syllableCount: 'syllabes détectées',
   syntaxGuide: 'Syntaxe : tiret (-) ou (--) pour mélisme, apostrophe (\') ou (_) pour élision.',
   footerSandbox: 'O Girador Vocal Lab • Bac à sable étanche • Zéro collision avec Sequenciador',

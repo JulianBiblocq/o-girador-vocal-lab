@@ -1,6 +1,6 @@
 /**
  * PianoRollEditor.tsx
- * Conteneur du Piano Roll combinant Toolbar, Clavier C2..C5, Règle Sticky Y,
+ * Conteneur du Piano Roll combinant Toolbar unifiée, Clavier C2..C5, Règle Sticky Y,
  * Palette contextuelle, Canvas zoomable et centrage automatique du scrollTop.
  */
 import React, { useRef, useState, useEffect, useMemo, useCallback } from 'react';
@@ -14,6 +14,7 @@ import { PianoRollCanvas } from './PianoRollCanvas';
 import { PianoRollStickyHeader } from './PianoRollStickyHeader';
 import { FloatingSyllableInput } from './FloatingSyllableInput';
 import { PianoRollToolPalette } from './PianoRollToolPalette';
+import { CordelPiano } from '../common/CordelIcons';
 import type { PianoRollTool } from './pianoRollInteractions';
 
 interface PianoRollEditorProps {
@@ -97,18 +98,21 @@ export const PianoRollEditor: React.FC<PianoRollEditorProps> = (props) => {
   }, [textInput, allSteps, gridWidth, maxMidi, onUpdateSteps]);
 
   return (
-    <div className="flex flex-col gap-1.5 w-full">
+    <div className="flex flex-col gap-2 w-full">
       <PianoRollToolbar
         activeTool={activeTool} onSelectTool={setActiveTool} zoomLevel={zoomLevel} onSetZoom={setZoomLevel}
         tonic={tonic} onSetTonic={onSetTonic} scaleType={scaleType} onSetScaleType={onSetScaleType}
         smoothingLevel={smoothingLevel} onSetSmoothingLevel={onSetSmoothingLevel}
         canUndo={canUndo} canRedo={canRedo} historyCount={historyCount} onUndo={onUndo} onRedo={onRedo}
       />
-      <div className="flex items-center justify-between text-[11px] font-mono text-theme-ink/80 px-1">
-        <span className="font-semibold text-amber-400">🎹 PIANO ROLL • {midiToNoteName(minMidi)} ➔ {midiToNoteName(maxMidi)} ({zoomLevel.toFixed(1)}x)</span>
-        <span className="text-[10px] text-sky-400/90 hidden sm:inline">{t('pianoRollHint')}</span>
+      <div className="flex items-center justify-between text-[11px] font-mono px-1">
+        <span className="font-bold text-theme-accent flex items-center gap-1.5">
+          <CordelPiano className="w-3.5 h-3.5" />
+          <span>PIANO ROLL • {midiToNoteName(minMidi)} ➔ {midiToNoteName(maxMidi)} ({zoomLevel.toFixed(1)}x)</span>
+        </span>
+        <span className="text-[10px] text-theme-ink/70 hidden sm:inline">{t('pianoRollHint')}</span>
       </div>
-      <div ref={scrollRef} className="w-full cordel-card overflow-x-auto overflow-y-auto cordel-scrollbar bg-stone-950/80 border border-theme-border/60 max-h-[380px]">
+      <div ref={scrollRef} className="w-full cordel-card overflow-x-auto overflow-y-auto cordel-scrollbar bg-stone-950/80 border border-theme-border/60 max-h-[380px] rounded-none">
         <div style={{ width: `${64 + gridWidth}px`, height: `${42 + canvasHeight}px` }}>
           <PianoRollStickyHeader
             gridWidth={gridWidth} beatsPerMeasure={beatsPerMeasure} totalDurationSec={totalDurationSec}

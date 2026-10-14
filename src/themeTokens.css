@@ -43,12 +43,13 @@
 .border-theme-accent { border-color: var(--cordel-accent); }
 .text-theme-secondary { color: var(--cordel-secondary-text); }
 
-/* Effet gravure sur bois (Cordel woodcut) */
+/* Effet gravure sur bois (Cordel woodcut) : coins carrés stricts (zéro pilule) */
 .cordel-card {
   background-color: var(--cordel-bg);
   color: var(--cordel-text);
   border: 3px solid var(--cordel-border);
   box-shadow: var(--cordel-shadow);
+  border-radius: 0 !important;
 }
 
 .cordel-card-sm {
@@ -56,6 +57,7 @@
   color: var(--cordel-text);
   border: 2px solid var(--cordel-border);
   box-shadow: var(--cordel-shadow-sm);
+  border-radius: 0 !important;
 }
 
 .cordel-btn {
@@ -64,6 +66,7 @@
   border: 2px solid var(--cordel-border);
   box-shadow: var(--cordel-shadow-sm);
   font-weight: 700;
+  border-radius: 0 !important;
   transition: all 0.15s ease-in-out;
 }
 
@@ -78,6 +81,7 @@
   border: 2px solid var(--cordel-border);
   box-shadow: var(--cordel-shadow);
   font-weight: 800;
+  border-radius: 0 !important;
   transition: all 0.15s ease-in-out;
 }
 
