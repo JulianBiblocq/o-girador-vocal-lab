@@ -428,5 +428,25 @@
     "es": "La preescucha de llamada",
     "de": "Das Einzähler-Cue (M-2 / M-1)",
     "it": "Il pre-ascolto di chiamata"
+  },
+  {
+    "id": "declinacao_velocidade",
+    "category": "estudio",
+    "br": "A declinação de velocidade (100% / 74% / 55%)",
+    "fr": "La déclinaison de vitesse (100% / 74% / 55%)",
+    "en": "The speed variant tier (100% / 74% / 55%)",
+    "es": "La declinación de velocidad",
+    "de": "Die Geschwindigkeitsstufe",
+    "it": "La declinazione di velocità"
+  },
+  {
+    "id": "transposicao_tons",
+    "category": "estudio",
+    "br": "A transposição em tons (-4 tons / 0 / +4 tons)",
+    "fr": "La transposition en tons (-4 tons / 0 / +4 tons)",
+    "en": "The pitch transposition in whole tones (-4 tons / 0 / +4 tons)",
+    "es": "La transposición en tonos",
+    "de": "Die Ganzton-Transposition",
+    "it": "La trasposizione in toni"
   }
 ]

@@ -1,18 +1,18 @@
 /**
  * i18n.types.ts
- * Typage strict du moteur i18n pour O Girador • Atelier Vocal (Oficina Vocal).
- * Supporte le binôme [ Langue de l'utilisateur (FR) | Portugais Brésilien (BR) ].
+ * Typage strict du moteur i18n pour O Girador - Atelier Vocal (Oficina Vocal).
+ * Supporte le binome [ Langue de l utilisateur (FR) | Portugais Bresilien (BR) ].
  */
 
 export type Locale = 'fr' | 'br';
 export type TranslationParams = Record<string, string | number>;
 
 export interface VocalLabTranslations {
-  // En-tête
+  // En-tete
   appTitle: string; appSubtitle: string; themeToggle: string;
   tabLivret1: string; tabLivret2: string;
 
-  // Jalon 4.A : Bibliothèque & Conducteur de Toada
+  // Jalon 4.A : Bibliotheque & Conducteur de Toada
   patternLibraryTitle: string; addPuxadorPattern: string; addCoroPattern: string;
   rolePuxador: string; roleCoro: string; patternAudioRecorded: string; patternAudioMissing: string;
   editPatternNameTooltip: string; deletePatternTooltip: string;
@@ -20,24 +20,32 @@ export interface VocalLabTranslations {
   railPuxador: string; railCoro: string; emptySlot: string; blockLabel: string;
   cueSelectorLabel: string; cueNone: string; cueAutoPrevious: string; cueCustomPrefix: string; cueReadyBadge: string;
 
+  // Jalon 4.B : Matrice de Declinaisons Audio
+  pattern_variants_title: string; variant_speed_nominal: string; variant_speed_slow: string;
+  variant_speed_extra: string; variant_add_speed_3: string; variant_pitch_nominal: string;
+  variant_pitch_low: string; variant_pitch_high: string; variant_add_pitch_3: string;
+  variant_status_recorded: string; variant_status_pending: string;
+  variant_tempo_banner: string; variant_pitch_banner: string;
+  export_toada_pack: string; export_toada_pack_success: string;
+
   // Balancier & Cycle de Prise
   pendulumIdleTitle: string; pendulumStatusIdle: string;
   pendulumStatusPrecount: string; pendulumStatusRec: string; pendulumSyncImpact: string;
   phasePrecount: string; phaseAnacrusis: string; phaseSinging: string; phaseCompletedTitle: string;
 
-  // Livret 1 - Métrique & Enregistrement
+  // Livret 1 - Metrique & Enregistrement
   metricTitle: string; timeSignature: string; tempoBpm: string; measuresCount: string;
   subdivisions: string; elanAnacrusis: string; measure1: string; measureAbbr: string;
   btnStartRecording: string; btnStopRecording: string; recordBtnStop: string; measureUnitShort: string;
 
-  // Livret 1 - Écoute & Repère
+  // Livret 1 - Ecoute & Repere
   listeningModeTitle: string; modeHeadphones: string; modeVisual: string;
   referencePitch: string; octave: string; octaveShort: string; testPitch: string; clickVolumeLabel: string;
   note_C: string; note_Cs: string; note_D: string; note_Ds: string;
   note_E: string; note_F: string; note_Fs: string; note_G: string;
   note_Gs: string; note_A: string; note_As: string; note_B: string;
 
-  // Livret 1 - Matériel & Calibration
+  // Livret 1 - Materiel & Calibration
   audioDevices: string; soundCardDevices: string; devicePanelTitle: string;
   connected: string; deviceConnectedBadge: string; refresh: string; deviceRefreshBtn: string;
   authorizeAudio: string; micInputPureDirect: string; deviceMicInputLabel: string;

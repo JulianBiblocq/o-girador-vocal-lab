@@ -1,6 +1,6 @@
 /**
  * PatternLibraryBar.tsx
- * Ligne 1 : Bibliothèque de Patterns nommables (Puxador / Coro) style Cordel.
+ * Ligne 1 : Bibliotheque de Patterns nommables (Puxador / Coro) style Cordel.
  */
 import React, { useState } from 'react';
 import { useToadaProject } from '../../context/ToadaProjectContext';
@@ -14,15 +14,11 @@ export const PatternLibraryBar: React.FC = () => {
   const [editName, setEditName] = useState<string>('');
 
   const handleStartEdit = (id: string, currentName: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setEditingId(id);
-    setEditName(currentName);
+    e.stopPropagation(); setEditingId(id); setEditName(currentName);
   };
 
   const handleSaveEdit = (id: string) => {
-    if (editName.trim()) {
-      updatePattern(id, { name: editName.trim() });
-    }
+    if (editName.trim()) updatePattern(id, { name: editName.trim() });
     setEditingId(null);
   };
 
@@ -35,39 +31,35 @@ export const PatternLibraryBar: React.FC = () => {
         </span>
         <div className="flex items-center gap-1.5">
           <button
-            type="button"
-            onClick={() => addPattern('puxador')}
+            type="button" onClick={() => addPattern('puxador')}
             className="px-2 py-0.5 text-[11px] font-bold font-mono bg-role-puxador bg-role-puxador-hover rounded-none flex items-center gap-1 cursor-pointer"
           >
-            <Plus className="w-3 h-3" />
-            <span>{t('addPuxadorPattern')}</span>
+            <Plus className="w-3 h-3" /><span>{t('addPuxadorPattern')}</span>
           </button>
           <button
-            type="button"
-            onClick={() => addPattern('coro')}
+            type="button" onClick={() => addPattern('coro')}
             className="px-2 py-0.5 text-[11px] font-bold font-mono bg-role-coro bg-role-coro-hover rounded-none flex items-center gap-1 cursor-pointer"
           >
-            <Plus className="w-3 h-3" />
-            <span>{t('addCoroPattern')}</span>
+            <Plus className="w-3 h-3" /><span>{t('addCoroPattern')}</span>
           </button>
         </div>
       </div>
 
-      {/* Cartes horizontales défilantes */}
+      {/* Cartes horizontales defilantes */}
       <div className="flex items-center gap-2 overflow-x-auto py-1 cordel-scrollbar">
         {project.patterns.map((pat) => {
           const isActive = pat.id === activePattern.id;
           const isPux = pat.role === 'puxador';
           const hasAudio = pat.recordingResult !== null && pat.recordingResult.pcm.length > 0;
+          const vList = Object.values(pat.variants ?? {});
+          const recCount = vList.filter((v) => v.recordingResult !== null).length;
+          const totCount = Math.max(vList.length, 4);
 
           return (
             <div
-              key={pat.id}
-              onClick={() => setActivePatternId(pat.id)}
+              key={pat.id} onClick={() => setActivePatternId(pat.id)}
               className={`px-2 py-1.5 min-w-[170px] max-w-[210px] shrink-0 cordel-card-sm flex flex-col gap-1 cursor-pointer transition-all ${
-                isActive
-                  ? 'border-theme-accent ring-1 ring-theme-accent/60 bg-black/60 shadow-md'
-                  : 'opacity-75 hover:opacity-100 bg-black/30'
+                isActive ? 'border-theme-accent ring-1 ring-theme-accent/60 bg-black/60 shadow-md' : 'opacity-75 hover:opacity-100 bg-black/30'
               }`}
             >
               <div className="flex items-center justify-between gap-1">
@@ -79,8 +71,7 @@ export const PatternLibraryBar: React.FC = () => {
                 </span>
                 {project.patterns.length > 1 && (
                   <button
-                    type="button"
-                    title={t('deletePatternTooltip')}
+                    type="button" title={t('deletePatternTooltip')}
                     onClick={(e) => { e.stopPropagation(); removePattern(pat.id); }}
                     className="p-0.5 text-theme-ink/40 hover:text-red-400 cursor-pointer"
                   >
@@ -89,14 +80,12 @@ export const PatternLibraryBar: React.FC = () => {
                 )}
               </div>
 
-              {/* Nom & Édition */}
+              {/* Nom & Edition */}
               <div className="flex items-center justify-between gap-1 mt-0.5">
                 {editingId === pat.id ? (
                   <div className="flex items-center gap-1 w-full" onClick={(e) => e.stopPropagation()}>
                     <input
-                      type="text"
-                      value={editName}
-                      autoFocus
+                      type="text" value={editName} autoFocus
                       onChange={(e) => setEditName(e.target.value)}
                       onKeyDown={(e) => { if (e.key === 'Enter') handleSaveEdit(pat.id); if (e.key === 'Escape') setEditingId(null); }}
                       onBlur={() => handleSaveEdit(pat.id)}
@@ -112,8 +101,7 @@ export const PatternLibraryBar: React.FC = () => {
                       {pat.name}
                     </span>
                     <button
-                      type="button"
-                      title={t('editPatternNameTooltip')}
+                      type="button" title={t('editPatternNameTooltip')}
                       onClick={(e) => handleStartEdit(pat.id, pat.name, e)}
                       className="p-0.5 text-theme-ink/40 hover:text-theme-ink cursor-pointer"
                     >
@@ -123,10 +111,13 @@ export const PatternLibraryBar: React.FC = () => {
                 )}
               </div>
 
-              {/* État audio */}
+              {/* Etat audio & declinaisons */}
               <div className="flex items-center justify-between text-[10px] font-mono pt-1 border-t border-theme-border/20">
                 <span className={hasAudio ? 'text-emerald-400 font-bold' : 'text-theme-ink/40 italic'}>
-                  {hasAudio ? `✓ ${t('patternAudioRecorded')}` : `• ${t('patternAudioMissing')}`}
+                  {hasAudio ? `✓ ${t('patternAudioRecorded')}` : `○ ${t('patternAudioMissing')}`}
+                </span>
+                <span className="text-[9px] text-stone-400 font-mono">
+                  {recCount}/{totCount} decl.
                 </span>
               </div>
             </div>

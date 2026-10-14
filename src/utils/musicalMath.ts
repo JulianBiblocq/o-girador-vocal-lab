@@ -1,6 +1,6 @@
-﻿/**
+/**
  * musicalMath.ts
- * Utilitaires de conversion de notes et métrique rythmique.
+ * Utilitaires de conversion de notes et metrique rythmique.
  */
 import type { TimeSignatureString } from '../types/vocalPack.types';
 
@@ -9,13 +9,30 @@ const NOTE_TO_SEMITONE: Record<string, number> = {
   'F#': 6, Gb: 6, G: 7, 'G#': 8, Ab: 8, A: 9, 'A#': 10, Bb: 10, B: 11,
 };
 
-export function noteToFrequency(note: string): number {
+const SEMITONE_TO_NOTE = ['C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B'];
+
+export function noteToMidi(note: string): number {
   const match = note.trim().match(/^([A-Ga-g][#b]?)(-?\d+)$/);
-  if (!match) return 440;
-  const noteName = match[1].charAt(0).toUpperCase() + match[1].slice(1);
-  const octave = parseInt(match[2], 10);
-  const semitone = NOTE_TO_SEMITONE[noteName] ?? 9;
-  const midi = (octave + 1) * 12 + semitone;
+  if (!match) return 60;
+  const name = match[1].charAt(0).toUpperCase() + match[1].slice(1);
+  const oct = parseInt(match[2], 10);
+  return (oct + 1) * 12 + (NOTE_TO_SEMITONE[name] ?? 0);
+}
+
+export function midiToNote(midi: number): string {
+  const clamped = Math.max(12, Math.min(127, Math.round(midi)));
+  const semitone = clamped % 12;
+  const oct = Math.floor(clamped / 12) - 1;
+  return `${SEMITONE_TO_NOTE[semitone]}${oct}`;
+}
+
+export function transposePitchNote(note: string, semitones: number): string {
+  if (semitones === 0) return note;
+  return midiToNote(noteToMidi(note) + semitones);
+}
+
+export function noteToFrequency(note: string): number {
+  const midi = noteToMidi(note);
   return 440 * Math.pow(2, (midi - 69) / 12);
 }
 
