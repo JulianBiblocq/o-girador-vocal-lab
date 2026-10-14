@@ -1,10 +1,13 @@
 /**
  * App.tsx
- * Point d'entrée de O Girador • Vocal Lab avec i18n bilingue [ FR | BR ],
- * plein écran permanent responsive et alignement géométrique Cordel.
+ * Point d'entrée de O Girador • Atelier Vocal (Oficina Vocal) avec i18n bilingue [ FR | BR ],
+ * Bibliothèque de Patterns nommables (Puxador/Coro) et Frise Conducteur.
  */
 import React, { useState } from 'react';
 import { LanguageProvider, useLanguage } from './i18n/LanguageContext';
+import { ToadaProjectProvider } from './context/ToadaProjectContext';
+import { PatternLibraryBar } from './components/conductor/PatternLibraryBar';
+import { ToadaConductorStrip } from './components/conductor/ToadaConductorStrip';
 import { LivretPrise } from './components/livret-prise/LivretPrise';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { Mic, Sun, Moon } from 'lucide-react';
@@ -21,7 +24,7 @@ const AppContent: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-theme-bg text-theme-ink flex flex-col p-2.5 sm:p-4 md:p-6 transition-colors duration-200">
-      <header className="w-full max-w-none mb-4 cordel-card p-3 sm:p-4 flex flex-wrap items-center justify-between gap-3">
+      <header className="w-full max-w-none mb-3 cordel-card p-3 sm:p-4 flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <div className="p-2 cordel-card-sm bg-theme-wood text-white shrink-0">
             <Mic className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
@@ -36,7 +39,7 @@ const AppContent: React.FC = () => {
           </div>
         </div>
 
-        {/* Contrôles à droite : Binôme [ FR | BR ] & Thème calés sur h-9 (36px) */}
+        {/* Contrôles à droite : Binôme [ FR | BR ] & Thème */}
         <div className="flex items-center gap-2.5">
           <div className="h-9 cordel-card-sm inline-flex items-center p-0.5 text-xs font-mono select-none">
             <button
@@ -76,6 +79,12 @@ const AppContent: React.FC = () => {
         </div>
       </header>
 
+      {/* Bandeau Supérieur en 2 Lignes : Bibliothèque de Patterns & Frise Conducteur */}
+      <div className="w-full flex flex-col gap-2.5 mb-3.5">
+        <PatternLibraryBar />
+        <ToadaConductorStrip />
+      </div>
+
       <main className="flex-1 flex flex-col items-center justify-start w-full max-w-none">
         <LivretPrise />
       </main>
@@ -91,7 +100,9 @@ const AppContent: React.FC = () => {
 export const App: React.FC = () => (
   <ErrorBoundary>
     <LanguageProvider>
-      <AppContent />
+      <ToadaProjectProvider>
+        <AppContent />
+      </ToadaProjectProvider>
     </LanguageProvider>
   </ErrorBoundary>
 );

@@ -368,5 +368,65 @@
     "es": "La sincronización humana (palmas)",
     "de": "Die menschliche Synchronisation (Klatschen)",
     "it": "La sincronizzazione umana (battiti)"
+  },
+  {
+    "id": "atelier_vocal",
+    "category": "estudio",
+    "br": "A oficina vocal",
+    "fr": "L'atelier vocal",
+    "en": "The vocal workshop",
+    "es": "El taller vocal",
+    "de": "Die Gesangswerkstatt",
+    "it": "Il laboratorio vocale"
+  },
+  {
+    "id": "biblioteca_patterns",
+    "category": "estudio",
+    "br": "A biblioteca de padrões (patterns)",
+    "fr": "La bibliothèque de motifs (patterns)",
+    "en": "The pattern library",
+    "es": "La biblioteca de patrones",
+    "de": "Die Pattern-Bibliothek",
+    "it": "La libreria di pattern"
+  },
+  {
+    "id": "frise_conducteur",
+    "category": "estudio",
+    "br": "A linha de regência (arranjo)",
+    "fr": "La frise conducteur (arrangement)",
+    "en": "The song conductor strip",
+    "es": "La línea de dirección (arreglo)",
+    "de": "Das Arrangement-Band",
+    "it": "La linea di conduzione"
+  },
+  {
+    "id": "puxador",
+    "category": "voz",
+    "br": "O puxador (solista)",
+    "fr": "Le soliste (puxador)",
+    "en": "The lead singer (puxador)",
+    "es": "El solista (puxador)",
+    "de": "Der Vorsänger (Puxador)",
+    "it": "Il solista (puxador)"
+  },
+  {
+    "id": "coro",
+    "category": "voz",
+    "br": "O coro (resposta)",
+    "fr": "Le chœur (coro)",
+    "en": "The chorus (coro)",
+    "es": "El coro (respuesta)",
+    "de": "Der Chor (Coro)",
+    "it": "Il coro (risposta)"
+  },
+  {
+    "id": "pre_ecoute_appel",
+    "category": "estudio",
+    "br": "A pré-escuta de chamada (C-2 / C-1)",
+    "fr": "La pré-écoute d'appel (M-2 / M-1)",
+    "en": "The cue playback (M-2 / M-1)",
+    "es": "La preescucha de llamada",
+    "de": "Das Einzähler-Cue (M-2 / M-1)",
+    "it": "Il pre-ascolto di chiamata"
   }
 ]

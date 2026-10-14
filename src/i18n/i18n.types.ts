@@ -1,6 +1,6 @@
 /**
  * i18n.types.ts
- * Typage strict du moteur i18n pour O Girador • Vocal Lab.
+ * Typage strict du moteur i18n pour O Girador • Atelier Vocal (Oficina Vocal).
  * Supporte le binôme [ Langue de l'utilisateur (FR) | Portugais Brésilien (BR) ].
  */
 
@@ -11,6 +11,14 @@ export interface VocalLabTranslations {
   // En-tête
   appTitle: string; appSubtitle: string; themeToggle: string;
   tabLivret1: string; tabLivret2: string;
+
+  // Jalon 4.A : Bibliothèque & Conducteur de Toada
+  patternLibraryTitle: string; addPuxadorPattern: string; addCoroPattern: string;
+  rolePuxador: string; roleCoro: string; patternAudioRecorded: string; patternAudioMissing: string;
+  editPatternNameTooltip: string; deletePatternTooltip: string;
+  conductorTitle: string; addConductorBlock: string; playFullToada: string; stopFullToada: string;
+  railPuxador: string; railCoro: string; emptySlot: string; blockLabel: string;
+  cueSelectorLabel: string; cueNone: string; cueAutoPrevious: string; cueCustomPrefix: string; cueReadyBadge: string;
 
   // Balancier & Cycle de Prise
   pendulumIdleTitle: string; pendulumStatusIdle: string;

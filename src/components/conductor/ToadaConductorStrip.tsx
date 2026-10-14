@@ -1,0 +1,130 @@
+/**
+ * ToadaConductorStrip.tsx
+ * Ligne 2 : Frise Conducteur de la Toada (Rails Puxador & Coro, enchaînement des blocs).
+ */
+import React, { useState, useMemo } from 'react';
+import { useToadaProject } from '../../context/ToadaProjectContext';
+import { useLanguage } from '../../i18n/LanguageContext';
+import { Play, Square, Plus, X, Layers } from 'lucide-react';
+import { ToadaPlayerEngine } from './ToadaPlayerEngine';
+
+export const ToadaConductorStrip: React.FC<{ outputDeviceId?: string }> = ({ outputDeviceId }) => {
+  const { project, addSlot, removeSlot, updateSlot } = useToadaProject();
+  const { t } = useLanguage();
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [currentSlotIdx, setCurrentSlotIdx] = useState<number | null>(null);
+
+  const player = useMemo(() => new ToadaPlayerEngine(), []);
+  const puxadorPatterns = useMemo(() => project.patterns.filter((p) => p.role === 'puxador'), [project.patterns]);
+  const coroPatterns = useMemo(() => project.patterns.filter((p) => p.role === 'coro'), [project.patterns]);
+
+  const handleTogglePlay = async () => {
+    if (isPlaying) {
+      player.stop();
+      setIsPlaying(false);
+      setCurrentSlotIdx(null);
+    } else {
+      setIsPlaying(true);
+      await player.play(
+        project, outputDeviceId,
+        (slotIdx) => setCurrentSlotIdx(slotIdx),
+        () => { setIsPlaying(false); setCurrentSlotIdx(null); }
+      );
+    }
+  };
+
+  return (
+    <div className="cordel-card p-2 w-full flex flex-col gap-1.5 bg-black/60 select-none">
+      <div className="flex items-center justify-between text-xs font-mono">
+        <span className="font-bold text-theme-ink/80 flex items-center gap-1.5 uppercase text-[11px] tracking-wider">
+          <Layers className="w-3.5 h-3.5 text-theme-accent" />
+          <span>{t('conductorTitle')}</span>
+        </span>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={addSlot}
+            className="px-2 py-0.5 text-[11px] font-bold font-mono cordel-btn rounded-none flex items-center gap-1 cursor-pointer"
+          >
+            <Plus className="w-3 h-3 text-theme-accent" />
+            <span>{t('addConductorBlock')}</span>
+          </button>
+          <button
+            type="button"
+            onClick={handleTogglePlay}
+            className={`px-2.5 py-0.5 text-[11px] font-bold font-mono rounded-none flex items-center gap-1.5 cursor-pointer ${
+              isPlaying ? 'bg-red-800 text-white animate-pulse' : 'cordel-btn-primary'
+            }`}
+          >
+            {isPlaying ? <Square className="w-3 h-3 fill-current" /> : <Play className="w-3 h-3 fill-current" />}
+            <span>{isPlaying ? t('stopFullToada') : t('playFullToada')}</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Grille des blocs séquentiels */}
+      <div className="flex items-stretch gap-1.5 overflow-x-auto py-1 cordel-scrollbar">
+        {/* En-tête des Rails */}
+        <div className="flex flex-col justify-end gap-1 shrink-0 w-20 text-[10px] font-mono font-bold">
+          <div className="h-6 flex items-center justify-end pr-1 text-role-puxador truncate">{t('railPuxador')}</div>
+          <div className="h-6 flex items-center justify-end pr-1 text-role-coro truncate">{t('railCoro')}</div>
+        </div>
+
+        {project.slots.map((slot, idx) => {
+          const isCurrent = currentSlotIdx === idx;
+          return (
+            <div
+              key={slot.slotId}
+              className={`flex flex-col gap-1 p-1 min-w-[125px] max-w-[145px] shrink-0 border transition-all ${
+                isCurrent
+                  ? 'border-theme-accent bg-theme-accent/15 ring-2 ring-theme-accent shadow-lg'
+                  : 'border-theme-border/50 bg-black/40'
+              }`}
+            >
+              <div className="flex items-center justify-between text-[10px] font-mono px-0.5 text-theme-ink/70">
+                <span className="font-bold">{t('blockLabel', { n: idx + 1 })}</span>
+                {project.slots.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={() => removeSlot(slot.slotId)}
+                    className="p-0.5 text-theme-ink/40 hover:text-red-400 cursor-pointer"
+                  >
+                    <X className="w-2.5 h-2.5" />
+                  </button>
+                )}
+              </div>
+
+              {/* Sélecteur Puxador */}
+              <select
+                value={slot.puxadorPatternId ?? ''}
+                onChange={(e) => updateSlot(slot.slotId, e.target.value || null, slot.coroPatternId)}
+                className={`h-6 text-[10px] font-mono font-bold px-1 outline-none border cursor-pointer ${
+                  slot.puxadorPatternId ? 'bg-role-puxador text-white border-role-puxador' : 'bg-black/50 text-theme-ink/50 border-theme-border/30'
+                }`}
+              >
+                <option value="" className="bg-theme-bg text-theme-ink">{t('emptySlot')}</option>
+                {puxadorPatterns.map((p) => (
+                  <option key={p.id} value={p.id} className="bg-theme-bg text-theme-ink">{p.name}</option>
+                ))}
+              </select>
+
+              {/* Sélecteur Coro */}
+              <select
+                value={slot.coroPatternId ?? ''}
+                onChange={(e) => updateSlot(slot.slotId, slot.puxadorPatternId, e.target.value || null)}
+                className={`h-6 text-[10px] font-mono font-bold px-1 outline-none border cursor-pointer ${
+                  slot.coroPatternId ? 'bg-role-coro text-white border-role-coro' : 'bg-black/50 text-theme-ink/50 border-theme-border/30'
+                }`}
+              >
+                <option value="" className="bg-theme-bg text-theme-ink">{t('emptySlot')}</option>
+                {coroPatterns.map((p) => (
+                  <option key={p.id} value={p.id} className="bg-theme-bg text-theme-ink">{p.name}</option>
+                ))}
+              </select>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
