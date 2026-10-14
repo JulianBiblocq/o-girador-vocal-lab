@@ -1,8 +1,10 @@
 ﻿/**
  * PreviewPlayer.ts
- * Lecteur de pré-écoute calé sur la grille absolue avec compensation de latence matérielle.
+ * Lecteur de pre-ecoute cale sur la grille absolue avec compensation de latence materielle.
+ * Utilise le singleton sharedAudioContext (zero accumulation d AudioContext).
  */
 import { extractCompensatedSlice } from '../utils/wavEncoder';
+import { getSharedAudioContext, setSharedSinkId } from './sharedAudioContext';
 
 export interface PreviewOptions {
   trimStartSec: number;
@@ -33,18 +35,9 @@ export class PreviewPlayer {
   ): Promise<void> {
     this.stop();
 
-    const AudioCtxClass = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-    this.ctx = new AudioCtxClass();
-    if (this.ctx.state !== 'running') {
-      await this.ctx.resume();
-    }
-
-    if (options.outputDeviceId && 'setSinkId' in this.ctx && typeof (this.ctx as any).setSinkId === 'function') {
-      try {
-        await (this.ctx as any).setSinkId(options.outputDeviceId);
-      } catch (err) {
-        console.warn('PreviewPlayer: setSinkId non supporté ou refusé :', err);
-      }
+    this.ctx = await getSharedAudioContext();
+    if (options.outputDeviceId) {
+      await setSharedSinkId(options.outputDeviceId);
     }
 
     const { trimStartSec, trimEndSec, latencyOffsetMs, bpm, beatsPerMeasure, clickEnabled, onEnded } = options;
@@ -65,10 +58,8 @@ export class PreviewPlayer {
     this.playbackContextStartTime = now;
     this.isPlaying = true;
 
-    // 1. Démarrage de la voix alignée sur la grille
     this.sourceNode.start(now);
 
-    // 2. Clic témoin strictement synchronisé sur les temps absolus de la grille
     if (clickEnabled) {
       const beatDuration = 60 / bpm;
       const totalBeats = Math.ceil(options.totalDurationSec / beatDuration);
@@ -130,7 +121,8 @@ export class PreviewPlayer {
     osc.frequency.setValueAtTime(isMajor ? 1400 : 900, time);
     osc.frequency.exponentialRampToValueAtTime(isMajor ? 260 : 180, time + 0.02);
 
-    gain.gain.setValueAtTime(isMajor ? 0.45 : 0.25, time);
+    gain.gain.setValueAtTime(0.0001, time);
+    gain.gain.linearRampToValueAtTime(isMajor ? 0.45 : 0.25, time + 0.002);
     gain.gain.exponentialRampToValueAtTime(0.0001, time + 0.02);
 
     osc.connect(gain);

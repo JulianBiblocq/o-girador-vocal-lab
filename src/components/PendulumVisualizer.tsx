@@ -21,7 +21,6 @@ export const PendulumVisualizer: React.FC<PendulumVisualizerProps> = ({
   const rightBumperRef = useRef<HTMLSpanElement>(null);
   const railWidthRef = useRef<number>(500);
 
-  // Mesure de la largeur hors RAF via ResizeObserver (Zero Layout Thrashing)
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
@@ -34,22 +33,20 @@ export const PendulumVisualizer: React.FC<PendulumVisualizerProps> = ({
     return () => observer.disconnect();
   }, []);
 
-  // Initialisation Vanilla JS exclusive des balises feuilles (Zéro enfant React = Zéro removeChild)
   useEffect(() => {
     if (leftBumperRef.current) {
       leftBumperRef.current.textContent = beatsPerMeasure === 4
-        ? '◀ T1 / T3 (IMPACT)'
-        : beatsPerMeasure === 2 ? '◀ T1 (IMPACT)' : '◀ T1 / T3 (IMPACT)';
+        ? '◄ T1 / T3 (IMPACT)'
+        : beatsPerMeasure === 2 ? '◄ T1 (IMPACT)' : '◄ T1 / T3 (IMPACT)';
     }
     if (rightBumperRef.current) {
-      rightBumperRef.current.textContent = beatsPerMeasure === 4 ? 'T2 / T4 ▶' : 'T2 ▶';
+      rightBumperRef.current.textContent = beatsPerMeasure === 4 ? 'T2 / T4 ►' : 'T2 ►';
     }
     if (phaseLabelRef.current && !isActive) {
-      phaseLabelRef.current.textContent = 'EN ATTENTE DU CYCLE DE TEST';
+      phaseLabelRef.current.textContent = 'EN ATTENTE DU CYCLE DE PRISE';
     }
   }, [beatsPerMeasure, isActive]);
 
-  // Boucle 60 FPS pure GPU (Commandements 1, 2 et 3)
   useEffect(() => {
     let animId: number;
     let lastBeatIndex = -1;
@@ -69,7 +66,7 @@ export const PendulumVisualizer: React.FC<PendulumVisualizerProps> = ({
 
       if (!isActive || status.phase === 'idle') {
         shuttle.style.transform = 'translate3d(0px, 0, 0)';
-        phaseLabel.textContent = 'EN ATTENTE DU CYCLE DE TEST';
+        phaseLabel.textContent = 'EN ATTENTE DU CYCLE DE PRISE';
         if (leftBumper) {
           leftBumper.style.opacity = '0.4';
           leftBumper.style.transform = 'scale(1)';
@@ -99,12 +96,14 @@ export const PendulumVisualizer: React.FC<PendulumVisualizerProps> = ({
         }
 
         const bpmTotal = status.beatsPerMeasure;
-        if (status.phase === 'anacrusis') {
-          phaseLabel.textContent = `ÉLAN / ANACROUSE — TEMPS ${status.currentBeat + 1} / ${bpmTotal}`;
+        if (status.phase === 'countdown') {
+          phaseLabel.textContent = `DECOMPTE & TONALITE (Ecoutez : ${status.currentBeat + 1} / ${bpmTotal})`;
+        } else if (status.phase === 'anacrusis') {
+          phaseLabel.textContent = `ANACROUSE / ELAN (Chantez si depart en levee : ${status.currentBeat + 1} / ${bpmTotal})`;
         } else if (status.phase === 'singing') {
           phaseLabel.textContent = `CHANT : MESURE ${status.currentMeasure + 1} / ${measuresCount} (TEMPS ${status.currentBeat + 1} / ${bpmTotal})`;
         } else if (status.phase === 'completed') {
-          phaseLabel.textContent = 'CYCLE TERMINÉ (PUNCH-OUT)';
+          phaseLabel.textContent = 'CYCLE TERMINE (PUNCH-OUT)';
         }
       }
 
@@ -142,7 +141,7 @@ export const PendulumVisualizer: React.FC<PendulumVisualizerProps> = ({
           style={{ willChange: 'transform' }}
           className="w-10 h-9 cordel-card-sm flex items-center justify-center font-bold text-xs bg-theme-wood text-theme-ink shadow-md cursor-default pointer-events-none"
         >
-          ●
+          ▲
         </div>
       </div>
     </div>

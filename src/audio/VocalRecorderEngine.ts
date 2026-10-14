@@ -2,10 +2,9 @@
  * VocalRecorderEngine.ts
  * Moteur de capture audio PCM synchrone cale sur l horloge Web Audio a T0.
  * Utilise un AudioWorkletNode dedie (blocs de 128 samples, zero buzz, zero blocage UI).
- * Auto-calage materiel aller-retour (DAC/ADC) & micro-fade in de 15 ms.
+ * Filtrage strict sur captureStartTime & micro-fade in de 15 ms.
  */
 import { VOCAL_CAPTURE_WORKLET_CODE } from './vocalCaptureWorkletCode';
-import { computeHardwareLagSec } from './hardwareLatencyHelper';
 
 export class VocalRecorderEngine {
   private static registeredContexts = new WeakSet<AudioContext>();
@@ -23,6 +22,9 @@ export class VocalRecorderEngine {
   public async prepare(ctx: AudioContext, deviceId?: string): Promise<number> {
     this.cleanup();
     this.ctx = ctx;
+    if (this.ctx.state !== 'running') {
+      await this.ctx.resume();
+    }
     this.sampleRate = ctx.sampleRate;
 
     if (!VocalRecorderEngine.registeredContexts.has(ctx)) {
@@ -63,11 +65,9 @@ export class VocalRecorderEngine {
     return this.sampleRate;
   }
 
-  public start(syncStartTime: number, totalDurationSec: number): void {
+  public start(captureStartTime: number, totalDurationSec: number): void {
     this.totalDurationSec = totalDurationSec;
     this.chunks = [];
-    const lagSec = computeHardwareLagSec(this.ctx, this.stream);
-    const captureStartTime = syncStartTime + lagSec;
 
     if (this.workletNode) {
       this.workletNode.port.postMessage({
