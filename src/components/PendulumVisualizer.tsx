@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
 import type { MetronomeEngine } from '../audio/MetronomeEngine';
 import { BeatImpactBar } from './pendulum/BeatImpactBar';
 import { applyPhaseStyles } from './pendulum/pendulumStyleHelper';
@@ -40,7 +40,7 @@ export const PendulumVisualizer: React.FC<PendulumVisualizerProps> = ({
     if (phaseLabelRef.current && !isActive) phaseLabelRef.current.textContent = 'EN ATTENTE DU CYCLE DE PRISE';
     if (recBadgeRef.current && !isActive) {
       recBadgeRef.current.textContent = '● VEILLE';
-      recBadgeRef.current.style.color = 'rgba(255, 255, 255, 0.4)';
+      recBadgeRef.current.style.color = 'var(--cordel-secondary-text, #57534e)';
     }
   }, [beatsPerMeasure, isActive]);
 
@@ -67,8 +67,11 @@ export const PendulumVisualizer: React.FC<PendulumVisualizerProps> = ({
       if (!isActive || status.phase === 'idle') {
         shuttle.style.transform = 'translate3d(0px, 0, 0)';
         phaseLabel.textContent = 'EN ATTENTE DU CYCLE DE PRISE';
-        if (recBadge) { recBadge.textContent = '● VEILLE'; recBadge.style.color = 'rgba(255, 255, 255, 0.4)'; }
-        if (card) { card.style.borderColor = ''; card.style.backgroundColor = ''; card.style.boxShadow = 'none'; }
+        if (recBadge) {
+          recBadge.textContent = '● VEILLE';
+          recBadge.style.color = 'var(--cordel-secondary-text, #57534e)';
+        }
+        if (card) { card.style.borderColor = ''; card.style.backgroundColor = ''; card.style.boxShadow = ''; }
         if (progressBar) progressBar.style.transform = 'scaleX(0)';
         if (leftBumper) { leftBumper.style.opacity = '0.4'; leftBumper.style.transform = 'scale(1)'; }
         if (rightBumper) rightBumper.style.opacity = '0.4';
@@ -77,7 +80,7 @@ export const PendulumVisualizer: React.FC<PendulumVisualizerProps> = ({
         return;
       }
 
-      // 1. Barre verte bidirectionnelle (suit le sens du balancier)
+      // 1. Barre verte bidirectionnelle
       if (progressBar) {
         progressBar.style.transformOrigin = (status.currentBeat % 2 === 0) ? 'left center' : 'right center';
         progressBar.style.transform = `scaleX(${status.beatProgress.toFixed(3)})`;
@@ -91,14 +94,14 @@ export const PendulumVisualizer: React.FC<PendulumVisualizerProps> = ({
       // 3. Bascule visuelle rouge dès M-1 et pendant le Chant
       applyPhaseStyles(card, recBadge, phaseLabel, status, measuresCount);
 
-      // 4. Flash d'impact des temps (beatProgress < 0.18)
+      // 4. Flash d'impact des temps
       const isImpact = status.beatProgress < 0.18;
       const isRec = status.phase === 'anacrusis' || status.phase === 'singing';
       padRefs.current.forEach((pad, idx) => {
         if (!pad) return;
         const isActivePad = idx === status.currentBeat;
         if (isActivePad && isImpact) {
-          pad.style.backgroundColor = idx === 0 ? 'var(--cordel-gold, #f59e0b)' : (isRec ? '#ef4444' : '#22c55e');
+          pad.style.backgroundColor = idx === 0 ? 'var(--cordel-accent-text, #f59e0b)' : (isRec ? '#ef4444' : '#22c55e');
           pad.style.color = '#000';
         } else {
           pad.style.backgroundColor = isActivePad ? 'rgba(255,255,255,0.18)' : 'transparent';

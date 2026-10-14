@@ -1,4 +1,8 @@
-﻿import React, { useState, useEffect, useCallback } from 'react';
+/**
+ * DeviceSelector.tsx
+ * Sélecteur d'entrées et de sorties audio (Carte Son / Micro / Casque) avec flex-1.
+ */
+import React, { useState, useEffect, useCallback } from 'react';
 import { Mic, Headphones, RefreshCw, CheckCircle2 } from 'lucide-react';
 
 interface DeviceSelectorProps {
@@ -68,7 +72,7 @@ export const DeviceSelector: React.FC<DeviceSelectorProps> = ({
   }, [requestPermissionAndEnumerate, onDeviceChange, onOutputDeviceChange, selectedDeviceId, selectedOutputDeviceId]);
 
   return (
-    <div className="cordel-card p-3 flex flex-col gap-2.5">
+    <div className="cordel-card p-3 flex-1 flex flex-col justify-between gap-2.5">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-theme-ink">
           <span>Carte Son & Périphériques</span>

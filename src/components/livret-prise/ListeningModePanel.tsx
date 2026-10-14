@@ -35,7 +35,7 @@ export const ListeningModePanel: React.FC<ListeningModePanelProps> = ({
   const currentOctave = match ? match[2] : '4';
 
   return (
-    <div className="cordel-card p-3 flex flex-col gap-2.5">
+    <div className="cordel-card p-3 h-full flex flex-col justify-between gap-2.5">
       <div className="flex flex-col gap-1.5">
         <div className="text-xs font-bold uppercase text-theme-ink flex items-center gap-1.5">
           {listeningMode === 'headphones' ? <Headphones className="w-3.5 h-3.5 text-theme-accent" /> : <VolumeX className="w-3.5 h-3.5 text-theme-wood" />}

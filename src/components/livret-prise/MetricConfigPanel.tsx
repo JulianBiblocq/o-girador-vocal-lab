@@ -43,7 +43,7 @@ export const MetricConfigPanel: React.FC<MetricConfigPanelProps> = ({
   };
 
   return (
-    <div className="cordel-card p-3 flex flex-col gap-3">
+    <div className="cordel-card p-3 h-full flex flex-col justify-between gap-3">
       {/* 1. Signature Rythmique */}
       <div className="flex flex-col gap-1.5">
         <div className="flex items-center justify-between text-xs font-bold uppercase text-theme-ink">

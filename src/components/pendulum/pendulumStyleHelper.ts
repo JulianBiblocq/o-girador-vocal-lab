@@ -1,4 +1,4 @@
-﻿/**
+/**
  * pendulumStyleHelper.ts
  * Helper pur pour l application des styles de statut et libellés du balancier 60 FPS.
  */
@@ -15,11 +15,11 @@ export function applyPhaseStyles(
   if (card) {
     card.style.borderColor = isRec ? '#dc2626' : 'rgba(217, 119, 6, 0.5)';
     card.style.backgroundColor = isRec ? 'rgba(220, 38, 38, 0.12)' : 'rgba(0, 0, 0, 0.4)';
-    card.style.boxShadow = isRec ? '0 0 16px rgba(220, 38, 38, 0.25)' : 'none';
+    card.style.boxShadow = isRec ? 'var(--cordel-shadow), 0 0 16px rgba(220, 38, 38, 0.35)' : '';
   }
   if (recBadge) {
     recBadge.textContent = isRec ? '🔴 REC ACTIF — CHANTEZ !' : '⏳ PRÉCOMPTE : ÉCOUTEZ LE TEMPO';
-    recBadge.style.color = isRec ? '#ef4444' : '#f59e0b';
+    recBadge.style.color = isRec ? '#ef4444' : 'var(--cordel-accent-text, #f59e0b)';
   }
   if (phaseLabel) {
     const bpmTotal = status.beatsPerMeasure;

@@ -1,7 +1,7 @@
 /**
  * LivretPrise.tsx
  * Conteneur du Livret 1 (Prise & Balancier) avec navigation Livret 1/2,
- * grille responsive 3 colonnes Desktop et support bilingue.
+ * grille 3 colonnes Desktop parfaitement alignée horizontalement et support bilingue.
  */
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { MetronomeEngine, getBeatsPerMeasure, type ListeningMode } from '../../audio/MetronomeEngine';
@@ -24,11 +24,7 @@ import { getSavedLatencyOffsetMs } from '../../utils/latencyStorage';
 import { useLanguage } from '../../i18n/LanguageContext';
 import type { TimeSignatureString, VocalPackExport, PitchCurvePoint, VocalStepData } from '../../types/vocalPack.types';
 
-interface LivretPriseProps {
-  isFullWidth?: boolean;
-}
-
-export const LivretPrise: React.FC<LivretPriseProps> = ({ isFullWidth = false }) => {
+export const LivretPrise: React.FC = () => {
   const { t } = useLanguage();
   const engine = useMemo(() => new MetronomeEngine(), []);
   const recorder = useMemo(() => new VocalRecorderEngine(), []);
@@ -87,7 +83,7 @@ export const LivretPrise: React.FC<LivretPriseProps> = ({ isFullWidth = false })
   }, [recordedPCM, recordedSampleRate, totalDurationSec, bpm, beatsPerMeasure, measuresCount, beatResolutions]);
 
   return (
-    <div className={`flex flex-col gap-3 w-full transition-all duration-200 ${isFullWidth ? 'max-w-none' : 'max-w-3xl mx-auto'}`}>
+    <div className="flex flex-col gap-3.5 w-full max-w-none">
       {melodicData && (
         <div className="flex items-center justify-center gap-2 border-b border-theme-border/40 pb-2">
           <button type="button" onClick={() => setActiveLivret('prise')} className={`px-3 py-1 text-xs font-mono rounded-lg transition-all ${activeLivret === 'prise' ? 'bg-amber-500/20 text-amber-300 font-bold border border-amber-500/40' : 'text-theme-ink/60 hover:text-theme-ink'}`}>
@@ -118,12 +114,12 @@ export const LivretPrise: React.FC<LivretPriseProps> = ({ isFullWidth = false })
               onReset={() => { setRecordedPCM(null); setMelodicData(null); }} onPackReady={handlePackReady}
             />
           ) : (
-            <div className="flex flex-col gap-2.5">
+            <div className="flex flex-col gap-3">
               <RecordActionButton isCycleActive={isCycleActive} measuresCount={measuresCount} onToggleRecord={handleToggleRecord} />
-              <div className={`grid grid-cols-1 gap-3 pt-1 items-start ${isFullWidth ? 'lg:grid-cols-3' : 'md:grid-cols-2'}`}>
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 items-stretch pt-1">
                 <MetricConfigPanel timeSignature={timeSignature} onTimeSignatureChange={setTimeSignature} bpm={bpm} onBpmChange={setBpm} measuresCount={measuresCount} onMeasuresCountChange={setMeasuresCount} beatResolutions={beatResolutions} onBeatResolutionsChange={setBeatResolutions} disabled={isCycleActive} />
                 <ListeningModePanel listeningMode={listeningMode} onListeningModeChange={setListeningMode} referencePitch={referencePitch} onReferencePitchChange={setReferencePitch} onPlayReferencePreview={() => engine.playReferencePitchPreview(referencePitch, 1.5, selectedOutputDeviceId)} disabled={isCycleActive} />
-                <div className="flex flex-col gap-3">
+                <div className="h-full flex flex-col justify-between gap-4">
                   <CalibrationBanner inputDeviceId={selectedDeviceId} outputDeviceId={selectedOutputDeviceId} sampleRate={recordedSampleRate} onCalibrationComplete={() => {}} disabled={isCycleActive} />
                   <DeviceSelector selectedDeviceId={selectedDeviceId} onDeviceChange={setSelectedDeviceId} selectedOutputDeviceId={selectedOutputDeviceId} onOutputDeviceChange={(id) => { setSelectedOutputDeviceId(id); engine.setOutputDevice(id); }} disabled={isCycleActive} />
                 </div>

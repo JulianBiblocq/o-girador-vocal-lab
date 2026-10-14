@@ -1,4 +1,4 @@
-﻿:root {
+:root {
   /* Dark mode is default */
   --cordel-bg: #1a1a1a;
   --cordel-text: #f4ecd8;
@@ -6,21 +6,31 @@
   --cordel-wood: #8b2a1a;
   --cordel-wood-light: #ab3a26;
   --cordel-accent: #d4af37;
+  --cordel-accent-text: #fbbf24;
+  --cordel-secondary-text: rgba(244, 236, 216, 0.7);
   --cordel-muted: rgba(244, 236, 216, 0.6);
   --cordel-faint: rgba(244, 236, 216, 0.15);
-  --cordel-shadow-color: rgba(0, 0, 0, 0.55);
+  --cordel-shadow-color: #57534e;
+  --cordel-shadow: 4px 4px 0px #57534e;
+  --cordel-shadow-sm: 2px 2px 0px #57534e;
+  --cordel-btn-primary-text: #f4ecd8;
 }
 
 [data-theme='light'] {
   --cordel-bg: #f4ecd8;
   --cordel-text: #1a1a1a;
   --cordel-border: #1a1a1a;
-  --cordel-wood: #8b2a1a;
-  --cordel-wood-light: #ab3a26;
-  --cordel-accent: #b8860b;
+  --cordel-wood: #df6d4e;
+  --cordel-wood-light: #eb7f61;
+  --cordel-accent: #9a3412;
+  --cordel-accent-text: #9a3412;
+  --cordel-secondary-text: #57534e;
   --cordel-muted: rgba(26, 26, 26, 0.6);
   --cordel-faint: rgba(26, 26, 26, 0.12);
-  --cordel-shadow-color: rgba(26, 26, 26, 0.25);
+  --cordel-shadow-color: #8c857b;
+  --cordel-shadow: 4px 4px 0px #8c857b;
+  --cordel-shadow-sm: 2px 2px 0px #8c857b;
+  --cordel-btn-primary-text: #1a1a1a;
 }
 
 /* Utilitaires Cordel sémantiques */
@@ -28,30 +38,31 @@
 .text-theme-ink { color: var(--cordel-text); }
 .border-theme-border { border-color: var(--cordel-border); }
 .bg-theme-wood { background-color: var(--cordel-wood); }
-.text-theme-accent { color: var(--cordel-accent); }
+.text-theme-accent { color: var(--cordel-accent-text); }
 .bg-theme-accent { background-color: var(--cordel-accent); }
 .border-theme-accent { border-color: var(--cordel-accent); }
+.text-theme-secondary { color: var(--cordel-secondary-text); }
 
 /* Effet gravure sur bois (Cordel woodcut) */
 .cordel-card {
   background-color: var(--cordel-bg);
   color: var(--cordel-text);
   border: 3px solid var(--cordel-border);
-  box-shadow: 4px 4px 0px var(--cordel-border);
+  box-shadow: var(--cordel-shadow);
 }
 
 .cordel-card-sm {
   background-color: var(--cordel-bg);
   color: var(--cordel-text);
   border: 2px solid var(--cordel-border);
-  box-shadow: 2px 2px 0px var(--cordel-border);
+  box-shadow: var(--cordel-shadow-sm);
 }
 
 .cordel-btn {
   background-color: var(--cordel-bg);
   color: var(--cordel-text);
   border: 2px solid var(--cordel-border);
-  box-shadow: 3px 3px 0px var(--cordel-border);
+  box-shadow: var(--cordel-shadow-sm);
   font-weight: 700;
   transition: all 0.15s ease-in-out;
 }
@@ -63,9 +74,9 @@
 
 .cordel-btn-primary {
   background-color: var(--cordel-wood);
-  color: var(--cordel-text);
+  color: var(--cordel-btn-primary-text);
   border: 2px solid var(--cordel-border);
-  box-shadow: 3px 3px 0px var(--cordel-border);
+  box-shadow: var(--cordel-shadow);
   font-weight: 800;
   transition: all 0.15s ease-in-out;
 }
@@ -73,10 +84,9 @@
 .cordel-btn-primary:hover {
   background-color: var(--cordel-wood-light);
   transform: translate(-1px, -1px);
-  box-shadow: 4px 4px 0px var(--cordel-border);
 }
 
 .cordel-btn-primary:active {
   transform: translate(1px, 1px);
-  box-shadow: 1px 1px 0px var(--cordel-border);
+  box-shadow: 1px 1px 0px var(--cordel-shadow-color);
 }
