@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Types & Contrat de données VocalPackExport v1.0
  * Standard d'échange étanche entre O Girador Vocal Lab et Sequenciador.
  */
@@ -13,9 +13,9 @@ export type TimeSignatureString = '4/4' | '2/4' | '3/4' | '6/8' | '12/8';
 export interface VocalStepData {
   stepIndex: number;
   active: boolean;
-  note: string; // Ex: 'C4', 'A3', 'F#4'
+  note: string; // Ex: 'C4', 'A3', '───' pour une note tenue
   midiNumber: number; // Ex: 60 pour C4
-  syllable?: string; // Phonème ou texte chanté
+  syllable?: string; // Syllabe de la Letra chantée
   velocity: number; // 0..127 ou 0..1
   decay: number; // Durée relative ou millisecondes
   microtiming?: number; // Décalage fin (nudge en ms ou fraction de pas)
@@ -28,6 +28,13 @@ export interface VocalAnacrusisData {
   beats: number;
   startOffsetSec: number;
   preRollSteps: number;
+  steps?: VocalStepData[]; // Pas chantés dans l'anacrouse M-1
+}
+
+/** Point de la courbe de justesse vocale continue */
+export interface PitchCurvePoint {
+  timeSec: number;
+  midiFloat: number; // Numéro MIDI fractionnaire continu
 }
 
 /** Payload audio consolidé et métadonnées d'alignement */
@@ -69,5 +76,6 @@ export interface VocalPackExport {
     steps: VocalStepData[];
     totalSteps: number;
   };
+  pitchCurve?: PitchCurvePoint[]; // Courbe continue pour affichage Piano Roll
   audio: VocalAudioPayload;
 }
