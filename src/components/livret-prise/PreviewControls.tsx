@@ -21,8 +21,7 @@ export const PreviewControls: React.FC<PreviewControlsProps> = ({
   highPassEnabled, onToggleHighPass, onReset, onProceedToExtraction,
   alignment, disabled = false,
 }) => {
-  const { t, locale } = useLanguage();
-  const isPt = locale === 'pt';
+  const { t } = useLanguage();
 
   return (
     <div className="cordel-card p-3 flex flex-col gap-2.5">
@@ -35,7 +34,7 @@ export const PreviewControls: React.FC<PreviewControlsProps> = ({
           </span>
           {alignment.anacrusis.hasAnacrusis && (
             <span className="text-[10px] text-theme-accent border border-theme-accent/50 px-1 py-0.5">
-              {t('anacrusisLabel')} ({alignment.anacrusis.beats.toFixed(1)} {isPt ? 'pulsos' : 'tps'})
+              {t('anacrusisLabel')} ({t('anacrusisBeats', { beats: alignment.anacrusis.beats.toFixed(1) })})
             </span>
           )}
         </div>
@@ -89,7 +88,7 @@ export const PreviewControls: React.FC<PreviewControlsProps> = ({
           className={`py-2 px-3 flex items-center justify-center gap-1.5 text-xs font-bold transition-all cursor-pointer ${
             clickEnabled ? 'cordel-btn-primary' : 'cordel-btn opacity-70'
           }`}
-          title={isPt ? 'Ativar/Desativar clique guia' : 'Activer/Désactiver le clic témoin'}
+          title={t('clickWitness')}
         >
           {clickEnabled ? <Volume2 className="w-4 h-4 text-theme-accent" /> : <VolumeX className="w-4 h-4" />}
           <span>{t('clickWitness')}</span>

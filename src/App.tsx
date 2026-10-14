@@ -1,6 +1,6 @@
 /**
  * App.tsx
- * Point d'entrée de O Girador • Vocal Lab avec i18n bilingue (FR/PT),
+ * Point d'entrée de O Girador • Vocal Lab avec i18n bilingue [ FR | BR ],
  * plein écran permanent responsive et alignement géométrique Cordel.
  */
 import React, { useState } from 'react';
@@ -36,7 +36,7 @@ const AppContent: React.FC = () => {
           </div>
         </div>
 
-        {/* Contrôles à droite : Langue & Thème calés sur h-9 (36px) */}
+        {/* Contrôles à droite : Binôme [ FR | BR ] & Thème calés sur h-9 (36px) */}
         <div className="flex items-center gap-2.5">
           <div className="h-9 cordel-card-sm inline-flex items-center p-0.5 text-xs font-mono select-none">
             <button
@@ -53,15 +53,15 @@ const AppContent: React.FC = () => {
             </button>
             <button
               type="button"
-              onClick={() => setLocale('pt')}
+              onClick={() => setLocale('br')}
               className={`h-full px-2.5 font-bold transition-all flex items-center justify-center cursor-pointer ${
-                locale === 'pt'
+                locale === 'br'
                   ? 'bg-theme-wood text-theme-ink font-black shadow-sm'
                   : 'opacity-60 hover:opacity-100 text-theme-ink'
               }`}
-              title="Português do Brasil"
+              title="Português Brasileiro"
             >
-              PT
+              BR
             </button>
           </div>
 

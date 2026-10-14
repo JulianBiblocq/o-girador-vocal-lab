@@ -14,10 +14,9 @@ interface PendulumVisualizerProps {
 export const PendulumVisualizer: React.FC<PendulumVisualizerProps> = ({
   engine, isActive, measuresCount, beatsPerMeasure = 4,
 }) => {
-  const { locale } = useLanguage();
-  const isPt = locale === 'pt';
-  const isPtRef = useRef(isPt);
-  useEffect(() => { isPtRef.current = isPt; }, [isPt]);
+  const { t } = useLanguage();
+  const tRef = useRef(t);
+  useEffect(() => { tRef.current = t; }, [t]);
 
   const cardRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -41,9 +40,9 @@ export const PendulumVisualizer: React.FC<PendulumVisualizerProps> = ({
   }, []);
 
   const resetIdle = (label: HTMLSpanElement | null, badge: HTMLSpanElement | null) => {
-    if (label) label.textContent = isPtRef.current ? 'AGUARDANDO CICLO DE GRAVAÇÃO' : 'EN ATTENTE DU CYCLE DE PRISE';
+    if (label) label.textContent = tRef.current('pendulumIdleTitle');
     if (badge) {
-      badge.textContent = isPtRef.current ? '● EM ESPERA' : '● VEILLE';
+      badge.textContent = tRef.current('pendulumStatusIdle');
       badge.style.color = 'var(--cordel-secondary-text, #57534e)';
     }
   };
@@ -52,7 +51,7 @@ export const PendulumVisualizer: React.FC<PendulumVisualizerProps> = ({
     if (leftBumperRef.current) leftBumperRef.current.textContent = beatsPerMeasure === 4 ? '◄ T1/T3' : '◄ T1';
     if (rightBumperRef.current) rightBumperRef.current.textContent = beatsPerMeasure === 4 ? 'T2/T4 ►' : 'T2 ►';
     if (!isActive) resetIdle(phaseLabelRef.current, recBadgeRef.current);
-  }, [beatsPerMeasure, isActive, isPt]);
+  }, [beatsPerMeasure, isActive, t]);
 
   useEffect(() => {
     let animId: number;
@@ -92,7 +91,7 @@ export const PendulumVisualizer: React.FC<PendulumVisualizerProps> = ({
       const currentX = (status.currentBeat % 2 === 0) ? h * railWidthRef.current : (1 - h) * railWidthRef.current;
       shuttle.style.transform = `translate3d(${currentX.toFixed(2)}px, 0, 0)`;
 
-      applyPhaseStyles(card, recBadge, phaseLabel, status, measuresCount, isPtRef.current);
+      applyPhaseStyles(card, recBadge, phaseLabel, status, measuresCount, tRef.current);
 
       const isImpact = status.beatProgress < 0.18;
       const isRec = status.phase === 'anacrusis' || status.phase === 'singing';

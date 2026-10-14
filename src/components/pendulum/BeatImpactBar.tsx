@@ -26,7 +26,7 @@ export const BeatImpactBar: React.FC<BeatImpactBarProps> = ({
           className="text-[10px] font-bold font-mono tracking-wider"
         />
         <span className="text-[10px] font-mono opacity-60">
-          {t('synchronousImpact')}
+          {t('pendulumSyncImpact')}
         </span>
       </div>
 

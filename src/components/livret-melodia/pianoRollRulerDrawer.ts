@@ -1,6 +1,6 @@
 /**
  * pianoRollRulerDrawer.ts
- * Rendu Canvas 2D de la règle temporelle supérieure (42 px : Mesures / Temps + indicateurs) bilingue.
+ * Rendu Canvas 2D de la règle temporelle supérieure (42 px : Mesures / Temps + indicateurs i18n purs).
  */
 export const RULER_HEIGHT = 42;
 
@@ -14,11 +14,13 @@ export interface DrawRulerOptions {
   seekStartSec: number;
   playheadSec: number;
   isPlaying: boolean;
-  isPt?: boolean;
+  elanLabel: string;
+  m1Label: string;
+  measurePrefix: string;
 }
 
 export function drawRulerBar(ctx: CanvasRenderingContext2D, opts: DrawRulerOptions): void {
-  const { width, height, dpr, beatsPerMeasure, totalDurationSec, anacrusisDurationSec, seekStartSec, playheadSec, isPlaying, isPt } = opts;
+  const { width, height, dpr, beatsPerMeasure, totalDurationSec, anacrusisDurationSec, seekStartSec, playheadSec, isPlaying, elanLabel, m1Label, measurePrefix } = opts;
   ctx.save();
   ctx.scale(dpr, dpr);
   ctx.clearRect(0, 0, width, height);
@@ -46,9 +48,7 @@ export function drawRulerBar(ctx: CanvasRenderingContext2D, opts: DrawRulerOptio
 
       ctx.font = isT1 ? 'bold 10px monospace' : 'bold 9.5px monospace';
       ctx.fillStyle = isT1 ? '#d4af37' : m === 0 ? '#fbbf24' : 'rgba(245, 240, 230, 0.85)';
-      const elanLabel = isPt ? 'ANACRUSE (C-1)' : 'ÉLAN (M-1)';
-      const m1Label = isPt ? '★ C1' : '★ M1';
-      const mLabel = isPt ? `C${m}` : `M${m}`;
+      const mLabel = `${measurePrefix}${m}`;
       ctx.fillText(m === 0 ? elanLabel : isT1 ? m1Label : mLabel, x + 6, 14.5);
     } else {
       ctx.lineWidth = 1;

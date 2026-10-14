@@ -19,8 +19,7 @@ export const CalibrationBanner: React.FC<CalibrationBannerProps> = ({
   onCalibrationComplete,
   disabled = false,
 }) => {
-  const { locale } = useLanguage();
-  const isPt = locale === 'pt';
+  const { t } = useLanguage();
   const [isCalibrating, setIsCalibrating] = useState(false);
   const [progress, setProgress] = useState<CalibrationProgress>({ step: 'idle' });
   const [calibratedLatency, setCalibratedLatency] = useState<number | null>(null);
@@ -50,12 +49,12 @@ export const CalibrationBanner: React.FC<CalibrationBannerProps> = ({
   };
 
   const statusLabel = calibratedLatency !== null
-    ? (isPt ? `Aparelho calibrado (${calibratedLatency > 0 ? '+' : ''}${calibratedLatency} ms)` : `Appareil calibré (${calibratedLatency > 0 ? '+' : ''}${calibratedLatency} ms)`)
-    : (isPt ? 'Novo aparelho de áudio detectado — CALIBRAR EM 8 PALMAS' : 'Nouvel appareil audio détecté — CALIBRER EN 8 CLAPS');
+    ? t('calibReadyBadge', { ms: (calibratedLatency > 0 ? '+' : '') + calibratedLatency })
+    : t('calibNewDeviceWarn');
 
   const btnLabel = calibratedLatency !== null
-    ? (isPt ? 'Recalibrar (8 palmas)' : 'Recalibrer (8 claps)')
-    : (isPt ? 'CALIBRAR EM 8 PALMAS' : 'CALIBRER EN 8 CLAPS');
+    ? t('calibRecalibrateBtn')
+    : t('calibNewDeviceWarnBtn');
 
   return (
     <div className="cordel-card p-2.5 bg-black/40 text-xs font-mono flex flex-col gap-2">
@@ -92,12 +91,12 @@ export const CalibrationBanner: React.FC<CalibrationBannerProps> = ({
       {isCalibrating && (
         <div className="p-2 border border-theme-accent/30 bg-theme-accent/10 flex items-center justify-between">
           <span className="text-[11px] text-theme-ink font-bold animate-pulse">
-            {progress.step === 'countdown' && (isPt ? 'Escute o andamento (4 pulsos)...' : 'Écoutez le tempo (4 bips)...')}
-            {progress.step === 'clapping' && (isPt ? `Bata palmas em cada pulso (${progress.currentBeat ?? 1}/8)!` : `Tapez dans vos mains sur chaque bip (${progress.currentBeat ?? 1}/8) !`)}
-            {progress.step === 'analyzing' && (isPt ? 'Calculando latência...' : 'Calcul de la latence...')}
+            {progress.step === 'countdown' && t('calibStepListen')}
+            {progress.step === 'clapping' && t('calibStepClap', { n: progress.currentBeat ?? 1 })}
+            {progress.step === 'analyzing' && t('calibStepCompute')}
           </span>
           <span className="text-[10px] text-theme-accent font-bold">
-            {progress.step === 'clapping' ? (isPt ? `PALMA ${progress.currentBeat}/8` : `CLAP ${progress.currentBeat}/8`) : 'AUTO-TEST'}
+            {progress.step === 'clapping' ? t('calibClapBadge', { n: progress.currentBeat ?? 1 }) : t('calibAutoTestBadge')}
           </span>
         </div>
       )}

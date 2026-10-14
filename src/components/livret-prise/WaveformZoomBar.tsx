@@ -1,6 +1,6 @@
 /**
  * WaveformZoomBar.tsx
- * Barre d'outils compacte de zoom horizontal (1x à 8x) et de centrage sur les trims bilingue.
+ * Barre d'outils compacte de zoom horizontal (1x à 8x) et de centrage sur les trims (i18n pur via t).
  */
 import React from 'react';
 import { useLanguage } from '../../i18n/LanguageContext';
@@ -17,8 +17,7 @@ interface WaveformZoomBarProps {
 export const WaveformZoomBar: React.FC<WaveformZoomBarProps> = ({
   zoomLevel, onSetZoom, onZoomIn, onZoomOut, onSeeStart, onSeeEnd,
 }) => {
-  const { t, locale } = useLanguage();
-  const isPt = locale === 'pt';
+  const { t } = useLanguage();
   const presets = [1, 2, 4, 8];
 
   return (
@@ -29,7 +28,7 @@ export const WaveformZoomBar: React.FC<WaveformZoomBarProps> = ({
           type="button"
           onClick={onZoomOut}
           disabled={zoomLevel <= 1.05}
-          title={isPt ? 'Diminuir zoom (Ctrl + Roda para trás)' : 'Dézoomer (Ctrl + Molette arrière)'}
+          title={t('zoomOutTitle')}
           className="px-2 py-0.5 rounded bg-white/5 hover:bg-white/10 active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed text-theme-ink font-mono"
         >
           🔍-
@@ -55,7 +54,7 @@ export const WaveformZoomBar: React.FC<WaveformZoomBarProps> = ({
           type="button"
           onClick={onZoomIn}
           disabled={zoomLevel >= 7.95}
-          title={isPt ? 'Aumentar zoom (Ctrl + Roda para frente)' : 'Zoomer (Ctrl + Molette avant)'}
+          title={t('zoomInTitle')}
           className="px-2 py-0.5 rounded bg-white/5 hover:bg-white/10 active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed text-theme-ink font-mono"
         >
           🔍+
@@ -66,7 +65,7 @@ export const WaveformZoomBar: React.FC<WaveformZoomBarProps> = ({
         <button
           type="button"
           onClick={onSeeStart}
-          title={isPt ? 'Centralizar visualização na alça de Início' : 'Centrer la vue sur la poignée Début'}
+          title={t('zoomSeeStartTitle')}
           className="px-2 py-0.5 rounded bg-sky-950/60 border border-sky-500/40 text-sky-300 hover:bg-sky-900/60 font-mono text-[11px] flex items-center gap-1 transition-all active:scale-95"
         >
           {t('zoomSeeStart')}
@@ -74,7 +73,7 @@ export const WaveformZoomBar: React.FC<WaveformZoomBarProps> = ({
         <button
           type="button"
           onClick={onSeeEnd}
-          title={isPt ? 'Centralizar visualização na alça de Fim' : 'Centrer la vue sur la poignée Fin'}
+          title={t('zoomSeeEndTitle')}
           className="px-2 py-0.5 rounded bg-red-950/60 border border-red-500/40 text-red-300 hover:bg-red-900/60 font-mono text-[11px] flex items-center gap-1 transition-all active:scale-95"
         >
           {t('zoomSeeEnd')}

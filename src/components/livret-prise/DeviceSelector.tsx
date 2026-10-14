@@ -1,6 +1,6 @@
 /**
  * DeviceSelector.tsx
- * Sélecteur d'entrées et de sorties audio (Carte Son / Micro / Casque) bilingue FR/PT.
+ * Sélecteur d'entrées et de sorties audio (Carte Son / Micro / Casque) bilingue FR/BR (i18n pur via t).
  */
 import React, { useState, useEffect, useCallback } from 'react';
 import { Mic, Headphones, RefreshCw, CheckCircle2 } from 'lucide-react';
@@ -18,8 +18,7 @@ export const DeviceSelector: React.FC<DeviceSelectorProps> = ({
   selectedDeviceId, onDeviceChange, selectedOutputDeviceId,
   onOutputDeviceChange, disabled = false,
 }) => {
-  const { t, locale } = useLanguage();
-  const isPt = locale === 'pt';
+  const { t } = useLanguage();
   const [inputDevices, setInputDevices] = useState<MediaDeviceInfo[]>([]);
   const [outputDevices, setOutputDevices] = useState<MediaDeviceInfo[]>([]);
   const [hasPermission, setHasPermission] = useState(false);
@@ -76,11 +75,11 @@ export const DeviceSelector: React.FC<DeviceSelectorProps> = ({
     <div className="cordel-card p-3 flex-1 flex flex-col justify-between gap-2.5">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-theme-ink">
-          <span>{t('soundCardDevices')}</span>
+          <span>{t('devicePanelTitle')}</span>
           {hasPermission && (
             <span className="text-[10px] text-emerald-400 font-mono tracking-normal flex items-center gap-1">
               <CheckCircle2 className="w-3 h-3" />
-              <span>{t('connected')}</span>
+              <span>{t('deviceConnectedBadge')}</span>
             </span>
           )}
         </div>
@@ -91,7 +90,7 @@ export const DeviceSelector: React.FC<DeviceSelectorProps> = ({
           className="cordel-btn px-2 py-0.5 flex items-center gap-1.5 text-xs cursor-pointer"
         >
           <RefreshCw className={`w-3 h-3 ${isLoading ? 'animate-spin' : ''}`} />
-          <span>{hasPermission ? t('refresh') : t('authorizeAudio')}</span>
+          <span>{hasPermission ? t('deviceRefreshBtn') : t('authorizeAudio')}</span>
         </button>
       </div>
 
@@ -99,7 +98,7 @@ export const DeviceSelector: React.FC<DeviceSelectorProps> = ({
       <div className="flex flex-col gap-1">
         <label className="text-[11px] font-mono text-theme-ink/80 flex items-center gap-1">
           <Mic className="w-3 h-3 text-theme-accent" />
-          <span>{t('micInputPureDirect')}</span>
+          <span>{t('deviceMicInputLabel')}</span>
         </label>
         <select
           value={selectedDeviceId}
@@ -110,7 +109,7 @@ export const DeviceSelector: React.FC<DeviceSelectorProps> = ({
         >
           {inputDevices.map((dev, idx) => (
             <option key={dev.deviceId || idx} value={dev.deviceId} className="bg-theme-bg text-theme-ink">
-              {dev.label || `${isPt ? 'Microfone' : 'Microphone'} ${idx + 1}`}
+              {dev.label || t('defaultMicLabel', { n: idx + 1 })}
             </option>
           ))}
           {inputDevices.length === 0 && <option value="">{t('clickAuthorizeAudio')}</option>}
@@ -122,7 +121,7 @@ export const DeviceSelector: React.FC<DeviceSelectorProps> = ({
         <div className="flex flex-col gap-1 pt-1 border-t border-theme-border/20">
           <label className="text-[11px] font-mono text-theme-ink/80 flex items-center gap-1">
             <Headphones className="w-3 h-3 text-theme-accent" />
-            <span>{t('headphonesOutputDirect')}</span>
+            <span>{t('deviceOutputLabel')}</span>
           </label>
           <select
             value={selectedOutputDeviceId}
@@ -132,7 +131,7 @@ export const DeviceSelector: React.FC<DeviceSelectorProps> = ({
           >
             {outputDevices.map((dev, idx) => (
               <option key={dev.deviceId || idx} value={dev.deviceId} className="bg-theme-bg text-theme-ink">
-                {dev.label || `${isPt ? 'Saída de áudio' : 'Sortie audio'} ${idx + 1}`}
+                {dev.label || t('defaultOutputLabel', { n: idx + 1 })}
               </option>
             ))}
           </select>

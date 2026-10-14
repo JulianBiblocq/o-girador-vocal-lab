@@ -1,8 +1,9 @@
 /**
  * pendulumStyleHelper.ts
- * Helper pur pour l'application des styles de statut et libellés du balancier 60 FPS bilingue.
+ * Helper pur pour l'application des styles de statut et libellés du balancier 60 FPS (i18n pur via t).
  */
 import type { CycleStatus } from '../../audio/cycleStatusHelper';
+import type { TranslationKey, TranslationParams } from '../../i18n/i18n.types';
 
 export function applyPhaseStyles(
   card: HTMLDivElement | null,
@@ -10,7 +11,7 @@ export function applyPhaseStyles(
   phaseLabel: HTMLSpanElement | null,
   status: CycleStatus,
   measuresCount: number,
-  isPt: boolean = false
+  t: (key: TranslationKey, params?: TranslationParams) => string
 ): void {
   const isRec = status.phase === 'anacrusis' || status.phase === 'singing';
   if (card) {
@@ -19,34 +20,21 @@ export function applyPhaseStyles(
     card.style.boxShadow = isRec ? 'var(--cordel-shadow), 0 0 16px rgba(220, 38, 38, 0.35)' : '';
   }
   if (recBadge) {
-    if (isRec) {
-      recBadge.textContent = isPt ? '🔴 GRAVANDO — CANTE!' : '🔴 REC ACTIF — CHANTEZ !';
-      recBadge.style.color = '#ef4444';
-    } else {
-      recBadge.textContent = isPt
-        ? '⏳ CONTAGEM: ESCUTE O ANDAMENTO (MICROFONE EM ESPERA)'
-        : '⏳ PRÉCOMPTE : ÉCOUTEZ LE TEMPO (MICRO EN ATTENTE)';
-      recBadge.style.color = 'var(--cordel-accent-text, #f59e0b)';
-    }
+    recBadge.textContent = isRec ? t('pendulumStatusRec') : t('pendulumStatusPrecount');
+    recBadge.style.color = isRec ? '#ef4444' : 'var(--cordel-accent-text, #f59e0b)';
   }
   if (phaseLabel) {
     const bpmTotal = status.beatsPerMeasure;
     const beatNum = status.currentBeat + 1;
     if (status.phase === 'countdown') {
-      phaseLabel.textContent = isPt
-        ? `CONTAGEM E TOM (Escute: ${beatNum} / ${bpmTotal})`
-        : `DÉCOMPTE & TONALITÉ (Écoutez : ${beatNum} / ${bpmTotal})`;
+      phaseLabel.textContent = t('phasePrecount', { beat: beatNum, beats: bpmTotal });
     } else if (status.phase === 'anacrusis') {
-      phaseLabel.textContent = isPt
-        ? `ANACRUSE / IMPULSO (Cante se iniciar em contratempo : ${beatNum} / ${bpmTotal})`
-        : `ANACROUSE / ÉLAN (Chantez si départ en levée : ${beatNum} / ${bpmTotal})`;
+      phaseLabel.textContent = t('phaseAnacrusis', { beat: beatNum, beats: bpmTotal });
     } else if (status.phase === 'singing') {
       const mNum = status.currentMeasure + 1;
-      phaseLabel.textContent = isPt
-        ? `CANTO: COMPASSO ${mNum} / ${measuresCount} (TEMPO ${beatNum} / ${bpmTotal})`
-        : `CHANT : MESURE ${mNum} / ${measuresCount} (TEMPS ${beatNum} / ${bpmTotal})`;
+      phaseLabel.textContent = t('phaseSinging', { current: mNum, total: measuresCount, beat: beatNum, beats: bpmTotal });
     } else if (status.phase === 'completed') {
-      phaseLabel.textContent = isPt ? 'CICLO CONCLUÍDO (PUNCH-OUT)' : 'CYCLE TERMINÉ (PUNCH-OUT)';
+      phaseLabel.textContent = t('phaseCompletedTitle');
     }
   }
 }

@@ -20,9 +20,7 @@ export const MetricConfigPanel: React.FC<MetricConfigPanelProps> = ({
   measuresCount, onMeasuresCountChange, beatResolutions,
   onBeatResolutionsChange, disabled = false,
 }) => {
-  const { t, locale } = useLanguage();
-  const isPt = locale === 'pt';
-  const unit = isPt ? 'C' : 'M';
+  const { t } = useLanguage();
 
   const toggleBeatResolution = (idx: number) => {
     const next = [...beatResolutions];
@@ -90,7 +88,7 @@ export const MetricConfigPanel: React.FC<MetricConfigPanelProps> = ({
                 key={count} type="button" disabled={disabled} onClick={() => onMeasuresCountChange(count)}
                 className={`py-1 text-xs font-bold transition-all cursor-pointer ${measuresCount === count ? 'cordel-btn-primary' : 'cordel-btn'}`}
               >
-                {count} {unit}
+                {t('measureUnitShort', { n: count })}
               </button>
             ))}
           </div>

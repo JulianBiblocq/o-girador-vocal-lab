@@ -27,7 +27,7 @@ export const WaveformOverlayCanvas: React.FC<WaveformOverlayCanvasProps> = ({
   const dragModeRef = useRef<'start' | 'end' | 'wave' | null>(null);
   const dragStartXRef = useRef<number>(0);
   const initialOffsetMsRef = useRef<number>(0);
-  const { locale } = useLanguage();
+  const { t } = useLanguage();
 
   useEffect(() => {
     peaksCacheRef.current = extractNormalizedPeaks(rawPCM, Math.min(rawPCM.length, Math.max(600, width * 2)));
@@ -46,9 +46,10 @@ export const WaveformOverlayCanvas: React.FC<WaveformOverlayCanvasProps> = ({
     drawWaveformOverlay(ctx, {
       width, height, dpr, peaks: peaksCacheRef.current, totalDurationSec,
       trimStartSec, trimEndSec, latencyOffsetMs, playheadSec, isPlaying,
-      isPt: locale === 'pt',
+      trimStartLabel: t('trimStartFlag'),
+      trimEndLabel: t('trimEndFlag'),
     });
-  }, [width, height, totalDurationSec, trimStartSec, trimEndSec, latencyOffsetMs, playheadSec, isPlaying, locale]);
+  }, [width, height, totalDurationSec, trimStartSec, trimEndSec, latencyOffsetMs, playheadSec, isPlaying, t]);
 
   useEffect(() => { draw(); }, [draw]);
 

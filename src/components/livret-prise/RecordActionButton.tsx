@@ -13,13 +13,7 @@ export const RecordActionButton: React.FC<RecordActionButtonProps> = ({
   measuresCount,
   onToggleRecord,
 }) => {
-  const { locale, t } = useLanguage();
-  const isPt = locale === 'pt';
-
-  const stopText = t('stopRecordBtn');
-  const recordText = isPt
-    ? `GRAVAR A VOZ (1 C ANACRUSE + ${measuresCount} C CANTO)`
-    : `ENREGISTRER LA VOIX (1 M ÉLAN + ${measuresCount} M CHANT)`;
+  const { t } = useLanguage();
 
   return (
     <button
@@ -33,12 +27,12 @@ export const RecordActionButton: React.FC<RecordActionButtonProps> = ({
         {isCycleActive ? (
           <>
             <Square className="w-5 h-5 fill-current" />
-            <span>{stopText}</span>
+            <span>{t('btnStopRecording')}</span>
           </>
         ) : (
           <>
             <Mic className="w-5 h-5 text-red-500 fill-current animate-pulse" />
-            <span>{recordText}</span>
+            <span>{t('btnStartRecording', { measures: measuresCount })}</span>
           </>
         )}
       </div>

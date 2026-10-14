@@ -1,7 +1,7 @@
 /**
  * PianoRollRulerCanvas.tsx
  * Canvas supérieur dédié à la règle temporelle (42 px : Mesures / Temps).
- * Fixé en sticky top-0, avec Seek immédiat au clic/glisser et indicateurs 60 FPS.
+ * Fixé en sticky top-0, avec Seek immédiat au clic/glisser et indicateurs 60 FPS (i18n pur via t).
  */
 import React, { useRef, useEffect, useCallback } from 'react';
 import { drawRulerBar, RULER_HEIGHT } from './pianoRollRulerDrawer';
@@ -22,7 +22,7 @@ export const PianoRollRulerCanvas: React.FC<PianoRollRulerCanvasProps> = (props)
   const { width, beatsPerMeasure, totalDurationSec, anacrusisDurationSec, seekStartSec, isPlaying, getPlayheadSec, onSeek } = props;
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const isDraggingRef = useRef<boolean>(false);
-  const { locale } = useLanguage();
+  const { t } = useLanguage();
 
   const draw = useCallback(() => {
     const canvas = canvasRef.current;
@@ -37,9 +37,12 @@ export const PianoRollRulerCanvas: React.FC<PianoRollRulerCanvasProps> = (props)
     const playhead = isPlaying && getPlayheadSec ? getPlayheadSec() : -1;
     drawRulerBar(ctx, {
       width, height: RULER_HEIGHT, dpr, beatsPerMeasure, totalDurationSec,
-      anacrusisDurationSec, seekStartSec, playheadSec: playhead, isPlaying, isPt: locale === 'pt'
+      anacrusisDurationSec, seekStartSec, playheadSec: playhead, isPlaying,
+      elanLabel: t('rulerElan'),
+      m1Label: t('rulerMeasure1'),
+      measurePrefix: t('measureAbbr'),
     });
-  }, [width, beatsPerMeasure, totalDurationSec, anacrusisDurationSec, seekStartSec, isPlaying, getPlayheadSec, locale]);
+  }, [width, beatsPerMeasure, totalDurationSec, anacrusisDurationSec, seekStartSec, isPlaying, getPlayheadSec, t]);
 
   useEffect(() => {
     draw();
@@ -82,7 +85,6 @@ export const PianoRollRulerCanvas: React.FC<PianoRollRulerCanvasProps> = (props)
       onPointerUp={handlePointerUp}
       onDoubleClick={() => onSeek(0)}
       style={{ width: `${width}px`, height: `${RULER_HEIGHT}px` }}
-      title="Règle temporelle (cliquer pour Seek, double-clic pour début)"
       className="block cursor-pointer select-none"
     />
   );

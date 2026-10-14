@@ -1,6 +1,6 @@
 /**
  * PianoRollToolbar.tsx
- * Barre d'outils du Piano Roll unifiée sur 1 seule ligne avec support bilingue FR/PT.
+ * Barre d'outils du Piano Roll unifiée sur 1 seule ligne avec support i18n pur via t.
  */
 import React from 'react';
 import type { PianoRollTool } from './pianoRollInteractions';
@@ -8,6 +8,7 @@ import { SCALE_DEFINITIONS, type ScaleType } from '../../audio/scaleQuantizer';
 import { NOTE_NAMES } from '../../utils/noteUtils';
 import { MousePointer, Link2, Scissors, Eraser, Type, ZoomIn, Undo2, Redo2 } from 'lucide-react';
 import { useLanguage } from '../../i18n/LanguageContext';
+import type { TranslationKey } from '../../i18n/i18n.types';
 
 interface PianoRollToolbarProps {
   activeTool: PianoRollTool;
@@ -27,20 +28,19 @@ interface PianoRollToolbarProps {
   onRedo?: () => void;
 }
 
-const SCALE_LABELS_PT: Record<ScaleType, string> = {
-  chromatic: 'Cromática (Livre)',
-  major: 'Maior',
-  natural_minor: 'Menor Natural',
-  mixolydian: 'Mixolídio / Nordeste (7ª menor)',
-  dorian: 'Dórico',
-  pentatonic_minor: 'Pentatônica Menor',
-  pentatonic_major: 'Pentatônica Maior',
+const SCALE_I18N_KEYS: Record<ScaleType, TranslationKey> = {
+  chromatic: 'scaleChromatic',
+  major: 'scaleMajor',
+  natural_minor: 'scaleNaturalMinor',
+  mixolydian: 'scaleMixolydian',
+  dorian: 'scaleDorian',
+  pentatonic_minor: 'scalePentatonicMinor',
+  pentatonic_major: 'scalePentatonicMajor',
 };
 
 export const PianoRollToolbar: React.FC<PianoRollToolbarProps> = (props) => {
   const { activeTool, onSelectTool, zoomLevel, onSetZoom, tonic, onSetTonic, scaleType, onSetScaleType, smoothingLevel, onSetSmoothingLevel, canUndo, canRedo, historyCount, onUndo, onRedo } = props;
-  const { t, locale } = useLanguage();
-  const isPt = locale === 'pt';
+  const { t } = useLanguage();
 
   const tools: { id: PianoRollTool; label: string; icon: React.FC<{ className?: string }> }[] = [
     { id: 'pointer', label: t('toolPointer'), icon: MousePointer },
@@ -101,9 +101,9 @@ export const PianoRollToolbar: React.FC<PianoRollToolbarProps> = (props) => {
             {NOTE_NAMES.map((n) => <option key={n} value={n} className="bg-theme-bg text-theme-ink">{n}</option>)}
           </select>
           <select value={scaleType} onChange={(e) => onSetScaleType(e.target.value as ScaleType)} className="px-1.5 py-0.5 bg-black/40 border border-theme-border/50 text-theme-accent font-bold outline-none rounded-none cursor-pointer">
-            {Object.entries(SCALE_DEFINITIONS).map(([key, def]) => (
+            {Object.keys(SCALE_DEFINITIONS).map((key) => (
               <option key={key} value={key} className="bg-theme-bg text-theme-ink">
-                {isPt ? SCALE_LABELS_PT[key as ScaleType] ?? def.label : def.label}
+                {t(SCALE_I18N_KEYS[key as ScaleType])}
               </option>
             ))}
           </select>

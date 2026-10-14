@@ -1,17 +1,20 @@
 /**
  * LanguageContext.tsx
- * Contexte React i18n pour O Girador • Vocal Lab avec fallback sécurisé HMR.
+ * Contexte React i18n pour O Girador • Vocal Lab avec interpolation dynamique de paramètres.
+ * Supporte le binôme [ Langue Locale (FR) | Portugais Brésilien (BR) ].
  */
 import React, { createContext, useContext, useState, useCallback, useMemo } from 'react';
-import { translationsFr, type TranslationKey } from './translationsFr';
-import { translationsPt } from './translationsPt';
+import type { Locale, TranslationKey, TranslationParams, VocalLabTranslations } from './i18n.types';
+import { translationsFr } from './translationsFr';
+import { translationsBr } from './translationsBr';
 
-export type Locale = 'fr' | 'pt';
+export * from './i18n.types';
 
 interface LanguageContextValue {
   locale: Locale;
   setLocale: (locale: Locale) => void;
-  t: (key: TranslationKey) => string;
+  t: (key: TranslationKey, params?: TranslationParams) => string;
+  dict: VocalLabTranslations;
 }
 
 const STORAGE_KEY = 'ogirador_vocal_lab_locale';
@@ -22,7 +25,8 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [locale, setLocaleState] = useState<Locale>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved === 'fr' || saved === 'pt') return saved;
+      if (saved === 'fr' || saved === 'br') return saved;
+      if (saved === 'pt') return 'br'; // Rétrocompatibilité transparente
       return 'fr';
     } catch {
       return 'fr';
@@ -36,17 +40,24 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     } catch {}
   }, []);
 
+  const dict = useMemo<VocalLabTranslations>(() => {
+    return locale === 'br' ? translationsBr : translationsFr;
+  }, [locale]);
+
   const t = useCallback(
-    (key: TranslationKey): string => {
-      if (locale === 'pt') {
-        return translationsPt[key] ?? translationsFr[key] ?? key;
+    (key: TranslationKey, params?: TranslationParams): string => {
+      const template = dict[key] ?? translationsFr[key] ?? key;
+      if (!params) return template;
+      let res = template;
+      for (const [pKey, pVal] of Object.entries(params)) {
+        res = res.replace(new RegExp(`\\{${pKey}\\}`, 'g'), String(pVal));
       }
-      return translationsFr[key] ?? key;
+      return res;
     },
-    [locale]
+    [dict]
   );
 
-  const value = useMemo(() => ({ locale, setLocale, t }), [locale, setLocale, t]);
+  const value = useMemo(() => ({ locale, setLocale, t, dict }), [locale, setLocale, t, dict]);
 
   return <LanguageContext.Provider value={value}>{children}</LanguageContext.Provider>;
 };
@@ -57,7 +68,16 @@ export function useLanguage(): LanguageContextValue {
     return {
       locale: 'fr',
       setLocale: () => {},
-      t: (key: TranslationKey) => translationsFr[key] ?? key,
+      dict: translationsFr,
+      t: (key: TranslationKey, params?: TranslationParams) => {
+        const template = translationsFr[key] ?? key;
+        if (!params) return template;
+        let res = template;
+        for (const [pKey, pVal] of Object.entries(params)) {
+          res = res.replace(new RegExp(`\\{${pKey}\\}`, 'g'), String(pVal));
+        }
+        return res;
+      },
     };
   }
   return context;
