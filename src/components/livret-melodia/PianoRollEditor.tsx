@@ -1,7 +1,7 @@
 /**
  * PianoRollEditor.tsx
- * Conteneur du Piano Roll combinant Toolbar, Clavier vertical,
- * Règle cliquable, Canvas zoomable et saisie flottante.
+ * Conteneur du Piano Roll combinant Toolbar, Clavier vertical, Règle 42px,
+ * Palette contextuelle au Clic Droit, Canvas zoomable et saisie flottante.
  */
 import React, { useRef, useState, useEffect, useMemo, useCallback } from 'react';
 import type { PitchCurvePoint, VocalStepData } from '../../types/vocalPack.types';
@@ -11,6 +11,7 @@ import { PianoRollToolbar } from './PianoRollToolbar';
 import { PianoRollKeyboard } from './PianoRollKeyboard';
 import { PianoRollCanvas } from './PianoRollCanvas';
 import { FloatingSyllableInput } from './FloatingSyllableInput';
+import { PianoRollToolPalette } from './PianoRollToolPalette';
 import { RULER_HEIGHT } from './pianoRollDrawer';
 import type { PianoRollTool } from './pianoRollInteractions';
 
@@ -49,14 +50,13 @@ export const PianoRollEditor: React.FC<PianoRollEditorProps> = (props) => {
   const [baseWidth, setBaseWidth] = useState<number>(640);
   const [zoomLevel, setZoomLevel] = useState<number>(1);
   const [activeTool, setActiveTool] = useState<PianoRollTool>('pointer');
+  const [palettePos, setPalettePos] = useState<{ x: number; y: number } | null>(null);
   const [textInput, setTextInput] = useState<{ stepIndex: number; rect: { x: number; y: number; w: number; h: number } } | null>(null);
 
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
-    const obs = new ResizeObserver(([entry]) => {
-      if (entry) setBaseWidth(Math.max(320, Math.floor(entry.contentRect.width) - 66));
-    });
+    const obs = new ResizeObserver(([e]) => { if (e) setBaseWidth(Math.max(320, Math.floor(e.contentRect.width) - 66)); });
     obs.observe(el);
     return () => obs.disconnect();
   }, []);
@@ -65,10 +65,7 @@ export const PianoRollEditor: React.FC<PianoRollEditorProps> = (props) => {
     const el = scrollRef.current;
     if (!el) return;
     const handleWheel = (e: WheelEvent) => {
-      if (e.ctrlKey) {
-        e.preventDefault();
-        setZoomLevel((prev) => Math.max(1, Math.min(8, prev * (e.deltaY < 0 ? 1.25 : 0.8))));
-      }
+      if (e.ctrlKey) { e.preventDefault(); setZoomLevel((p) => Math.max(1, Math.min(8, p * (e.deltaY < 0 ? 1.25 : 0.8)))); }
     };
     el.addEventListener('wheel', handleWheel, { passive: false });
     return () => el.removeEventListener('wheel', handleWheel);
@@ -108,7 +105,7 @@ export const PianoRollEditor: React.FC<PianoRollEditorProps> = (props) => {
 
       <div className="flex items-center justify-between text-[11px] font-mono text-theme-ink/80 px-1">
         <span className="font-semibold text-amber-400">🎹 PIANO ROLL • {midiToNoteName(minMidi)} ➔ {midiToNoteName(maxMidi)} ({zoomLevel.toFixed(1)}x)</span>
-        <span className="text-[10px] text-sky-400/90 hidden sm:inline">Règle cliquable = Seek • Ctrl+Molette = Zoom • Espace = Lecture</span>
+        <span className="text-[10px] text-sky-400/90 hidden sm:inline">Clic Droit = Palette d'outils • Règle cliquable = Seek</span>
       </div>
 
       <div ref={scrollRef} className="w-full cordel-card overflow-x-auto overflow-y-auto cordel-scrollbar bg-stone-950/80 border border-theme-border/60 max-h-[380px]">
@@ -120,7 +117,8 @@ export const PianoRollEditor: React.FC<PianoRollEditorProps> = (props) => {
               beatsPerMeasure={beatsPerMeasure} beatResolutions={beatResolutions} allSteps={allSteps} pitchCurve={pitchCurve}
               totalDurationSec={totalDurationSec} anacrusisDurationSec={anacrusisDurationSec} seekStartSec={seekStartSec}
               isPlaying={isPlaying} activeTool={activeTool} getPlayheadSec={getPlayheadSec} onSeek={onSeek}
-              onUpdateSteps={onUpdateSteps} onPlayNotePreview={onPlayNotePreview} onOpenTextInput={(idx, rect) => setTextInput({ stepIndex: idx, rect })}
+              onOpenContextMenu={(x, y) => setPalettePos({ x, y })} onUpdateSteps={onUpdateSteps}
+              onPlayNotePreview={onPlayNotePreview} onOpenTextInput={(idx, rect) => setTextInput({ stepIndex: idx, rect })}
             />
             {textInput && (
               <FloatingSyllableInput
@@ -132,6 +130,13 @@ export const PianoRollEditor: React.FC<PianoRollEditorProps> = (props) => {
           </div>
         </div>
       </div>
+
+      {palettePos && (
+        <PianoRollToolPalette
+          x={palettePos.x} y={palettePos.y} activeTool={activeTool}
+          onSelectTool={setActiveTool} onClose={() => setPalettePos(null)}
+        />
+      )}
     </div>
   );
 };
