@@ -77,10 +77,18 @@ export const WaveformTrimEditor: React.FC<WaveformTrimEditorProps> = ({
     setIsPlaying(true);
     await player.play(rawPCM, sampleRate, {
       trimStartSec, trimEndSec, latencyOffsetMs, bpm, beatsPerMeasure, totalDurationSec,
-      clickEnabled, highPassFilterEnabled: highPassEnabled, outputDeviceId,
+      clickEnabled, highPassFilterEnabled: highPassEnabled, normalizeRMS: true, outputDeviceId,
       onEnded: () => setIsPlaying(false),
     });
   }, [player, isPlaying, rawPCM, sampleRate, trimStartSec, trimEndSec, latencyOffsetMs, bpm, beatsPerMeasure, totalDurationSec, clickEnabled, highPassEnabled, outputDeviceId]);
+
+  const handleToggleClick = useCallback(() => {
+    setClickEnabled((prev) => {
+      const next = !prev;
+      player.setClickEnabled(next);
+      return next;
+    });
+  }, [player]);
 
   const handleProceed = useCallback(() => {
     player.stop();
@@ -88,7 +96,7 @@ export const WaveformTrimEditor: React.FC<WaveformTrimEditorProps> = ({
     const pack = generateVocalPack({
       rawPCM, sampleRate, trimStartSec, trimEndSec, latencyOffsetMs, bpm, timeSignature,
       measuresCount, beatsPerMeasure, beatResolutions, referencePitch, alignment,
-      highPassFilterEnabled: highPassEnabled,
+      highPassFilterEnabled: highPassEnabled, normalizeRMS: true,
     });
     onPackReady(pack);
   }, [player, rawPCM, sampleRate, trimStartSec, trimEndSec, latencyOffsetMs, bpm, timeSignature, measuresCount, beatsPerMeasure, beatResolutions, referencePitch, alignment, highPassEnabled, onPackReady]);
@@ -112,14 +120,14 @@ export const WaveformTrimEditor: React.FC<WaveformTrimEditorProps> = ({
       </div>
 
       <p className="text-[11px] font-mono text-theme-ink/80 text-center leading-snug px-1">
-        ✂️ Glissez les poignées Début (bleue) et Fin (rouge) pour couper les respirations ou bruits : votre calage rythmique sur le Temps 1 reste 100 % verrouillé.
+        ✂️ Glissez les poignées Début (bleue) et Fin (rouge) pour couper les respirations : votre calage rythmique sur le Temps 1 reste 100 % verrouillé.
       </p>
 
       <LatencyNudgeBar latencyOffsetMs={latencyOffsetMs} onChange={setLatencyOffsetMs} disabled={isPlaying} />
 
       <PreviewControls
         isPlaying={isPlaying} onTogglePlay={handleTogglePlay}
-        clickEnabled={clickEnabled} onToggleClick={() => setClickEnabled((v) => !v)}
+        clickEnabled={clickEnabled} onToggleClick={handleToggleClick}
         highPassEnabled={highPassEnabled} onToggleHighPass={() => setHighPassEnabled((v) => !v)}
         onReset={onReset} onProceedToExtraction={handleProceed} alignment={alignment}
       />

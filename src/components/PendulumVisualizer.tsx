@@ -1,6 +1,7 @@
 ﻿import React, { useEffect, useRef } from 'react';
 import type { MetronomeEngine } from '../audio/MetronomeEngine';
 import { BeatImpactBar } from './pendulum/BeatImpactBar';
+import { applyPhaseStyles } from './pendulum/pendulumStyleHelper';
 
 interface PendulumVisualizerProps {
   engine: MetronomeEngine;
@@ -12,12 +13,14 @@ interface PendulumVisualizerProps {
 export const PendulumVisualizer: React.FC<PendulumVisualizerProps> = ({
   engine, isActive, measuresCount, beatsPerMeasure = 4,
 }) => {
+  const cardRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const shuttleRef = useRef<HTMLDivElement>(null);
   const phaseLabelRef = useRef<HTMLSpanElement>(null);
   const leftBumperRef = useRef<HTMLSpanElement>(null);
   const rightBumperRef = useRef<HTMLSpanElement>(null);
   const progressBarRef = useRef<HTMLDivElement>(null);
+  const recBadgeRef = useRef<HTMLSpanElement>(null);
   const padRefs = useRef<(HTMLSpanElement | null)[]>([]);
   const railWidthRef = useRef<number>(500);
 
@@ -35,6 +38,10 @@ export const PendulumVisualizer: React.FC<PendulumVisualizerProps> = ({
     if (leftBumperRef.current) leftBumperRef.current.textContent = beatsPerMeasure === 4 ? '◄ T1/T3' : '◄ T1';
     if (rightBumperRef.current) rightBumperRef.current.textContent = beatsPerMeasure === 4 ? 'T2/T4 ►' : 'T2 ►';
     if (phaseLabelRef.current && !isActive) phaseLabelRef.current.textContent = 'EN ATTENTE DU CYCLE DE PRISE';
+    if (recBadgeRef.current && !isActive) {
+      recBadgeRef.current.textContent = '● VEILLE';
+      recBadgeRef.current.style.color = 'rgba(255, 255, 255, 0.4)';
+    }
   }, [beatsPerMeasure, isActive]);
 
   useEffect(() => {
@@ -47,6 +54,8 @@ export const PendulumVisualizer: React.FC<PendulumVisualizerProps> = ({
       const leftBumper = leftBumperRef.current;
       const rightBumper = rightBumperRef.current;
       const progressBar = progressBarRef.current;
+      const recBadge = recBadgeRef.current;
+      const card = cardRef.current;
 
       if (!shuttle || !phaseLabel) {
         animId = requestAnimationFrame(updateFrame);
@@ -58,6 +67,8 @@ export const PendulumVisualizer: React.FC<PendulumVisualizerProps> = ({
       if (!isActive || status.phase === 'idle') {
         shuttle.style.transform = 'translate3d(0px, 0, 0)';
         phaseLabel.textContent = 'EN ATTENTE DU CYCLE DE PRISE';
+        if (recBadge) { recBadge.textContent = '● VEILLE'; recBadge.style.color = 'rgba(255, 255, 255, 0.4)'; }
+        if (card) { card.style.borderColor = ''; card.style.backgroundColor = ''; card.style.boxShadow = 'none'; }
         if (progressBar) progressBar.style.transform = 'scaleX(0)';
         if (leftBumper) { leftBumper.style.opacity = '0.4'; leftBumper.style.transform = 'scale(1)'; }
         if (rightBumper) rightBumper.style.opacity = '0.4';
@@ -66,18 +77,28 @@ export const PendulumVisualizer: React.FC<PendulumVisualizerProps> = ({
         return;
       }
 
-      if (progressBar) progressBar.style.transform = `scaleX(${status.beatProgress.toFixed(3)})`;
+      // 1. Barre verte bidirectionnelle (suit le sens du balancier)
+      if (progressBar) {
+        progressBar.style.transformOrigin = (status.currentBeat % 2 === 0) ? 'left center' : 'right center';
+        progressBar.style.transform = `scaleX(${status.beatProgress.toFixed(3)})`;
+      }
 
+      // 2. Trajectoire du balancier
       const h = 0.5 * (1 - Math.cos(Math.PI * status.beatProgress));
       const currentX = (status.currentBeat % 2 === 0) ? h * railWidthRef.current : (1 - h) * railWidthRef.current;
       shuttle.style.transform = `translate3d(${currentX.toFixed(2)}px, 0, 0)`;
 
+      // 3. Bascule visuelle rouge dès M-1 et pendant le Chant
+      applyPhaseStyles(card, recBadge, phaseLabel, status, measuresCount);
+
+      // 4. Flash d'impact des temps (beatProgress < 0.18)
       const isImpact = status.beatProgress < 0.18;
+      const isRec = status.phase === 'anacrusis' || status.phase === 'singing';
       padRefs.current.forEach((pad, idx) => {
         if (!pad) return;
         const isActivePad = idx === status.currentBeat;
         if (isActivePad && isImpact) {
-          pad.style.backgroundColor = idx === 0 ? 'var(--cordel-gold, #f59e0b)' : 'var(--cordel-accent, #22c55e)';
+          pad.style.backgroundColor = idx === 0 ? 'var(--cordel-gold, #f59e0b)' : (isRec ? '#ef4444' : '#22c55e');
           pad.style.color = '#000';
         } else {
           pad.style.backgroundColor = isActivePad ? 'rgba(255,255,255,0.18)' : 'transparent';
@@ -93,17 +114,6 @@ export const PendulumVisualizer: React.FC<PendulumVisualizerProps> = ({
           leftBumper.style.transform = isT1 ? 'scale(1.15)' : 'scale(1)';
         }
         if (rightBumper) rightBumper.style.opacity = (status.currentBeat === 1 || status.currentBeat === 3) ? '0.85' : '0.3';
-
-        const bpmTotal = status.beatsPerMeasure;
-        if (status.phase === 'countdown') {
-          phaseLabel.textContent = `DECOMPTE & TONALITE (Ecoutez : ${status.currentBeat + 1} / ${bpmTotal})`;
-        } else if (status.phase === 'anacrusis') {
-          phaseLabel.textContent = `ANACROUSE / ELAN (Chantez si depart en levee : ${status.currentBeat + 1} / ${bpmTotal})`;
-        } else if (status.phase === 'singing') {
-          phaseLabel.textContent = `CHANT : MESURE ${status.currentMeasure + 1} / ${measuresCount} (TEMPS ${status.currentBeat + 1} / ${bpmTotal})`;
-        } else if (status.phase === 'completed') {
-          phaseLabel.textContent = 'CYCLE TERMINE (PUNCH-OUT)';
-        }
       }
 
       animId = requestAnimationFrame(updateFrame);
@@ -114,7 +124,7 @@ export const PendulumVisualizer: React.FC<PendulumVisualizerProps> = ({
   }, [engine, isActive, measuresCount]);
 
   return (
-    <div className="w-full cordel-card p-3 flex flex-col gap-2.5 select-none">
+    <div ref={cardRef} className="w-full cordel-card p-3 flex flex-col gap-2.5 select-none transition-colors duration-150">
       <div className="flex items-center justify-between text-xs font-mono tracking-wider opacity-80">
         <span ref={leftBumperRef} className="px-2 py-0.5 cordel-card-sm text-theme-accent font-bold transition-all duration-75" />
         <span ref={phaseLabelRef} className="font-bold text-center text-sm tracking-wide text-theme-ink uppercase min-h-[20px]" />
@@ -128,7 +138,7 @@ export const PendulumVisualizer: React.FC<PendulumVisualizerProps> = ({
         </div>
       </div>
 
-      <BeatImpactBar beatsPerMeasure={beatsPerMeasure} progressBarRef={progressBarRef} padRefs={padRefs} />
+      <BeatImpactBar beatsPerMeasure={beatsPerMeasure} progressBarRef={progressBarRef} padRefs={padRefs} recBadgeRef={recBadgeRef} />
     </div>
   );
 };

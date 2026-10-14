@@ -4,25 +4,39 @@ interface BeatImpactBarProps {
   beatsPerMeasure: number;
   progressBarRef: React.RefObject<HTMLDivElement | null>;
   padRefs: React.MutableRefObject<(HTMLSpanElement | null)[]>;
+  recBadgeRef: React.RefObject<HTMLSpanElement | null>;
 }
 
 export const BeatImpactBar: React.FC<BeatImpactBarProps> = ({
   beatsPerMeasure,
   progressBarRef,
   padRefs,
+  recBadgeRef,
 }) => {
   return (
-    <div className="w-full flex flex-col gap-1.5 pt-1 select-none">
-      {/* 1. Barre de progression verte (scaleX 0..1 vers l impact du temps) */}
+    <div className="w-full flex flex-col gap-1.5 pt-0.5 select-none">
+      {/* 1. Statut REC & Tête de mesure */}
+      <div className="flex items-center justify-between min-h-[18px]">
+        <span
+          ref={recBadgeRef}
+          style={{ willChange: 'opacity, transform, color' }}
+          className="text-[10px] font-bold font-mono tracking-wider"
+        />
+        <span className="text-[10px] font-mono opacity-60">
+          Impact synchrone
+        </span>
+      </div>
+
+      {/* 2. Barre verte bidirectionnelle (suit le sens du balancier) */}
       <div className="w-full h-1.5 bg-black/60 border border-theme-border/30 overflow-hidden relative">
         <div
           ref={progressBarRef}
-          style={{ transform: 'scaleX(0)', transformOrigin: 'left', willChange: 'transform' }}
+          style={{ transform: 'scaleX(0)', transformOrigin: 'left center', willChange: 'transform' }}
           className="h-full bg-emerald-500 w-full"
         />
       </div>
 
-      {/* 2. Rangee de paves indicateurs des temps (T1, T2, T3, T4...) */}
+      {/* 3. Pavés indicateurs des temps (T1, T2, T3, T4...) */}
       <div className="flex items-center justify-between gap-1.5 w-full">
         {Array.from({ length: beatsPerMeasure }).map((_, idx) => (
           <span

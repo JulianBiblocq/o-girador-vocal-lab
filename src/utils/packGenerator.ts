@@ -16,17 +16,19 @@ export interface PackGeneratorParams {
   referencePitch: string;
   alignment: AlignmentResult;
   highPassFilterEnabled?: boolean;
+  normalizeRMS?: boolean;
 }
 
 export function generateVocalPack(params: PackGeneratorParams): VocalPackExport {
   const {
     rawPCM, sampleRate, trimStartSec, trimEndSec, latencyOffsetMs,
     bpm, timeSignature, measuresCount, beatsPerMeasure,
-    beatResolutions, referencePitch, alignment, highPassFilterEnabled = true,
+    beatResolutions, referencePitch, alignment,
+    highPassFilterEnabled = true, normalizeRMS = true,
   } = params;
 
   const cleanPCM = extractCompensatedSlice(
-    rawPCM, sampleRate, trimStartSec, trimEndSec, latencyOffsetMs, highPassFilterEnabled
+    rawPCM, sampleRate, trimStartSec, trimEndSec, latencyOffsetMs, highPassFilterEnabled, normalizeRMS
   );
   const audioBase64 = audioBufferToWavBase64(cleanPCM, sampleRate);
 

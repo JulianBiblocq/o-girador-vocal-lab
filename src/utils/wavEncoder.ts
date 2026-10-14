@@ -1,9 +1,10 @@
 ﻿/**
  * wavEncoder.ts
  * Utilitaires purs de decoupe avec compensation de latence, filtre coupe-bas,
- * micro-fondus et encodage WAV 16-bit PCM mono.
+ * normalisation vocale intelligente -16 dBFS et encodage WAV 16-bit PCM mono.
  */
 import { applyHighPass90Hz } from '../audio/vocalFilterHelper';
+import { normalizeActiveRMS } from '../audio/vocalNormalizer';
 
 export function extractCompensatedSlice(
   rawPCM: Float32Array,
@@ -11,7 +12,8 @@ export function extractCompensatedSlice(
   trimStartSec: number,
   trimEndSec: number,
   latencyOffsetMs: number,
-  highPassFilterEnabled = true
+  highPassFilterEnabled = true,
+  normalizeRMS = true
 ): Float32Array {
   const durationSec = Math.max(0.01, trimEndSec - trimStartSec);
   const targetSamples = Math.floor(durationSec * sampleRate);
@@ -30,18 +32,23 @@ export function extractCompensatedSlice(
     result.set(rawPCM.subarray(sourceStart, sourceStart + copyLength), destStart);
   }
 
-  // Filtre coupe-bas studio 90 Hz anti-rumble (in-place)
+  // 1. Filtre coupe-bas studio 90 Hz anti-rumble (in-place)
   if (highPassFilterEnabled) {
     applyHighPass90Hz(result, sampleRate);
   }
 
-  // Micro-fondu d entrée de 10 ms
+  // 2. Normalisation vocale intelligente Gated RMS -16 dBFS + Soft-Knee Limiter -1 dBFS
+  if (normalizeRMS) {
+    normalizeActiveRMS(result, sampleRate);
+  }
+
+  // 3. Micro-fondu d entrée de 10 ms
   const fadeInSamples = Math.min(targetSamples, Math.floor(0.01 * sampleRate));
   for (let i = 0; i < fadeInSamples; i++) {
     result[i] *= (i / fadeInSamples);
   }
 
-  // Micro-fondu de sortie de 30 ms
+  // 4. Micro-fondu de sortie de 30 ms
   const fadeOutSamples = Math.min(targetSamples, Math.floor(0.03 * sampleRate));
   for (let i = 0; i < fadeOutSamples; i++) {
     const idx = targetSamples - 1 - i;

@@ -1,5 +1,5 @@
 ﻿import React from 'react';
-import { Play, Square, Volume2, VolumeX, RotateCcw, ArrowRight, Filter } from 'lucide-react';
+import { Play, Square, Volume2, VolumeX, RotateCcw, ArrowRight, Filter, Zap } from 'lucide-react';
 import type { AlignmentResult } from '../../utils/alignmentMath';
 
 interface PreviewControlsProps {
@@ -16,16 +16,9 @@ interface PreviewControlsProps {
 }
 
 export const PreviewControls: React.FC<PreviewControlsProps> = ({
-  isPlaying,
-  onTogglePlay,
-  clickEnabled,
-  onToggleClick,
-  highPassEnabled,
-  onToggleHighPass,
-  onReset,
-  onProceedToExtraction,
-  alignment,
-  disabled = false,
+  isPlaying, onTogglePlay, clickEnabled, onToggleClick,
+  highPassEnabled, onToggleHighPass, onReset, onProceedToExtraction,
+  alignment, disabled = false,
 }) => {
   return (
     <div className="cordel-card p-3 flex flex-col gap-2.5">
@@ -48,31 +41,28 @@ export const PreviewControls: React.FC<PreviewControlsProps> = ({
         </div>
       </div>
 
-      {/* 2. Option Coupe-Bas Studio 90 Hz */}
+      {/* 2. Options Audio Studio & Normalisation RMS */}
       <div className="flex items-center justify-between px-1 py-0.5">
         <label className="flex items-center gap-2 text-xs font-mono cursor-pointer select-none text-theme-ink/90 hover:text-theme-ink">
           <input
-            type="checkbox"
-            checked={highPassEnabled}
-            onChange={onToggleHighPass}
+            type="checkbox" checked={highPassEnabled} onChange={onToggleHighPass}
             className="accent-[var(--cordel-wood)] w-3.5 h-3.5 cursor-pointer"
           />
           <span className="flex items-center gap-1.5">
             <Filter className="w-3.5 h-3.5 text-theme-accent" />
-            <span>Coupe-bas Studio (90 Hz - Anti-rumble / plosives)</span>
+            <span>Coupe-bas (90 Hz)</span>
           </span>
         </label>
-        <span className="text-[10px] text-emerald-400 font-mono">
-          {highPassEnabled ? '✓ Actif' : 'Désactivé'}
+        <span className="text-[10px] text-emerald-400 font-mono flex items-center gap-1">
+          <Zap className="w-3 h-3 text-amber-400" />
+          <span>Volume normalise (-16 LUFS)</span>
         </span>
       </div>
 
       {/* 3. Barre d actions de pré-écoute & Clic */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1 border-t border-theme-border/20">
         <button
-          type="button"
-          disabled={disabled}
-          onClick={onTogglePlay}
+          type="button" disabled={disabled} onClick={onTogglePlay}
           className={`py-2 px-3 flex items-center justify-center gap-1.5 text-xs font-bold transition-all cursor-pointer ${
             isPlaying ? 'bg-red-900 text-theme-ink border-2 border-theme-border' : 'cordel-btn-primary'
           }`}
@@ -85,28 +75,24 @@ export const PreviewControls: React.FC<PreviewControlsProps> = ({
           ) : (
             <>
               <Play className="w-4 h-4 fill-current" />
-              <span>Réécouter</span>
+              <span>Reecouter</span>
             </>
           )}
         </button>
 
         <button
-          type="button"
-          disabled={disabled}
-          onClick={onToggleClick}
+          type="button" disabled={disabled} onClick={onToggleClick}
           className={`py-2 px-3 flex items-center justify-center gap-1.5 text-xs font-bold transition-all cursor-pointer ${
             clickEnabled ? 'cordel-btn-primary' : 'cordel-btn opacity-70'
           }`}
-          title="Activer/Désactiver le clic témoin pendant la pré-écoute"
+          title="Activer/Desactiver le clic temoin en direct"
         >
           {clickEnabled ? <Volume2 className="w-4 h-4 text-theme-accent" /> : <VolumeX className="w-4 h-4" />}
-          <span>Clic Témoin</span>
+          <span>Clic Temoin</span>
         </button>
 
         <button
-          type="button"
-          disabled={disabled || isPlaying}
-          onClick={onReset}
+          type="button" disabled={disabled || isPlaying} onClick={onReset}
           className="cordel-btn py-2 px-3 flex items-center justify-center gap-1.5 text-xs font-bold cursor-pointer opacity-80 hover:opacity-100"
         >
           <RotateCcw className="w-3.5 h-3.5" />
@@ -114,9 +100,7 @@ export const PreviewControls: React.FC<PreviewControlsProps> = ({
         </button>
 
         <button
-          type="button"
-          disabled={disabled || isPlaying}
-          onClick={onProceedToExtraction}
+          type="button" disabled={disabled || isPlaying} onClick={onProceedToExtraction}
           className="cordel-btn-primary py-2 px-3 flex items-center justify-center gap-1.5 text-xs font-bold cursor-pointer bg-emerald-800 hover:bg-emerald-700"
         >
           <span>Extraire</span>

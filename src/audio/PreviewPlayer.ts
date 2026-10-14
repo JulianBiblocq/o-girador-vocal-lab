@@ -1,7 +1,6 @@
 ﻿/**
  * PreviewPlayer.ts
- * Lecteur de pre-ecoute cale sur la grille avec compensation de latence,
- * boost de volume du clic et filtre coupe-bas studio 90 Hz temps reel.
+ * Lecteur de pre-ecoute synchrone avec clickGainNode temps reel et normalisation RMS.
  */
 import { extractCompensatedSlice } from '../utils/wavEncoder';
 import { getSharedAudioContext, setSharedSinkId } from './sharedAudioContext';
@@ -16,6 +15,7 @@ export interface PreviewOptions {
   totalDurationSec: number;
   clickEnabled: boolean;
   highPassFilterEnabled?: boolean;
+  normalizeRMS?: boolean;
   outputDeviceId?: string;
   onEnded?: () => void;
 }
@@ -23,6 +23,7 @@ export interface PreviewOptions {
 export class PreviewPlayer {
   private ctx: AudioContext | null = null;
   private sourceNode: AudioBufferSourceNode | null = null;
+  private clickGainNode: GainNode | null = null;
   private activeNodes: AudioNode[] = [];
   private isPlaying = false;
   private playheadStartCycleTime = 0;
@@ -30,20 +31,13 @@ export class PreviewPlayer {
   private playDuration = 0;
   private stopTimerId: number | null = null;
 
-  public async play(
-    rawPCM: Float32Array,
-    sampleRate: number,
-    options: PreviewOptions
-  ): Promise<void> {
+  public async play(rawPCM: Float32Array, sampleRate: number, options: PreviewOptions): Promise<void> {
     this.stop();
-
     this.ctx = await getSharedAudioContext();
-    if (options.outputDeviceId) {
-      await setSharedSinkId(options.outputDeviceId);
-    }
+    if (options.outputDeviceId) await setSharedSinkId(options.outputDeviceId);
 
-    const { trimStartSec, trimEndSec, latencyOffsetMs, bpm, beatsPerMeasure, clickEnabled, highPassFilterEnabled, onEnded } = options;
-    const cleanPCM = extractCompensatedSlice(rawPCM, sampleRate, trimStartSec, trimEndSec, latencyOffsetMs, highPassFilterEnabled);
+    const { trimStartSec, trimEndSec, latencyOffsetMs, bpm, beatsPerMeasure, clickEnabled, highPassFilterEnabled, normalizeRMS, onEnded } = options;
+    const cleanPCM = extractCompensatedSlice(rawPCM, sampleRate, trimStartSec, trimEndSec, latencyOffsetMs, highPassFilterEnabled !== false, normalizeRMS !== false);
 
     this.playDuration = Math.max(0.05, trimEndSec - trimStartSec);
     this.playheadStartCycleTime = trimStartSec;
@@ -67,20 +61,23 @@ export class PreviewPlayer {
     }
     this.activeNodes.push(this.sourceNode);
 
+    // Routage du clic tmoin via un gain commutable en direct
+    this.clickGainNode = this.ctx.createGain();
+    this.clickGainNode.gain.setValueAtTime(clickEnabled ? 1 : 0, this.ctx.currentTime);
+    this.clickGainNode.connect(this.ctx.destination);
+    this.activeNodes.push(this.clickGainNode);
+
     const now = this.ctx.currentTime + 0.03;
     this.playbackContextStartTime = now;
     this.isPlaying = true;
     this.sourceNode.start(now);
 
-    if (clickEnabled) {
-      const beatDuration = 60 / bpm;
-      const totalBeats = Math.ceil(options.totalDurationSec / beatDuration);
-      for (let b = 0; b < totalBeats; b++) {
-        const beatGridTime = b * beatDuration;
-        if (beatGridTime >= trimStartSec - 0.001 && beatGridTime <= trimEndSec + 0.001) {
-          const clickTime = now + (beatGridTime - trimStartSec);
-          this.scheduleClick(this.ctx, clickTime, b % beatsPerMeasure === 0);
-        }
+    const beatDuration = 60 / bpm;
+    const totalBeats = Math.ceil(options.totalDurationSec / beatDuration);
+    for (let b = 0; b < totalBeats; b++) {
+      const beatGridTime = b * beatDuration;
+      if (beatGridTime >= trimStartSec - 0.001 && beatGridTime <= trimEndSec + 0.001) {
+        this.scheduleClick(this.ctx, now + (beatGridTime - trimStartSec), b % beatsPerMeasure === 0);
       }
     }
 
@@ -90,11 +87,14 @@ export class PreviewPlayer {
     }, (this.playDuration + 0.05) * 1000);
   }
 
-  public stop(): void {
-    if (this.stopTimerId !== null) {
-      window.clearTimeout(this.stopTimerId);
-      this.stopTimerId = null;
+  public setClickEnabled(enabled: boolean): void {
+    if (this.clickGainNode && this.ctx) {
+      this.clickGainNode.gain.setValueAtTime(enabled ? 1 : 0, this.ctx.currentTime);
     }
+  }
+
+  public stop(): void {
+    if (this.stopTimerId !== null) { window.clearTimeout(this.stopTimerId); this.stopTimerId = null; }
     for (const node of this.activeNodes) {
       try {
         if ('stop' in node && typeof (node as AudioScheduledSourceNode).stop === 'function') {
@@ -105,14 +105,14 @@ export class PreviewPlayer {
     }
     this.activeNodes = [];
     this.sourceNode = null;
+    this.clickGainNode = null;
     this.isPlaying = false;
   }
 
   public getCurrentPlayheadSec(): number {
     if (!this.isPlaying || !this.ctx) return this.playheadStartCycleTime;
     const elapsed = this.ctx.currentTime - this.playbackContextStartTime;
-    if (elapsed < 0) return this.playheadStartCycleTime;
-    return Math.min(this.playheadStartCycleTime + this.playDuration, this.playheadStartCycleTime + elapsed);
+    return elapsed < 0 ? this.playheadStartCycleTime : Math.min(this.playheadStartCycleTime + this.playDuration, this.playheadStartCycleTime + elapsed);
   }
 
   public getIsPlaying(): boolean { return this.isPlaying; }
@@ -120,7 +120,6 @@ export class PreviewPlayer {
   private scheduleClick(ctx: AudioContext, time: number, isMajor: boolean): void {
     const vol = getSavedClickVolume();
     if (vol <= 0.01) return;
-
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
     osc.type = 'triangle';
@@ -128,13 +127,13 @@ export class PreviewPlayer {
     osc.frequency.exponentialRampToValueAtTime(isMajor ? 280 : 190, time + 0.02);
 
     const baseGain = isMajor ? 0.65 : 0.4;
-    const targetGain = Math.min(1.5, baseGain * vol);
     gain.gain.setValueAtTime(0.0001, time);
-    gain.gain.linearRampToValueAtTime(targetGain, time + 0.002);
+    gain.gain.linearRampToValueAtTime(Math.min(1.5, baseGain * vol), time + 0.002);
     gain.gain.exponentialRampToValueAtTime(0.0001, time + 0.02);
 
     osc.connect(gain);
-    gain.connect(ctx.destination);
+    if (this.clickGainNode) gain.connect(this.clickGainNode);
+    else gain.connect(ctx.destination);
     this.activeNodes.push(osc, gain);
     osc.start(time);
     osc.stop(time + 0.02);
