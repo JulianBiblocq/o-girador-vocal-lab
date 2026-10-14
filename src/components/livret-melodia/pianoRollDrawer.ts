@@ -113,7 +113,7 @@ export function drawPianoRollGrid(ctx: CanvasRenderingContext2D, opts: DrawGridO
     }
   }
 
-  // 5. Courbe de pitch « Zéro Rouge »
+  // 5. Courbe de pitch « Zéro Rouge » (seuil de justesse élargi à ±45 cents)
   if (pitchCurve.length > 1) {
     ctx.lineWidth = 2.5;
     for (let p = 0; p < pitchCurve.length - 1; p++) {
@@ -121,7 +121,7 @@ export function drawPianoRollGrid(ctx: CanvasRenderingContext2D, opts: DrawGridO
       if (Math.abs(p2.timeSec - p1.timeSec) > 0.04) continue;
       const x1 = (p1.timeSec / totalDurationSec) * width, y1 = RULER_HEIGHT + (maxMidi - p1.midiFloat) * rowHeight + rowHeight / 2;
       const x2 = (p2.timeSec / totalDurationSec) * width, y2 = RULER_HEIGHT + (maxMidi - p2.midiFloat) * rowHeight + rowHeight / 2;
-      ctx.strokeStyle = Math.abs(p1.midiFloat - Math.round(p1.midiFloat)) <= 0.35 ? '#10b981' : '#f59e0b';
+      ctx.strokeStyle = Math.abs(p1.midiFloat - Math.round(p1.midiFloat)) <= 0.45 ? '#10b981' : '#f59e0b';
       ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
     }
   }

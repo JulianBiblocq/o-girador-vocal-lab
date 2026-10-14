@@ -1,7 +1,7 @@
 /**
  * LetraEditorPanel.tsx
  * Éditeur « Letra da Toada » avec alignement automatique, ruban de pastilles,
- * bouton de bascule [ ␣ Espace ] / [ - Lié ] et aperçu des mots reconstitués.
+ * bouton de bascule [ ␣ Espace ] / [ - Lié ], mémo mélismes/élisions et aperçu.
  */
 import React, { useState, useMemo } from 'react';
 import type { VocalStepData } from '../../types/vocalPack.types';
@@ -28,8 +28,7 @@ export const LetraEditorPanel: React.FC<LetraEditorPanelProps> = ({ allSteps, on
   const handleToggleTrailingSpace = (stepIndex: number) => {
     const current = allSteps[stepIndex]?.syllable ?? '';
     const hasSpace = current.endsWith(' ');
-    const nextSyl = hasSpace ? current.trimEnd() : `${current.trimEnd()} `;
-    handleSyllableChange(stepIndex, nextSyl);
+    handleSyllableChange(stepIndex, hasSpace ? current.trimEnd() : `${current.trimEnd()} `);
   };
 
   const handleShiftSyllable = (targetActiveIdx: number, direction: -1 | 1) => {
@@ -74,6 +73,10 @@ export const LetraEditorPanel: React.FC<LetraEditorPanelProps> = ({ allSteps, on
         </button>
       </div>
 
+      <p className="text-[9.5px] font-mono text-amber-200/70 leading-snug px-0.5">
+        💡 <strong>Astuce :</strong> "va-di" = couper un mot • "va - di" (ou "--") = 1 voyelle sur 2 notes • "qu'eu" ou "être_le" = 2 mots sur 1 seule note.
+      </p>
+
       {/* Ruban des pastilles syllabiques */}
       <div className="flex items-center gap-1.5 overflow-x-auto py-1 cordel-scrollbar">
         {activeSteps.length === 0 ? (
@@ -114,7 +117,6 @@ export const LetraEditorPanel: React.FC<LetraEditorPanelProps> = ({ allSteps, on
         )}
       </div>
 
-      {/* Aperçu des mots reconstitués */}
       <div className="flex items-center gap-2 pt-1 border-t border-theme-border/30 text-[11px] font-mono">
         <span className="text-theme-ink/60">Mots reconstitués :</span>
         <span className="text-emerald-400 font-semibold italic bg-black/40 px-2 py-0.5 rounded">

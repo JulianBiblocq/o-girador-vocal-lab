@@ -81,11 +81,11 @@ export const LivretMelodia: React.FC<LivretMelodiaProps> = (props) => {
     const q = quantizePitchToSteps({
       pitchCurve, bpm: initialPack.metadata.bpm, beatsPerMeasure, measuresCount,
       beatResolutions: initialPack.metadata.beatResolutions, trimStartSec: 0, trimEndSec: totalDurationSec,
-      smoothingLevel: lvl, tonic: t, scaleType: st,
+      smoothingLevel: lvl, tonic: t, scaleType: st, pcm: cleanPCM, sampleRate,
     });
     const newSteps = [...q.anacrusisSteps, ...q.gridSteps];
     setAllSteps((prev) => newSteps.map((s, idx) => ({ ...s, syllable: prev[idx]?.syllable || '' })));
-  }, [pitchCurve, initialPack, beatsPerMeasure, measuresCount, totalDurationSec, setAllSteps]);
+  }, [pitchCurve, initialPack, beatsPerMeasure, measuresCount, totalDurationSec, cleanPCM, sampleRate, setAllSteps]);
 
   const handleDownloadPack = useCallback(() => {
     const anacrusisCount = beatsPerMeasure * (initialPack.metadata.beatResolutions[0] || 4);

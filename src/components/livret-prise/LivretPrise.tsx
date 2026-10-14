@@ -73,7 +73,7 @@ export const LivretPrise: React.FC = () => {
     if (!recordedPCM) return;
     const cleanPCM = createPaddedPreviewBuffer(recordedPCM, recordedSampleRate, totalDurationSec, 0, totalDurationSec, 0, true, true);
     const pitchCurve = extractContinuousPitchCurve(cleanPCM, { sampleRate: recordedSampleRate, totalDurationSec, trimStartSec: 0, trimEndSec: totalDurationSec });
-    const quantized = quantizePitchToSteps({ pitchCurve, bpm, beatsPerMeasure, measuresCount, beatResolutions, trimStartSec: 0, trimEndSec: totalDurationSec });
+    const quantized = quantizePitchToSteps({ pitchCurve, bpm, beatsPerMeasure, measuresCount, beatResolutions, trimStartSec: 0, trimEndSec: totalDurationSec, pcm: cleanPCM, sampleRate: recordedSampleRate });
     const allSteps = [...quantized.anacrusisSteps, ...quantized.gridSteps];
     setMelodicData({ pitchCurve, allSteps, pack, cleanPCM });
     setActiveLivret('melodia');

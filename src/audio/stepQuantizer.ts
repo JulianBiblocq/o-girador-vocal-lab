@@ -1,11 +1,12 @@
 /**
  * stepQuantizer.ts
  * Quantification MIDI avec cœur de voyelle, hystérésis réglable (80 cents),
- * filtre anti-accroc (glitch filter) et intégration de gamme musicale.
+ * détection des plosives/attaques (onsetDetector) et intégration de gamme.
  */
 import type { PitchCurvePoint, VocalStepData } from '../types/vocalPack.types';
 import { midiToNoteName } from '../utils/noteUtils';
 import { snapMidiToScale, type ScaleType } from './scaleQuantizer';
+import { hasSyllableAttack } from './onsetDetector';
 
 export interface QuantizerParams {
   pitchCurve: PitchCurvePoint[];
@@ -15,9 +16,11 @@ export interface QuantizerParams {
   beatResolutions: number[];
   trimStartSec: number;
   trimEndSec: number;
-  smoothingLevel?: number; // 0..1 (défaut 0.5)
+  smoothingLevel?: number;
   tonic?: string;
   scaleType?: ScaleType;
+  pcm?: Float32Array;
+  sampleRate?: number;
 }
 
 export interface QuantizedGridResult {
@@ -31,10 +34,8 @@ function filterGlitchesAndHoldTies(steps: VocalStepData[], smoothing: number): V
 
   // 1. Lissage des sauts isolés de 1 ou 2 demi-tons entourés de notes stables
   for (let i = 1; i < result.length - 1; i++) {
-    const prev = result[i - 1];
-    const curr = result[i];
-    const next = result[i + 1];
-    if (prev.active && next.active && curr.active && prev.midiNumber === next.midiNumber) {
+    const prev = result[i - 1], curr = result[i], next = result[i + 1];
+    if (prev.active && next.active && curr.active && !curr.syllableAttack && prev.midiNumber === next.midiNumber) {
       if (Math.abs(curr.midiNumber - prev.midiNumber) <= (smoothing >= 0.7 ? 2 : 1)) {
         curr.midiNumber = prev.midiNumber;
         curr.note = '───';
@@ -42,30 +43,28 @@ function filterGlitchesAndHoldTies(steps: VocalStepData[], smoothing: number): V
     }
   }
 
-  // 2. Fusion des pas consécutifs très proches (≤ 1 demi-ton) si lissage activé
+  // 2. Fusion des pas consécutifs très proches si lissage activé ET sans ré-attaque
   if (smoothing >= 0.4) {
     for (let i = 1; i < result.length; i++) {
-      const prev = result[i - 1];
-      const curr = result[i];
-      if (prev.active && curr.active && Math.abs(curr.midiNumber - prev.midiNumber) <= 1) {
+      const prev = result[i - 1], curr = result[i];
+      if (prev.active && curr.active && !curr.syllableAttack && Math.abs(curr.midiNumber - prev.midiNumber) <= 1) {
         curr.midiNumber = prev.midiNumber;
         curr.note = '───';
       }
     }
   }
-
   return result;
 }
 
 export function quantizePitchToSteps(params: QuantizerParams): QuantizedGridResult {
-  const { pitchCurve, bpm, beatsPerMeasure, measuresCount, beatResolutions, trimStartSec, trimEndSec, smoothingLevel = 0.5, tonic = 'C', scaleType = 'chromatic' } = params;
+  const { pitchCurve, bpm, beatsPerMeasure, measuresCount, beatResolutions, trimStartSec, trimEndSec, smoothingLevel = 0.5, tonic = 'C', scaleType = 'chromatic', pcm, sampleRate } = params;
 
   const beatDuration = 60 / bpm;
   const totalMeasures = 1 + measuresCount;
   const allSteps: VocalStepData[] = [];
   let globalStepIndex = 0;
   let previousActiveMidi = -1;
-  const hysteresisCents = 0.50 + smoothingLevel * 0.40; // 50 à 90 cents
+  const hysteresisCents = 0.50 + smoothingLevel * 0.40;
 
   for (let m = 0; m < totalMeasures; m++) {
     for (let b = 0; b < beatsPerMeasure; b++) {
@@ -103,12 +102,12 @@ export function quantizePitchToSteps(params: QuantizerParams): QuantizedGridResu
           targetMidi = Math.round(medianMidi);
         }
 
-        if (scaleType !== 'chromatic') {
-          targetMidi = snapMidiToScale(targetMidi, tonic, scaleType);
-        }
+        if (scaleType !== 'chromatic') targetMidi = snapMidiToScale(targetMidi, tonic, scaleType);
 
+        // Détection d'attaque de plosive / coupe syllabique
+        const hasAttack = (pcm && sampleRate) ? hasSyllableAttack(pcm, sampleRate, stepStart, stepEnd) : false;
         const prevStep = allSteps[allSteps.length - 1];
-        const isTie = prevStep && prevStep.active && prevStep.midiNumber === targetMidi;
+        const isTie = !hasAttack && prevStep && prevStep.active && prevStep.midiNumber === targetMidi;
 
         allSteps.push({
           stepIndex: globalStepIndex++,
@@ -116,6 +115,7 @@ export function quantizePitchToSteps(params: QuantizerParams): QuantizedGridResu
           note: isTie ? '───' : midiToNoteName(targetMidi),
           midiNumber: targetMidi,
           syllable: '',
+          syllableAttack: hasAttack,
           velocity: isTie ? 90 : 100,
           decay: stepDuration,
         });
@@ -125,11 +125,11 @@ export function quantizePitchToSteps(params: QuantizerParams): QuantizedGridResu
   }
 
   const smoothed = filterGlitchesAndHoldTies(allSteps, smoothingLevel);
-  const anacrusisStepsCount = beatsPerMeasure * (beatResolutions[0] || 4);
+  const anacrusisCount = beatsPerMeasure * (beatResolutions[0] || 4);
 
   return {
-    anacrusisSteps: smoothed.slice(0, anacrusisStepsCount),
-    gridSteps: smoothed.slice(anacrusisStepsCount).map((st, i) => ({ ...st, stepIndex: i })),
+    anacrusisSteps: smoothed.slice(0, anacrusisCount),
+    gridSteps: smoothed.slice(anacrusisCount).map((st, i) => ({ ...st, stepIndex: i })),
     totalSteps: smoothed.length,
   };
 }
