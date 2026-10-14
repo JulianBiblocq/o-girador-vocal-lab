@@ -1,5 +1,5 @@
 ﻿import React from 'react';
-import { Play, Square, Volume2, VolumeX, RotateCcw, ArrowRight } from 'lucide-react';
+import { Play, Square, Volume2, VolumeX, RotateCcw, ArrowRight, Filter } from 'lucide-react';
 import type { AlignmentResult } from '../../utils/alignmentMath';
 
 interface PreviewControlsProps {
@@ -7,6 +7,8 @@ interface PreviewControlsProps {
   onTogglePlay: () => void;
   clickEnabled: boolean;
   onToggleClick: () => void;
+  highPassEnabled: boolean;
+  onToggleHighPass: () => void;
   onReset: () => void;
   onProceedToExtraction: () => void;
   alignment: AlignmentResult;
@@ -18,14 +20,16 @@ export const PreviewControls: React.FC<PreviewControlsProps> = ({
   onTogglePlay,
   clickEnabled,
   onToggleClick,
+  highPassEnabled,
+  onToggleHighPass,
   onReset,
   onProceedToExtraction,
   alignment,
   disabled = false,
 }) => {
   return (
-    <div className="cordel-card p-3 flex flex-col gap-3">
-      {/* 1. Métadonnées d'alignement et d'anacrouse calculées */}
+    <div className="cordel-card p-3 flex flex-col gap-2.5">
+      {/* 1. Métadonnées d alignement et d anacrouse */}
       <div className="flex items-center justify-between text-xs font-mono bg-black/30 p-2 border border-theme-border/30">
         <div className="flex items-center gap-1.5">
           <span className="opacity-70">Décalage T1 :</span>
@@ -44,9 +48,27 @@ export const PreviewControls: React.FC<PreviewControlsProps> = ({
         </div>
       </div>
 
-      {/* 2. Barre d'actions de pré-écoute & Clic */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-        {/* Play / Stop */}
+      {/* 2. Option Coupe-Bas Studio 90 Hz */}
+      <div className="flex items-center justify-between px-1 py-0.5">
+        <label className="flex items-center gap-2 text-xs font-mono cursor-pointer select-none text-theme-ink/90 hover:text-theme-ink">
+          <input
+            type="checkbox"
+            checked={highPassEnabled}
+            onChange={onToggleHighPass}
+            className="accent-[var(--cordel-wood)] w-3.5 h-3.5 cursor-pointer"
+          />
+          <span className="flex items-center gap-1.5">
+            <Filter className="w-3.5 h-3.5 text-theme-accent" />
+            <span>Coupe-bas Studio (90 Hz - Anti-rumble / plosives)</span>
+          </span>
+        </label>
+        <span className="text-[10px] text-emerald-400 font-mono">
+          {highPassEnabled ? '✓ Actif' : 'Désactivé'}
+        </span>
+      </div>
+
+      {/* 3. Barre d actions de pré-écoute & Clic */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1 border-t border-theme-border/20">
         <button
           type="button"
           disabled={disabled}
@@ -68,7 +90,6 @@ export const PreviewControls: React.FC<PreviewControlsProps> = ({
           )}
         </button>
 
-        {/* Clic témoin toggle */}
         <button
           type="button"
           disabled={disabled}
@@ -82,7 +103,6 @@ export const PreviewControls: React.FC<PreviewControlsProps> = ({
           <span>Clic Témoin</span>
         </button>
 
-        {/* Jeter et refaire */}
         <button
           type="button"
           disabled={disabled || isPlaying}
@@ -93,7 +113,6 @@ export const PreviewControls: React.FC<PreviewControlsProps> = ({
           <span>Refaire</span>
         </button>
 
-        {/* Action suivante */}
         <button
           type="button"
           disabled={disabled || isPlaying}

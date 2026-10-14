@@ -42,6 +42,7 @@ export const WaveformTrimEditor: React.FC<WaveformTrimEditorProps> = ({
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const [playheadSec, setPlayheadSec] = useState<number>(-1);
   const [clickEnabled, setClickEnabled] = useState<boolean>(true);
+  const [highPassEnabled, setHighPassEnabled] = useState<boolean>(true);
 
   useEffect(() => {
     const el = containerRef.current;
@@ -76,9 +77,10 @@ export const WaveformTrimEditor: React.FC<WaveformTrimEditorProps> = ({
     setIsPlaying(true);
     await player.play(rawPCM, sampleRate, {
       trimStartSec, trimEndSec, latencyOffsetMs, bpm, beatsPerMeasure, totalDurationSec,
-      clickEnabled, outputDeviceId, onEnded: () => setIsPlaying(false),
+      clickEnabled, highPassFilterEnabled: highPassEnabled, outputDeviceId,
+      onEnded: () => setIsPlaying(false),
     });
-  }, [player, isPlaying, rawPCM, sampleRate, trimStartSec, trimEndSec, latencyOffsetMs, bpm, beatsPerMeasure, totalDurationSec, clickEnabled, outputDeviceId]);
+  }, [player, isPlaying, rawPCM, sampleRate, trimStartSec, trimEndSec, latencyOffsetMs, bpm, beatsPerMeasure, totalDurationSec, clickEnabled, highPassEnabled, outputDeviceId]);
 
   const handleProceed = useCallback(() => {
     player.stop();
@@ -86,12 +88,13 @@ export const WaveformTrimEditor: React.FC<WaveformTrimEditorProps> = ({
     const pack = generateVocalPack({
       rawPCM, sampleRate, trimStartSec, trimEndSec, latencyOffsetMs, bpm, timeSignature,
       measuresCount, beatsPerMeasure, beatResolutions, referencePitch, alignment,
+      highPassFilterEnabled: highPassEnabled,
     });
     onPackReady(pack);
-  }, [player, rawPCM, sampleRate, trimStartSec, trimEndSec, latencyOffsetMs, bpm, timeSignature, measuresCount, beatsPerMeasure, beatResolutions, referencePitch, alignment, onPackReady]);
+  }, [player, rawPCM, sampleRate, trimStartSec, trimEndSec, latencyOffsetMs, bpm, timeSignature, measuresCount, beatsPerMeasure, beatResolutions, referencePitch, alignment, highPassEnabled, onPackReady]);
 
   return (
-    <div className="flex flex-col gap-3 w-full">
+    <div className="flex flex-col gap-2.5 w-full">
       <div ref={containerRef} className="w-full h-36 relative cordel-card overflow-hidden select-none bg-black/40">
         <WaveformGridCanvas
           width={containerWidth} height={144} totalDurationSec={totalDurationSec}
@@ -108,15 +111,16 @@ export const WaveformTrimEditor: React.FC<WaveformTrimEditorProps> = ({
         />
       </div>
 
-      <LatencyNudgeBar
-        latencyOffsetMs={latencyOffsetMs}
-        onChange={setLatencyOffsetMs}
-        disabled={isPlaying}
-      />
+      <p className="text-[11px] font-mono text-theme-ink/80 text-center leading-snug px-1">
+        ✂️ Glissez les poignées Début (bleue) et Fin (rouge) pour couper les respirations ou bruits : votre calage rythmique sur le Temps 1 reste 100 % verrouillé.
+      </p>
+
+      <LatencyNudgeBar latencyOffsetMs={latencyOffsetMs} onChange={setLatencyOffsetMs} disabled={isPlaying} />
 
       <PreviewControls
         isPlaying={isPlaying} onTogglePlay={handleTogglePlay}
         clickEnabled={clickEnabled} onToggleClick={() => setClickEnabled((v) => !v)}
+        highPassEnabled={highPassEnabled} onToggleHighPass={() => setHighPassEnabled((v) => !v)}
         onReset={onReset} onProceedToExtraction={handleProceed} alignment={alignment}
       />
     </div>

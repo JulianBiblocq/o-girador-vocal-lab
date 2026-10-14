@@ -63,7 +63,7 @@ export const MetricConfigPanel: React.FC<MetricConfigPanelProps> = ({
         </div>
       </div>
 
-      {/* 2. Tempo & Mesures Chant */}
+      {/* 2. Tempo (30..240 BPM) & Mesures Chant */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1 border-t border-theme-border/20">
         <div className="flex flex-col gap-1.5">
           <div className="flex items-center justify-between">
@@ -72,13 +72,13 @@ export const MetricConfigPanel: React.FC<MetricConfigPanelProps> = ({
               Tempo (BPM)
             </span>
             <input
-              type="number" min={60} max={220} value={bpm} disabled={disabled}
-              onChange={(e) => onBpmChange(Math.max(60, Math.min(220, Number(e.target.value) || 100)))}
+              type="number" min={30} max={240} value={bpm} disabled={disabled}
+              onChange={(e) => onBpmChange(Math.max(30, Math.min(240, Number(e.target.value) || 100)))}
               className="w-14 bg-black/30 border border-theme-border text-center font-mono font-bold text-xs p-1 focus:outline-none focus:border-theme-accent"
             />
           </div>
           <input
-            type="range" min={60} max={220} value={bpm} disabled={disabled}
+            type="range" min={30} max={240} value={bpm} disabled={disabled}
             onChange={(e) => onBpmChange(Number(e.target.value))}
             className="w-full accent-[var(--cordel-wood)] cursor-pointer"
           />
@@ -105,12 +105,12 @@ export const MetricConfigPanel: React.FC<MetricConfigPanelProps> = ({
         </div>
       </div>
 
-      {/* 3. Métrique par temps */}
+      {/* 3. Metrique par temps */}
       <div className="flex flex-col gap-1.5 pt-1 border-t border-theme-border/20">
         <div className="flex items-center justify-between text-xs font-bold uppercase text-theme-ink">
           <span className="flex items-center gap-1.5">
             <Grid className="w-3.5 h-3.5 text-theme-accent" />
-            Métrique par temps
+            Metrique par temps
           </span>
           <span className="text-[10px] font-normal opacity-70">
             Alterner Binaire / Triolet

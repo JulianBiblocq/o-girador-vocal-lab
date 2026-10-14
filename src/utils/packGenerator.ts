@@ -15,17 +15,19 @@ export interface PackGeneratorParams {
   beatResolutions: number[];
   referencePitch: string;
   alignment: AlignmentResult;
+  highPassFilterEnabled?: boolean;
 }
 
 export function generateVocalPack(params: PackGeneratorParams): VocalPackExport {
   const {
     rawPCM, sampleRate, trimStartSec, trimEndSec, latencyOffsetMs,
     bpm, timeSignature, measuresCount, beatsPerMeasure,
-    beatResolutions, referencePitch, alignment,
+    beatResolutions, referencePitch, alignment, highPassFilterEnabled = true,
   } = params;
 
-  // Découpe physique avec intégration directe de la compensation de latence
-  const cleanPCM = extractCompensatedSlice(rawPCM, sampleRate, trimStartSec, trimEndSec, latencyOffsetMs);
+  const cleanPCM = extractCompensatedSlice(
+    rawPCM, sampleRate, trimStartSec, trimEndSec, latencyOffsetMs, highPassFilterEnabled
+  );
   const audioBase64 = audioBufferToWavBase64(cleanPCM, sampleRate);
 
   return {
@@ -41,7 +43,7 @@ export function generateVocalPack(params: PackGeneratorParams): VocalPackExport 
     alignment: {
       startOffsetSec: alignment.startOffsetSec,
       anacrusis: alignment.anacrusis,
-      nudgeMs: 0, // 0 car la latence matérielle est déjà compensée dans le fichier WAV exporté
+      nudgeMs: 0,
     },
     grid: {
       steps: [],
