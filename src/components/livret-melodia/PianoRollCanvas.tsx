@@ -1,11 +1,12 @@
 /**
  * PianoRollCanvas.tsx
- * Canvas interactif HiDPI : Règle temporelle (42px) cliquable (Seek),
- * Subdivisions, Édition MIDI, Palette au Clic Droit et Playhead 60 FPS (Zero Render Thrashing).
+ * Canvas interactif HiDPI pour la grille des notes :
+ * Subdivisions, Édition MIDI (déplacement, resize, briques), Palette au Clic Droit
+ * et Tête de lecture 60 FPS (Zero Render Thrashing).
  */
 import React, { useEffect, useRef, useCallback } from 'react';
 import type { PitchCurvePoint, VocalStepData } from '../../types/vocalPack.types';
-import { drawPianoRollGrid, RULER_HEIGHT } from './pianoRollDrawer';
+import { drawPianoRollGrid } from './pianoRollDrawer';
 import {
   findBrickRange, moveBrick, resizeBrick, glueBrickToPrevious,
   splitTieAtStep, eraseBrick, createSingleNote, type PianoRollTool
@@ -27,7 +28,6 @@ interface PianoRollCanvasProps {
   isPlaying: boolean;
   activeTool: PianoRollTool;
   getPlayheadSec?: () => number;
-  onSeek: (sec: number) => void;
   onOpenContextMenu: (x: number, y: number) => void;
   onUpdateSteps: (newSteps: VocalStepData[]) => void;
   onPlayNotePreview: (midi: number) => void;
@@ -35,9 +35,9 @@ interface PianoRollCanvasProps {
 }
 
 export const PianoRollCanvas: React.FC<PianoRollCanvasProps> = (props) => {
-  const { width, height, minMidi, maxMidi, rowHeight, beatsPerMeasure, beatResolutions, allSteps, pitchCurve, totalDurationSec, anacrusisDurationSec, seekStartSec, isPlaying, activeTool, getPlayheadSec, onSeek, onOpenContextMenu, onUpdateSteps, onPlayNotePreview, onOpenTextInput } = props;
+  const { width, height, minMidi, maxMidi, rowHeight, beatsPerMeasure, beatResolutions, allSteps, pitchCurve, totalDurationSec, anacrusisDurationSec, seekStartSec, isPlaying, activeTool, getPlayheadSec, onOpenContextMenu, onUpdateSteps, onPlayNotePreview, onOpenTextInput } = props;
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const dragRef = useRef<{ mode: 'move' | 'resize' | 'seek'; rootIdx: number; lastMidi: number } | null>(null);
+  const dragRef = useRef<{ mode: 'move' | 'resize'; rootIdx: number; lastMidi: number } | null>(null);
 
   const draw = useCallback(() => {
     const canvas = canvasRef.current;
@@ -67,21 +67,15 @@ export const PianoRollCanvas: React.FC<PianoRollCanvasProps> = (props) => {
     const x = Math.max(0, Math.min(width - 1, e.clientX - rect.left));
     const y = Math.max(0, Math.min(height - 1, e.clientY - rect.top));
     const stepIdx = allSteps.length > 0 ? Math.min(allSteps.length - 1, Math.floor((x / width) * allSteps.length)) : 0;
-    const rowIdx = Math.max(0, Math.floor((y - RULER_HEIGHT) / rowHeight));
+    const rowIdx = Math.max(0, Math.floor(y / rowHeight));
     return { stepIdx, midi: maxMidi - Math.min(maxMidi - minMidi, rowIdx), x, y };
   };
 
   const handlePointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
-    const { stepIdx, midi, x, y } = getCoords(e);
+    const { stepIdx, midi, x } = getCoords(e);
     if (e.button === 2) {
       e.preventDefault(); e.stopPropagation();
       onOpenContextMenu(e.clientX, e.clientY);
-      return;
-    }
-    if (y <= RULER_HEIGHT) {
-      onSeek(Math.max(0, Math.min(totalDurationSec - 0.05, (x / width) * totalDurationSec)));
-      dragRef.current = { mode: 'seek', rootIdx: 0, lastMidi: 0 };
-      e.currentTarget.setPointerCapture(e.pointerId);
       return;
     }
     if (activeTool === 'erase') { onUpdateSteps(eraseBrick(allSteps, stepIdx)); return; }
@@ -107,13 +101,14 @@ export const PianoRollCanvas: React.FC<PianoRollCanvasProps> = (props) => {
 
   const handlePointerMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
     if (!dragRef.current) return;
-    const { stepIdx, midi, x } = getCoords(e);
-    if (dragRef.current.mode === 'seek') onSeek(Math.max(0, Math.min(totalDurationSec - 0.05, (x / width) * totalDurationSec)));
-    else if (dragRef.current.mode === 'move' && midi !== dragRef.current.lastMidi) {
+    const { stepIdx, midi } = getCoords(e);
+    if (dragRef.current.mode === 'move' && midi !== dragRef.current.lastMidi) {
       dragRef.current.lastMidi = midi;
       onUpdateSteps(moveBrick(allSteps, dragRef.current.rootIdx, midi));
       onPlayNotePreview(midi);
-    } else if (dragRef.current.mode === 'resize') onUpdateSteps(resizeBrick(allSteps, dragRef.current.rootIdx, stepIdx));
+    } else if (dragRef.current.mode === 'resize') {
+      onUpdateSteps(resizeBrick(allSteps, dragRef.current.rootIdx, stepIdx));
+    }
   };
 
   const triggerTextInput = (stepIdx: number) => {
@@ -122,7 +117,7 @@ export const PianoRollCanvas: React.FC<PianoRollCanvasProps> = (props) => {
     const stepW = width / allSteps.length;
     const brickW = range ? (range.endIndex - range.rootIndex + 1) * stepW : stepW;
     const step = allSteps[targetIdx];
-    const brickY = RULER_HEIGHT + (maxMidi - (step?.midiNumber ?? minMidi)) * rowHeight;
+    const brickY = (maxMidi - (step?.midiNumber ?? minMidi)) * rowHeight;
     onOpenTextInput(targetIdx, { x: targetIdx * stepW, y: brickY, w: brickW, h: rowHeight });
   };
 
@@ -132,7 +127,7 @@ export const PianoRollCanvas: React.FC<PianoRollCanvasProps> = (props) => {
       onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); onOpenContextMenu(e.clientX, e.clientY); }}
       onPointerDown={handlePointerDown} onPointerMove={handlePointerMove}
       onPointerUp={(e) => { if (dragRef.current) { try { e.currentTarget.releasePointerCapture(e.pointerId); } catch {} dragRef.current = null; } }}
-      onDoubleClick={(e) => { const { stepIdx, y } = getCoords(e); if (y <= RULER_HEIGHT) onSeek(0); else triggerTextInput(stepIdx); }}
+      onDoubleClick={(e) => triggerTextInput(getCoords(e).stepIdx)}
       style={{ width: `${width}px`, height: `${height}px` }}
       className={`block select-none ${activeTool === 'erase' ? 'cursor-not-allowed' : activeTool === 'text' ? 'cursor-text' : 'cursor-pointer'}`}
     />

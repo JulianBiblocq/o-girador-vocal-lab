@@ -40,15 +40,17 @@ export function centsDiff(midiFloat: number, targetMidi: number): number {
   return Math.abs(midiFloat - targetMidi) * 100;
 }
 
+/**
+ * Calcule l'étendue du clavier : plage stable permanente de C2 (36) à C5 (72).
+ * S'élargit si une note dépasse cette plage, mais ne rétrécit JAMAIS en-dessous de C2..C5.
+ */
 export function calculateTessitura(midiNumbers: number[]): { minMidi: number; maxMidi: number } {
-  const valid = midiNumbers.filter((m) => m >= 24 && m <= 96);
-  if (valid.length === 0) return { minMidi: 48, maxMidi: 72 }; // C3..C5 par défaut (2 octaves)
-  let min = Math.min(...valid) - 2;
-  let max = Math.max(...valid) + 2;
-  if (max - min < 12) {
-    const pad = Math.ceil((12 - (max - min)) / 2);
-    min = Math.max(24, min - pad);
-    max = Math.min(96, max + pad);
+  const valid = midiNumbers.filter((m) => m >= 20 && m <= 108);
+  let min = 36; // C2
+  let max = 72; // C5
+  if (valid.length > 0) {
+    min = Math.min(36, Math.min(...valid) - 1);
+    max = Math.max(72, Math.max(...valid) + 1);
   }
   return { minMidi: min, maxMidi: max };
 }

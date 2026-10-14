@@ -1,7 +1,7 @@
 /**
  * PianoRollKeyboard.tsx
  * Clavier vertical 64 px fixe à gauche (touches ivoire / ébène en relief).
- * Avec en-tête de 42 px à 2 étages (MESURES / TEMPS) synchronisé sur la règle.
+ * Aligné directement avec la grille de notes (C2..C5).
  */
 import React from 'react';
 import { midiToNoteName } from '../../utils/noteUtils';
@@ -66,16 +66,8 @@ export const PianoRollKeyboard: React.FC<PianoRollKeyboardProps> = ({ minMidi, m
   return (
     <div
       style={{ width: `${KEYBOARD_WIDTH}px` }}
-      className="sticky left-0 z-20 shrink-0 bg-[#1c1917] border-r-2 border-black/80 flex flex-col shadow-lg"
+      className="sticky left-0 z-10 shrink-0 bg-[#1c1917] border-r-2 border-black/80 flex flex-col shadow-lg"
     >
-      <div style={{ height: '42px' }} className="w-full bg-[#141210] border-b border-white/20 flex flex-col justify-between shrink-0">
-        <div style={{ height: '21px' }} className="w-full border-b border-white/10 flex items-center justify-center">
-          <span className="text-[7.5px] font-mono font-bold text-amber-400/85 tracking-widest">MESURES</span>
-        </div>
-        <div style={{ height: '21px' }} className="w-full flex items-center justify-center">
-          <span className="text-[7.5px] font-mono font-semibold text-stone-400/80 tracking-widest">TEMPS</span>
-        </div>
-      </div>
       {rows}
     </div>
   );

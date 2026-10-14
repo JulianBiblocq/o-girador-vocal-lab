@@ -1,3 +1,8 @@
+/**
+ * LivretPrise.tsx
+ * Conteneur du Livret 1 (Prise & Balancier) avec navigation Livret 1/2,
+ * grille responsive 3 colonnes Desktop et support bilingue.
+ */
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { MetronomeEngine, getBeatsPerMeasure, type ListeningMode } from '../../audio/MetronomeEngine';
 import { VocalRecorderEngine } from '../../audio/VocalRecorderEngine';
@@ -16,9 +21,15 @@ import { createPaddedPreviewBuffer } from '../../utils/wavEncoder';
 import { getDefaultBeatResolutions } from '../../utils/alignmentMath';
 import { buildDeviceSignature } from '../../utils/deviceSignature';
 import { getSavedLatencyOffsetMs } from '../../utils/latencyStorage';
+import { useLanguage } from '../../i18n/LanguageContext';
 import type { TimeSignatureString, VocalPackExport, PitchCurvePoint, VocalStepData } from '../../types/vocalPack.types';
 
-export const LivretPrise: React.FC = () => {
+interface LivretPriseProps {
+  isFullWidth?: boolean;
+}
+
+export const LivretPrise: React.FC<LivretPriseProps> = ({ isFullWidth = false }) => {
+  const { t } = useLanguage();
   const engine = useMemo(() => new MetronomeEngine(), []);
   const recorder = useMemo(() => new VocalRecorderEngine(), []);
 
@@ -35,7 +46,7 @@ export const LivretPrise: React.FC = () => {
   const [isCycleActive, setIsCycleActive] = useState<boolean>(false);
   const [recordedPCM, setRecordedPCM] = useState<Float32Array | null>(null);
   const [recordedSampleRate, setRecordedSampleRate] = useState<number>(44100);
-  const [melodicData, setMelodicData] = useState<{ pitchCurve: PitchCurvePoint[]; allSteps: VocalStepData[]; pack: VocalPackExport; cleanPCM: Float32Array; } | null>(null);
+  const [melodicData, setMelodicData] = useState<{ pitchCurve: PitchCurvePoint[]; allSteps: VocalStepData[]; pack: VocalPackExport; cleanPCM: Float32Array } | null>(null);
 
   const beatsPerMeasure = getBeatsPerMeasure(timeSignature);
   const beatDuration = 60 / bpm;
@@ -49,23 +60,20 @@ export const LivretPrise: React.FC = () => {
     const ctx = await engine.initContext();
     const sampleRate = await recorder.prepare(ctx, selectedDeviceId);
     setRecordedSampleRate(sampleRate);
-    await new Promise((resolve) => setTimeout(resolve, 180));
+    await new Promise((r) => setTimeout(r, 180));
 
-    const countdownDurationSec = beatsPerMeasure * beatDuration;
-    const singingDurationSec = (1 + measuresCount) * beatsPerMeasure * beatDuration;
-    const cycleStartTime = ctx.currentTime + 0.08;
-    const anacrusisStartTime = cycleStartTime + countdownDurationSec;
-
+    const countdownSec = beatsPerMeasure * beatDuration;
+    const singingSec = (1 + measuresCount) * beatsPerMeasure * beatDuration;
+    const cycleStart = ctx.currentTime + 0.08;
+    const anacrusisStart = cycleStart + countdownSec;
     const sig = buildDeviceSignature(selectedDeviceId, selectedOutputDeviceId, sampleRate);
-    const captureStartTime = anacrusisStartTime - (getSavedLatencyOffsetMs(sig) / 1000);
+    const captureStart = anacrusisStart - (getSavedLatencyOffsetMs(sig) / 1000);
 
-    recorder.start(captureStartTime, singingDurationSec);
+    recorder.start(captureStart, singingSec);
     setIsCycleActive(true);
-
     await engine.startCycle(
       { bpm, timeSignature, measuresCount, referencePitch, listeningMode, outputDeviceId: selectedOutputDeviceId },
-      () => { setRecordedPCM(recorder.stop()); setIsCycleActive(false); },
-      cycleStartTime
+      () => { setRecordedPCM(recorder.stop()); setIsCycleActive(false); }, cycleStart
     );
   }, [engine, recorder, isCycleActive, selectedDeviceId, selectedOutputDeviceId, bpm, timeSignature, measuresCount, referencePitch, listeningMode, beatsPerMeasure, beatDuration]);
 
@@ -73,21 +81,20 @@ export const LivretPrise: React.FC = () => {
     if (!recordedPCM) return;
     const cleanPCM = createPaddedPreviewBuffer(recordedPCM, recordedSampleRate, totalDurationSec, 0, totalDurationSec, 0, true, true);
     const pitchCurve = extractContinuousPitchCurve(cleanPCM, { sampleRate: recordedSampleRate, totalDurationSec, trimStartSec: 0, trimEndSec: totalDurationSec });
-    const quantized = quantizePitchToSteps({ pitchCurve, bpm, beatsPerMeasure, measuresCount, beatResolutions, trimStartSec: 0, trimEndSec: totalDurationSec, pcm: cleanPCM, sampleRate: recordedSampleRate });
-    const allSteps = [...quantized.anacrusisSteps, ...quantized.gridSteps];
-    setMelodicData({ pitchCurve, allSteps, pack, cleanPCM });
+    const q = quantizePitchToSteps({ pitchCurve, bpm, beatsPerMeasure, measuresCount, beatResolutions, trimStartSec: 0, trimEndSec: totalDurationSec, pcm: cleanPCM, sampleRate: recordedSampleRate });
+    setMelodicData({ pitchCurve, allSteps: [...q.anacrusisSteps, ...q.gridSteps], pack, cleanPCM });
     setActiveLivret('melodia');
   }, [recordedPCM, recordedSampleRate, totalDurationSec, bpm, beatsPerMeasure, measuresCount, beatResolutions]);
 
   return (
-    <div className="flex flex-col gap-3 max-w-2xl mx-auto w-full">
+    <div className={`flex flex-col gap-3 w-full transition-all duration-200 ${isFullWidth ? 'max-w-none' : 'max-w-3xl mx-auto'}`}>
       {melodicData && (
         <div className="flex items-center justify-center gap-2 border-b border-theme-border/40 pb-2">
           <button type="button" onClick={() => setActiveLivret('prise')} className={`px-3 py-1 text-xs font-mono rounded-lg transition-all ${activeLivret === 'prise' ? 'bg-amber-500/20 text-amber-300 font-bold border border-amber-500/40' : 'text-theme-ink/60 hover:text-theme-ink'}`}>
-            🎙️ Livret 1 : Prise
+            {t('tabLivret1')}
           </button>
           <button type="button" onClick={() => setActiveLivret('melodia')} className={`px-3 py-1 text-xs font-mono rounded-lg transition-all ${activeLivret === 'melodia' ? 'bg-amber-500/20 text-amber-300 font-bold border border-amber-500/40' : 'text-theme-ink/60 hover:text-theme-ink'}`}>
-            🎵 Livret 2 : Melodia & Letra
+            {t('tabLivret2')}
           </button>
         </div>
       )}
@@ -108,17 +115,16 @@ export const LivretPrise: React.FC = () => {
               rawPCM={recordedPCM} sampleRate={recordedSampleRate} bpm={bpm} timeSignature={timeSignature}
               measuresCount={measuresCount} beatsPerMeasure={beatsPerMeasure} beatResolutions={beatResolutions}
               referencePitch={referencePitch} outputDeviceId={selectedOutputDeviceId}
-              onReset={() => { setRecordedPCM(null); setMelodicData(null); }}
-              onPackReady={handlePackReady}
+              onReset={() => { setRecordedPCM(null); setMelodicData(null); }} onPackReady={handlePackReady}
             />
           ) : (
             <div className="flex flex-col gap-2.5">
-              <CalibrationBanner inputDeviceId={selectedDeviceId} outputDeviceId={selectedOutputDeviceId} sampleRate={recordedSampleRate} onCalibrationComplete={() => {}} disabled={isCycleActive} />
               <RecordActionButton isCycleActive={isCycleActive} measuresCount={measuresCount} onToggleRecord={handleToggleRecord} />
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
+              <div className={`grid grid-cols-1 gap-3 pt-1 items-start ${isFullWidth ? 'lg:grid-cols-3' : 'md:grid-cols-2'}`}>
                 <MetricConfigPanel timeSignature={timeSignature} onTimeSignatureChange={setTimeSignature} bpm={bpm} onBpmChange={setBpm} measuresCount={measuresCount} onMeasuresCountChange={setMeasuresCount} beatResolutions={beatResolutions} onBeatResolutionsChange={setBeatResolutions} disabled={isCycleActive} />
+                <ListeningModePanel listeningMode={listeningMode} onListeningModeChange={setListeningMode} referencePitch={referencePitch} onReferencePitchChange={setReferencePitch} onPlayReferencePreview={() => engine.playReferencePitchPreview(referencePitch, 1.5, selectedOutputDeviceId)} disabled={isCycleActive} />
                 <div className="flex flex-col gap-3">
-                  <ListeningModePanel listeningMode={listeningMode} onListeningModeChange={setListeningMode} referencePitch={referencePitch} onReferencePitchChange={setReferencePitch} onPlayReferencePreview={() => engine.playReferencePitchPreview(referencePitch, 1.5, selectedOutputDeviceId)} disabled={isCycleActive} />
+                  <CalibrationBanner inputDeviceId={selectedDeviceId} outputDeviceId={selectedOutputDeviceId} sampleRate={recordedSampleRate} onCalibrationComplete={() => {}} disabled={isCycleActive} />
                   <DeviceSelector selectedDeviceId={selectedDeviceId} onDeviceChange={setSelectedDeviceId} selectedOutputDeviceId={selectedOutputDeviceId} onOutputDeviceChange={(id) => { setSelectedOutputDeviceId(id); engine.setOutputDevice(id); }} disabled={isCycleActive} />
                 </div>
               </div>

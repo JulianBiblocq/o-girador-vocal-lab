@@ -1,13 +1,14 @@
 /**
  * PianoRollToolbar.tsx
  * Barre d'outils du Piano Roll : Outils MIDI, Annuler/Rétablir (Ctrl+Z/Y),
- * Zoom horizontal, Gamme / Tonique et Lissage des tenues.
+ * Zoom horizontal, Gamme / Tonique et Lissage des tenues bilingues.
  */
 import React from 'react';
 import type { PianoRollTool } from './pianoRollInteractions';
 import { SCALE_DEFINITIONS, type ScaleType } from '../../audio/scaleQuantizer';
 import { NOTE_NAMES } from '../../utils/noteUtils';
 import { MousePointer, Link2, Scissors, Eraser, Type, ZoomIn, Undo2, Redo2 } from 'lucide-react';
+import { useLanguage } from '../../i18n/LanguageContext';
 
 interface PianoRollToolbarProps {
   activeTool: PianoRollTool;
@@ -27,40 +28,41 @@ interface PianoRollToolbarProps {
   onRedo?: () => void;
 }
 
-const TOOLS: { id: PianoRollTool; label: string; icon: React.FC<{ className?: string }> }[] = [
-  { id: 'pointer', label: 'Déplacer/Écrire', icon: MousePointer },
-  { id: 'glue', label: 'Coller', icon: Link2 },
-  { id: 'cut', label: 'Couper', icon: Scissors },
-  { id: 'erase', label: 'Gomme', icon: Eraser },
-  { id: 'text', label: 'Texte', icon: Type },
-];
-
 export const PianoRollToolbar: React.FC<PianoRollToolbarProps> = (props) => {
   const { activeTool, onSelectTool, zoomLevel, onSetZoom, tonic, onSetTonic, scaleType, onSetScaleType, smoothingLevel, onSetSmoothingLevel, canUndo, canRedo, historyCount, onUndo, onRedo } = props;
+  const { t } = useLanguage();
+
+  const tools: { id: PianoRollTool; label: string; icon: React.FC<{ className?: string }> }[] = [
+    { id: 'pointer', label: t('toolPointer'), icon: MousePointer },
+    { id: 'glue', label: t('toolGlue'), icon: Link2 },
+    { id: 'cut', label: t('toolCut'), icon: Scissors },
+    { id: 'erase', label: t('toolErase'), icon: Eraser },
+    { id: 'text', label: t('toolText'), icon: Type },
+  ];
 
   return (
     <div className="flex flex-col gap-1.5 p-2 bg-black/60 border border-theme-border/60 rounded-xl">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-1 bg-black/40 p-1 rounded-lg border border-white/5">
-          {TOOLS.map((t) => {
-            const Icon = t.icon;
-            const isActive = activeTool === t.id;
+          {tools.map((item) => {
+            const Icon = item.icon;
+            const isActive = activeTool === item.id;
             return (
               <button
-                key={t.id} type="button" onClick={() => onSelectTool(t.id)} title={t.label}
+                key={item.id} type="button" onClick={() => onSelectTool(item.id)} title={item.label}
                 className={`px-2 py-1 rounded text-xs font-mono flex items-center gap-1 transition-all ${
                   isActive ? 'bg-amber-600 text-white font-bold shadow-sm' : 'text-theme-ink/70 hover:bg-white/10 hover:text-theme-ink'
                 }`}
               >
                 <Icon className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">{t.label}</span>
+                <span className="hidden sm:inline">{item.label}</span>
               </button>
             );
           })}
 
           <div className="h-4 w-px bg-white/10 mx-0.5" />
           <button
-            type="button" onClick={onUndo} disabled={!canUndo} title="Annuler (Ctrl+Z)"
+            type="button" onClick={onUndo} disabled={!canUndo} title={t('undo')}
             className={`px-1.5 py-1 rounded text-xs font-mono flex items-center gap-1 transition-all ${
               canUndo ? 'text-amber-200 hover:bg-white/10' : 'text-stone-600 cursor-not-allowed opacity-50'
             }`}
@@ -69,7 +71,7 @@ export const PianoRollToolbar: React.FC<PianoRollToolbarProps> = (props) => {
             {historyCount !== undefined && historyCount > 0 && <span className="text-[10px] text-amber-400 font-bold">({historyCount})</span>}
           </button>
           <button
-            type="button" onClick={onRedo} disabled={!canRedo} title="Rétablir (Ctrl+Y)"
+            type="button" onClick={onRedo} disabled={!canRedo} title={t('redo')}
             className={`px-1.5 py-1 rounded text-xs font-mono flex items-center gap-1 transition-all ${
               canRedo ? 'text-amber-200 hover:bg-white/10' : 'text-stone-600 cursor-not-allowed opacity-50'
             }`}
@@ -95,7 +97,7 @@ export const PianoRollToolbar: React.FC<PianoRollToolbarProps> = (props) => {
 
       <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-white/5 text-[11px] font-mono">
         <div className="flex items-center gap-2">
-          <span className="text-theme-ink/60">Gamme :</span>
+          <span className="text-theme-ink/60">{t('scaleLabel')} :</span>
           <select value={tonic} onChange={(e) => onSetTonic(e.target.value)} className="px-1.5 py-0.5 bg-black/50 border border-theme-border/40 rounded text-amber-300 outline-none">
             {NOTE_NAMES.map((n) => <option key={n} value={n}>{n}</option>)}
           </select>
@@ -105,7 +107,7 @@ export const PianoRollToolbar: React.FC<PianoRollToolbarProps> = (props) => {
         </div>
 
         <div className="flex items-center gap-1.5">
-          <span className="text-theme-ink/60">Lissage :</span>
+          <span className="text-theme-ink/60">{t('smoothingLabel')} :</span>
           <span className="text-[10px] text-theme-ink/40">Fin</span>
           <input type="range" min={0} max={1} step={0.1} value={smoothingLevel} onChange={(e) => onSetSmoothingLevel(parseFloat(e.target.value))} className="w-20 accent-amber-500 cursor-pointer" />
           <span className="text-[10px] text-theme-ink/40">Large</span>

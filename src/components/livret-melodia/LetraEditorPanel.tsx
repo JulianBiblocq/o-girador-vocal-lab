@@ -7,6 +7,7 @@ import React, { useState, useMemo } from 'react';
 import type { VocalStepData } from '../../types/vocalPack.types';
 import { splitTextIntoLetraSyllables, mapSyllablesToSteps, reconstructWordsFromSteps } from '../../utils/syllabifier';
 import { Sparkles, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useLanguage } from '../../i18n/LanguageContext';
 
 interface LetraEditorPanelProps {
   allSteps: VocalStepData[];
@@ -14,6 +15,7 @@ interface LetraEditorPanelProps {
 }
 
 export const LetraEditorPanel: React.FC<LetraEditorPanelProps> = ({ allSteps, onUpdateSteps }) => {
+  const { t } = useLanguage();
   const [rawText, setRawText] = useState<string>('Eu vou vadiar');
 
   const handleAlign = () => {
@@ -51,8 +53,8 @@ export const LetraEditorPanel: React.FC<LetraEditorPanelProps> = ({ allSteps, on
   return (
     <div className="flex flex-col gap-2 p-2.5 bg-black/50 border border-theme-border/60 rounded-xl cordel-card">
       <div className="flex items-center justify-between text-xs font-mono">
-        <span className="font-bold text-amber-300">📜 LETRA DA TOADA</span>
-        <span className="text-[10px] text-theme-ink/60">Bouton [␣ Espace] pour marquer la fin d'un mot</span>
+        <span className="font-bold text-amber-300">📜 {t('letraTitle')}</span>
+        <span className="text-[10px] text-theme-ink/60">{activeSteps.length} {t('syllableCount')}</span>
       </div>
 
       <div className="flex items-center gap-2">
@@ -69,12 +71,12 @@ export const LetraEditorPanel: React.FC<LetraEditorPanelProps> = ({ allSteps, on
           className="cordel-btn px-3 py-1 text-xs font-mono bg-amber-600 hover:bg-amber-500 text-white flex items-center gap-1 font-semibold"
         >
           <Sparkles className="w-3.5 h-3.5" />
-          <span>Aligner</span>
+          <span>{t('alignBtn')}</span>
         </button>
       </div>
 
       <p className="text-[9.5px] font-mono text-amber-200/70 leading-snug px-0.5">
-        💡 <strong>Astuce :</strong> "va-di" = couper un mot • "va - di" (ou "--") = 1 voyelle sur 2 notes • "qu'eu" ou "être_le" = 2 mots sur 1 seule note.
+        💡 {t('syntaxGuide')}
       </p>
 
       {/* Ruban des pastilles syllabiques */}
@@ -118,7 +120,7 @@ export const LetraEditorPanel: React.FC<LetraEditorPanelProps> = ({ allSteps, on
       </div>
 
       <div className="flex items-center gap-2 pt-1 border-t border-theme-border/30 text-[11px] font-mono">
-        <span className="text-theme-ink/60">Mots reconstitués :</span>
+        <span className="text-theme-ink/60">Mots :</span>
         <span className="text-emerald-400 font-semibold italic bg-black/40 px-2 py-0.5 rounded">
           {reconstructedWords ? `« ${reconstructedWords} »` : '(vide)'}
         </span>
