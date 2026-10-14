@@ -13,18 +13,18 @@ export const translationsFr: VocalLabTranslations = {
 
   // Jalon 4.A : Bibliotheque & Conducteur de Toada
   patternLibraryTitle: 'BIBLIOTHEQUE DES PATTERNS (TOADA)',
-  addPuxadorPattern: '+ Pattern Puxador', addCoroPattern: '+ Pattern Coro',
+  addPuxadorPattern: 'Pattern Puxador', addCoroPattern: 'Pattern Coro',
   rolePuxador: 'PUXADOR', roleCoro: 'CORO',
   patternAudioRecorded: 'Audio', patternAudioMissing: 'Vide',
   editPatternNameTooltip: 'Renommer le pattern', deletePatternTooltip: 'Supprimer le pattern',
-  conductorTitle: 'FRISE CONDUCTEUR DE LA TOADA', addConductorBlock: '+ Bloc',
+  conductorTitle: 'FRISE CONDUCTEUR DE LA TOADA', addConductorBlock: 'Bloc',
   playFullToada: 'Ecouter la Toada complete', stopFullToada: 'Arreter la Toada',
   railPuxador: 'Rail Puxador', railCoro: 'Rail Coro', emptySlot: '- Vide -', blockLabel: 'Bloc {n}',
   cueSelectorLabel: 'Appel avant la prise (M-2 & M-1) :', cueNone: 'Aucun (Clic seul)',
   cueAutoPrevious: 'Pattern precedent du Conducteur', cueCustomPrefix: 'Pattern :', cueReadyBadge: 'Pret ({measures} M)',
 
   // Jalon 4.B : Matrice de Declinaisons Audio
-  pattern_variants_title: 'DECLINAISONS AUDIO DU PATTERN (ANTI-DISTORSION)',
+  pattern_variants_title: 'DECLINAISONS AUDIO DU PATTERN (ANTI-DISTORCAO)',
   variant_speed_nominal: '100 % Nominal (87-115 %)', variant_speed_slow: '74 % Ralenti (60-87 %)',
   variant_speed_extra: '55 % Ultra-lent (45-60 %)', variant_add_speed_3: '+ 3e vitesse (55 %)',
   variant_pitch_nominal: 'Ton 0 (-2 a +2 tons)', variant_pitch_low: '-4 tons (-8 dt)',
@@ -76,7 +76,7 @@ export const translationsFr: VocalLabTranslations = {
   calibPingInstruction: 'Silence... Emission de 3 pings acoustiques',
   calibPingFailed: 'Signal trop faible ou non detecte. Reessayez ou utilisez la Synchro Humaine.',
   calibRetryPing: 'Reessayer Auto-Ping', calibCancelTooltip: 'Annuler',
-  calibStepListen: 'Ecoutez le tempo (4 bips)...', calibStepClap: 'Tapez dans vos mains sur chaque bip ({n}/8) !',
+  calibStepListen: 'Ecoutez le tempo (4 bips)...', calibStepClap: 'Tapez dans vos mains sur chaque bip ({n}/8)!',
   calibStepCompute: 'Calcul de la latence...', calibClapBadge: 'CLAP {n}/8', calibAutoTestBadge: 'AUTO-TEST',
 
   // Livret 1 - Onde & Trim
@@ -95,7 +95,7 @@ export const translationsFr: VocalLabTranslations = {
   undo: 'Annuler (Ctrl+Z)', redo: 'Retablir (Ctrl+Y)', scaleLabel: 'Gamme', smoothingLabel: 'Lissage',
   smoothingFine: 'Fin', smoothingWide: 'Large',
   scaleChromatic: 'Chromatique (Libre)', scaleMajor: 'Majeur', scaleNaturalMinor: 'Mineur Naturel',
-  scaleMixolydian: 'Mixolydien / Nordeste (7e min)', scaleDorian: 'Dorien',
+  scaleMixolydian: 'Mixolidien / Nordeste (7e min)', scaleDorian: 'Dorien',
   scalePentatonicMinor: 'Pentatonique Mineure', scalePentatonicMajor: 'Pentatonique Majeure',
   rulerMeasures: 'MESURES', rulerBeats: 'TEMPS', rulerElan: 'ELAN (M-1)', rulerMeasure1: 'M1',
   pianoRollHint: "Clic Droit = Palette d'outils - Regle cliquable = Seek",

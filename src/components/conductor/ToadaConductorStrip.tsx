@@ -1,6 +1,6 @@
 /**
  * ToadaConductorStrip.tsx
- * Ligne 2 : Frise Conducteur de la Toada (Rails Puxador & Coro, enchaînement des blocs).
+ * Ligne 2 : Frise Conducteur de la Toada (Rails Puxador & Coro, enchainement des blocs).
  */
 import React, { useState, useMemo } from 'react';
 import { useToadaProject } from '../../context/ToadaProjectContext';
@@ -34,8 +34,8 @@ export const ToadaConductorStrip: React.FC<{ outputDeviceId?: string }> = ({ out
   };
 
   return (
-    <div className="cordel-card p-2 w-full flex flex-col gap-1.5 bg-black/60 select-none">
-      <div className="flex items-center justify-between text-xs font-mono">
+    <div className="cordel-card p-2 w-full h-full flex flex-col justify-between bg-black/60 select-none">
+      <div className="flex items-center justify-between text-xs font-mono mb-1.5">
         <span className="font-bold text-theme-ink/80 flex items-center gap-1.5 uppercase text-[11px] tracking-wider">
           <Layers className="w-3.5 h-3.5 text-theme-accent" />
           <span>{t('conductorTitle')}</span>
@@ -62,9 +62,9 @@ export const ToadaConductorStrip: React.FC<{ outputDeviceId?: string }> = ({ out
         </div>
       </div>
 
-      {/* Grille des blocs séquentiels */}
-      <div className="flex items-stretch gap-1.5 overflow-x-auto py-1 cordel-scrollbar">
-        {/* En-tête des Rails */}
+      {/* Grille des blocs sequentiels avec defilement gap-2.5 */}
+      <div className="flex items-stretch gap-2.5 overflow-x-auto pb-1 cordel-scrollbar">
+        {/* En-tete des Rails */}
         <div className="flex flex-col justify-end gap-1 shrink-0 w-20 text-[10px] font-mono font-bold">
           <div className="h-6 flex items-center justify-end pr-1 text-role-puxador truncate">{t('railPuxador')}</div>
           <div className="h-6 flex items-center justify-end pr-1 text-role-coro truncate">{t('railCoro')}</div>
@@ -94,7 +94,7 @@ export const ToadaConductorStrip: React.FC<{ outputDeviceId?: string }> = ({ out
                 )}
               </div>
 
-              {/* Sélecteur Puxador */}
+              {/* Selecteur Puxador */}
               <select
                 value={slot.puxadorPatternId ?? ''}
                 onChange={(e) => updateSlot(slot.slotId, e.target.value || null, slot.coroPatternId)}
@@ -108,7 +108,7 @@ export const ToadaConductorStrip: React.FC<{ outputDeviceId?: string }> = ({ out
                 ))}
               </select>
 
-              {/* Sélecteur Coro */}
+              {/* Selecteur Coro */}
               <select
                 value={slot.coroPatternId ?? ''}
                 onChange={(e) => updateSlot(slot.slotId, slot.puxadorPatternId, e.target.value || null)}

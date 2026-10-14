@@ -13,11 +13,11 @@ export const translationsBr: VocalLabTranslations = {
 
   // Jalon 4.A : Biblioteca & Regencia de Toada
   patternLibraryTitle: 'BIBLIOTECA DE PADROES (TOADA)',
-  addPuxadorPattern: '+ Padrao Puxador', addCoroPattern: '+ Padrao Coro',
+  addPuxadorPattern: 'Padrao Puxador', addCoroPattern: 'Padrao Coro',
   rolePuxador: 'PUXADOR', roleCoro: 'CORO',
   patternAudioRecorded: 'Audio', patternAudioMissing: 'Vazio',
   editPatternNameTooltip: 'Renomear padrao', deletePatternTooltip: 'Excluir padrao',
-  conductorTitle: 'LINHA DE REGENCIA DA TOADA', addConductorBlock: '+ Bloco',
+  conductorTitle: 'LINHA DE REGENCIA DA TOADA', addConductorBlock: 'Bloco',
   playFullToada: 'Ouvir Toada Completa', stopFullToada: 'Parar Toada',
   railPuxador: 'Puxador', railCoro: 'Coro', emptySlot: '- Vazio -', blockLabel: 'Bloco {n}',
   cueSelectorLabel: 'Chamada antes da tomada (C-2 e C-1) :', cueNone: 'Nenhuma (Apenas clique)',

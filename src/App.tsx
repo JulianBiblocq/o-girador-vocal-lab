@@ -1,7 +1,7 @@
 /**
  * App.tsx
- * Point d'entrée de O Girador • Atelier Vocal (Oficina Vocal) avec i18n bilingue [ FR | BR ],
- * Bibliothèque de Patterns nommables (Puxador/Coro) et Frise Conducteur.
+ * Point d'entree de O Girador - Atelier Vocal (Oficina Vocal) avec i18n bilingue [ FR | BR ],
+ * Bibliotheque de Patterns nommables (Puxador/Coro) et Frise Conducteur sur 1 seule ligne Desktop.
  */
 import React, { useState } from 'react';
 import { LanguageProvider, useLanguage } from './i18n/LanguageContext';
@@ -39,7 +39,7 @@ const AppContent: React.FC = () => {
           </div>
         </div>
 
-        {/* Contrôles à droite : Binôme [ FR | BR ] & Thème */}
+        {/* Controles a droite : Binome [ FR | BR ] & Theme */}
         <div className="flex items-center gap-2.5">
           <div className="h-9 cordel-card-sm inline-flex items-center p-0.5 text-xs font-mono select-none">
             <button
@@ -50,7 +50,7 @@ const AppContent: React.FC = () => {
                   ? 'bg-theme-wood text-white font-black shadow-sm'
                   : 'opacity-60 hover:opacity-100 text-theme-ink'
               }`}
-              title="Français"
+              title="Francais"
             >
               FR
             </button>
@@ -62,7 +62,7 @@ const AppContent: React.FC = () => {
                   ? 'bg-theme-wood text-white font-black shadow-sm'
                   : 'opacity-60 hover:opacity-100 text-theme-ink'
               }`}
-              title="Português Brasileiro"
+              title="Portugues Brasileiro"
             >
               BR
             </button>
@@ -79,10 +79,14 @@ const AppContent: React.FC = () => {
         </div>
       </header>
 
-      {/* Bandeau Supérieur en 2 Lignes : Bibliothèque de Patterns & Frise Conducteur */}
-      <div className="w-full flex flex-col gap-2.5 mb-3.5">
-        <PatternLibraryBar />
-        <ToadaConductorStrip />
+      {/* Grille sur 1 ligne sur Desktop : Bibliotheque & Frise Conducteur cote a cote */}
+      <div className="w-full grid grid-cols-1 xl:grid-cols-12 gap-4 items-stretch mb-3.5">
+        <div className="xl:col-span-5 h-full">
+          <PatternLibraryBar />
+        </div>
+        <div className="xl:col-span-7 h-full">
+          <ToadaConductorStrip />
+        </div>
       </div>
 
       <main className="flex-1 flex flex-col items-center justify-start w-full max-w-none">
