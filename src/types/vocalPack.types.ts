@@ -51,7 +51,7 @@ export interface VocalPackMetadata {
   timeSignature: TimeSignatureString;
   measuresCount: number; // Nombre de mesures de chant N (1..4)
   beatResolutions: number[]; // Ex: [4, 4, 4, 4] pour binaire 4/4, [3, 3] pour 6/8
-  suggestedRole: VocalRoleTarget;
+  suggestedRole?: VocalRoleTarget; // Optionnel : universel par défaut
   referencePitch: string; // Ex: 'C4', 'A3'
   createdAt: string; // ISO 8601
 }

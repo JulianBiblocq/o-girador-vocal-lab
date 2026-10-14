@@ -10,30 +10,25 @@ export type ListeningMode = 'headphones' | 'speakers';
 export interface MetronomeConfig {
   bpm: number;
   timeSignature: TimeSignatureString;
-  measuresCount: number; // N mesures de chant (1..4)
-  referencePitch: string; // Ex: 'C4', 'A3', 'G4'
+  measuresCount: number;
+  referencePitch: string;
   listeningMode: ListeningMode;
 }
 
 export interface CycleStatus {
   phase: 'idle' | 'anacrusis' | 'singing' | 'completed';
-  currentMeasure: number; // -1 pour anacrouse, 0..(N-1) pour chant
-  currentBeat: number; // 0..(beatsPerMeasure - 1)
+  currentMeasure: number;
+  currentBeat: number;
   beatsPerMeasure: number;
-  beatIndexInCycle: number; // 0..(totalBeats - 1)
-  beatProgress: number; // 0..1 dans le temps courant
+  beatIndexInCycle: number;
+  beatProgress: number;
   elapsedSec: number;
   totalDurationSec: number;
 }
 
 const NOTE_TO_SEMITONE: Record<string, number> = {
-  C: 0, 'C#': 1, Db: 1,
-  D: 2, 'D#': 3, Eb: 3,
-  E: 4,
-  F: 5, 'F#': 6, Gb: 6,
-  G: 7, 'G#': 8, Ab: 8,
-  A: 9, 'A#': 10, Bb: 10,
-  B: 11
+  C: 0, 'C#': 1, Db: 1, D: 2, 'D#': 3, Eb: 3, E: 4, F: 5,
+  'F#': 6, Gb: 6, G: 7, 'G#': 8, Ab: 8, A: 9, 'A#': 10, Bb: 10, B: 11
 };
 
 export function noteToFrequency(note: string): number {
@@ -50,8 +45,8 @@ export function getBeatsPerMeasure(timeSignature: TimeSignatureString): number {
   switch (timeSignature) {
     case '2/4': return 2;
     case '3/4': return 3;
-    case '6/8': return 2; // 2 pulsations de noire pointée
-    case '12/8': return 4; // 4 pulsations de noire pointée
+    case '6/8': return 2;
+    case '12/8': return 4;
     case '4/4':
     default:
       return 4;
@@ -87,12 +82,13 @@ export class MetronomeEngine {
   }
 
   /**
-   * Lance un cycle complet calibré : 1 mesure d'élan (M-1) + N mesures de chant.
+   * Lance un cycle complet calibré avec option de synchronisation externe T0.
    */
   public async startCycle(
     config: MetronomeConfig,
-    onComplete?: () => void
-  ): Promise<void> {
+    onComplete?: () => void,
+    externalStartTime?: number
+  ): Promise<number> {
     this.stop();
 
     const ctx = await this.initContext();
@@ -102,31 +98,26 @@ export class MetronomeEngine {
     this.beatsPerMeasure = getBeatsPerMeasure(config.timeSignature);
     this.beatDurationSec = 60 / config.bpm;
 
-    // Mesure d'élan (beatsPerMeasure temps) + N mesures de chant
     const anacrusisBeats = this.beatsPerMeasure;
     const singingBeats = this.measuresCount * this.beatsPerMeasure;
     this.totalBeats = anacrusisBeats + singingBeats;
     this.totalDurationSec = this.totalBeats * this.beatDurationSec;
 
-    // Décalage de garde (50ms) pour programmation déterministe
-    const leadTime = 0.05;
-    this.startTime = ctx.currentTime + leadTime;
+    // Décalage de garde de 50ms ou timestamp externe imposé (T0 synchrone)
+    this.startTime = externalStartTime ?? (ctx.currentTime + 0.05);
 
-    // En mode casque uniquement, programmer clics et diapason
     if (config.listeningMode === 'headphones') {
       this.scheduleHeadphoneAudio(ctx, this.startTime, config);
     }
 
-    // Punch-out automatique
-    const delayMs = (leadTime + this.totalDurationSec) * 1000;
+    const delayMs = Math.max(10, (this.startTime - ctx.currentTime + this.totalDurationSec) * 1000);
     this.completionTimerId = window.setTimeout(() => {
       this.handleCycleCompletion();
     }, delayMs);
+
+    return this.startTime;
   }
 
-  /**
-   * Arrêt d'urgence ou interruption manuelle avec nettoyage strict.
-   */
   public stop(): void {
     if (this.completionTimerId !== null) {
       window.clearTimeout(this.completionTimerId);
@@ -140,16 +131,13 @@ export class MetronomeEngine {
         }
         node.disconnect();
       } catch {
-        // Ignorer si déjà arrêté
+        // Ignorer
       }
     }
     this.activeNodes = [];
     this.isRunning = false;
   }
 
-  /**
-   * Écoute de la note repère au repos.
-   */
   public async playReferencePitchPreview(noteName: string, durationSec = 1.5): Promise<void> {
     this.stop();
     const ctx = await this.initContext();
@@ -162,7 +150,6 @@ export class MetronomeEngine {
 
     osc.type = 'triangle';
     osc.frequency.setValueAtTime(freq, now);
-
     filter.type = 'lowpass';
     filter.frequency.setValueAtTime(1600, now);
 
@@ -174,7 +161,6 @@ export class MetronomeEngine {
     osc.connect(filter);
     filter.connect(gain);
     gain.connect(ctx.destination);
-
     this.activeNodes.push(osc, filter, gain);
 
     osc.start(now);
@@ -189,9 +175,6 @@ export class MetronomeEngine {
     };
   }
 
-  /**
-   * Calcul d'état temps réel sans allocation mémoire pour le balancier 60 FPS.
-   */
   public getCycleStatus(): CycleStatus {
     if (!this.isRunning || !this.ctx) {
       return {
@@ -263,19 +246,12 @@ export class MetronomeEngine {
     return this.beatDurationSec;
   }
 
-  private scheduleHeadphoneAudio(
-    ctx: AudioContext,
-    start: number,
-    config: MetronomeConfig
-  ): void {
+  private scheduleHeadphoneAudio(ctx: AudioContext, start: number, config: MetronomeConfig): void {
     for (let b = 0; b < this.totalBeats; b++) {
       const beatTime = start + b * this.beatDurationSec;
-      // Temps 1 de chaque mesure (Temps fort)
       const isMajorBeat = b % this.beatsPerMeasure === 0;
       this.scheduleWoodClick(ctx, beatTime, isMajorBeat);
     }
-
-    // Note repère pendant l'anacrouse M-1
     const pitchDurationSec = this.beatsPerMeasure * this.beatDurationSec;
     this.scheduleReferencePitch(ctx, start, config.referencePitch, pitchDurationSec);
   }
@@ -283,7 +259,6 @@ export class MetronomeEngine {
   private scheduleWoodClick(ctx: AudioContext, time: number, isMajor: boolean): void {
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
-
     const startFreq = isMajor ? 1400 : 900;
     const endFreq = isMajor ? 260 : 180;
     const duration = 0.025;
@@ -297,7 +272,6 @@ export class MetronomeEngine {
 
     osc.connect(gain);
     gain.connect(ctx.destination);
-
     this.activeNodes.push(osc, gain);
 
     osc.start(time);
@@ -313,12 +287,7 @@ export class MetronomeEngine {
     };
   }
 
-  private scheduleReferencePitch(
-    ctx: AudioContext,
-    startTime: number,
-    noteName: string,
-    durationSec: number
-  ): void {
+  private scheduleReferencePitch(ctx: AudioContext, startTime: number, noteName: string, durationSec: number): void {
     const osc = ctx.createOscillator();
     const filter = ctx.createBiquadFilter();
     const gain = ctx.createGain();
@@ -326,7 +295,6 @@ export class MetronomeEngine {
     const freq = noteToFrequency(noteName);
     osc.type = 'triangle';
     osc.frequency.setValueAtTime(freq, startTime);
-
     filter.type = 'lowpass';
     filter.frequency.setValueAtTime(1400, startTime);
 
@@ -338,7 +306,6 @@ export class MetronomeEngine {
     osc.connect(filter);
     filter.connect(gain);
     gain.connect(ctx.destination);
-
     this.activeNodes.push(osc, filter, gain);
 
     osc.start(startTime);

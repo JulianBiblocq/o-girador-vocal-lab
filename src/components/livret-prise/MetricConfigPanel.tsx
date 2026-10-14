@@ -1,6 +1,7 @@
 ﻿import React from 'react';
 import { Gauge, Music2, Grid, Clock } from 'lucide-react';
 import type { TimeSignatureString } from '../../types/vocalPack.types';
+import { getDefaultBeatResolutions } from '../../utils/alignmentMath';
 
 interface MetricConfigPanelProps {
   timeSignature: TimeSignatureString;
@@ -16,28 +17,10 @@ interface MetricConfigPanelProps {
 
 const SUPPORTED_SIGNATURES: TimeSignatureString[] = ['4/4', '2/4', '3/4', '6/8', '12/8'];
 
-export function getDefaultBeatResolutions(sig: TimeSignatureString): number[] {
-  switch (sig) {
-    case '2/4': return [4, 4];
-    case '3/4': return [4, 4, 4];
-    case '6/8': return [3, 3];
-    case '12/8': return [3, 3, 3, 3];
-    case '4/4':
-    default:
-      return [4, 4, 4, 4];
-  }
-}
-
 export const MetricConfigPanel: React.FC<MetricConfigPanelProps> = ({
-  timeSignature,
-  onTimeSignatureChange,
-  bpm,
-  onBpmChange,
-  measuresCount,
-  onMeasuresCountChange,
-  beatResolutions,
-  onBeatResolutionsChange,
-  disabled = false,
+  timeSignature, onTimeSignatureChange, bpm, onBpmChange,
+  measuresCount, onMeasuresCountChange, beatResolutions,
+  onBeatResolutionsChange, disabled = false,
 }) => {
   const handleSignatureSelect = (sig: TimeSignatureString) => {
     if (disabled) return;
@@ -54,7 +37,7 @@ export const MetricConfigPanel: React.FC<MetricConfigPanelProps> = ({
 
   return (
     <div className="cordel-card p-3 flex flex-col gap-3">
-      {/* 1. Sélecteur de Signature Rythmique */}
+      {/* 1. Signature Rythmique */}
       <div className="flex flex-col gap-1.5">
         <div className="flex items-center justify-between text-xs font-bold uppercase text-theme-ink">
           <span className="flex items-center gap-1.5">
@@ -80,7 +63,7 @@ export const MetricConfigPanel: React.FC<MetricConfigPanelProps> = ({
         </div>
       </div>
 
-      {/* 2. Réglage Tempo & Nombre de mesures */}
+      {/* 2. Tempo & Mesures Chant */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1 border-t border-theme-border/20">
         <div className="flex flex-col gap-1.5">
           <div className="flex items-center justify-between">
@@ -89,21 +72,13 @@ export const MetricConfigPanel: React.FC<MetricConfigPanelProps> = ({
               Tempo (BPM)
             </span>
             <input
-              type="number"
-              min={60}
-              max={220}
-              value={bpm}
-              disabled={disabled}
+              type="number" min={60} max={220} value={bpm} disabled={disabled}
               onChange={(e) => onBpmChange(Math.max(60, Math.min(220, Number(e.target.value) || 100)))}
               className="w-14 bg-black/30 border border-theme-border text-center font-mono font-bold text-xs p-1 focus:outline-none focus:border-theme-accent"
             />
           </div>
           <input
-            type="range"
-            min={60}
-            max={220}
-            value={bpm}
-            disabled={disabled}
+            type="range" min={60} max={220} value={bpm} disabled={disabled}
             onChange={(e) => onBpmChange(Number(e.target.value))}
             className="w-full accent-[var(--cordel-wood)] cursor-pointer"
           />
@@ -117,9 +92,7 @@ export const MetricConfigPanel: React.FC<MetricConfigPanelProps> = ({
           <div className="grid grid-cols-4 gap-1">
             {[1, 2, 3, 4].map((count) => (
               <button
-                key={count}
-                type="button"
-                disabled={disabled}
+                key={count} type="button" disabled={disabled}
                 onClick={() => onMeasuresCountChange(count)}
                 className={`py-1 text-xs font-bold transition-all cursor-pointer ${
                   measuresCount === count ? 'cordel-btn-primary' : 'cordel-btn'
@@ -132,7 +105,7 @@ export const MetricConfigPanel: React.FC<MetricConfigPanelProps> = ({
         </div>
       </div>
 
-      {/* 3. Grille de métrique par temps : Binaire vs Triolet */}
+      {/* 3. Métrique par temps */}
       <div className="flex flex-col gap-1.5 pt-1 border-t border-theme-border/20">
         <div className="flex items-center justify-between text-xs font-bold uppercase text-theme-ink">
           <span className="flex items-center gap-1.5">
@@ -140,24 +113,20 @@ export const MetricConfigPanel: React.FC<MetricConfigPanelProps> = ({
             Métrique par temps
           </span>
           <span className="text-[10px] font-normal opacity-70">
-            Cliquer pour alterner Binaire / Triolet
+            Alterner Binaire / Triolet
           </span>
         </div>
         <div className="grid grid-flow-col auto-cols-fr gap-1.5">
           {beatResolutions.map((res, idx) => (
             <button
-              key={idx}
-              type="button"
-              disabled={disabled}
+              key={idx} type="button" disabled={disabled}
               onClick={() => toggleBeatResolution(idx)}
               className={`p-1.5 flex flex-col items-center justify-center text-xs font-mono transition-all cursor-pointer ${
                 res === 4 ? 'cordel-card-sm' : 'cordel-btn-primary'
               }`}
             >
               <span className="text-[10px] opacity-75">T{idx + 1}</span>
-              <span className="font-bold text-xs">
-                {res === 4 ? '4 (Bin)' : '3 (Tri)'}
-              </span>
+              <span className="font-bold text-xs">{res === 4 ? '4 (Bin)' : '3 (Tri)'}</span>
             </button>
           ))}
         </div>
