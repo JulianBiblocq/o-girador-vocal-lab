@@ -16,6 +16,7 @@ export const LivretPrise: React.FC = () => {
   const recorder = useMemo(() => new VocalRecorderEngine(), []);
 
   const [selectedDeviceId, setSelectedDeviceId] = useState<string>('');
+  const [selectedOutputDeviceId, setSelectedOutputDeviceId] = useState<string>('');
   const [timeSignature, setTimeSignature] = useState<TimeSignatureString>('4/4');
   const [bpm, setBpm] = useState<number>(100);
   const [measuresCount, setMeasuresCount] = useState<number>(2);
@@ -30,7 +31,6 @@ export const LivretPrise: React.FC = () => {
 
   const beatsPerMeasure = getBeatsPerMeasure(timeSignature);
 
-  // Démarrage synchrone à T0 (Micro préparé AVANT départ de l'horloge)
   const handleToggleRecord = useCallback(async () => {
     if (isCycleActive) {
       engine.stop();
@@ -40,7 +40,7 @@ export const LivretPrise: React.FC = () => {
       return;
     }
 
-    const ctx = await engine.initContext();
+    const ctx = await engine.initContext(selectedOutputDeviceId);
     const sampleRate = await recorder.prepare(ctx, selectedDeviceId);
     setRecordedSampleRate(sampleRate);
 
@@ -52,7 +52,7 @@ export const LivretPrise: React.FC = () => {
     setIsCycleActive(true);
 
     await engine.startCycle(
-      { bpm, timeSignature, measuresCount, referencePitch, listeningMode },
+      { bpm, timeSignature, measuresCount, referencePitch, listeningMode, outputDeviceId: selectedOutputDeviceId },
       () => {
         const pcm = recorder.stop();
         setRecordedPCM(pcm);
@@ -60,7 +60,7 @@ export const LivretPrise: React.FC = () => {
       },
       syncStartTime
     );
-  }, [engine, recorder, isCycleActive, selectedDeviceId, bpm, timeSignature, measuresCount, referencePitch, listeningMode, beatsPerMeasure]);
+  }, [engine, recorder, isCycleActive, selectedDeviceId, selectedOutputDeviceId, bpm, timeSignature, measuresCount, referencePitch, listeningMode, beatsPerMeasure]);
 
   return (
     <div className="flex flex-col gap-4 max-w-2xl mx-auto w-full">
@@ -72,7 +72,7 @@ export const LivretPrise: React.FC = () => {
       />
 
       {recordedPCM ? (
-        <div className="flex flex-col gap-3">
+        <div key="waveform-view-block" className="flex flex-col gap-3">
           <WaveformTrimEditor
             rawPCM={recordedPCM}
             sampleRate={recordedSampleRate}
@@ -82,37 +82,40 @@ export const LivretPrise: React.FC = () => {
             beatsPerMeasure={beatsPerMeasure}
             beatResolutions={beatResolutions}
             referencePitch={referencePitch}
+            outputDeviceId={selectedOutputDeviceId}
             onReset={() => { setRecordedPCM(null); setExportedPack(null); }}
             onPackReady={(pack) => setExportedPack(pack)}
           />
           {exportedPack && <PackDownloadBanner exportedPack={exportedPack} />}
         </div>
       ) : (
-        <button
-          type="button"
-          onClick={handleToggleRecord}
-          className={`w-full py-3.5 px-6 cordel-btn-primary text-sm tracking-widest uppercase cursor-pointer transition-colors ${
-            isCycleActive ? 'bg-red-900 hover:bg-red-800' : ''
-          }`}
-        >
-          <div className="flex items-center justify-center gap-2">
-            {isCycleActive ? (
-              <>
-                <Square className="w-5 h-5 fill-current" />
-                <span>ARRÊTER LA PRISE</span>
-              </>
-            ) : (
-              <>
-                <Mic className="w-5 h-5 text-red-500 fill-current animate-pulse" />
-                <span>ENREGISTRER LA VOIX (1 M ÉLAN + {measuresCount} M CHANT)</span>
-              </>
-            )}
-          </div>
-        </button>
+        <div key="record-button-block">
+          <button
+            type="button"
+            onClick={handleToggleRecord}
+            className={`w-full py-3.5 px-6 cordel-btn-primary text-sm tracking-widest uppercase cursor-pointer transition-colors ${
+              isCycleActive ? 'bg-red-900 hover:bg-red-800' : ''
+            }`}
+          >
+            <div className="flex items-center justify-center gap-2">
+              {isCycleActive ? (
+                <>
+                  <Square className="w-5 h-5 fill-current" />
+                  <span>ARRÊTER LA PRISE</span>
+                </>
+              ) : (
+                <>
+                  <Mic className="w-5 h-5 text-red-500 fill-current animate-pulse" />
+                  <span>ENREGISTRER LA VOIX (1 M ÉLAN + {measuresCount} M CHANT)</span>
+                </>
+              )}
+            </div>
+          </button>
+        </div>
       )}
 
       {!recordedPCM && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div key="config-panels-block" className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <MetricConfigPanel
             timeSignature={timeSignature}
             onTimeSignatureChange={setTimeSignature}
@@ -131,13 +134,15 @@ export const LivretPrise: React.FC = () => {
               onListeningModeChange={setListeningMode}
               referencePitch={referencePitch}
               onReferencePitchChange={setReferencePitch}
-              onPlayReferencePreview={() => engine.playReferencePitchPreview(referencePitch)}
+              onPlayReferencePreview={() => engine.playReferencePitchPreview(referencePitch, 1.5, selectedOutputDeviceId)}
               disabled={isCycleActive}
             />
 
             <DeviceSelector
               selectedDeviceId={selectedDeviceId}
               onDeviceChange={setSelectedDeviceId}
+              selectedOutputDeviceId={selectedOutputDeviceId}
+              onOutputDeviceChange={setSelectedOutputDeviceId}
               disabled={isCycleActive}
             />
           </div>

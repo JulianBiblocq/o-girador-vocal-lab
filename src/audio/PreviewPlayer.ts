@@ -11,6 +11,7 @@ export interface PreviewOptions {
   beatsPerMeasure: number;
   totalDurationSec: number;
   clickEnabled: boolean;
+  outputDeviceId?: string;
   onEnded?: () => void;
 }
 
@@ -29,7 +30,7 @@ export class PreviewPlayer {
     sampleRate: number,
     options: PreviewOptions
   ): Promise<void> {
-    this.stop(); // Kill-switch préventif
+    this.stop();
 
     const AudioCtxClass = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
     this.ctx = new AudioCtxClass();
@@ -37,12 +38,19 @@ export class PreviewPlayer {
       await this.ctx.resume();
     }
 
+    if (options.outputDeviceId && 'setSinkId' in this.ctx && typeof (this.ctx as any).setSinkId === 'function') {
+      try {
+        await (this.ctx as any).setSinkId(options.outputDeviceId);
+      } catch (err) {
+        console.warn('PreviewPlayer: setSinkId non supporté ou refusé :', err);
+      }
+    }
+
     const { trimStartSec, trimEndSec, bpm, beatsPerMeasure, clickEnabled, onEnded } = options;
     const cleanPCM = applyTrimWithFades(rawPCM, sampleRate, trimStartSec, trimEndSec);
     this.playDuration = Math.max(0.05, trimEndSec - trimStartSec);
     this.playheadStartCycleTime = trimStartSec;
 
-    // Création de l'AudioBuffer pour la portion rognée
     const audioBuffer = this.ctx.createBuffer(1, cleanPCM.length, sampleRate);
     audioBuffer.getChannelData(0).set(cleanPCM);
 
@@ -51,21 +59,18 @@ export class PreviewPlayer {
     this.sourceNode.connect(this.ctx.destination);
     this.activeNodes.push(this.sourceNode);
 
-    const now = this.ctx.currentTime + 0.02; // Décalage de 20ms pour programmation fluide
+    const now = this.ctx.currentTime + 0.02;
     this.playbackContextStartTime = now;
     this.isPlaying = true;
 
-    // 1. Démarrage de la voix
     this.sourceNode.start(now);
 
-    // 2. Clic témoin parfaitement aligné sur la grille absolue du cycle
     if (clickEnabled) {
       const beatDuration = 60 / bpm;
       const totalBeats = Math.ceil(options.totalDurationSec / beatDuration);
 
       for (let b = 0; b < totalBeats; b++) {
         const beatCycleTime = b * beatDuration;
-        // On programme uniquement les clics situés dans l'intervalle d'écoute [trimStartSec, trimEndSec]
         if (beatCycleTime >= trimStartSec - 0.001 && beatCycleTime <= trimEndSec + 0.001) {
           const delayFromStart = beatCycleTime - trimStartSec;
           const clickTime = now + delayFromStart;
@@ -75,7 +80,6 @@ export class PreviewPlayer {
       }
     }
 
-    // Arrêt programmé
     this.stopTimerId = window.setTimeout(() => {
       this.stop();
       if (onEnded) onEnded();
@@ -95,7 +99,7 @@ export class PreviewPlayer {
         }
         node.disconnect();
       } catch {
-        // Ignorer si déjà arrêté
+        // Ignorer
       }
     }
     this.activeNodes = [];

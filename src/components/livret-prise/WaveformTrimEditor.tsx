@@ -16,13 +16,15 @@ interface WaveformTrimEditorProps {
   beatsPerMeasure: number;
   beatResolutions: number[];
   referencePitch: string;
+  outputDeviceId?: string;
   onReset: () => void;
   onPackReady: (pack: VocalPackExport) => void;
 }
 
 export const WaveformTrimEditor: React.FC<WaveformTrimEditorProps> = ({
   rawPCM, sampleRate, bpm, timeSignature, measuresCount,
-  beatsPerMeasure, beatResolutions, referencePitch, onReset, onPackReady,
+  beatsPerMeasure, beatResolutions, referencePitch, outputDeviceId,
+  onReset, onPackReady,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [containerWidth, setContainerWidth] = useState<number>(600);
@@ -70,10 +72,10 @@ export const WaveformTrimEditor: React.FC<WaveformTrimEditorProps> = ({
     if (isPlaying) { player.stop(); setIsPlaying(false); return; }
     setIsPlaying(true);
     await player.play(rawPCM, sampleRate, {
-      trimStartSec, trimEndSec, bpm, beatsPerMeasure, totalDurationSec, clickEnabled,
-      onEnded: () => setIsPlaying(false),
+      trimStartSec, trimEndSec, bpm, beatsPerMeasure, totalDurationSec,
+      clickEnabled, outputDeviceId, onEnded: () => setIsPlaying(false),
     });
-  }, [player, isPlaying, rawPCM, sampleRate, trimStartSec, trimEndSec, bpm, beatsPerMeasure, totalDurationSec, clickEnabled]);
+  }, [player, isPlaying, rawPCM, sampleRate, trimStartSec, trimEndSec, bpm, beatsPerMeasure, totalDurationSec, clickEnabled, outputDeviceId]);
 
   const handleProceed = useCallback(() => {
     player.stop();

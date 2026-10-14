@@ -13,6 +13,7 @@ export interface MetronomeConfig {
   measuresCount: number;
   referencePitch: string;
   listeningMode: ListeningMode;
+  outputDeviceId?: string;
 }
 
 export interface CycleStatus {
@@ -66,13 +67,20 @@ export class MetronomeEngine {
   private completionTimerId: number | null = null;
   private onCompleteCallback: (() => void) | null = null;
 
-  public async initContext(): Promise<AudioContext> {
+  public async initContext(outputDeviceId?: string): Promise<AudioContext> {
     if (!this.ctx || this.ctx.state === 'closed') {
       const AudioCtxClass = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
       this.ctx = new AudioCtxClass();
     }
     if (this.ctx.state !== 'running') {
       await this.ctx.resume();
+    }
+    if (outputDeviceId && 'setSinkId' in this.ctx && typeof (this.ctx as any).setSinkId === 'function') {
+      try {
+        await (this.ctx as any).setSinkId(outputDeviceId);
+      } catch (err) {
+        console.warn('setSinkId non supporté ou refusé :', err);
+      }
     }
     return this.ctx;
   }
@@ -81,9 +89,6 @@ export class MetronomeEngine {
     return this.ctx;
   }
 
-  /**
-   * Lance un cycle complet calibré avec option de synchronisation externe T0.
-   */
   public async startCycle(
     config: MetronomeConfig,
     onComplete?: () => void,
@@ -91,7 +96,7 @@ export class MetronomeEngine {
   ): Promise<number> {
     this.stop();
 
-    const ctx = await this.initContext();
+    const ctx = await this.initContext(config.outputDeviceId);
     this.onCompleteCallback = onComplete ?? null;
     this.isRunning = true;
     this.measuresCount = Math.max(1, Math.min(4, config.measuresCount));
@@ -103,7 +108,6 @@ export class MetronomeEngine {
     this.totalBeats = anacrusisBeats + singingBeats;
     this.totalDurationSec = this.totalBeats * this.beatDurationSec;
 
-    // Décalage de garde de 50ms ou timestamp externe imposé (T0 synchrone)
     this.startTime = externalStartTime ?? (ctx.currentTime + 0.05);
 
     if (config.listeningMode === 'headphones') {
@@ -138,9 +142,9 @@ export class MetronomeEngine {
     this.isRunning = false;
   }
 
-  public async playReferencePitchPreview(noteName: string, durationSec = 1.5): Promise<void> {
+  public async playReferencePitchPreview(noteName: string, durationSec = 1.5, outputDeviceId?: string): Promise<void> {
     this.stop();
-    const ctx = await this.initContext();
+    const ctx = await this.initContext(outputDeviceId);
     const freq = noteToFrequency(noteName);
 
     const now = ctx.currentTime;
@@ -178,14 +182,9 @@ export class MetronomeEngine {
   public getCycleStatus(): CycleStatus {
     if (!this.isRunning || !this.ctx) {
       return {
-        phase: 'idle',
-        currentMeasure: -1,
-        currentBeat: 0,
-        beatsPerMeasure: this.beatsPerMeasure,
-        beatIndexInCycle: 0,
-        beatProgress: 0,
-        elapsedSec: 0,
-        totalDurationSec: this.totalDurationSec
+        phase: 'idle', currentMeasure: -1, currentBeat: 0,
+        beatsPerMeasure: this.beatsPerMeasure, beatIndexInCycle: 0,
+        beatProgress: 0, elapsedSec: 0, totalDurationSec: this.totalDurationSec
       };
     }
 
@@ -193,27 +192,18 @@ export class MetronomeEngine {
 
     if (elapsed < 0) {
       return {
-        phase: 'anacrusis',
-        currentMeasure: -1,
-        currentBeat: 0,
-        beatsPerMeasure: this.beatsPerMeasure,
-        beatIndexInCycle: 0,
-        beatProgress: 0,
-        elapsedSec: 0,
-        totalDurationSec: this.totalDurationSec
+        phase: 'anacrusis', currentMeasure: -1, currentBeat: 0,
+        beatsPerMeasure: this.beatsPerMeasure, beatIndexInCycle: 0,
+        beatProgress: 0, elapsedSec: 0, totalDurationSec: this.totalDurationSec
       };
     }
 
     if (elapsed >= this.totalDurationSec) {
       return {
-        phase: 'completed',
-        currentMeasure: this.measuresCount - 1,
-        currentBeat: this.beatsPerMeasure - 1,
-        beatsPerMeasure: this.beatsPerMeasure,
-        beatIndexInCycle: this.totalBeats - 1,
-        beatProgress: 1,
-        elapsedSec: this.totalDurationSec,
-        totalDurationSec: this.totalDurationSec
+        phase: 'completed', currentMeasure: this.measuresCount - 1,
+        currentBeat: this.beatsPerMeasure - 1, beatsPerMeasure: this.beatsPerMeasure,
+        beatIndexInCycle: this.totalBeats - 1, beatProgress: 1,
+        elapsedSec: this.totalDurationSec, totalDurationSec: this.totalDurationSec
       };
     }
 
@@ -227,24 +217,13 @@ export class MetronomeEngine {
     const currentBeat = isAnacrusis ? beatIndexInCycle : (beatIndexInCycle - this.beatsPerMeasure) % this.beatsPerMeasure;
 
     return {
-      phase,
-      currentMeasure,
-      currentBeat,
-      beatsPerMeasure: this.beatsPerMeasure,
-      beatIndexInCycle,
-      beatProgress,
-      elapsedSec: elapsed,
-      totalDurationSec: this.totalDurationSec
+      phase, currentMeasure, currentBeat, beatsPerMeasure: this.beatsPerMeasure,
+      beatIndexInCycle, beatProgress, elapsedSec: elapsed, totalDurationSec: this.totalDurationSec
     };
   }
 
-  public getIsRunning(): boolean {
-    return this.isRunning;
-  }
-
-  public getBeatDurationSec(): number {
-    return this.beatDurationSec;
-  }
+  public getIsRunning(): boolean { return this.isRunning; }
+  public getBeatDurationSec(): number { return this.beatDurationSec; }
 
   private scheduleHeadphoneAudio(ctx: AudioContext, start: number, config: MetronomeConfig): void {
     for (let b = 0; b < this.totalBeats; b++) {
@@ -322,8 +301,6 @@ export class MetronomeEngine {
 
   private handleCycleCompletion(): void {
     this.stop();
-    if (this.onCompleteCallback) {
-      this.onCompleteCallback();
-    }
+    if (this.onCompleteCallback) this.onCompleteCallback();
   }
 }
