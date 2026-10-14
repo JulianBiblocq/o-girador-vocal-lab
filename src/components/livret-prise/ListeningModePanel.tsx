@@ -25,23 +25,25 @@ export const ListeningModePanel: React.FC<ListeningModePanelProps> = ({
 }) => {
   return (
     <div className="cordel-card p-3 flex flex-col gap-3">
-      {/* 1. Bascule franche d'écoute */}
+      {/* 1. Bascule franche d'écoute avec structure DOM stable */}
       <div className="flex flex-col gap-1.5">
-        <span className="text-xs font-bold uppercase text-theme-ink flex items-center gap-1.5">
-          {listeningMode === 'headphones' ? (
-            <Headphones className="w-3.5 h-3.5 text-theme-accent" />
-          ) : (
-            <VolumeX className="w-3.5 h-3.5 text-theme-wood" />
-          )}
-          Mode d'écoute & Monitoring
-        </span>
+        <div className="text-xs font-bold uppercase text-theme-ink flex items-center gap-1.5">
+          <span className="flex items-center">
+            {listeningMode === 'headphones' ? (
+              <Headphones key="mode-hp" className="w-3.5 h-3.5 text-theme-accent" />
+            ) : (
+              <VolumeX key="mode-spk" className="w-3.5 h-3.5 text-theme-wood" />
+            )}
+          </span>
+          <span>Mode d'écoute & Monitoring</span>
+        </div>
 
         <div className="grid grid-cols-2 gap-2">
           <button
             type="button"
             disabled={disabled}
             onClick={() => onListeningModeChange('headphones')}
-            className={`p-2 flex flex-col items-center justify-center gap-1 text-xs font-bold transition-all ${
+            className={`p-2 flex flex-col items-center justify-center gap-1 text-xs font-bold transition-all cursor-pointer ${
               listeningMode === 'headphones'
                 ? 'cordel-btn-primary'
                 : 'cordel-btn opacity-70'
@@ -60,7 +62,7 @@ export const ListeningModePanel: React.FC<ListeningModePanelProps> = ({
             type="button"
             disabled={disabled}
             onClick={() => onListeningModeChange('speakers')}
-            className={`p-2 flex flex-col items-center justify-center gap-1 text-xs font-bold transition-all ${
+            className={`p-2 flex flex-col items-center justify-center gap-1 text-xs font-bold transition-all cursor-pointer ${
               listeningMode === 'speakers'
                 ? 'cordel-btn-primary'
                 : 'cordel-btn opacity-70'
@@ -79,10 +81,10 @@ export const ListeningModePanel: React.FC<ListeningModePanelProps> = ({
 
       {/* 2. Note repère / Diapason */}
       <div className="flex flex-col gap-1.5 pt-1 border-t border-theme-border/20">
-        <span className="text-xs font-bold uppercase text-theme-ink flex items-center gap-1.5">
+        <div className="text-xs font-bold uppercase text-theme-ink flex items-center gap-1.5">
           <Volume2 className="w-3.5 h-3.5 text-theme-accent" />
-          Note Repère d'Attaque (Diapason)
-        </span>
+          <span>Note Repère d'Attaque (Diapason)</span>
+        </div>
 
         <div className="flex items-center gap-2">
           <select
@@ -102,7 +104,7 @@ export const ListeningModePanel: React.FC<ListeningModePanelProps> = ({
             type="button"
             onClick={onPlayReferencePreview}
             disabled={disabled}
-            className="cordel-btn px-3 py-2 text-xs flex items-center gap-1.5 whitespace-nowrap"
+            className="cordel-btn px-3 py-2 text-xs flex items-center gap-1.5 whitespace-nowrap cursor-pointer"
             title="Tester la note repère au casque ou haut-parleur avant la prise"
           >
             <Play className="w-3.5 h-3.5 text-theme-accent" />

@@ -1,10 +1,10 @@
 ﻿/**
  * Types & Contrat de données VocalPackExport v1.0
- * Standard d'échange étanche entre O Girador Vocal Lab et Séquenciad'Or.
+ * Standard d'échange étanche entre O Girador Vocal Lab et Sequenciador.
  */
 
-/** Pupitres vocaux stricts de Séquenciad'Or */
-export type VocalRoleTarget = 'puxador' | 'coro' | 'toada';
+/** Pupitres vocaux stricts de Sequenciador (Puxador et Coro) */
+export type VocalRoleTarget = 'puxador' | 'coro';
 
 /** Chiffrages de mesure supportés */
 export type TimeSignatureString = '4/4' | '2/4' | '3/4' | '6/8' | '12/8';
@@ -50,7 +50,7 @@ export interface VocalPackMetadata {
   bpm: number;
   timeSignature: TimeSignatureString;
   measuresCount: number; // Nombre de mesures de chant N (1..4)
-  beatResolutions: number[]; // Ex: [4, 4, 4, 4] pour binaire, [3, 3, 3, 3] pour triolets
+  beatResolutions: number[]; // Ex: [4, 4, 4, 4] pour binaire 4/4, [3, 3] pour 6/8
   suggestedRole: VocalRoleTarget;
   referencePitch: string; // Ex: 'C4', 'A3'
   createdAt: string; // ISO 8601

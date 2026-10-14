@@ -1,24 +1,27 @@
 ﻿import React, { useState, useMemo, useCallback } from 'react';
 import { Play, Square, Sparkles } from 'lucide-react';
-import { MetronomeEngine, type ListeningMode } from '../../audio/MetronomeEngine';
+import { MetronomeEngine, getBeatsPerMeasure, type ListeningMode } from '../../audio/MetronomeEngine';
 import { PendulumVisualizer } from '../PendulumVisualizer';
 import { DeviceSelector } from './DeviceSelector';
-import { MetricConfigPanel } from './MetricConfigPanel';
+import { MetricConfigPanel, getDefaultBeatResolutions } from './MetricConfigPanel';
 import { ListeningModePanel } from './ListeningModePanel';
-import type { VocalRoleTarget } from '../../types/vocalPack.types';
+import type { VocalRoleTarget, TimeSignatureString } from '../../types/vocalPack.types';
 
 export const LivretPrise: React.FC = () => {
   const engine = useMemo(() => new MetronomeEngine(), []);
 
   // États du Livret 1
   const [selectedDeviceId, setSelectedDeviceId] = useState<string>('');
+  const [timeSignature, setTimeSignature] = useState<TimeSignatureString>('4/4');
   const [bpm, setBpm] = useState<number>(100);
   const [measuresCount, setMeasuresCount] = useState<number>(2);
-  const [beatResolutions, setBeatResolutions] = useState<number[]>([4, 4, 4, 4]);
+  const [beatResolutions, setBeatResolutions] = useState<number[]>(() => getDefaultBeatResolutions('4/4'));
   const [listeningMode, setListeningMode] = useState<ListeningMode>('headphones');
   const [referencePitch, setReferencePitch] = useState<string>('C4');
   const [suggestedRole, setSuggestedRole] = useState<VocalRoleTarget>('puxador');
   const [isCycleActive, setIsCycleActive] = useState<boolean>(false);
+
+  const beatsPerMeasure = getBeatsPerMeasure(timeSignature);
 
   // Lancement synchrone du cycle de test (avec réveil AudioContext)
   const handleToggleCycle = useCallback(async () => {
@@ -28,23 +31,22 @@ export const LivretPrise: React.FC = () => {
       return;
     }
 
-    // Réveil synchrone de l'AudioContext lors du geste utilisateur
     await engine.initContext();
-
     setIsCycleActive(true);
+
     await engine.startCycle(
       {
         bpm,
+        timeSignature,
         measuresCount,
         referencePitch,
         listeningMode,
       },
       () => {
-        // Callback de fin automatique (punch-out)
         setIsCycleActive(false);
       }
     );
-  }, [engine, isCycleActive, bpm, measuresCount, referencePitch, listeningMode]);
+  }, [engine, isCycleActive, bpm, timeSignature, measuresCount, referencePitch, listeningMode]);
 
   // Écoute de la note repère au repos
   const handlePlayReferencePreview = useCallback(async () => {
@@ -60,47 +62,51 @@ export const LivretPrise: React.FC = () => {
         engine={engine}
         isActive={isCycleActive}
         measuresCount={measuresCount}
+        beatsPerMeasure={beatsPerMeasure}
       />
 
-      {/* 2. Gros bouton d'action principal */}
+      {/* 2. Bouton d'action principal à structure DOM 100% stable */}
       <button
         type="button"
         onClick={handleToggleCycle}
-        className={`w-full py-3 px-6 cordel-btn-primary flex items-center justify-center gap-2 text-sm tracking-widest uppercase cursor-pointer ${
+        className={`w-full py-3 px-6 cordel-btn-primary text-sm tracking-widest uppercase cursor-pointer transition-colors ${
           isCycleActive ? 'bg-red-900 hover:bg-red-800' : ''
         }`}
       >
-        {isCycleActive ? (
-          <>
-            <Square className="w-5 h-5 fill-current" />
-            <span>ARRÊTER LE CYCLE</span>
-          </>
-        ) : (
-          <>
-            <Play className="w-5 h-5 fill-current" />
-            <span>LANCER LE CYCLE DE TEST (1 M Élan + {measuresCount} M Chant)</span>
-          </>
-        )}
+        <div className="flex items-center justify-center gap-2">
+          <span className="flex items-center">
+            {isCycleActive ? (
+              <Square key="icon-stop" className="w-5 h-5 fill-current" />
+            ) : (
+              <Play key="icon-play" className="w-5 h-5 fill-current" />
+            )}
+          </span>
+          <span>
+            {isCycleActive
+              ? 'ARRÊTER LE CYCLE'
+              : `LANCER LE CYCLE DE TEST (1 M Élan + ${measuresCount} M Chant)`}
+          </span>
+        </div>
       </button>
 
-      {/* 3. Sélecteur de Pupitre Séquenciad'Or */}
+      {/* 3. Sélecteur de Pupitre Sequenciador (Puxador et Coro stricts) */}
       <div className="cordel-card p-3 flex items-center justify-between">
         <span className="flex items-center gap-1.5 text-xs font-bold uppercase text-theme-ink">
           <Sparkles className="w-3.5 h-3.5 text-theme-accent" />
-          Pupitre Cible Séquenciad'Or
+          Pupitre Cible Sequenciador
         </span>
-        <div className="flex gap-1.5">
-          {(['puxador', 'coro', 'toada'] as VocalRoleTarget[]).map((role) => (
+        <div className="flex gap-2">
+          {(['puxador', 'coro'] as VocalRoleTarget[]).map((role) => (
             <button
               key={role}
               type="button"
               disabled={isCycleActive}
               onClick={() => setSuggestedRole(role)}
-              className={`px-3 py-1 text-xs uppercase font-bold transition-all ${
+              className={`px-4 py-1.5 text-xs uppercase font-bold transition-all cursor-pointer ${
                 suggestedRole === role ? 'cordel-btn-primary' : 'cordel-btn'
               }`}
             >
-              {role}
+              {role === 'puxador' ? 'Puxador' : 'Coro'}
             </button>
           ))}
         </div>
@@ -109,6 +115,8 @@ export const LivretPrise: React.FC = () => {
       {/* 4. Sous-panneaux de configuration modulaires */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         <MetricConfigPanel
+          timeSignature={timeSignature}
+          onTimeSignatureChange={setTimeSignature}
           bpm={bpm}
           onBpmChange={setBpm}
           measuresCount={measuresCount}

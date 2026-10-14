@@ -22,7 +22,7 @@ Si du code est généré ou modifié, ces règles doivent être strictement resp
 
 ---
 ### 🛡️ Gouvernance Centralisée des Règles Firebase & Sécurité (Strict)
-- **Autorité unique :** Les règles d'accès (`firestore.rules` et `storage.rules`) sont exclusivement pilotées, modifiées et déployées par le projet maître (**Orchestrad'Or** / backend commun).
+- **Autorité unique :** Les règles d'accès (`firestore.rules` et `storage.rules`) sont exclusivement pilotées, modifiées et déployées par le projet maître (**Orchestrador** / backend commun).
 - **Interdiction formelle dans cette application :** 
   * Ne jamais créer, modifier ou valider de fichier local `firestore.rules` ou `storage.rules`.
   * Ne jamais exécuter de commande de déploiement de règles (`firebase deploy --only firestore:rules` ou `storage` formellement proscrits).
@@ -35,7 +35,7 @@ Si du code est généré ou modifié, ces règles doivent être strictement resp
 - **Seuil strict (< 150 lignes)** : Tout composant React doit rester concis, modulaire et focalisé. Toute logique dépassant ce seuil ou 30 lignes de sous-traitance doit faire l'objet d'une extraction immédiate vers des sous-composants dédiés (`src/components/...`), des custom hooks (`src/hooks/...`) ou des modules utilitaires purs (`src/utils/...`).
 
 ### B. Découplage Graphique Multi-Univers (Design Tokens Sémantiques)
-- **Bannir les styles en dur** : Interdiction formelle d'écrire des valeurs de couleur ou styles hardcodés (ex: `#f4ecd8`, `#1a1a1a`, `#8b2a1a`, etc.) dans les attributs `style={{ ... }}` ou les classes utilitaires statiques.
+- **Bannir les styles en dur** : Interdiction formelle d'écrire des valeurs de couleur ou styles hardcodés dans les attributs `style={{ ... }}` ou les classes utilitaires statiques.
 - **Usage des jetons sémantiques** : Utiliser exclusivement les variables CSS et jetons sémantiques Cordel (`var(--cordel-bg)`, `var(--cordel-text)`, `var(--cordel-border)`, `var(--cordel-wood)`, `themeTokens.css`, etc.) afin de garantir la cohérence graphique et le basculement instantané entre les thèmes.
 
 ### C. Commandements de Performance Web Audio & Temps-Réel
@@ -57,16 +57,16 @@ Si du code est généré ou modifié, ces règles doivent être strictement resp
   1. **Capture sur bloc fixe calibré** : 1 mesure d'élan/anacrouse ($M-1$) + $N$ mesures de chant ($N \in \{1, 2, 3, 4\}$).
   2. **Nettoyage Trim & Nudge** : Découpage et calibration de latence hors-ligne.
   3. **Analyse de Pitch & Paroles** : Extraction des notes (Basic Pitch), syllabes et quantification selon les `beatResolutions` configurées par temps.
-  4. **Export VocalPackExport v1.0** : Contrat standardisé pour réinjection fluide dans les pupitres vocaux (`puxador`, `coro`, `toada`) du séquenceur Séquenciad'Or.
+  4. **Export VocalPackExport v1.0** : Contrat standardisé pour réinjection fluide dans les pupitres vocaux (`puxador` et `coro`) de Sequenciador.
 
 ---
 
 ## RÈGLE STRICTE DES PORTS LOCAUX (ÉCOSYSTÈME O GIRADOR)
 - Cet agent doit respecter la cartographie des ports :
-  * Orquestrad'Or : 5170
-  * Séquenciad'Or : 5174
-  * Organizad'Or : 5175
-  * Dançad'Or : 5176
+  * Orchestrador : 5170
+  * Sequenciador : 5174
+  * Organizador : 5175
+  * Dancador : 5176
   * **O Girador Vocal Lab : 5177**
 - Interdiction de modifier le port local sans instruction explicite.
 - `strictPort: true` est obligatoire : si le port est occupé, tuer les processus résiduels au lieu de changer de port.

@@ -1,5 +1,5 @@
 ﻿import React, { useState, useEffect, useCallback } from 'react';
-import { Mic, RefreshCw } from 'lucide-react';
+import { Mic, RefreshCw, CheckCircle2 } from 'lucide-react';
 
 interface DeviceSelectorProps {
   selectedDeviceId: string;
@@ -16,66 +16,92 @@ export const DeviceSelector: React.FC<DeviceSelectorProps> = ({
   const [hasPermission, setHasPermission] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Énumération sécurisée avec coupure immédiate des pistes (Protection carte son)
-  const refreshDevices = useCallback(async () => {
+  // Découverte des vrais libellés matériels de la carte son sans contraintes bloquantes
+  const requestPermissionAndEnumerate = useCallback(async () => {
     if (!navigator.mediaDevices?.enumerateDevices) return;
     setIsLoading(true);
 
     try {
-      // Demande éphémère pour libérer les libellés de périphériques
-      const tempStream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          echoCancellation: false,
-          noiseSuppression: false,
-          autoGainControl: false,
-        },
-      });
+      // 1. Demande de flux audio standard pour déverrouiller les labels matériels Windows
+      const tempStream = await navigator.mediaDevices.getUserMedia({ audio: true });
 
-      // Coupure immédiate et absolue de toutes les pistes audio (zéro flux actif au repos)
-      tempStream.getTracks().forEach((track) => track.stop());
-      setHasPermission(true);
-
+      // 2. Énumération des périphériques avec labels réels (Focusrite, Behringer, Realtek, etc.)
       const allDevices = await navigator.mediaDevices.enumerateDevices();
+
+      // 3. Coupure immédiate et totale de toutes les pistes audio (zéro flux persistant au repos)
+      tempStream.getTracks().forEach((track) => track.stop());
+
       const audioInputs = allDevices.filter((d) => d.kind === 'audioinput');
       setDevices(audioInputs);
 
-      if (audioInputs.length > 0 && !selectedDeviceId) {
-        onDeviceChange(audioInputs[0].deviceId);
+      const hasRealLabels = audioInputs.some((d) => d.label && d.label.trim().length > 0);
+      setHasPermission(hasRealLabels);
+
+      // Si un périphérique est trouvé et aucun n'est encore sélectionné, sélectionner le premier
+      if (audioInputs.length > 0) {
+        const currentStillExists = audioInputs.some((d) => d.deviceId === selectedDeviceId);
+        if (!selectedDeviceId || !currentStillExists) {
+          onDeviceChange(audioInputs[0].deviceId);
+        }
       }
     } catch (err) {
-      console.warn('Impossible d\'accéder aux entrées micro :', err);
-      // Fallback si permission refusée
+      console.warn('Autorisation microphone non accordée ou annulée :', err);
+      // Fallback énumération
       const allDevices = await navigator.mediaDevices.enumerateDevices();
-      setDevices(allDevices.filter((d) => d.kind === 'audioinput'));
+      const audioInputs = allDevices.filter((d) => d.kind === 'audioinput');
+      setDevices(audioInputs);
     } finally {
       setIsLoading(false);
     }
   }, [onDeviceChange, selectedDeviceId]);
 
+  // Énumération initiale passive & écoute du branchement de cartes son USB
   useEffect(() => {
-    refreshDevices();
-  }, [refreshDevices]);
+    if (!navigator.mediaDevices?.enumerateDevices) return;
+
+    navigator.mediaDevices.enumerateDevices().then((allDevices) => {
+      const audioInputs = allDevices.filter((d) => d.kind === 'audioinput');
+      setDevices(audioInputs);
+      if (audioInputs.some((d) => d.label && d.label.length > 0)) {
+        setHasPermission(true);
+      }
+      if (audioInputs.length > 0 && !selectedDeviceId) {
+        onDeviceChange(audioInputs[0].deviceId);
+      }
+    });
+
+    const handleDeviceChange = () => {
+      requestPermissionAndEnumerate();
+    };
+
+    navigator.mediaDevices.addEventListener('devicechange', handleDeviceChange);
+    return () => {
+      navigator.mediaDevices.removeEventListener('devicechange', handleDeviceChange);
+    };
+  }, [requestPermissionAndEnumerate, onDeviceChange, selectedDeviceId]);
 
   return (
     <div className="cordel-card p-3 flex flex-col gap-2">
       <div className="flex items-center justify-between">
         <label className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-theme-ink">
           <Mic className="w-4 h-4 text-theme-accent" />
-          <span>Entrée Micro (Pure Direct)</span>
+          <span>Entrée Carte Son / Micro</span>
           {hasPermission && (
-            <span className="text-[10px] text-emerald-400 font-mono tracking-normal">
-              ● Détecté
+            <span className="text-[10px] text-emerald-400 font-mono tracking-normal flex items-center gap-1">
+              <CheckCircle2 className="w-3 h-3" />
+              <span>Connecté</span>
             </span>
           )}
         </label>
         <button
           type="button"
-          onClick={refreshDevices}
+          onClick={requestPermissionAndEnumerate}
           disabled={disabled || isLoading}
-          className="cordel-btn p-1 flex items-center gap-1 text-xs"
-          title="Rafraîchir les périphériques"
+          className="cordel-btn px-2 py-0.5 flex items-center gap-1.5 text-xs cursor-pointer"
+          title="Détecter ou actualiser les entrées de la carte son externe"
         >
-          <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
+          <RefreshCw className={`w-3 h-3 ${isLoading ? 'animate-spin' : ''}`} />
+          <span>{hasPermission ? 'Actualiser' : 'Autoriser Micro'}</span>
         </button>
       </div>
 
@@ -83,22 +109,25 @@ export const DeviceSelector: React.FC<DeviceSelectorProps> = ({
         <select
           value={selectedDeviceId}
           onChange={(e) => onDeviceChange(e.target.value)}
+          onFocus={() => {
+            if (!hasPermission) requestPermissionAndEnumerate();
+          }}
           disabled={disabled || devices.length === 0}
-          className="w-full bg-black/30 border-2 border-theme-border text-theme-ink text-xs p-2 rounded-none font-mono focus:outline-none focus:border-theme-accent"
+          className="w-full bg-black/30 border-2 border-theme-border text-theme-ink text-xs p-2 rounded-none font-mono focus:outline-none focus:border-theme-accent cursor-pointer"
         >
           {devices.map((dev, idx) => (
             <option key={dev.deviceId || idx} value={dev.deviceId} className="bg-theme-bg text-theme-ink">
-              {dev.label || `Microphone ${idx + 1}`}
+              {dev.label || `Entrée audio ${idx + 1}`}
             </option>
           ))}
           {devices.length === 0 && (
-            <option value="">Aucun microphone détecté</option>
+            <option value="">Cliquez sur « Autoriser Micro »</option>
           )}
         </select>
       </div>
 
       <p className="text-[10px] text-theme-ink/60 font-mono">
-        Filtres matériels désactivés (AGC/AEC off) pour un timbre acoustique fidèle.
+        Capture Pure Direct : zéro compression ni traitement destructif actif au repos.
       </p>
     </div>
   );

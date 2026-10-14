@@ -3,11 +3,13 @@
  * Moteur d'horloge Web Audio temps réel haute précision (60 FPS sync).
  * Respect strict de la Règle 6.C (nettoyage des nœuds, pas de fuite mémoire).
  */
+import type { TimeSignatureString } from '../types/vocalPack.types';
 
 export type ListeningMode = 'headphones' | 'speakers';
 
 export interface MetronomeConfig {
   bpm: number;
+  timeSignature: TimeSignatureString;
   measuresCount: number; // N mesures de chant (1..4)
   referencePitch: string; // Ex: 'C4', 'A3', 'G4'
   listeningMode: ListeningMode;
@@ -16,7 +18,8 @@ export interface MetronomeConfig {
 export interface CycleStatus {
   phase: 'idle' | 'anacrusis' | 'singing' | 'completed';
   currentMeasure: number; // -1 pour anacrouse, 0..(N-1) pour chant
-  currentBeat: number; // 0..3 (dans la mesure)
+  currentBeat: number; // 0..(beatsPerMeasure - 1)
+  beatsPerMeasure: number;
   beatIndexInCycle: number; // 0..(totalBeats - 1)
   beatProgress: number; // 0..1 dans le temps courant
   elapsedSec: number;
@@ -35,12 +38,24 @@ const NOTE_TO_SEMITONE: Record<string, number> = {
 
 export function noteToFrequency(note: string): number {
   const match = note.trim().match(/^([A-Ga-g][#b]?)(-?\d+)$/);
-  if (!match) return 440; // Fallback standard A4
+  if (!match) return 440;
   const noteName = match[1].charAt(0).toUpperCase() + match[1].slice(1);
   const octave = parseInt(match[2], 10);
   const semitone = NOTE_TO_SEMITONE[noteName] ?? 9;
   const midi = (octave + 1) * 12 + semitone;
   return 440 * Math.pow(2, (midi - 69) / 12);
+}
+
+export function getBeatsPerMeasure(timeSignature: TimeSignatureString): number {
+  switch (timeSignature) {
+    case '2/4': return 2;
+    case '3/4': return 3;
+    case '6/8': return 2; // 2 pulsations de noire pointée
+    case '12/8': return 4; // 4 pulsations de noire pointée
+    case '4/4':
+    default:
+      return 4;
+  }
 }
 
 export class MetronomeEngine {
@@ -50,6 +65,7 @@ export class MetronomeEngine {
   private totalDurationSec = 0;
   private beatDurationSec = 0;
   private totalBeats = 0;
+  private beatsPerMeasure = 4;
   private measuresCount = 1;
   private activeNodes: AudioNode[] = [];
   private completionTimerId: number | null = null;
@@ -77,30 +93,31 @@ export class MetronomeEngine {
     config: MetronomeConfig,
     onComplete?: () => void
   ): Promise<void> {
-    this.stop(); // Stoppe et nettoie tout cycle précédent
+    this.stop();
 
     const ctx = await this.initContext();
     this.onCompleteCallback = onComplete ?? null;
     this.isRunning = true;
     this.measuresCount = Math.max(1, Math.min(4, config.measuresCount));
+    this.beatsPerMeasure = getBeatsPerMeasure(config.timeSignature);
     this.beatDurationSec = 60 / config.bpm;
-    
-    // Mesure d'élan (4 temps) + N mesures de chant (4 temps par mesure)
-    const anacrusisBeats = 4;
-    const singingBeats = this.measuresCount * 4;
+
+    // Mesure d'élan (beatsPerMeasure temps) + N mesures de chant
+    const anacrusisBeats = this.beatsPerMeasure;
+    const singingBeats = this.measuresCount * this.beatsPerMeasure;
     this.totalBeats = anacrusisBeats + singingBeats;
     this.totalDurationSec = this.totalBeats * this.beatDurationSec;
 
-    // Décalage de 50ms pour laisser le temps de programmer les nœuds Web Audio de façon déterministe
+    // Décalage de garde (50ms) pour programmation déterministe
     const leadTime = 0.05;
     this.startTime = ctx.currentTime + leadTime;
 
-    // Si nous sommes en mode casque, programmer les sons audio
+    // En mode casque uniquement, programmer clics et diapason
     if (config.listeningMode === 'headphones') {
       this.scheduleHeadphoneAudio(ctx, this.startTime, config);
     }
 
-    // Programmer l'arrêt automatique (punch-out) à la fin du cycle
+    // Punch-out automatique
     const delayMs = (leadTime + this.totalDurationSec) * 1000;
     this.completionTimerId = window.setTimeout(() => {
       this.handleCycleCompletion();
@@ -108,7 +125,7 @@ export class MetronomeEngine {
   }
 
   /**
-   * Arrêt d'urgence ou interruption manuelle.
+   * Arrêt d'urgence ou interruption manuelle avec nettoyage strict.
    */
   public stop(): void {
     if (this.completionTimerId !== null) {
@@ -116,7 +133,6 @@ export class MetronomeEngine {
       this.completionTimerId = null;
     }
 
-    // Déconnexion et nettoyage strict de tous les nœuds audio en vol (Règle 6.C)
     for (const node of this.activeNodes) {
       try {
         if ('stop' in node && typeof (node as AudioScheduledSourceNode).stop === 'function') {
@@ -124,7 +140,7 @@ export class MetronomeEngine {
         }
         node.disconnect();
       } catch {
-        // Ignorer les erreurs si déjà arrêté
+        // Ignorer si déjà arrêté
       }
     }
     this.activeNodes = [];
@@ -132,7 +148,7 @@ export class MetronomeEngine {
   }
 
   /**
-   * Permet d'écouter la note repère au repos (bouton "Écouter la note repère").
+   * Écoute de la note repère au repos.
    */
   public async playReferencePitchPreview(noteName: string, durationSec = 1.5): Promise<void> {
     this.stop();
@@ -150,7 +166,6 @@ export class MetronomeEngine {
     filter.type = 'lowpass';
     filter.frequency.setValueAtTime(1600, now);
 
-    // Enveloppe d'amplitude douce (pas de pop)
     gain.gain.setValueAtTime(0.0001, now);
     gain.gain.exponentialRampToValueAtTime(0.35, now + 0.05);
     gain.gain.setValueAtTime(0.35, now + durationSec - 0.1);
@@ -175,7 +190,7 @@ export class MetronomeEngine {
   }
 
   /**
-   * Calcul précis et sans garbage collection de l'état du cycle pour le balancier 60 FPS.
+   * Calcul d'état temps réel sans allocation mémoire pour le balancier 60 FPS.
    */
   public getCycleStatus(): CycleStatus {
     if (!this.isRunning || !this.ctx) {
@@ -183,6 +198,7 @@ export class MetronomeEngine {
         phase: 'idle',
         currentMeasure: -1,
         currentBeat: 0,
+        beatsPerMeasure: this.beatsPerMeasure,
         beatIndexInCycle: 0,
         beatProgress: 0,
         elapsedSec: 0,
@@ -193,11 +209,11 @@ export class MetronomeEngine {
     const elapsed = this.ctx.currentTime - this.startTime;
 
     if (elapsed < 0) {
-      // Période de pré-roll (leadTime de 50ms)
       return {
         phase: 'anacrusis',
         currentMeasure: -1,
         currentBeat: 0,
+        beatsPerMeasure: this.beatsPerMeasure,
         beatIndexInCycle: 0,
         beatProgress: 0,
         elapsedSec: 0,
@@ -209,7 +225,8 @@ export class MetronomeEngine {
       return {
         phase: 'completed',
         currentMeasure: this.measuresCount - 1,
-        currentBeat: 3,
+        currentBeat: this.beatsPerMeasure - 1,
+        beatsPerMeasure: this.beatsPerMeasure,
         beatIndexInCycle: this.totalBeats - 1,
         beatProgress: 1,
         elapsedSec: this.totalDurationSec,
@@ -221,16 +238,16 @@ export class MetronomeEngine {
     const beatIndexInCycle = Math.floor(totalBeatFraction);
     const beatProgress = totalBeatFraction - beatIndexInCycle;
 
-    // 4 temps dans l'anacrouse (M-1)
-    const isAnacrusis = beatIndexInCycle < 4;
+    const isAnacrusis = beatIndexInCycle < this.beatsPerMeasure;
     const phase = isAnacrusis ? 'anacrusis' : 'singing';
-    const currentMeasure = isAnacrusis ? -1 : Math.floor((beatIndexInCycle - 4) / 4);
-    const currentBeat = isAnacrusis ? beatIndexInCycle : (beatIndexInCycle - 4) % 4;
+    const currentMeasure = isAnacrusis ? -1 : Math.floor((beatIndexInCycle - this.beatsPerMeasure) / this.beatsPerMeasure);
+    const currentBeat = isAnacrusis ? beatIndexInCycle : (beatIndexInCycle - this.beatsPerMeasure) % this.beatsPerMeasure;
 
     return {
       phase,
       currentMeasure,
       currentBeat,
+      beatsPerMeasure: this.beatsPerMeasure,
       beatIndexInCycle,
       beatProgress,
       elapsedSec: elapsed,
@@ -246,37 +263,30 @@ export class MetronomeEngine {
     return this.beatDurationSec;
   }
 
-  /**
-   * Ordonnance les clics et le diapason pour le mode casque via l'horloge Web Audio.
-   */
   private scheduleHeadphoneAudio(
     ctx: AudioContext,
     start: number,
     config: MetronomeConfig
   ): void {
-    // 1. Clics boisés sur chaque temps du cycle (Élan + Chant)
     for (let b = 0; b < this.totalBeats; b++) {
       const beatTime = start + b * this.beatDurationSec;
-      const isMajorBeat = b === 0 || (b >= 4 && (b - 4) % 4 === 0);
+      // Temps 1 de chaque mesure (Temps fort)
+      const isMajorBeat = b % this.beatsPerMeasure === 0;
       this.scheduleWoodClick(ctx, beatTime, isMajorBeat);
     }
 
-    // 2. Note repère / Diapason (Élan M-1 uniquement)
-    // Joue sur les 4 temps de l'élan et s'arrête net au Temps 1 de la mesure de chant M.
-    const pitchDurationSec = 4 * this.beatDurationSec;
+    // Note repère pendant l'anacrouse M-1
+    const pitchDurationSec = this.beatsPerMeasure * this.beatDurationSec;
     this.scheduleReferencePitch(ctx, start, config.referencePitch, pitchDurationSec);
   }
 
-  /**
-   * Synthèse d'un clic boisé sec et court (percussion acoustique type clave/bloc).
-   */
   private scheduleWoodClick(ctx: AudioContext, time: number, isMajor: boolean): void {
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
 
     const startFreq = isMajor ? 1400 : 900;
     const endFreq = isMajor ? 260 : 180;
-    const duration = 0.025; // 25ms court et précis
+    const duration = 0.025;
 
     osc.type = 'triangle';
     osc.frequency.setValueAtTime(startFreq, time);
@@ -303,9 +313,6 @@ export class MetronomeEngine {
     };
   }
 
-  /**
-   * Synthèse de la note de référence pendant l'élan M-1.
-   */
   private scheduleReferencePitch(
     ctx: AudioContext,
     startTime: number,
@@ -323,10 +330,8 @@ export class MetronomeEngine {
     filter.type = 'lowpass';
     filter.frequency.setValueAtTime(1400, startTime);
 
-    // Enveloppe douce pour éviter tout bruit parasite
     gain.gain.setValueAtTime(0.0001, startTime);
     gain.gain.exponentialRampToValueAtTime(0.28, startTime + 0.04);
-    // Tenue jusqu'à 30ms avant la fin, puis fondu rapide pour couper au Temps 1 de chant
     gain.gain.setValueAtTime(0.28, startTime + durationSec - 0.03);
     gain.gain.exponentialRampToValueAtTime(0.0001, startTime + durationSec);
 
