@@ -32,9 +32,7 @@ export const PendulumVisualizer: React.FC<PendulumVisualizerProps> = ({
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
-    const obs = new ResizeObserver(([entry]) => {
-      railWidthRef.current = Math.max(100, entry.contentRect.width - 44);
-    });
+    const obs = new ResizeObserver(([entry]) => { railWidthRef.current = Math.max(100, entry.contentRect.width - 44); });
     obs.observe(el);
     return () => obs.disconnect();
   }, []);
@@ -75,8 +73,8 @@ export const PendulumVisualizer: React.FC<PendulumVisualizerProps> = ({
         resetIdle(phaseLabel, recBadge);
         if (card) { card.style.borderColor = ''; card.style.backgroundColor = ''; card.style.boxShadow = ''; }
         if (progressBar) progressBar.style.transform = 'scaleX(0)';
-        if (leftBumper) { leftBumper.style.opacity = '0.4'; leftBumper.style.transform = 'scale(1)'; }
-        if (rightBumper) rightBumper.style.opacity = '0.4';
+        if (leftBumper) { leftBumper.style.opacity = '0.9'; leftBumper.style.transform = 'scale(1)'; }
+        if (rightBumper) rightBumper.style.opacity = '0.9';
         padRefs.current.forEach((p) => { if (p) { p.style.backgroundColor = 'transparent'; p.style.color = ''; } });
         animId = requestAnimationFrame(updateFrame);
         return;
@@ -111,10 +109,10 @@ export const PendulumVisualizer: React.FC<PendulumVisualizerProps> = ({
         lastBeatIndex = status.beatIndexInCycle;
         const isT1 = status.currentBeat === 0;
         if (leftBumper) {
-          leftBumper.style.opacity = isT1 ? '1' : status.currentBeat === 2 ? '0.75' : '0.3';
+          leftBumper.style.opacity = isT1 ? '1' : status.currentBeat === 2 ? '0.75' : '0.4';
           leftBumper.style.transform = isT1 ? 'scale(1.15)' : 'scale(1)';
         }
-        if (rightBumper) rightBumper.style.opacity = (status.currentBeat === 1 || status.currentBeat === 3) ? '0.85' : '0.3';
+        if (rightBumper) rightBumper.style.opacity = (status.currentBeat === 1 || status.currentBeat === 3) ? '0.9' : '0.4';
       }
 
       animId = requestAnimationFrame(updateFrame);
@@ -126,10 +124,10 @@ export const PendulumVisualizer: React.FC<PendulumVisualizerProps> = ({
 
   return (
     <div ref={cardRef} className="w-full cordel-card p-3 flex flex-col gap-2.5 select-none transition-colors duration-150">
-      <div className="flex items-center justify-between text-xs font-mono tracking-wider opacity-80">
-        <span ref={leftBumperRef} className="px-2 py-0.5 cordel-card-sm text-theme-accent font-bold transition-all duration-75" />
+      <div className="flex items-center justify-between text-xs font-mono tracking-wider">
+        <span ref={leftBumperRef} className="px-2 py-0.5 bg-[var(--cordel-bg)] text-[var(--cordel-text)] border border-[var(--cordel-border)] font-bold opacity-90 transition-all duration-75" />
         <span ref={phaseLabelRef} className="font-bold text-center text-sm tracking-wide text-theme-ink uppercase min-h-[20px]" />
-        <span ref={rightBumperRef} className="px-2 py-0.5 cordel-card-sm font-bold transition-all duration-75" />
+        <span ref={rightBumperRef} className="px-2 py-0.5 bg-[var(--cordel-bg)] text-[var(--cordel-text)] border border-[var(--cordel-border)] font-bold opacity-90 transition-all duration-75" />
       </div>
 
       <div ref={containerRef} className="w-full h-11 bg-black/40 border-2 border-theme-border relative flex items-center px-1 overflow-hidden rounded-sm">

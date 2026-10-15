@@ -16,7 +16,6 @@ export const CuePatternSelector: React.FC<{ disabled?: boolean }> = ({ disabled 
     (p) => p.id !== activePattern.id && p.recordingResult !== null && p.recordingResult.pcm.length > 0
   );
 
-  // Détermination du pattern effectif
   const effectiveCuePattern =
     cueMode === 'none'
       ? null
@@ -27,10 +26,10 @@ export const CuePatternSelector: React.FC<{ disabled?: boolean }> = ({ disabled 
   const isCueReady = effectiveCuePattern && effectiveCuePattern.recordingResult !== null;
 
   return (
-    <div className="cordel-card p-2 w-full flex flex-wrap items-center justify-between gap-2 bg-black/40 text-xs font-mono select-none">
+    <div className="cordel-card p-2 w-full flex flex-wrap items-center justify-between gap-2 bg-[var(--cordel-surface)] text-xs font-mono select-none">
       <div className="flex items-center gap-2">
         <Headphones className="w-3.5 h-3.5 text-theme-accent shrink-0" />
-        <span className="font-bold text-theme-ink/80 text-[11px]">{t('cueSelectorLabel')}</span>
+        <span className="font-bold text-[var(--cordel-text)] text-[11px]">{t('cueSelectorLabel')}</span>
       </div>
 
       <div className="flex items-center gap-2">
@@ -38,16 +37,16 @@ export const CuePatternSelector: React.FC<{ disabled?: boolean }> = ({ disabled 
           value={cueMode}
           disabled={disabled}
           onChange={(e) => setCueMode(e.target.value)}
-          className="bg-black/60 border border-theme-border/50 text-[11px] font-mono text-theme-ink px-2 py-1 outline-none rounded-none cursor-pointer"
+          className="bg-[var(--cordel-bg)] text-[var(--cordel-text)] border-2 border-[var(--cordel-border)] font-bold text-[11px] font-mono px-2 py-1 outline-none rounded-none cursor-pointer"
         >
-          <option value="none" className="bg-theme-bg text-theme-ink">
+          <option value="none" className="bg-[var(--cordel-bg)] text-[var(--cordel-text)]">
             {t('cueNone')}
           </option>
-          <option value="auto_previous" className="bg-theme-bg text-theme-ink">
+          <option value="auto_previous" className="bg-[var(--cordel-bg)] text-[var(--cordel-text)]">
             {t('cueAutoPrevious')} {previousPattern ? `(${previousPattern.name})` : ''}
           </option>
           {otherRecordedPatterns.map((p) => (
-            <option key={p.id} value={p.id} className="bg-theme-bg text-theme-ink">
+            <option key={p.id} value={p.id} className="bg-[var(--cordel-bg)] text-[var(--cordel-text)]">
               {t('cueCustomPrefix')} {p.name} ({p.role.toUpperCase()} • {p.measuresCount} M)
             </option>
           ))}

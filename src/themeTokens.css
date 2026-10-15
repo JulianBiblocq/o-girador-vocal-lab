@@ -14,6 +14,7 @@
   --cordel-on-primary: #ffffff;
   --cordel-accent: #d4af37;
   --cordel-accent-text: #fbbf24;
+  --cordel-surface: #262626;
   --cordel-secondary-text: rgba(244, 236, 216, 0.7);
   --cordel-muted: rgba(244, 236, 216, 0.6);
   --cordel-faint: rgba(244, 236, 216, 0.15);
@@ -38,6 +39,7 @@
   --cordel-on-primary: #ffffff;
   --cordel-accent: #9a3412;
   --cordel-accent-text: #9a3412;
+  --cordel-surface: #efe6d0;
   --cordel-secondary-text: #57534e;
   --cordel-muted: rgba(26, 26, 26, 0.6);
   --cordel-faint: rgba(26, 26, 26, 0.12);
@@ -49,6 +51,7 @@
 
 /* Utilitaires Cordel sémantiques */
 .bg-theme-bg { background-color: var(--cordel-bg); }
+.bg-theme-surface { background-color: var(--cordel-surface); }
 .text-theme-ink { color: var(--cordel-text); }
 .border-theme-border { border-color: var(--cordel-border); }
 .bg-theme-wood { background-color: var(--cordel-wood) !important; }

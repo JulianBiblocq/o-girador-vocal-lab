@@ -1,9 +1,9 @@
 /**
  * App.tsx
- * Point d'entree de O Girador - Atelier Vocal (Oficina Vocal) avec i18n bilingue [ FR | BR ],
- * Bibliotheque de Patterns nommables (Puxador/Coro) et Frise Conducteur sur 1 seule ligne Desktop.
+ * Point d'entrée de O Girador - Atelier Vocal (Oficina Vocal) avec i18n bilingue [ FR | BR ],
+ * Bibliothèque de Patterns nommables (Puxador/Coro) et Frise Conducteur sur 1 seule ligne Desktop.
  */
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { LanguageProvider, useLanguage } from './i18n/LanguageContext';
 import { ToadaProjectProvider } from './context/ToadaProjectContext';
 import { PatternLibraryBar } from './components/conductor/PatternLibraryBar';
@@ -14,12 +14,23 @@ import { Mic, Sun, Moon } from 'lucide-react';
 
 const AppContent: React.FC = () => {
   const { locale, setLocale, t } = useLanguage();
-  const [theme, setTheme] = useState<'dark' | 'light'>('dark');
+  const [theme, setTheme] = useState<'dark' | 'light'>(() => {
+    try {
+      const saved = localStorage.getItem('ogirador_vocal_lab_theme');
+      if (saved === 'light' || saved === 'dark') return saved;
+      const attr = document.documentElement.getAttribute('data-theme');
+      if (attr === 'light' || attr === 'dark') return attr;
+    } catch {}
+    return 'dark';
+  });
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    try { localStorage.setItem('ogirador_vocal_lab_theme', theme); } catch {}
+  }, [theme]);
 
   const toggleTheme = () => {
-    const next = theme === 'dark' ? 'light' : 'dark';
-    setTheme(next);
-    document.documentElement.setAttribute('data-theme', next);
+    setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
   };
 
   return (
@@ -43,24 +54,18 @@ const AppContent: React.FC = () => {
         <div className="flex items-center gap-2.5">
           <div className="h-9 cordel-card-sm inline-flex items-center p-0.5 text-xs font-mono select-none">
             <button
-              type="button"
-              onClick={() => setLocale('fr')}
+              type="button" onClick={() => setLocale('fr')}
               className={`h-full px-2.5 font-bold transition-all flex items-center justify-center cursor-pointer ${
-                locale === 'fr'
-                  ? 'bg-theme-wood text-white font-black shadow-sm'
-                  : 'opacity-60 hover:opacity-100 text-theme-ink'
+                locale === 'fr' ? 'bg-theme-wood text-white font-black shadow-sm' : 'opacity-60 hover:opacity-100 text-theme-ink'
               }`}
               title="Francais"
             >
               FR
             </button>
             <button
-              type="button"
-              onClick={() => setLocale('br')}
+              type="button" onClick={() => setLocale('br')}
               className={`h-full px-2.5 font-bold transition-all flex items-center justify-center cursor-pointer ${
-                locale === 'br'
-                  ? 'bg-theme-wood text-white font-black shadow-sm'
-                  : 'opacity-60 hover:opacity-100 text-theme-ink'
+                locale === 'br' ? 'bg-theme-wood text-white font-black shadow-sm' : 'opacity-60 hover:opacity-100 text-theme-ink'
               }`}
               title="Portugues Brasileiro"
             >
@@ -69,8 +74,7 @@ const AppContent: React.FC = () => {
           </div>
 
           <button
-            type="button"
-            onClick={toggleTheme}
+            type="button" onClick={toggleTheme}
             className="h-9 w-9 p-0 cordel-card-sm inline-flex items-center justify-center cursor-pointer transition-colors"
             title={t('themeToggle')}
           >
