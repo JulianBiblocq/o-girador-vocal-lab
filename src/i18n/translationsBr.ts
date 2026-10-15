@@ -124,4 +124,5 @@ export const translationsBr: VocalLabTranslations = {
   letraWordsLabel: 'Palavras :', letraEmptyWords: '(vazio)',
   footerSandbox: 'O Girador - Oficina Vocal - Ambiente isolado - Zero colisao com Sequenciador',
   footerPack: 'Padrao VocalPackExport v1.0 - Puxador / Coro',
+  listenPitch: "Ouvir", doubleClickRename: "Clique duplo para renomear", puxadorSectionTitle: "Puxador", coroSectionTitle: "Coro", midiLockedTake1Notice: "Notas MIDI travadas na Tomada 1",
 };

@@ -124,4 +124,5 @@ export const translationsFr: VocalLabTranslations = {
   letraWordsLabel: 'Mots :', letraEmptyWords: '(vide)',
   footerSandbox: 'O Girador - Atelier Vocal - Bac a sable etanche - Zero collision avec Sequenciador',
   footerPack: 'Standard VocalPackExport v1.0 - Puxador / Coro',
+  listenPitch: "Écouter", doubleClickRename: "Double-clic pour renommer", puxadorSectionTitle: "Puxador", coroSectionTitle: "Coro", midiLockedTake1Notice: "Notes MIDI verrouillées sur la Prise 1",
 };

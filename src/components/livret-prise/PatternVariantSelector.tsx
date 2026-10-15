@@ -1,20 +1,32 @@
 /**
  * PatternVariantSelector.tsx
  * Matrice visuelle de declinaisons audio multi-vitesses et multi-hauteurs.
- * Permet d enregistrer des variantes anti-distorsion partageant la meme partition.
+ * Affiche le vrai BPM (asservi a baseBpm) et les notes transposees calculees.
  */
 import React, { useState } from 'react';
 import { useToadaProject } from '../../context/ToadaProjectContext';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { makeVariantKey, createDefaultVariant } from '../../types/toadaProject.types';
+import { getTransposedNoteDisplay } from '../../utils/musicalMath';
+import { Volume2 } from 'lucide-react';
 
-export const PatternVariantSelector: React.FC<{ disabled?: boolean }> = ({ disabled }) => {
+interface PatternVariantSelectorProps {
+  baseBpm?: number;
+  referencePitch?: string;
+  onPlayPitchPreview?: (pitch: string) => void;
+  disabled?: boolean;
+}
+
+export const PatternVariantSelector: React.FC<PatternVariantSelectorProps> = ({
+  baseBpm, referencePitch = 'C4', onPlayPitchPreview, disabled,
+}) => {
   const { activePattern, activeVariant, setActiveVariantKey, ensureVariantExists, project } = useToadaProject();
-  const { t } = useLanguage();
+  const { t, locale } = useLanguage();
   const [showTier3Speed, setShowTier3Speed] = useState(false);
   const [showTier3Pitch, setShowTier3Pitch] = useState(false);
   const [altPitch, setAltPitch] = useState<-8 | 8>(-8);
 
+  const effectiveBaseBpm = baseBpm ?? project.bpm;
   const speeds = showTier3Speed ? [1.0, 0.74, 0.55] : [1.0, 0.74];
   const pitches = showTier3Pitch ? [-8, 0, 8] : [0, altPitch];
 
@@ -61,13 +73,13 @@ export const PatternVariantSelector: React.FC<{ disabled?: boolean }> = ({ disab
             const variant = activePattern.variants[vKey] ?? createDefaultVariant(s, p);
             const isRecorded = variant.recordingResult !== null;
             const isActive = activeVariant.variantKey === vKey;
-            const bpmDisplay = Math.round(project.bpm * s);
-            const pLabel = p === 0 ? t('variant_pitch_nominal') : p < 0 ? t('variant_pitch_low') : t('variant_pitch_high');
-            const sLabel = s === 1.0 ? t('variant_speed_nominal') : s === 0.74 ? t('variant_speed_slow') : t('variant_speed_extra');
+            const bpmDisplay = Math.round(effectiveBaseBpm * s);
+            const speedPercent = Math.round(s * 100);
+            const noteDisplay = getTransposedNoteDisplay(referencePitch, p, locale);
 
             return (
-              <button
-                key={vKey} type="button" disabled={disabled} onClick={() => handleSelect(s, p)}
+              <div
+                key={vKey} onClick={() => handleSelect(s, p)}
                 className={`p-2 border text-left flex flex-col justify-between gap-1 transition-all rounded-none cursor-pointer ${
                   isActive
                     ? 'border-[var(--cordel-primary)] bg-[var(--cordel-primary)]/10 font-bold shadow-sm'
@@ -75,10 +87,20 @@ export const PatternVariantSelector: React.FC<{ disabled?: boolean }> = ({ disab
                 }`}
               >
                 <div className="flex items-center justify-between text-[11px] leading-tight">
-                  <span className="font-bold text-[var(--cordel-text)]">{sLabel}</span>
-                  <span className="text-[10px] text-stone-400 font-mono">{bpmDisplay} BPM</span>
+                  <span className="font-bold text-[var(--cordel-text)]">{speedPercent} % ({bpmDisplay} BPM)</span>
+                  {onPlayPitchPreview && (
+                    <button
+                      type="button" title={`${t('listenPitch')} ${noteDisplay.noteCode}`}
+                      onClick={(e) => { e.stopPropagation(); onPlayPitchPreview(noteDisplay.noteCode); }}
+                      className="p-0.5 hover:text-amber-400 text-stone-300 cursor-pointer"
+                    >
+                      <Volume2 className="w-3.5 h-3.5" />
+                    </button>
+                  )}
                 </div>
-                <div className="text-[10px] text-stone-300 font-mono">{pLabel}</div>
+                <div className="text-[10px] text-amber-200/90 font-mono truncate" title={noteDisplay.label}>
+                  {noteDisplay.label}
+                </div>
                 <div className="flex items-center gap-1 text-[10px] pt-0.5">
                   {isRecorded ? (
                     <span className="text-emerald-400 font-bold">{t('variant_status_recorded')}</span>
@@ -86,7 +108,7 @@ export const PatternVariantSelector: React.FC<{ disabled?: boolean }> = ({ disab
                     <span className="text-stone-400">{t('variant_status_pending')}</span>
                   )}
                 </div>
-              </button>
+              </div>
             );
           })
         )}

@@ -1,6 +1,6 @@
 /**
  * musicalMath.ts
- * Utilitaires de conversion de notes et metrique rythmique.
+ * Utilitaires de conversion de notes, calcul solfégique bilingue et métrique rythmique.
  */
 import type { TimeSignatureString } from '../types/vocalPack.types';
 
@@ -10,6 +10,21 @@ const NOTE_TO_SEMITONE: Record<string, number> = {
 };
 
 const SEMITONE_TO_NOTE = ['C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B'];
+
+const SOLFEGE_MAP: Record<string, { fr: string; br: string }> = {
+  C: { fr: 'Do', br: 'Dó' }, 'C#': { fr: 'Do#', br: 'Dó#' }, Db: { fr: 'Réb', br: 'Réb' },
+  D: { fr: 'Ré', br: 'Ré' }, 'D#': { fr: 'Ré#', br: 'Ré#' }, Eb: { fr: 'Mib', br: 'Mib' },
+  E: { fr: 'Mi', br: 'Mi' }, F: { fr: 'Fa', br: 'Fá' }, 'F#': { fr: 'Fa#', br: 'Fá#' },
+  Gb: { fr: 'Solb', br: 'Solb' }, G: { fr: 'Sol', br: 'Sol' }, 'G#': { fr: 'Sol#', br: 'Sol#' },
+  Ab: { fr: 'Lab', br: 'Láb' }, A: { fr: 'La', br: 'Lá' }, 'A#': { fr: 'La#', br: 'Lá#' },
+  Bb: { fr: 'Sib', br: 'Sib' }, B: { fr: 'Si', br: 'Si' },
+};
+
+export interface TransposedNoteDisplay {
+  noteCode: string;
+  solfege: string;
+  label: string;
+}
 
 export function noteToMidi(note: string): number {
   const match = note.trim().match(/^([A-Ga-g][#b]?)(-?\d+)$/);
@@ -29,6 +44,28 @@ export function midiToNote(midi: number): string {
 export function transposePitchNote(note: string, semitones: number): string {
   if (semitones === 0) return note;
   return midiToNote(noteToMidi(note) + semitones);
+}
+
+export function getTransposedNoteDisplay(
+  referencePitch: string,
+  semitonesOffset: number,
+  locale: 'fr' | 'br'
+): TransposedNoteDisplay {
+  const targetNote = transposePitchNote(referencePitch, semitonesOffset);
+  const match = targetNote.trim().match(/^([A-Ga-g][#b]?)(-?\d+)$/);
+  const root = match ? match[1].charAt(0).toUpperCase() + match[1].slice(1) : 'C';
+  const solfege = SOLFEGE_MAP[root]?.[locale] ?? root;
+
+  let label = '';
+  if (semitonesOffset === 0) {
+    label = locale === 'br' ? `Tom : ${solfege} (${targetNote})` : `Ton : ${solfege} (${targetNote})`;
+  } else {
+    const tones = Math.abs(semitonesOffset) / 2;
+    const sign = semitonesOffset > 0 ? '+' : '-';
+    label = `${sign}${tones} tons ➔ ${solfege} (${targetNote})`;
+  }
+
+  return { noteCode: targetNote, solfege, label };
 }
 
 export function noteToFrequency(note: string): number {

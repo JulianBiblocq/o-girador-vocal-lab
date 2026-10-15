@@ -24,12 +24,13 @@ interface LivretMelodiaProps {
   pitchCurve: PitchCurvePoint[];
   initialSteps: any[];
   outputDeviceId?: string;
+  pitchShiftSemitones?: number;
   onBackToPrise: () => void;
   onPackUpdated: (pack: VocalPackExport) => void;
 }
 
 export const LivretMelodia: React.FC<LivretMelodiaProps> = (props) => {
-  const { initialPack, cleanPCM, sampleRate, totalDurationSec, anacrusisDurationSec, beatsPerMeasure, measuresCount, pitchCurve, initialSteps, outputDeviceId, onBackToPrise, onPackUpdated } = props;
+  const { initialPack, cleanPCM, sampleRate, totalDurationSec, anacrusisDurationSec, beatsPerMeasure, measuresCount, pitchCurve, initialSteps, outputDeviceId, pitchShiftSemitones = 0, onBackToPrise, onPackUpdated } = props;
 
   const { steps: allSteps, setSteps: setAllSteps, undo, redo, canUndo, canRedo, historyCount } = useStepsHistory(initialSteps, 10);
   const [playMode, setPlayMode] = useState<MelodicPlayMode>('duo');
@@ -48,7 +49,7 @@ export const LivretMelodia: React.FC<LivretMelodiaProps> = (props) => {
     setIsPlaying(true);
     await player.play({
       cleanPCM, sampleRate, totalDurationSec, allSteps, bpm: initialPack.metadata.bpm,
-      beatsPerMeasure, playMode, clickEnabled, seekStartSec, outputDeviceId, onEnded: () => setIsPlaying(false),
+      beatsPerMeasure, playMode, clickEnabled, pitchShiftSemitones, seekStartSec, outputDeviceId, onEnded: () => setIsPlaying(false),
     });
   }, [player, isPlaying, cleanPCM, sampleRate, totalDurationSec, allSteps, initialPack, beatsPerMeasure, playMode, clickEnabled, seekStartSec, outputDeviceId]);
 
@@ -57,7 +58,7 @@ export const LivretMelodia: React.FC<LivretMelodiaProps> = (props) => {
     if (isPlaying) {
       player.play({
         cleanPCM, sampleRate, totalDurationSec, allSteps, bpm: initialPack.metadata.bpm,
-        beatsPerMeasure, playMode, clickEnabled, seekStartSec: sec, outputDeviceId, onEnded: () => setIsPlaying(false),
+        beatsPerMeasure, playMode, clickEnabled, pitchShiftSemitones, seekStartSec: sec, outputDeviceId, onEnded: () => setIsPlaying(false),
       });
     }
   }, [isPlaying, player, cleanPCM, sampleRate, totalDurationSec, allSteps, initialPack, beatsPerMeasure, playMode, clickEnabled, outputDeviceId]);

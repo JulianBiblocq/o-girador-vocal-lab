@@ -96,6 +96,7 @@ export interface VocalLabTranslations {
   letraSpaceTooltip: string; letraTiedTooltip: string;
   letraWordsLabel: string; letraEmptyWords: string;
   footerSandbox: string; footerPack: string;
+  listenPitch: string; doubleClickRename: string; puxadorSectionTitle: string; coroSectionTitle: string; midiLockedTake1Notice: string;
 }
 
 export type TranslationKey = keyof VocalLabTranslations;

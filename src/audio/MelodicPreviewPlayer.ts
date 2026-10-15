@@ -1,7 +1,7 @@
 /**
  * MelodicPreviewPlayer.ts
  * Lecteur d'écoute comparative 3-états ('voice', 'synth', 'duo')
- * avec support du Seek temporel et playhead synchrone 60 FPS.
+ * avec support du Seek, playhead synchrone 60 FPS et transposition de déclinaison.
  */
 import type { VocalStepData } from '../types/vocalPack.types';
 import { getSharedAudioContext, setSharedSinkId } from './sharedAudioContext';
@@ -19,6 +19,7 @@ export interface MelodicPlayOptions {
   beatsPerMeasure: number;
   playMode: MelodicPlayMode;
   clickEnabled: boolean;
+  pitchShiftSemitones?: number;
   seekStartSec?: number;
   outputDeviceId?: string;
   onEnded?: () => void;
@@ -44,7 +45,7 @@ export class MelodicPreviewPlayer {
     this.ctx = await getSharedAudioContext();
     if (options.outputDeviceId) await setSharedSinkId(options.outputDeviceId);
 
-    const { cleanPCM, sampleRate, totalDurationSec, allSteps, bpm, beatsPerMeasure, playMode, clickEnabled, onEnded } = options;
+    const { cleanPCM, sampleRate, totalDurationSec, allSteps, bpm, beatsPerMeasure, playMode, clickEnabled, pitchShiftSemitones, onEnded } = options;
     this.totalDuration = totalDurationSec;
     this.seekStartSec = Math.max(0, Math.min(totalDurationSec - 0.05, options.seekStartSec || 0));
     this.playRemainingDuration = totalDurationSec - this.seekStartSec;
@@ -71,7 +72,10 @@ export class MelodicPreviewPlayer {
 
     const beatDuration = 60 / bpm;
     const stepDuration = beatDuration / 4;
-    this.synthNodes = scheduleMelodySteps(this.ctx, this.synthGainNode, allSteps, stepDuration, now, this.seekStartSec);
+    const effectiveSteps = (pitchShiftSemitones && pitchShiftSemitones !== 0)
+      ? allSteps.map((s) => (s.active && s.midiNumber > 0 && s.note !== '───') ? { ...s, midiNumber: s.midiNumber + pitchShiftSemitones } : s)
+      : allSteps;
+    this.synthNodes = scheduleMelodySteps(this.ctx, this.synthGainNode, effectiveSteps, stepDuration, now, this.seekStartSec);
 
     const totalBeats = Math.ceil(totalDurationSec / beatDuration);
     for (let b = 0; b < totalBeats; b++) {
@@ -81,15 +85,10 @@ export class MelodicPreviewPlayer {
       }
     }
 
-    this.stopTimerId = window.setTimeout(() => {
-      this.stop();
-      if (onEnded) onEnded();
-    }, (this.playRemainingDuration + 0.05) * 1000);
+    this.stopTimerId = window.setTimeout(() => { this.stop(); onEnded?.(); }, (this.playRemainingDuration + 0.05) * 1000);
   }
 
-  public setPlayMode(mode: MelodicPlayMode, clickEnabled = true): void {
-    this.applyGains(mode, clickEnabled);
-  }
+  public setPlayMode(mode: MelodicPlayMode, clickEnabled = true): void { this.applyGains(mode, clickEnabled); }
 
   public async playNotePreview(midi: number): Promise<void> {
     const ctx = await getSharedAudioContext();

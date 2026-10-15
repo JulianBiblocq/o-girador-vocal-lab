@@ -40,6 +40,7 @@ export interface VocalPatternItem {
   mainSteps: VocalStepData[];
   pitchCurve: PitchCurvePoint[];
   pack?: VocalPackExport | null;
+  midiLocked?: boolean;
 }
 
 export interface ToadaArrangementSlot {

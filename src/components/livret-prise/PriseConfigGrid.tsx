@@ -22,6 +22,7 @@ interface PriseConfigGridProps {
   listeningMode: ListeningMode;
   onListeningModeChange: (mode: ListeningMode) => void;
   referencePitch: string;
+  effectivePitch?: string;
   onReferencePitchChange: (pitch: string) => void;
   engine: MetronomeEngine;
   selectedDeviceId: string;
@@ -35,7 +36,7 @@ interface PriseConfigGridProps {
 export const PriseConfigGrid: React.FC<PriseConfigGridProps> = ({
   timeSignature, onTimeSignatureChange, bpm, onBpmChange, measuresCount,
   onMeasuresCountChange, beatResolutions, onBeatResolutionsChange,
-  listeningMode, onListeningModeChange, referencePitch, onReferencePitchChange,
+  listeningMode, onListeningModeChange, referencePitch, effectivePitch, onReferencePitchChange,
   engine, selectedDeviceId, onSelectedDeviceChange, selectedOutputDeviceId,
   onSelectedOutputDeviceChange, recordedSampleRate, isCycleActive,
 }) => {
@@ -50,7 +51,7 @@ export const PriseConfigGrid: React.FC<PriseConfigGridProps> = ({
       <ListeningModePanel
         listeningMode={listeningMode} onListeningModeChange={onListeningModeChange}
         referencePitch={referencePitch} onReferencePitchChange={onReferencePitchChange}
-        onPlayReferencePreview={() => engine.playReferencePitchPreview(referencePitch, 1.5, selectedOutputDeviceId)}
+        onPlayReferencePreview={() => engine.playReferencePitchPreview(effectivePitch || referencePitch, 1.5, selectedOutputDeviceId)}
         disabled={isCycleActive}
       />
       <div className="h-full flex flex-col justify-between gap-4">
