@@ -10,6 +10,7 @@ import { LivretPrise } from './components/livret-prise/LivretPrise';
 import { BrandHeaderLogo } from './components/header/BrandHeaderLogo';
 import { ProjectSelectorBar } from './components/header/ProjectSelectorBar';
 import { RoleModeSwitcher } from './components/header/RoleModeSwitcher';
+import { UserAvatarMenu } from './components/header/UserAvatarMenu';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { CordelDialogModal } from './components/ui/CordelDialogModal';
 import { useGlobalTransportShortcuts } from './hooks/useGlobalTransportShortcuts';
@@ -99,17 +100,14 @@ const AppContent: React.FC = () => {
           >
             {theme === 'dark' ? <Sun className="w-4 h-4 text-theme-accent" /> : <Moon className="w-4 h-4 text-theme-accent" />}
           </button>
+
+          <UserAvatarMenu />
         </div>
       </header>
 
       <main className="relative z-10 flex-1 flex flex-col items-center justify-start w-full max-w-none">
         <LivretPrise />
       </main>
-
-      <footer className="relative z-10 w-full max-w-none mt-6 text-center text-xs font-mono text-theme-ink/60 flex flex-col gap-1">
-        <div>{t('footerSandbox')}</div>
-        <div>{t('footerPack')}</div>
-      </footer>
     </div>
   );
 };

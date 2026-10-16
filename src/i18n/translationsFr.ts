@@ -25,7 +25,7 @@ export const translationsFr: VocalLabTranslations = {
   swapPuxadorCoroBtn: '⇄ Inverser Puxador ↔ Coro', swapRolesTooltip: 'Inverser globalement les rôles Puxador et Coro (patterns, conducteur et fiche)', duplicateVariation: '❐ (2)', duplicateVariationTooltip: 'Dupliquer ce pattern en une variation indépendante (2)',
   scopeAll: '🌍 Tout le chant', scopeActive: '🎯 Ce bloc seul', scopeSelected: '☑ Blocs cochés ({n})', selectAll: 'Tout cocher', deselectAll: 'Tout décocher', selectPatternCheckbox: 'Sélectionner ce bloc',
   importPreconfigTitle: 'RÉGLAGES PAR DÉFAUT DU CHANT', importDefaultBpm: 'BPM :', importMeasuresPerLine: 'Mesures / ligne :', importAnacrusisDefault: 'Anacrouse :',
-  btnSaveToada: 'Sauvegarder', btnSavedSuccess: 'Sauvegardé !', saveToadaTooltip: 'Sauvegarder la Toada (Ctrl+S)', toadaSavedToast: 'Toada sauvegardée avec succès !',
+  btnSaveToada: 'Sauvegarder', btnSavedSuccess: 'Sauvegardé !', saveToadaTooltip: 'Sauvegarder la Toada (Ctrl+S)', toadaSavedToast: 'Toada sauvegardée avec succès !', saveAndExportMenu: 'Sauvegarder & Exporter', exportFullSongWav: 'Exporter l\'audio du chant (.wav)', wavExportSuccess: 'Chant complet exporté en .wav avec succès !',
 
   export_toada_pack: 'Telecharger Pack Toada JSON', export_toada_pack_success: 'Pack Toada multi-declinaisons pret pour Sequenciad\'Or !',
 

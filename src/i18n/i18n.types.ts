@@ -28,7 +28,7 @@ export interface VocalLabTranslationsCore {
   swapPuxadorCoroBtn: string; swapRolesTooltip: string; duplicateVariation: string; duplicateVariationTooltip: string;
   scopeAll: string; scopeActive: string; scopeSelected: string; selectAll: string; deselectAll: string; selectPatternCheckbox: string;
   importPreconfigTitle: string; importDefaultBpm: string; importMeasuresPerLine: string; importAnacrusisDefault: string;
-  btnSaveToada: string; btnSavedSuccess: string; saveToadaTooltip: string; toadaSavedToast: string;
+  btnSaveToada: string; btnSavedSuccess: string; saveToadaTooltip: string; toadaSavedToast: string; saveAndExportMenu: string; exportFullSongWav: string; wavExportSuccess: string;
 
   // Jalon 4.B : Matrice de Declinaisons Audio
   pattern_variants_title: string; variant_speed_nominal: string; variant_speed_slow: string; variant_speed_extra: string;

@@ -1,131 +1,35 @@
 /**
  * ProjectSelectorBar.tsx
- * Barre d'actions supérieure Cloud : Auth, Mes Toadas, Sauvegarder, Fiches Organizador & Pont Sequenciador (< 135 lignes).
+ * Barre d'actions Cloud allégée : MIDI, Toadas Dropdown & Sauvegarder/Exporter Dropdown (< 75 lignes).
  */
 import React, { useState } from 'react';
 import { useToadaProject } from '../../context/ToadaProjectContext';
-import { useLanguage } from '../../i18n/LanguageContext';
-import { useVocalTransportStore } from '../../stores/useVocalTransportStore';
 import { useOrganizadorAuth } from '../../hooks/useOrganizadorAuth';
 import { useOrganizadorDeepLink } from '../../hooks/useOrganizadorDeepLink';
-import { useManualSave } from '../../hooks/useManualSave';
-import { publishToadaToSequencer } from '../../services/cloudToadaPublisher';
-import { confirmAsync } from '../../stores/useCordelDialogStore';
-import { AuthUserButton } from './AuthUserButton';
 import { ToadaLibraryDropdown } from './ToadaLibraryDropdown';
+import { SaveAndExportDropdown } from './SaveAndExportDropdown';
 import { MidiConnectionBadge } from './MidiConnectionBadge';
 import { OrganizadorToadaModal } from '../modals/OrganizadorToadaModal';
-import { Scroll, CloudUpload, Loader2, ExternalLink, Save, Check } from 'lucide-react';
 
 export const ProjectSelectorBar: React.FC = () => {
   const { project } = useToadaProject();
-  const { t } = useLanguage();
-  const viewRoleMode = useVocalTransportStore((s) => s.viewRoleMode);
-  const { currentUser, groupId, isLoading: isAuthLoading, loginWithGoogle, logout } = useOrganizadorAuth();
+  const { currentUser, groupId, loginWithGoogle } = useOrganizadorAuth();
+  const [isOrganizadorOpen, setIsOrganizadorOpen] = useState(false);
 
   // Prise en charge automatique des deep-links (?mode=eleve, ?toadaId=..., ?songId=...)
   useOrganizadorDeepLink(groupId);
 
-  const { isSaving, isSavedSuccess, handleSave } = useManualSave(project, Boolean(currentUser));
-  const [isOrganizadorOpen, setIsOrganizadorOpen] = useState(false);
-  const [isPublishing, setIsPublishing] = useState(false);
-  const [publishedUrl, setPublishedUrl] = useState<string | null>(null);
-
-  const handlePublish = async () => {
-    setIsPublishing(true);
-    try {
-      const res = await publishToadaToSequencer(project);
-      setPublishedUrl(res.sequenciadorUrl);
-      const openNow = await confirmAsync({
-        title: t('toadaPublishedSuccess'),
-        message: `${project.title} a été synchronisée dans le Cloud. Souhaitez-vous l'ouvrir immédiatement dans Sequenciador ?`,
-        confirmLabel: t('openInSequencer'),
-        cancelLabel: t('dialogCancel'),
-      });
-      if (openNow) window.open(res.sequenciadorUrl, '_blank');
-    } catch (err: any) {
-      console.error('[ProjectSelectorBar] Échec publication :', err);
-      window.dispatchEvent(new CustomEvent('app-toast', { detail: { type: 'error', message: `Échec publication : ${err?.message || 'erreur'}` } }));
-    } finally {
-      setIsPublishing(false);
-    }
-  };
-
   return (
     <div className="flex items-center gap-2 flex-wrap relative z-40">
-      <AuthUserButton
-        currentUser={currentUser}
-        isLoading={isAuthLoading}
-        onLogin={loginWithGoogle}
-        onLogout={logout}
-      />
       <MidiConnectionBadge />
-      <ToadaLibraryDropdown />
-
-      {/* Bouton explicite Sauvegarder (Ctrl+S) */}
-      <button
-        type="button"
-        disabled={isSaving}
-        onClick={handleSave}
-        title={t('saveToadaTooltip')}
-        className={`h-9 px-2.5 cordel-card-sm text-xs font-mono font-bold flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50 ${
-          isSavedSuccess
-            ? 'bg-emerald-700 text-[#f4ecd8] border-emerald-400 font-black'
-            : 'bg-black/40 hover:bg-black/60 text-theme-ink'
-        }`}
-      >
-        {isSaving ? (
-          <Loader2 className="w-3.5 h-3.5 animate-spin text-theme-accent" />
-        ) : isSavedSuccess ? (
-          <Check className="w-3.5 h-3.5 text-[#f4ecd8]" />
-        ) : (
-          <Save className="w-3.5 h-3.5 text-amber-500" />
-        )}
-        <span>{isSavedSuccess ? t('btnSavedSuccess') : t('btnSaveToada')}</span>
-      </button>
-
-      {viewRoleMode !== 'eleve' && (
-        <>
-          <button
-            type="button"
-            onClick={() => setIsOrganizadorOpen(true)}
-            title={t('fichesOrganizador')}
-            className="h-9 px-3 cordel-card-sm text-xs font-mono font-bold flex items-center gap-1.5 bg-black/40 hover:bg-black/60 text-theme-ink transition-colors cursor-pointer"
-          >
-            <Scroll className="w-4 h-4 text-[var(--cordel-accent-text)]" />
-            <span className="hidden md:inline">{t('fichesOrganizador')}</span>
-          </button>
-
-          <button
-            type="button"
-            disabled={isPublishing}
-            onClick={handlePublish}
-            title={t('sendToSequencerTooltip')}
-            className="h-9 px-3 cordel-card-sm text-xs font-mono font-bold flex items-center gap-1.5 bg-theme-wood hover:bg-theme-wood/90 text-[#f4ecd8] transition-colors cursor-pointer disabled:opacity-50"
-          >
-            {isPublishing ? (
-              <Loader2 className="w-4 h-4 animate-spin text-[#f4ecd8]" />
-            ) : (
-              <CloudUpload className="w-4 h-4 text-[#f4ecd8]" />
-            )}
-            <span className="hidden md:inline">
-              {isPublishing ? t('toadaPublishing') : t('sendToSequencer')}
-            </span>
-          </button>
-
-          {publishedUrl && (
-            <button
-              type="button"
-              onClick={() => window.open(publishedUrl, '_blank')}
-              title={t('openInSequencer')}
-              className="h-9 px-2.5 cordel-card-sm text-xs font-mono font-bold flex items-center gap-1 bg-amber-600/30 text-amber-300 border border-amber-500/50 hover:bg-amber-600/50 cursor-pointer"
-            >
-              <ExternalLink className="w-3.5 h-3.5" />
-              <span className="hidden lg:inline">{t('openInSequencer')}</span>
-            </button>
-          )}
-        </>
-      )}
+      <ToadaLibraryDropdown
+        onOpenOrganizador={() => setIsOrganizadorOpen(true)}
+        groupName={groupId || undefined}
+      />
+      <SaveAndExportDropdown
+        project={project}
+        isUserLoggedIn={Boolean(currentUser)}
+      />
 
       {isOrganizadorOpen && (
         <OrganizadorToadaModal
