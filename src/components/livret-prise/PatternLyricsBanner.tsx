@@ -6,13 +6,9 @@ import React, { useMemo } from 'react';
 import { useToadaProject } from '../../context/ToadaProjectContext';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { applyLyricsSyllablesToSteps } from '../../utils/syllableAligner';
-import { Scroll, Sparkles } from 'lucide-react';
+import { Sparkles } from 'lucide-react';
 
-interface PatternLyricsBannerProps {
-  onOpenToadaModal: () => void;
-}
-
-export const PatternLyricsBanner: React.FC<PatternLyricsBannerProps> = ({ onOpenToadaModal }) => {
+export const PatternLyricsBanner: React.FC = () => {
   const { activePattern, updatePattern, project } = useToadaProject();
   const { t } = useLanguage();
 
@@ -60,15 +56,6 @@ export const PatternLyricsBanner: React.FC<PatternLyricsBannerProps> = ({ onOpen
             {activePattern.name}
           </span>
         </div>
-
-        <button
-          type="button"
-          onClick={onOpenToadaModal}
-          className="h-7 px-2.5 cordel-card-sm text-[11px] font-mono font-bold flex items-center gap-1.5 bg-theme-wood/80 hover:bg-theme-wood text-[#f4ecd8] cursor-pointer"
-        >
-          <Scroll className="w-3.5 h-3.5 text-[var(--cordel-accent-text)]" />
-          <span>{t('toadaSheetBtn')}</span>
-        </button>
       </div>
 
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">

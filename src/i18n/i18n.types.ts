@@ -125,10 +125,8 @@ export interface VocalLabTranslationsCore {
   packLoadSuccess: string; packLoadError: string;
 
   // Dialogues Cordel Asynchrones
-  dialogConfirm: string; dialogCancel: string; dialogOk: string;
-  dialogAlertTitle: string; dialogConfirmTitle: string;
-  deletePatternConfirm: string; deletePatternTitle: string;
-  resetRecordingConfirm: string; resetRecordingTitle: string;
+  dialogConfirm: string; dialogCancel: string; dialogOk: string; dialogAlertTitle: string; dialogConfirmTitle: string;
+  deletePatternConfirm: string; deletePatternTitle: string; resetRecordingConfirm: string; resetRecordingTitle: string;
 
   // Jalon 4.J - Zones Melodyne Libres [ In ── Out ]
   melodynePitchCenter: string; melodyneFlatten: string; melodyneCreateZoneBtn: string; melodyneWholePhraseBtn: string;
@@ -138,8 +136,11 @@ export interface VocalLabTranslationsCore {
   // Jalon 4.K - Option Anacrouse & Gestion Multi-Toadas
   anacrusisOption: string; hasAnacrusisYes: string; hasAnacrusisNo: string; noAnacrusisBadge: string;
   newToada: string; newToadaConfirm: string; newToadaTitle: string; myToadas: string; deleteToadaConfirm: string; deleteToadaTitle: string; noSavedToadas: string;
-  // Jalon 4.L - Raccourcis Studio & Controleur MIDI
   midiBadge: string; midiConnectedTitle: string; midiNotConnectedTitle: string; roleStudio: string; roleEleve: string; rulerClickSeekHint: string;
+
+  // Passerelle Cloud Cantador & Fiches Organizador
+  fichesOrganizador: string; sendToSequencer: string; sendToSequencerTooltip: string; openInSequencer: string;
+  toadaPublishedSuccess: string; toadaPublishing: string; toadaImportTxt: string; organizadorSearchPlaceholder: string; noOrganizadorToadas: string;
 }
 
 export type VocalLabTranslations = VocalLabTranslationsCore & SlicerTranslations & ToadaSheetTranslations & TreinoSubTranslations;

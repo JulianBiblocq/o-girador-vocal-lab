@@ -18,7 +18,6 @@ import { PriseConfigGrid } from './PriseConfigGrid';
 import { LivretMelodia } from '../livret-melodia/LivretMelodia';
 import { LivretTreino } from '../livret-treino/LivretTreino';
 import { PatternLyricsBanner } from './PatternLyricsBanner';
-import { ToadaSheetModal } from './ToadaSheetModal';
 import { MasterTakeSlicerModal } from '../slicer/MasterTakeSlicerModal';
 import { usePriseRecorder } from './usePriseRecorder';
 import { useToadaProject } from '../../context/ToadaProjectContext';
@@ -47,7 +46,6 @@ export const LivretPrise: React.FC = () => {
   const [recordedSampleRate, setRecordedSampleRate] = useState(44100);
   const [melodicData, setMelodicData] = useState<{ pitchCurve: PitchCurvePoint[]; allSteps: VocalStepData[]; pack: VocalPackExport; cleanPCM: Float32Array } | null>(null);
   const [isSlicerOpen, setIsSlicerOpen] = useState(false);
-  const [isToadaModalOpen, setIsToadaModalOpen] = useState(false);
 
   useEffect(() => { setBpm(activePattern.baseBpm ?? project.bpm ?? 55); setReferencePitch(activePattern.referencePitch ?? 'C4'); }, [activePattern.id]);
   useEffect(() => () => { engine.stop(); recorder.cleanup(); closeSharedAudioContext(); }, [engine, recorder]);
@@ -122,7 +120,7 @@ export const LivretPrise: React.FC = () => {
             onToggleRecord={handleToggleRecord} onTrimChange={(s, e) => updateVariant(activePattern.id, activeVariant.variantKey, { trimStartSec: s, trimEndSec: e })} onPackReady={handlePackReady} onResetRecording={handleResetRecording}
             onOpenSlicerModal={() => setIsSlicerOpen(true)} onDirectImportAudio={handleDirectImportAudio}
           />
-          <PatternLyricsBanner onOpenToadaModal={() => setIsToadaModalOpen(true)} />
+          <PatternLyricsBanner />
           <div className="w-full grid grid-cols-1 xl:grid-cols-12 gap-4 items-stretch pt-1">
             <div className="xl:col-span-5 h-full"><PatternLibraryBar /></div> <div className="xl:col-span-7 h-full"><ToadaConductorStrip /></div>
           </div>
@@ -136,7 +134,6 @@ export const LivretPrise: React.FC = () => {
         </>
       )}
       <MasterTakeSlicerModal isOpen={isSlicerOpen} onClose={() => setIsSlicerOpen(false)} />
-      <ToadaSheetModal isOpen={isToadaModalOpen} onClose={() => setIsToadaModalOpen(false)} />
     </div>
   );
 };

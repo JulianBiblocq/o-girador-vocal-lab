@@ -9,8 +9,8 @@ import { variantTranslationsFr } from './variantTranslationsFr';
 
 export const translationsFr: VocalLabTranslations = {
   // En-tete
-  appTitle: 'O Girador - Atelier Vocal',
-  appSubtitle: 'Horloge 60 FPS - Metronome Accorde - Balancier Cinematique',
+  appTitle: 'O Girador — Cantador',
+  appSubtitle: 'Atelier Vocal - Prosodie & Chant Maracatu',
   themeToggle: 'Changer de theme (Clair / Sombre)',
   tabLivret1: 'Livret 1 : Prise', tabLivret2: 'Livret 2 : Melodia & Letra', tabLivret3: 'Livret 3 : Entrainement',
 
@@ -135,11 +135,13 @@ export const translationsFr: VocalLabTranslations = {
   melodynePurgeTooltip: 'Supprime toutes les zones Melodyne pour écouter le son 100% brut du Livret 1 tout en conservant les notes MIDI',
   melodynePurgeToast: 'Son brut du Livret 1 rétabli (zones Melodyne purgées)',
 
-  // Jalon 4.K - Option Anacrouse & Gestion Multi-Toadas
+  // Jalon 4.K & L - Gestion Multi-Toadas & Passerelle Cloud
   anacrusisOption: 'Anacrouse', hasAnacrusisYes: 'Oui', hasAnacrusisNo: 'Non', noAnacrusisBadge: 'Départ Temps 1 (Sans anacrouse)',
   newToada: 'Nouvelle Toada', newToadaTitle: 'Nouvelle Toada', newToadaConfirm: 'Créer une nouvelle Toada ? La Toada actuelle reste conservée dans "Mes Toadas".',
   myToadas: 'Mes Toadas', noSavedToadas: 'Aucune Toada enregistrée', deleteToadaConfirm: 'Supprimer définitivement la Toada', deleteToadaTitle: 'Supprimer la Toada',
-  midiBadge: 'MIDI', midiConnectedTitle: 'Contrôleur MIDI connecté : {device}', midiNotConnectedTitle: 'Aucun contrôleur MIDI détecté',
-  roleStudio: 'Studio', roleEleve: 'Élève', rulerClickSeekHint: 'Règle cliquable = Départ lecture',
+  midiBadge: 'MIDI', midiConnectedTitle: 'Contrôleur MIDI connecté : {device}', midiNotConnectedTitle: 'Aucun contrôleur MIDI détecté', roleStudio: 'Studio', roleEleve: 'Élève', rulerClickSeekHint: 'Règle cliquable = Départ lecture',
+  fichesOrganizador: 'Fiches Organizador', sendToSequencer: 'Envoyer vers Sequenciador', sendToSequencerTooltip: 'Téléverser les enregistrements et publier la Toada pour Sequenciador',
+  openInSequencer: 'Ouvrir dans Sequenciador', toadaPublishedSuccess: 'Toada publiée dans le Cloud avec succès !', toadaPublishing: 'Publication de la Toada...', toadaImportTxt: 'Importer un fichier .txt',
+  organizadorSearchPlaceholder: 'Rechercher une fiche ou toada...', noOrganizadorToadas: 'Aucune fiche trouvée',
   ...slicerTranslationsFr, ...toadaSheetTranslationsFr, ...treinoSubTranslationsFr, ...variantTranslationsFr,
 };

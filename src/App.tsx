@@ -7,13 +7,14 @@ import React, { useState, useEffect } from 'react';
 import { LanguageProvider, useLanguage } from './i18n/LanguageContext';
 import { ToadaProjectProvider } from './context/ToadaProjectContext';
 import { LivretPrise } from './components/livret-prise/LivretPrise';
-import { PackHeaderActions } from './components/header/PackHeaderActions';
+import { BrandHeaderLogo } from './components/header/BrandHeaderLogo';
+import { ProjectSelectorBar } from './components/header/ProjectSelectorBar';
 import { RoleModeSwitcher } from './components/header/RoleModeSwitcher';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { CordelDialogModal } from './components/ui/CordelDialogModal';
 import { useGlobalTransportShortcuts } from './hooks/useGlobalTransportShortcuts';
 import { useVocalLabMidi } from './hooks/useVocalLabMidi';
-import { Mic, Sun, Moon } from 'lucide-react';
+import { Sun, Moon } from 'lucide-react';
 
 const AppContent: React.FC = () => {
   useGlobalTransportShortcuts();
@@ -64,23 +65,11 @@ const AppContent: React.FC = () => {
         aria-hidden="true"
       />
       <header className="relative z-10 w-full max-w-none mb-3 cordel-card p-3 sm:p-4 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <div className="p-2 cordel-card-sm bg-theme-wood text-white shrink-0">
-            <Mic className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
-          </div>
-          <div>
-            <h1 className="text-base sm:text-lg md:text-xl font-black tracking-widest uppercase m-0 leading-tight">
-              {t('appTitle')}
-            </h1>
-            <p className="text-[11px] sm:text-xs font-mono text-theme-ink/70 m-0 hidden xs:block">
-              {t('appSubtitle')}
-            </p>
-          </div>
-        </div>
+        <BrandHeaderLogo />
 
-        {/* Controles a droite : Pack Actions, Rôle Studio/Élève, Binome [ FR | BR ] & Theme */}
-        <div className="flex items-center gap-2.5">
-          <PackHeaderActions />
+        {/* Controles a droite : Barre Projet Cloud, Rôle Studio/Élève, Binome [ FR | BR ] & Theme */}
+        <div className="flex items-center gap-2.5 flex-wrap">
+          <ProjectSelectorBar />
           <RoleModeSwitcher />
           <div className="h-9 cordel-card-sm inline-flex items-center p-0.5 text-xs font-mono select-none">
             <button

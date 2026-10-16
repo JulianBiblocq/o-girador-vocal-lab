@@ -9,8 +9,8 @@ import { variantTranslationsBr } from './variantTranslationsBr';
 
 export const translationsBr: VocalLabTranslations = {
   // Cabecalho
-  appTitle: 'O Girador - Oficina Vocal',
-  appSubtitle: 'Relogio 60 FPS - Metronomo Afinado - Balancim Cinematico',
+  appTitle: 'O Girador — Cantador',
+  appSubtitle: 'Oficina Vocal - Prosódia e Canto de Maracatu',
   themeToggle: 'Alternar tema (Claro / Escuro)',
   tabLivret1: 'Livreto 1 : Gravacao', tabLivret2: 'Livreto 2 : Melodia e Letra', tabLivret3: 'Livreto 3 : Treino Vocal',
 
@@ -134,11 +134,13 @@ export const translationsBr: VocalLabTranslations = {
   melodynePurgeTooltip: 'Exclui todas as zonas Melodyne para ouvir o som 100% bruto do Folheto 1 mantendo as notas MIDI',
   melodynePurgeToast: 'Som bruto do Folheto 1 restaurado (zonas Melodyne limpas)',
 
-  // Jalon 4.K - Option Anacrouse & Gestion Multi-Toadas
+  // Jalon 4.K & L - Gestion Multi-Toadas & Passerelle Cloud
   anacrusisOption: 'Anacruse', hasAnacrusisYes: 'Sim', hasAnacrusisNo: 'Não', noAnacrusisBadge: 'Partida Tempo 1 (Sem anacruse)',
   newToada: 'Nova Toada', newToadaTitle: 'Nova Toada', newToadaConfirm: 'Criar uma nova Toada? A Toada atual permanece salva em "Minhas Toadas".',
   myToadas: 'Minhas Toadas', noSavedToadas: 'Nenhuma Toada salva', deleteToadaConfirm: 'Excluir permanentemente a Toada', deleteToadaTitle: 'Excluir Toada',
-  midiBadge: 'MIDI', midiConnectedTitle: 'Controlador MIDI conectado: {device}', midiNotConnectedTitle: 'Nenhum controlador MIDI detectado',
-  roleStudio: 'Estúdio', roleEleve: 'Aluno', rulerClickSeekHint: 'Régua clicável = Início da reprodução',
+  midiBadge: 'MIDI', midiConnectedTitle: 'Controlador MIDI conectado: {device}', midiNotConnectedTitle: 'Nenhum controlador MIDI detectado', roleStudio: 'Estúdio', roleEleve: 'Aluno', rulerClickSeekHint: 'Régua clicável = Início da reprodução',
+  fichesOrganizador: 'Fichas Organizador', sendToSequencer: 'Enviar ao Sequenciador', sendToSequencerTooltip: 'Enviar gravações e publicar Toada para o Sequenciador',
+  openInSequencer: 'Abrir no Sequenciador', toadaPublishedSuccess: 'Toada publicada na Nuvem com sucesso!', toadaPublishing: 'Publicando Toada na nuvem...', toadaImportTxt: 'Importar arquivo .txt',
+  organizadorSearchPlaceholder: 'Buscar ficha ou toada...', noOrganizadorToadas: 'Nenhuma ficha encontrada',
   ...slicerTranslationsBr, ...toadaSheetTranslationsBr, ...treinoSubTranslationsBr, ...variantTranslationsBr,
 };

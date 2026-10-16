@@ -7,7 +7,7 @@
  */
 import React from 'react';
 import type { MelodicPlayMode } from '../../audio/MelodicPreviewPlayer';
-import { Play, Square, ArrowLeft, Download, SkipBack } from 'lucide-react';
+import { Play, Square, ArrowLeft, SkipBack } from 'lucide-react';
 import { CordelMic, CordelPiano, CordelSpeaker } from '../common/CordelIcons';
 import { useLanguage } from '../../i18n/LanguageContext';
 
@@ -20,11 +20,11 @@ interface MelodicControlsProps {
   onSetPlayMode: (mode: MelodicPlayMode) => void;
   onToggleClick: () => void;
   onBackToPrise: () => void;
-  onDownloadPack: () => void;
+  onDownloadPack?: () => void;
 }
 
 export const MelodicControls: React.FC<MelodicControlsProps> = (props) => {
-  const { isPlaying, playMode, clickEnabled, onTogglePlay, onResetSeek, onSetPlayMode, onToggleClick, onBackToPrise, onDownloadPack } = props;
+  const { isPlaying, playMode, clickEnabled, onTogglePlay, onResetSeek, onSetPlayMode, onToggleClick, onBackToPrise } = props;
   const { t } = useLanguage();
 
   return (
@@ -121,16 +121,6 @@ export const MelodicControls: React.FC<MelodicControlsProps> = (props) => {
         >
           {isPlaying ? <Square className="w-4 h-4 fill-current" /> : <Play className="w-4 h-4 fill-current text-[#f4ecd8]" />}
           <span>{isPlaying ? t('recordBtnStop') : 'Play'}</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={onDownloadPack}
-          className="cordel-btn-primary px-3 py-1.5 text-xs font-mono font-bold flex items-center gap-1.5 rounded-none cursor-pointer !text-[#f4ecd8] text-[var(--cordel-on-primary)]"
-          title="Pack JSON VocalPackExport"
-        >
-          <Download className="w-3.5 h-3.5 !text-[#f4ecd8] text-[var(--cordel-on-primary)]" />
-          <span className="!text-[#f4ecd8] text-[var(--cordel-on-primary)]">{t('downloadPack')}</span>
         </button>
       </div>
     </div>

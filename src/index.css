@@ -2,6 +2,18 @@
 @import "./themeTokens.css";
 @import "./components/livret-melodia/melodiaThemeOverrides.css";
 
+@font-face {
+  font-family: 'Cactus';
+  src: url('/fonts/Cactus Regular.otf') format('opentype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+.font-cactus {
+  font-family: 'Cactus', 'Cinzel Decorative', Georgia, serif;
+}
+
 * {
   box-sizing: border-box;
 }
