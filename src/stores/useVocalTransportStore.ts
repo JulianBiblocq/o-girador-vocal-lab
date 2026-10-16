@@ -8,6 +8,7 @@ import { getInitialRoleMode } from '../utils/vocalPermissions';
 
 export type LivretType = 'prise' | 'melodia' | 'treino';
 export type ViewRoleMode = 'studio' | 'eleve';
+export type TreinoSubTab = 'ambitus' | 'warmup' | 'posture_diction' | 'chanter_toada';
 
 export interface LivretTransportHandlers {
   togglePlay?: () => void;
@@ -25,6 +26,7 @@ export interface LivretTransportHandlers {
 export interface VocalTransportState {
   activeLivret: LivretType;
   viewRoleMode: ViewRoleMode;
+  treinoSubTab: TreinoSubTab;
   isRecording: boolean;
   isPlaying: boolean;
   isMidiConnected: boolean;
@@ -32,6 +34,7 @@ export interface VocalTransportState {
   handlers: LivretTransportHandlers;
   setActiveLivret: (livret: LivretType) => void;
   setViewRoleMode: (mode: ViewRoleMode) => void;
+  setTreinoSubTab: (tab: TreinoSubTab) => void;
   setIsRecording: (rec: boolean) => void;
   setIsPlaying: (playing: boolean) => void;
   setMidiConnection: (connected: boolean, deviceName?: string | null) => void;
@@ -56,11 +59,14 @@ const initialMode = getInitialRoleMode();
 let state: VocalTransportState = {
   activeLivret: initialMode === 'eleve' ? 'treino' : 'prise',
   viewRoleMode: initialMode,
+  treinoSubTab: 'ambitus',
   isRecording: false,
   isPlaying: false,
   isMidiConnected: false,
   activeMidiDeviceName: null,
   handlers: {},
+
+  setTreinoSubTab: (tab: TreinoSubTab) => { state = { ...state, treinoSubTab: tab }; notify(); },
 
   setActiveLivret: (livret: LivretType) => {
     if (state.viewRoleMode === 'eleve' && livret !== 'treino') return;

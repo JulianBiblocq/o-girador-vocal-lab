@@ -5,20 +5,22 @@
  * Strictement < 120 lignes.
  */
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useCallback, useEffect } from 'react';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { AmbitusFinderPanel } from './AmbitusFinderPanel';
 import { MaracatuVocalGames } from './MaracatuVocalGames';
 import { PronunciationCardsPanel } from './PronunciationCardsPanel';
 import { ChanterToadaWorkshop } from './ChanterToadaWorkshop';
 import { triggerTreinoKillSwitch } from '../../audio/maracatuVocalGameEngine';
+import { useVocalTransportStore, type TreinoSubTab } from '../../stores/useVocalTransportStore';
 import { Compass, Target, Volume2, Mic } from 'lucide-react';
 
-export type TreinoSubTab = 'ambitus' | 'warmup' | 'posture_diction' | 'chanter_toada';
+export type { TreinoSubTab };
 
 export const LivretTreino: React.FC = () => {
   const { t } = useLanguage();
-  const [activeSubTab, setActiveSubTab] = useState<TreinoSubTab>('ambitus');
+  const activeSubTab = useVocalTransportStore((s) => s.treinoSubTab);
+  const setTreinoSubTab = useVocalTransportStore((s) => s.setTreinoSubTab);
 
   useEffect(() => {
     return () => {
@@ -30,8 +32,8 @@ export const LivretTreino: React.FC = () => {
     if (nextTab === activeSubTab) return;
     // Sécurité Kill-Switch : coupe immédiatement flux micro, RAF et nœuds Web Audio de l'atelier précédent
     triggerTreinoKillSwitch();
-    setActiveSubTab(nextTab);
-  }, [activeSubTab]);
+    setTreinoSubTab(nextTab);
+  }, [activeSubTab, setTreinoSubTab]);
 
   const tabs: { id: TreinoSubTab; label: string; Icon: React.FC<{ className?: string }> }[] = [
     { id: 'ambitus', label: t('tabAmbitus'), Icon: Compass },

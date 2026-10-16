@@ -1,6 +1,6 @@
 /**
  * OrganizadorToadaModal.tsx
- * Modale de sélection directe des fiches de chant d'Organizador (< 135 lignes).
+ * Modale de sélection directe des fiches de chant d'Organizador (< 130 lignes).
  */
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
@@ -9,15 +9,17 @@ import { useLanguage } from '../../i18n/LanguageContext';
 import { fetchOrganizadorToadas, type ToadaDocument } from '../../services/firebaseClient';
 import { parseToadaDocument, parseToadaJsonOrText } from '../../utils/toadaSheetParser';
 import { generateToadaFromSheet } from '../../utils/toadaConductorGenerator';
-import { Scroll, Search, X, Loader2, FileText, ArrowRight } from 'lucide-react';
+import { OrganizadorDocRow } from './OrganizadorDocRow';
+import { Scroll, Search, X, Loader2, FileText, LogIn } from 'lucide-react';
 
 interface OrganizadorToadaModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  preSelectedSongId?: string | null;
+  isOpen: boolean; onClose: () => void; groupId?: string | null;
+  isUserLoggedIn?: boolean; onLogin?: () => void; preSelectedSongId?: string | null;
 }
 
-export const OrganizadorToadaModal: React.FC<OrganizadorToadaModalProps> = ({ isOpen, onClose, preSelectedSongId }) => {
+export const OrganizadorToadaModal: React.FC<OrganizadorToadaModalProps> = ({
+  isOpen, onClose, groupId, isUserLoggedIn, onLogin, preSelectedSongId,
+}) => {
   const { project, loadProject } = useToadaProject();
   const { t } = useLanguage();
   const [docs, setDocs] = useState<ToadaDocument[]>([]);
@@ -28,7 +30,7 @@ export const OrganizadorToadaModal: React.FC<OrganizadorToadaModalProps> = ({ is
   useEffect(() => {
     if (!isOpen) return;
     setIsLoading(true);
-    fetchOrganizadorToadas()
+    fetchOrganizadorToadas(groupId)
       .then((res) => {
         setDocs(res);
         if (preSelectedSongId) {
@@ -37,7 +39,7 @@ export const OrganizadorToadaModal: React.FC<OrganizadorToadaModalProps> = ({ is
         }
       })
       .finally(() => setIsLoading(false));
-  }, [isOpen, preSelectedSongId]);
+  }, [isOpen, groupId, preSelectedSongId]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -47,8 +49,7 @@ export const OrganizadorToadaModal: React.FC<OrganizadorToadaModalProps> = ({ is
 
   const applyDoc = (doc: ToadaDocument) => {
     const parsed = parseToadaDocument(doc, 'coro');
-    const updated = generateToadaFromSheet(project, parsed);
-    loadProject(updated);
+    loadProject(generateToadaFromSheet(project, parsed));
     window.dispatchEvent(new CustomEvent('app-toast', { detail: { type: 'success', message: `${doc.titre} chargée !` } }));
     onClose();
   };
@@ -58,8 +59,7 @@ export const OrganizadorToadaModal: React.FC<OrganizadorToadaModalProps> = ({ is
     if (!f) return;
     const r = new FileReader();
     r.onload = (ev) => {
-      const text = ev.target?.result as string;
-      const res = parseToadaJsonOrText(text, 'coro');
+      const res = parseToadaJsonOrText(ev.target?.result as string, 'coro');
       loadProject(generateToadaFromSheet(project, res.parsed));
       window.dispatchEvent(new CustomEvent('app-toast', { detail: { type: 'success', message: `${f.name} importé !` } }));
       onClose();
@@ -85,18 +85,31 @@ export const OrganizadorToadaModal: React.FC<OrganizadorToadaModalProps> = ({ is
           </button>
         </div>
 
+        {!isUserLoggedIn && (
+          <div className="p-2 border border-amber-500/50 bg-amber-500/10 text-amber-200 text-xs font-mono flex items-center justify-between gap-2">
+            <span>{t('authLoginRequiredNotice') || 'Connexion requise pour accéder aux fiches de votre troupe.'}</span>
+            {onLogin && (
+              <button
+                type="button" onClick={onLogin}
+                className="px-2 py-1 bg-amber-600 hover:bg-amber-500 text-stone-900 font-bold flex items-center gap-1 shrink-0 cursor-pointer"
+              >
+                <LogIn className="w-3.5 h-3.5" />
+                <span>{t('authLogin') || 'Connexion'}</span>
+              </button>
+            )}
+          </div>
+        )}
+
         <div className="relative">
           <Search className="w-4 h-4 absolute left-2.5 top-1/2 -translate-y-1/2 text-stone-400" />
           <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            type="text" value={search} onChange={(e) => setSearch(e.target.value)}
             placeholder={t('organizadorSearchPlaceholder')}
             className="w-full pl-8 pr-3 py-1.5 bg-black/50 border border-[var(--cordel-border)] text-xs font-mono text-stone-200 focus:outline-none rounded-none"
           />
         </div>
 
-        <div className="flex-1 overflow-y-auto flex flex-col gap-1.5 min-h-[200px] max-h-[400px] pr-1 cordel-scrollbar">
+        <div className="flex-1 overflow-y-auto flex flex-col gap-1.5 min-h-[200px] max-h-[380px] pr-1 cordel-scrollbar">
           {isLoading ? (
             <div className="flex flex-col items-center justify-center py-12 gap-2 text-stone-400">
               <Loader2 className="w-6 h-6 animate-spin text-theme-wood" />
@@ -105,22 +118,7 @@ export const OrganizadorToadaModal: React.FC<OrganizadorToadaModalProps> = ({ is
           ) : filtered.length === 0 ? (
             <div className="text-center py-12 text-stone-500 text-xs font-mono">{t('noOrganizadorToadas')}</div>
           ) : (
-            filtered.map((item) => (
-              <button
-                key={item.id} type="button" onClick={() => applyDoc(item)}
-                className="w-full text-left p-2.5 border border-stone-800 bg-stone-900/40 hover:bg-theme-wood/20 hover:border-theme-wood transition-all flex items-center justify-between gap-3 cursor-pointer group rounded-none"
-              >
-                <div className="flex flex-col gap-0.5 min-w-0">
-                  <span className="font-bold text-xs truncate group-hover:text-amber-400 text-stone-200">{item.titre}</span>
-                  <div className="flex items-center gap-2 text-[10px] font-mono text-stone-400">
-                    {item.nacao && <span className="text-amber-300/80">{item.nacao}</span>}
-                    {item.rythme && <span>• {item.rythme}</span>}
-                    {item.bpmDefaut && <span>• {item.bpmDefaut} BPM</span>}
-                  </div>
-                </div>
-                <ArrowRight className="w-4 h-4 text-stone-500 group-hover:text-amber-400 group-hover:translate-x-0.5 transition-all shrink-0" />
-              </button>
-            ))
+            filtered.map((item) => <OrganizadorDocRow key={item.id} item={item} onSelect={applyDoc} />)
           )}
         </div>
 

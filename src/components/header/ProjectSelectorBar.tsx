@@ -1,14 +1,16 @@
 /**
  * ProjectSelectorBar.tsx
- * Barre d'actions supérieure Cloud : Mes Toadas, Fiches Organizador & Pont Sequenciador (< 130 lignes).
+ * Barre d'actions supérieure Cloud : Auth, Mes Toadas, Fiches Organizador & Pont Sequenciador (< 125 lignes).
  */
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useToadaProject } from '../../context/ToadaProjectContext';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { useVocalTransportStore } from '../../stores/useVocalTransportStore';
-import { handleSsoUrlToken, getUrlSongId } from '../../services/firebaseClient';
+import { useOrganizadorAuth } from '../../hooks/useOrganizadorAuth';
+import { useOrganizadorDeepLink } from '../../hooks/useOrganizadorDeepLink';
 import { publishToadaToSequencer } from '../../services/cloudToadaPublisher';
 import { confirmAsync } from '../../stores/useCordelDialogStore';
+import { AuthUserButton } from './AuthUserButton';
 import { ToadaLibraryDropdown } from './ToadaLibraryDropdown';
 import { MidiConnectionBadge } from './MidiConnectionBadge';
 import { OrganizadorToadaModal } from '../modals/OrganizadorToadaModal';
@@ -18,21 +20,14 @@ export const ProjectSelectorBar: React.FC = () => {
   const { project } = useToadaProject();
   const { t } = useLanguage();
   const viewRoleMode = useVocalTransportStore((s) => s.viewRoleMode);
+  const { currentUser, groupId, isLoading: isAuthLoading, loginWithGoogle, logout } = useOrganizadorAuth();
+
+  // Prise en charge automatique des deep-links (?mode=eleve, ?toadaId=..., ?songId=...)
+  useOrganizadorDeepLink(groupId);
 
   const [isOrganizadorOpen, setIsOrganizadorOpen] = useState(false);
-  const [initialSongId, setInitialSongId] = useState<string | null>(null);
   const [isPublishing, setIsPublishing] = useState(false);
   const [publishedUrl, setPublishedUrl] = useState<string | null>(null);
-
-  // Gestion du jeton SSO et pré-sélection de morceau via URL
-  useEffect(() => {
-    handleSsoUrlToken();
-    const songId = getUrlSongId();
-    if (songId) {
-      setInitialSongId(songId);
-      setIsOrganizadorOpen(true);
-    }
-  }, []);
 
   const handlePublish = async () => {
     setIsPublishing(true);
@@ -45,9 +40,7 @@ export const ProjectSelectorBar: React.FC = () => {
         confirmLabel: t('openInSequencer'),
         cancelLabel: t('dialogCancel'),
       });
-      if (openNow) {
-        window.open(res.sequenciadorUrl, '_blank');
-      }
+      if (openNow) window.open(res.sequenciadorUrl, '_blank');
     } catch (err: any) {
       console.error('[ProjectSelectorBar] Échec publication :', err);
       window.dispatchEvent(new CustomEvent('app-toast', { detail: { type: 'error', message: `Échec publication : ${err?.message || 'erreur'}` } }));
@@ -57,7 +50,13 @@ export const ProjectSelectorBar: React.FC = () => {
   };
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-2 flex-wrap">
+      <AuthUserButton
+        currentUser={currentUser}
+        isLoading={isAuthLoading}
+        onLogin={loginWithGoogle}
+        onLogout={logout}
+      />
       <MidiConnectionBadge />
       <ToadaLibraryDropdown />
 
@@ -107,8 +106,10 @@ export const ProjectSelectorBar: React.FC = () => {
       {isOrganizadorOpen && (
         <OrganizadorToadaModal
           isOpen={isOrganizadorOpen}
-          onClose={() => { setIsOrganizadorOpen(false); setInitialSongId(null); }}
-          preSelectedSongId={initialSongId}
+          onClose={() => setIsOrganizadorOpen(false)}
+          groupId={groupId}
+          isUserLoggedIn={Boolean(currentUser)}
+          onLogin={loginWithGoogle}
         />
       )}
     </div>

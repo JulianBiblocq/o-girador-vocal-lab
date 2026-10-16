@@ -138,9 +138,10 @@ export interface VocalLabTranslationsCore {
   newToada: string; newToadaConfirm: string; newToadaTitle: string; myToadas: string; deleteToadaConfirm: string; deleteToadaTitle: string; noSavedToadas: string;
   midiBadge: string; midiConnectedTitle: string; midiNotConnectedTitle: string; roleStudio: string; roleEleve: string; rulerClickSeekHint: string;
 
-  // Passerelle Cloud Cantador & Fiches Organizador
+  // Passerelle Cloud Cantador, Auth & Fiches Organizador
   fichesOrganizador: string; sendToSequencer: string; sendToSequencerTooltip: string; openInSequencer: string;
   toadaPublishedSuccess: string; toadaPublishing: string; toadaImportTxt: string; organizadorSearchPlaceholder: string; noOrganizadorToadas: string;
+  authLogin: string; authLoginTooltip: string; authLogout: string; authLoginRequiredNotice: string;
 }
 
 export type VocalLabTranslations = VocalLabTranslationsCore & SlicerTranslations & ToadaSheetTranslations & TreinoSubTranslations;
