@@ -1,6 +1,6 @@
 /**
  * firebaseClient.ts
- * Initialisation Firebase SSO, Google Auth, Firestore & Storage partagé (< 140 lignes).
+ * Initialisation Firebase SSO, Google Auth, Firestore & Storage partagé (< 130 lignes).
  */
 import { signInWithCustomToken, GoogleAuthProvider, signInWithPopup, signOut, type User } from 'firebase/auth';
 import { collection, doc, getDoc, getDocs, query, limit } from 'firebase/firestore';
@@ -8,6 +8,7 @@ import { getStorage } from 'firebase/storage';
 import app, { auth, db } from '../firebase/config';
 import type { ToadaDocument } from '../types/toadaDocument.types';
 import type { ToadaProject } from '../types/toadaProject.types';
+import { isVaralSong, normalizeToadaDoc, mergeAndDeduplicateToadas } from '../utils/varalSongFilter';
 
 export type { ToadaDocument };
 export const storage = getStorage(app);
@@ -49,58 +50,35 @@ export async function getUserGroupId(uid: string): Promise<string | null> {
   return null;
 }
 
-function normalizeToadaDoc(id: string, data: any): ToadaDocument {
-  const paroles = data.parolesOriginales || data.paroles || data.lyrics || data.texte || data.activeToada?.paroles || '';
-  return {
-    id,
-    titre: data.titre || data.title || data.nom || 'Sans titre',
-    type: 'song',
-    nacao: data.nacao || data.nação || '',
-    rythme: data.rythme || data.ritmo || '',
-    parolesOriginales: paroles,
-    parolesPhonetiques: data.parolesPhonetiques || data.phonetique || data.activeToada?.parolesPhonetiques || '',
-    tonaliteDefaut: data.tonaliteDefaut,
-    bpmDefaut: data.bpmDefaut || data.bpm,
-    lienSequenceurId: data.sequenceurId || data.lienSequenceurId,
-    audioUrl: data.activeAudioUrl || data.audioUrl,
-  };
-}
-
 export async function fetchOrganizadorToadas(groupId?: string | null): Promise<ToadaDocument[]> {
-  const docsMap = new Map<string, ToadaDocument>();
+  const primaryDocs: ToadaDocument[] = [];
   try {
     const snap = await getDocs(query(collection(db, 'documents'), limit(150)));
     snap.forEach((d) => {
       const data = d.data();
-      const p = data.parolesOriginales || data.paroles || data.lyrics || data.texte;
-      if (data.type === 'song' || data.typeMorceau === 'song' || data.categoryId === 'Toadas' || Boolean(p)) {
-        docsMap.set(d.id, normalizeToadaDoc(d.id, data));
+      if (isVaralSong(data)) {
+        primaryDocs.push(normalizeToadaDoc(d.id, data));
       }
     });
   } catch (err) {
     console.warn('[firebaseClient] Erreur documents :', err);
   }
 
+  const repertoireDocs: { id: string; data: any }[] = [];
   const groupCandidates = Array.from(new Set([groupId, groupId?.toLowerCase(), 'Samambaia', 'samambaia'].filter(Boolean) as string[]));
   for (const gId of groupCandidates) {
     try {
       const repSnap = await getDocs(query(collection(db, 'associations', gId, 'repertoire'), limit(100)));
-      repSnap.forEach((d) => {
-        const data = d.data();
-        const p = data.paroles || data.parolesOriginales || data.lyrics || data.activeToada?.paroles;
-        if (data.type === 'song' || data.typeMorceau === 'song' || Boolean(p) || data.toadaDocId) {
-          if (!docsMap.has(d.id)) docsMap.set(d.id, normalizeToadaDoc(d.id, data));
-        }
-      });
+      repSnap.forEach((d) => repertoireDocs.push({ id: d.id, data: d.data() }));
     } catch {}
   }
-  return Array.from(docsMap.values()).sort((a, b) => a.titre.localeCompare(b.titre));
+  return mergeAndDeduplicateToadas(primaryDocs, repertoireDocs);
 }
 
 export async function fetchOrganizadorToadaById(songId: string, groupId?: string | null): Promise<ToadaDocument | null> {
   try {
     const docSnap = await getDoc(doc(db, 'documents', songId));
-    if (docSnap.exists()) return normalizeToadaDoc(docSnap.id, docSnap.data());
+    if (docSnap.exists() && isVaralSong(docSnap.data())) return normalizeToadaDoc(docSnap.id, docSnap.data());
   } catch {}
 
   const groupCandidates = Array.from(new Set([groupId, groupId?.toLowerCase(), 'Samambaia', 'samambaia'].filter(Boolean) as string[]));
@@ -112,9 +90,12 @@ export async function fetchOrganizadorToadaById(songId: string, groupId?: string
         const toadaDocId = pData.toadaDocId || pData.toadaId;
         if (toadaDocId) {
           const linked = await fetchOrganizadorToadaById(toadaDocId, groupId);
-          if (linked) return linked;
+          if (linked) {
+            linked.repertoireId = pSnap.id;
+            return linked;
+          }
         }
-        return normalizeToadaDoc(pSnap.id, pData);
+        if (isVaralSong(pData)) return normalizeToadaDoc(pSnap.id, pData, pSnap.id);
       }
     } catch {}
   }

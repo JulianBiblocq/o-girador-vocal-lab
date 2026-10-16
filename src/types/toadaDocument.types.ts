@@ -26,6 +26,7 @@ export interface ToadaDocument {
   questionsQcm?: Array<{ question: string; options: string[]; correctIndex: number; extraitTexte?: string }>;
   tonaliteDefaut?: string;
   bpmDefaut?: number;
+  repertoireId?: string;
 }
 
 export interface ParsedLyricsSegment {
