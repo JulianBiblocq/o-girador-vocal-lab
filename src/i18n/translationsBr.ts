@@ -22,10 +22,10 @@ export const translationsBr: VocalLabTranslations = {
   railPuxador: 'Puxador', railCoro: 'Coro', emptySlot: '- Vazio -', blockLabel: 'Bloco {n}',
   cueSelectorLabel: 'Chamada antes da tomada (C-2 e C-1) :', cueNone: 'Nenhuma (Apenas clique)',
   cueAutoPrevious: 'Padrao anterior da Regencia', cueCustomPrefix: 'Padrao :', cueReadyBadge: 'Pronto ({measures} C)',
-  swapPuxadorCoroBtn: '⇄ Inverter Puxador ↔ Coro', swapRolesTooltip: 'Inverter globalmente os papéis Puxador e Coro (padrões, condutor e ficha)',
-  duplicateVariation: '❐ (2)', duplicateVariationTooltip: 'Duplicar este padrão em uma variação independente (2)',
+  swapPuxadorCoroBtn: '⇄ Inverter Puxador ↔ Coro', swapRolesTooltip: 'Inverter globalmente os papéis Puxador e Coro (padrões, condutor e ficha)', duplicateVariation: '❐ (2)', duplicateVariationTooltip: 'Duplicar este padrão em uma variação independente (2)',
   scopeAll: '🌍 Toda a toada', scopeActive: '🎯 Apenas este bloco', scopeSelected: '☑ Blocos marcados ({n})', selectAll: 'Marcar todos', deselectAll: 'Desmarcar todos', selectPatternCheckbox: 'Selecionar este bloco',
   importPreconfigTitle: 'CONFIGURAÇÕES PADRÃO DO CANTO', importDefaultBpm: 'BPM :', importMeasuresPerLine: 'Compassos / linha :', importAnacrusisDefault: 'Anacruse :',
+  btnSaveToada: 'Salvar', btnSavedSuccess: 'Salvo !', saveToadaTooltip: 'Salvar Toada (Ctrl+S)', toadaSavedToast: 'Toada salva com sucesso!',
 
   export_toada_pack: 'Baixar Pack Toada JSON', export_toada_pack_success: 'Pack Toada multi-declinacoes pronto para Sequenciad\'Or !',
 

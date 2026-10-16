@@ -64,7 +64,7 @@ const AppContent: React.FC = () => {
         className="fixed inset-0 pointer-events-none z-0 wallpaper-surface-bg"
         aria-hidden="true"
       />
-      <header className="relative z-10 w-full max-w-none mb-3 cordel-card p-3 sm:p-4 flex flex-wrap items-center justify-between gap-3">
+      <header className="relative z-40 w-full max-w-none mb-3 cordel-card p-3 sm:p-4 flex flex-wrap items-center justify-between gap-3">
         <BrandHeaderLogo />
 
         {/* Controles a droite : Barre Projet Cloud, Rôle Studio/Élève, Binome [ FR | BR ] & Theme */}

@@ -1,6 +1,6 @@
 /**
  * ProjectSelectorBar.tsx
- * Barre d'actions supérieure Cloud : Auth, Mes Toadas, Fiches Organizador & Pont Sequenciador (< 125 lignes).
+ * Barre d'actions supérieure Cloud : Auth, Mes Toadas, Sauvegarder, Fiches Organizador & Pont Sequenciador (< 135 lignes).
  */
 import React, { useState } from 'react';
 import { useToadaProject } from '../../context/ToadaProjectContext';
@@ -8,13 +8,14 @@ import { useLanguage } from '../../i18n/LanguageContext';
 import { useVocalTransportStore } from '../../stores/useVocalTransportStore';
 import { useOrganizadorAuth } from '../../hooks/useOrganizadorAuth';
 import { useOrganizadorDeepLink } from '../../hooks/useOrganizadorDeepLink';
+import { useManualSave } from '../../hooks/useManualSave';
 import { publishToadaToSequencer } from '../../services/cloudToadaPublisher';
 import { confirmAsync } from '../../stores/useCordelDialogStore';
 import { AuthUserButton } from './AuthUserButton';
 import { ToadaLibraryDropdown } from './ToadaLibraryDropdown';
 import { MidiConnectionBadge } from './MidiConnectionBadge';
 import { OrganizadorToadaModal } from '../modals/OrganizadorToadaModal';
-import { Scroll, CloudUpload, Loader2, ExternalLink } from 'lucide-react';
+import { Scroll, CloudUpload, Loader2, ExternalLink, Save, Check } from 'lucide-react';
 
 export const ProjectSelectorBar: React.FC = () => {
   const { project } = useToadaProject();
@@ -25,6 +26,7 @@ export const ProjectSelectorBar: React.FC = () => {
   // Prise en charge automatique des deep-links (?mode=eleve, ?toadaId=..., ?songId=...)
   useOrganizadorDeepLink(groupId);
 
+  const { isSaving, isSavedSuccess, handleSave } = useManualSave(project, Boolean(currentUser));
   const [isOrganizadorOpen, setIsOrganizadorOpen] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
   const [publishedUrl, setPublishedUrl] = useState<string | null>(null);
@@ -50,7 +52,7 @@ export const ProjectSelectorBar: React.FC = () => {
   };
 
   return (
-    <div className="flex items-center gap-2 flex-wrap">
+    <div className="flex items-center gap-2 flex-wrap relative z-40">
       <AuthUserButton
         currentUser={currentUser}
         isLoading={isAuthLoading}
@@ -59,6 +61,28 @@ export const ProjectSelectorBar: React.FC = () => {
       />
       <MidiConnectionBadge />
       <ToadaLibraryDropdown />
+
+      {/* Bouton explicite Sauvegarder (Ctrl+S) */}
+      <button
+        type="button"
+        disabled={isSaving}
+        onClick={handleSave}
+        title={t('saveToadaTooltip')}
+        className={`h-9 px-2.5 cordel-card-sm text-xs font-mono font-bold flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50 ${
+          isSavedSuccess
+            ? 'bg-emerald-700 text-[#f4ecd8] border-emerald-400 font-black'
+            : 'bg-black/40 hover:bg-black/60 text-theme-ink'
+        }`}
+      >
+        {isSaving ? (
+          <Loader2 className="w-3.5 h-3.5 animate-spin text-theme-accent" />
+        ) : isSavedSuccess ? (
+          <Check className="w-3.5 h-3.5 text-[#f4ecd8]" />
+        ) : (
+          <Save className="w-3.5 h-3.5 text-amber-500" />
+        )}
+        <span>{isSavedSuccess ? t('btnSavedSuccess') : t('btnSaveToada')}</span>
+      </button>
 
       {viewRoleMode !== 'eleve' && (
         <>
