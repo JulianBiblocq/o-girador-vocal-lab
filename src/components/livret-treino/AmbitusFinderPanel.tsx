@@ -1,17 +1,16 @@
 /**
  * AmbitusFinderPanel.tsx
  * Parcours d'Ambitus Intelligent en 4 Étapes (Balayage, Grave, Aigu, Escalier).
- * Support du synthé continu dans l'oreille et retour visuel Cordel. Strictement < 120 lignes.
+ * Orchestration modulaire via composants spécialisés (< 95 lignes).
  */
 import React from 'react';
 import { useLanguage } from '../../i18n/LanguageContext';
-import { midiToNoteName } from '../../utils/noteUtils';
-import { buildAmbitusStaircase } from '../../audio/ambitusSweepAndStairs';
 import { useAmbitusJourney } from '../../hooks/useAmbitusJourney';
 import { AmbitusStageBar } from './AmbitusStageBar';
-import { AmbitusPitchGraph } from './AmbitusPitchGraph';
+import { AmbitusWizardStepToneCheck } from './AmbitusWizardStepToneCheck';
+import { AmbitusWizardStepStaircase } from './AmbitusWizardStepStaircase';
 import { AmbitusSummaryCard } from './AmbitusSummaryCard';
-import { Volume2, Play, Check } from 'lucide-react';
+import { Play } from 'lucide-react';
 
 export const AmbitusFinderPanel: React.FC = () => {
   const { t } = useLanguage();
@@ -38,39 +37,45 @@ export const AmbitusFinderPanel: React.FC = () => {
         )}
 
         {(j.stage === 'low_test' || j.stage === 'high_test') && (
-          <div className="space-y-3">
-            <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
-              <div className="flex items-center gap-1.5">
-                <span className="font-bold">{j.stage === 'low_test' ? t('ambitusLowestLabel') : t('ambitusHighestLabel')} :</span>
-                <button type="button" onClick={() => j.setCurrentMidi((m) => m - 1)} className="px-1.5 py-0.5 border border-[#1a1a1a] bg-[#f4ecd8] dark:bg-[#2b2722] font-mono font-bold cursor-pointer">-1</button>
-                <span className="font-mono font-bold text-base px-2 py-0.5 bg-[#f5edd6] dark:bg-[#2b2722] border border-[#1a1a1a]/30">{midiToNoteName(j.currentMidi)}</span>
-                <button type="button" onClick={() => j.setCurrentMidi((m) => m + 1)} className="px-1.5 py-0.5 border border-[#1a1a1a] bg-[#f4ecd8] dark:bg-[#2b2722] font-mono font-bold cursor-pointer">+1</button>
-              </div>
-              <label className="flex items-center gap-1.5 text-[11px] cursor-pointer font-semibold select-none">
-                <input type="checkbox" checked={j.keepGuideInEar} onChange={(e) => j.setKeepGuideInEar(e.target.checked)} className="accent-[#2a9d8f]" />
-                <span>{t('ambitusKeepGuideInEar')}</span>
-              </label>
-            </div>
-            <AmbitusPitchGraph mode="single" targetMidi={j.currentMidi} samples={j.samples} />
-            <div className="flex gap-2">
-              <button type="button" disabled={j.isTesting} onClick={() => j.runSingleNoteTest(j.currentMidi, j.stage === 'high_test')} className="flex-1 py-2 cordel-btn-primary font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer">
-                <Volume2 className="w-4 h-4" /><span>{j.isTesting ? t('ambitusHoldProgress', { percent: 60 }) : t('ambitusTestNoteBtn')}</span>
-              </button>
-              <button type="button" onClick={() => { if (j.stage === 'low_test') { j.setCurrentMidi(j.highestMidi); j.setStage('high_test'); } else { j.setStage('staircase'); } }} className="py-2 px-3 border-2 border-[#1a1a1a] bg-[#2a9d8f] text-[#f4ecd8] font-bold text-xs flex items-center gap-1 cursor-pointer">
-                <Check className="w-4 h-4" /><span>{t('ambitusValidateAndNext')}</span>
-              </button>
-            </div>
-          </div>
+          <AmbitusWizardStepToneCheck
+            stage={j.stage}
+            currentMidi={j.currentMidi}
+            onSetCurrentMidi={j.setCurrentMidi}
+            engine={j.engine}
+            isTesting={j.isTesting}
+            setIsTesting={j.setIsTesting}
+            samples={j.samples}
+            setSamples={j.setSamples}
+            setFeedback={j.setFeedback}
+            onValidateAndNext={() => {
+              if (j.stage === 'low_test') {
+                j.setLowestMidi(j.currentMidi);
+                j.setCurrentMidi(j.highestMidi);
+                j.setCompletedStages((p) => (p.includes('low_test') ? p : [...p, 'low_test']));
+                j.setStage('high_test');
+              } else {
+                j.setHighestMidi(j.currentMidi);
+                j.setCompletedStages((p) => (p.includes('high_test') ? p : [...p, 'high_test']));
+                j.setStage('staircase');
+              }
+            }}
+            t={t}
+          />
         )}
 
         {j.stage === 'staircase' && (
-          <div className="space-y-3">
-            <p className="text-xs text-[var(--cordel-text)]">{t('ambitusStaircaseDesc')}</p>
-            <AmbitusPitchGraph mode="staircase" targetMidi={j.lowestMidi} samples={j.samples} staircaseSteps={j.staircasePlan?.steps ?? buildAmbitusStaircase(j.lowestMidi, j.highestMidi, 5).steps} />
-            <button type="button" disabled={j.isTesting} onClick={j.runStaircase} className="w-full py-2.5 cordel-btn-primary font-bold text-xs flex items-center justify-center gap-2 cursor-pointer shadow-md">
-              <Play className="w-4 h-4 fill-current" /><span>{j.isTesting ? t('ambitusHoldProgress', { percent: 75 }) : t('ambitusStaircaseBtn')}</span>
-            </button>
-          </div>
+          <AmbitusWizardStepStaircase
+            lowestMidi={j.lowestMidi}
+            highestMidi={j.highestMidi}
+            engine={j.engine}
+            isTesting={j.isTesting}
+            setIsTesting={j.setIsTesting}
+            samples={j.samples}
+            setSamples={j.setSamples}
+            setFeedback={j.setFeedback}
+            onCompleteStaircase={j.onCompleteStaircase}
+            t={t}
+          />
         )}
 
         {j.feedback && (

@@ -37,6 +37,15 @@ export const treinoSubTranslationsBr = {
   ambitusToadaTransposeAdvice: 'Dica: transponha a Toada em {n} semitons para cantar no seu conforto.',
   ambitusPlayPitch: 'Ouvir a nota alvo', ambitusTestDown: '-1 st', ambitusTestUp: '+1 st',
   ambitusRestartJourney: '↺ Reiniciar jornada',
+  ambitusListenTargetBtn: 'Ouvir a nota ({note})',
+  ambitusListenStaircaseBtn: 'Ouvir a escada',
+  ambitusListenPhasePrompt: '👂 Escute bem a nota {note}...',
+  ambitusSingPhasePrompt: '🎙️ Cante {note} agora!',
+  ambitusPitchTooLow: '↓ Muito baixo',
+  ambitusPitchPerfect: '🎯 Perfeito!',
+  ambitusPitchTooHigh: '↑ Muito alto',
+  ambitusPitchNoVoice: 'Cante no microfone...',
+  ambitusStaircaseStepProgress: 'Degrau {current}/{total} : {note}',
 
   // Oficina 2 : Os 3 Exercícios Vocais do Maracatu
   maracatuGamesTitle: 'OS 3 JOGOS DE VOZ DO MARACATU (BAQUE VIRADO)',

@@ -1,13 +1,12 @@
 /**
  * ambitusAudioEngine.ts
- * Moteur Web Audio de test d'ambitus : écoute micro, référence synthé et capture d'échantillons.
- * Support du synthétiseur continu dans l'oreille pendant le chant.
- * Strictement < 145 lignes.
+ * Moteur Web Audio de test d'ambitus : écoute micro stabilisée (150ms)
+ * et pilotage du synthétiseur harmonique riche sans coupure matérielle.
+ * Strictement < 125 lignes (Anti-Monolithe Rule 6.A).
  */
 import { getSharedAudioContext } from './sharedAudioContext';
-import { playSingleSynthNote, type SynthScheduledNode } from './synthVoiceHelper';
+import { playSustainedReferenceMidi, type SustainedSynthController } from './ambitusSynthPlayer';
 import { detectRealtimePitch } from './realtimePitchDetector';
-import { midiToFrequency } from '../utils/noteUtils';
 import type { ValidationSample } from './ambitusValidator';
 
 export interface AmbitusLiveTick {
@@ -20,60 +19,41 @@ export class AmbitusAudioEngine {
   private micStream: MediaStream | null = null;
   private micSource: MediaStreamAudioSourceNode | null = null;
   private analyser: AnalyserNode | null = null;
-  private synthRefNode: SynthScheduledNode | null = null;
-  private continuousOsc: OscillatorNode | null = null;
-  private continuousGain: GainNode | null = null;
-  private continuousFilter: BiquadFilterNode | null = null;
+  private synthCtrl: SustainedSynthController | null = null;
   private rafId: number | null = null;
   private isTesting = false;
 
-  async playReferenceNote(targetMidi: number, durationSec = 1.2): Promise<void> {
-    const ctx = await getSharedAudioContext();
+  async playReferenceNote(targetMidi: number, durationSec = 1.8, gainLevel = 0.45): Promise<void> {
     this.stopReferenceNote();
-    this.synthRefNode = playSingleSynthNote(ctx, ctx.destination, targetMidi, ctx.currentTime, durationSec);
+    this.synthCtrl = await playSustainedReferenceMidi(targetMidi, durationSec, gainLevel);
   }
 
   stopReferenceNote(): void {
-    if (this.synthRefNode) {
-      try { this.synthRefNode.stop(); this.synthRefNode.disconnect(); } catch {}
-      this.synthRefNode = null;
+    if (this.synthCtrl) {
+      this.synthCtrl.stop();
+      this.synthCtrl = null;
     }
   }
 
-  async startContinuousTone(targetMidi: number, volume = 0.18): Promise<void> {
-    const ctx = await getSharedAudioContext();
+  async startContinuousTone(targetMidi: number, volume = 0.22): Promise<void> {
     this.stopContinuousTone();
-    const osc = ctx.createOscillator(), filter = ctx.createBiquadFilter(), gain = ctx.createGain();
-    const freq = midiToFrequency(targetMidi);
-    osc.type = 'triangle';
-    osc.frequency.setValueAtTime(freq, ctx.currentTime);
-    filter.type = 'lowpass';
-    filter.frequency.setValueAtTime(Math.min(2800, freq * 3.5), ctx.currentTime);
-    gain.gain.setValueAtTime(0.0001, ctx.currentTime);
-    gain.gain.linearRampToValueAtTime(volume, ctx.currentTime + 0.05);
-    osc.connect(filter); filter.connect(gain); gain.connect(ctx.destination);
-    osc.start();
-    this.continuousOsc = osc; this.continuousFilter = filter; this.continuousGain = gain;
+    this.synthCtrl = await playSustainedReferenceMidi(targetMidi, 120, volume);
   }
 
   updateContinuousTonePitch(newMidi: number): void {
-    if (this.continuousOsc && this.continuousFilter) {
-      const freq = midiToFrequency(newMidi), now = this.continuousOsc.context.currentTime;
-      this.continuousOsc.frequency.setValueAtTime(freq, now);
-      this.continuousFilter.frequency.setValueAtTime(Math.min(2800, freq * 3.5), now);
+    if (this.synthCtrl) {
+      this.synthCtrl.updatePitch(newMidi);
+    }
+  }
+
+  setContinuousToneGain(volume: number): void {
+    if (this.synthCtrl) {
+      this.synthCtrl.setGain(volume);
     }
   }
 
   stopContinuousTone(): void {
-    if (this.continuousGain && this.continuousOsc) {
-      try {
-        const ctx = this.continuousGain.context;
-        this.continuousGain.gain.setValueAtTime(this.continuousGain.gain.value, ctx.currentTime);
-        this.continuousGain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.04);
-        this.continuousOsc.stop(ctx.currentTime + 0.05);
-      } catch {}
-      this.continuousOsc = null; this.continuousGain = null; this.continuousFilter = null;
-    }
+    this.stopReferenceNote();
   }
 
   async startListening(
@@ -81,7 +61,8 @@ export class AmbitusAudioEngine {
     targetDurationSec = 2.0
   ): Promise<() => Promise<ValidationSample[]>> {
     const ctx = await getSharedAudioContext();
-    this.stopListening();
+    this.stopListening(false);
+
     this.micStream = await navigator.mediaDevices.getUserMedia({
       audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false },
     });
@@ -89,6 +70,9 @@ export class AmbitusAudioEngine {
     this.analyser = ctx.createAnalyser();
     this.analyser.fftSize = 2048;
     this.micSource.connect(this.analyser);
+
+    // Stabilisation matérielle du pilote audio (150 ms)
+    await new Promise((r) => setTimeout(r, 150));
 
     const buffer = new Float32Array(this.analyser.fftSize);
     const samples: ValidationSample[] = [];
@@ -108,18 +92,19 @@ export class AmbitusAudioEngine {
 
     this.rafId = requestAnimationFrame(loop);
     return async (): Promise<ValidationSample[]> => {
-      this.stopListening();
+      this.stopListening(true);
       return samples;
     };
   }
 
-  stopListening(): void {
+  stopListening(stopSynth = true): void {
     this.isTesting = false;
     if (this.rafId !== null) { cancelAnimationFrame(this.rafId); this.rafId = null; }
     if (this.micSource) { try { this.micSource.disconnect(); } catch {} this.micSource = null; }
     if (this.analyser) { try { this.analyser.disconnect(); } catch {} this.analyser = null; }
     if (this.micStream) { this.micStream.getTracks().forEach((t) => t.stop()); this.micStream = null; }
-    this.stopReferenceNote();
-    this.stopContinuousTone();
+    if (stopSynth) {
+      this.stopReferenceNote();
+    }
   }
 }

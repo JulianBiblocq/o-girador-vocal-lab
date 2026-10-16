@@ -13,11 +13,11 @@ export interface ValidationSample {
 }
 
 export const AMBITUS_HOLD_SEC = 2.0;
-export const MIN_PROJECTION_RMS = 0.035;
+export const MIN_PROJECTION_RMS = 0.012;
 export const AMBITUS_MIN_RMS = MIN_PROJECTION_RMS;
 export const MAX_SAGGING_CENTS = 50;
-export const PITCH_TOLERANCE_SEMITONES = 0.45; // +/- 45 cents
-export const MAX_CONTINUITY_GAP_SEC = 0.25;
+export const PITCH_TOLERANCE_SEMITONES = 1.2;
+export const MAX_CONTINUITY_GAP_SEC = 0.35;
 
 export interface AmbitusDetailedFeedback {
   isSolid: boolean;
@@ -35,7 +35,7 @@ export function validateAmbitusNote(
   minProjectionRms = MIN_PROJECTION_RMS
 ): AmbitusStepResult {
   const noteName = midiToNoteName(targetMidi);
-  const voiced = samples.filter((s) => s.pitchMidi > 0 && s.rms >= minProjectionRms * 0.4);
+  const voiced = samples.filter((s) => s.pitchMidi > 0 && s.rms >= minProjectionRms * 0.35);
 
   if (voiced.length < 4) {
     return {
@@ -62,7 +62,7 @@ export function validateAmbitusNote(
     if (gap > maxGapSec) maxGapSec = gap;
   }
 
-  if (durationSec < targetHoldSec * 0.85 || maxGapSec > MAX_CONTINUITY_GAP_SEC) {
+  if (durationSec < targetHoldSec * 0.75 || maxGapSec > MAX_CONTINUITY_GAP_SEC) {
     return {
       note: noteName, midi: targetMidi, heldDurationSec: durationSec, avgRms,
       isSolid: false, status: 'failed_pitch', messageKey: 'ambitusCoachingTooShort',
@@ -87,8 +87,14 @@ export function validateAmbitusNote(
     }
   }
 
-  // 4. Justesse globale et directionnelle (+/- 45 cents)
-  const avgDiff = voiced.reduce((acc, s) => acc + (s.pitchMidi - targetMidi), 0) / voiced.length;
+  // 4. Justesse globale et directionnelle (+/- 1.2 st avec repliement d'octave si saut)
+  const wrapDiff = (m: number) => {
+    let d = m - targetMidi;
+    while (d > 6) d -= 12;
+    while (d < -6) d += 12;
+    return d;
+  };
+  const avgDiff = voiced.reduce((acc, s) => acc + wrapDiff(s.pitchMidi), 0) / voiced.length;
   if (avgDiff < -PITCH_TOLERANCE_SEMITONES) {
     return {
       note: noteName, midi: targetMidi, heldDurationSec: durationSec, avgRms,
