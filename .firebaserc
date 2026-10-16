@@ -1,0 +1,15 @@
+{
+  "projects": {
+    "default": "o-girador-7828c"
+  },
+  "targets": {
+    "o-girador-7828c": {
+      "hosting": {
+        "vocal-lab": [
+          "o-girador-vocal-lab"
+        ]
+      }
+    }
+  },
+  "etags": {}
+}

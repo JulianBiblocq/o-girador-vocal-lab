@@ -132,7 +132,7 @@ export const PendulumVisualizer: React.FC<PendulumVisualizerProps> = ({
 
       <div ref={containerRef} className="w-full h-11 bg-black/40 border-2 border-theme-border relative flex items-center px-1 overflow-hidden rounded-sm">
         <div className="absolute left-1/2 top-0 bottom-0 w-0.5 bg-theme-border/20 -translate-x-1/2 pointer-events-none" />
-        <div ref={shuttleRef} style={{ willChange: 'transform' }} className="w-9 h-8 cordel-card-sm flex items-center justify-center font-bold text-xs bg-theme-wood text-white shadow-md cursor-default pointer-events-none">
+        <div ref={shuttleRef} style={{ willChange: 'transform' }} className="w-9 h-8 cordel-card-sm flex items-center justify-center font-bold text-xs bg-theme-wood text-[#f4ecd8] shadow-md cursor-default pointer-events-none">
           ▲
         </div>
       </div>

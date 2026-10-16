@@ -4,6 +4,7 @@
  * normalisation vocale intelligente -16 dBFS et encodage WAV 16-bit PCM mono.
  */
 import { applyHighPass90Hz } from '../audio/vocalFilterHelper';
+import { applyVocalToneShaping } from '../audio/vocalToneShaper';
 import { normalizeActiveRMS } from '../audio/vocalNormalizer';
 
 export function extractCompensatedSlice(
@@ -13,7 +14,8 @@ export function extractCompensatedSlice(
   trimEndSec: number,
   latencyOffsetMs: number,
   highPassFilterEnabled = true,
-  normalizeRMS = true
+  normalizeRMS = true,
+  enableTonePolish = true
 ): Float32Array {
   const durationSec = Math.max(0.01, trimEndSec - trimStartSec);
   const targetSamples = Math.floor(durationSec * sampleRate);
@@ -33,6 +35,7 @@ export function extractCompensatedSlice(
   }
 
   if (highPassFilterEnabled) applyHighPass90Hz(result, sampleRate);
+  if (enableTonePolish) applyVocalToneShaping(result, sampleRate);
   if (normalizeRMS) normalizeActiveRMS(result, sampleRate);
 
   const fadeInSamples = Math.min(targetSamples, Math.floor(0.01 * sampleRate));
@@ -54,13 +57,14 @@ export function createPaddedPreviewBuffer(
   trimEndSec: number,
   latencyOffsetMs: number,
   highPassFilterEnabled = true,
-  normalizeRMS = true
+  normalizeRMS = true,
+  enableTonePolish = true
 ): Float32Array {
   const totalSamples = Math.floor(totalDurationSec * sampleRate);
   const fullBuffer = new Float32Array(totalSamples);
   const activeSlice = extractCompensatedSlice(
     rawPCM, sampleRate, trimStartSec, trimEndSec,
-    latencyOffsetMs, highPassFilterEnabled, normalizeRMS
+    latencyOffsetMs, highPassFilterEnabled, normalizeRMS, enableTonePolish
   );
   const startSample = Math.max(0, Math.floor(trimStartSec * sampleRate));
   const copyLen = Math.min(activeSlice.length, Math.max(0, totalSamples - startSample));

@@ -14,18 +14,21 @@ export function scheduleCuePatternAudio(
   ctx: AudioContext,
   cuePattern: VocalPatternItem,
   cycleStartTime: number,
-  beatsPerMeasure: number,
-  beatDurationSec: number
+  _beatsPerMeasure?: number,
+  _beatDurationSec?: number
 ): CuePlaybackHandle | null {
-  if (!cuePattern.recordingResult || !cuePattern.recordingResult.pcm) {
-    return null;
-  }
+  const variant = cuePattern.variants?.[cuePattern.activeVariantKey];
+  const rec = cuePattern.recordingResult ?? variant?.recordingResult;
+  if (!rec || !rec.pcm || rec.pcm.length === 0) return null;
 
-  const { pcm, sampleRate } = cuePattern.recordingResult;
-  const startOffset = Math.max(0, Math.floor((cuePattern.trimStartSec || 0) * sampleRate));
-  const endOffset = cuePattern.trimEndSec > 0
-    ? Math.min(pcm.length, Math.floor(cuePattern.trimEndSec * sampleRate))
-    : pcm.length;
+  const { pcm, sampleRate } = rec;
+  const trimStartSec = cuePattern.trimStartSec || variant?.trimStartSec || 0;
+  const trimEndSec = (cuePattern.trimEndSec || variant?.trimEndSec || 0) > 0
+    ? (cuePattern.trimEndSec || variant?.trimEndSec || 0)
+    : pcm.length / sampleRate;
+
+  const startOffset = Math.max(0, Math.floor(trimStartSec * sampleRate));
+  const endOffset = Math.min(pcm.length, Math.floor(trimEndSec * sampleRate));
 
   const usefulLength = Math.max(0, endOffset - startOffset);
   if (usefulLength === 0) return null;
@@ -43,13 +46,12 @@ export function scheduleCuePatternAudio(
   source.connect(gain);
   gain.connect(ctx.destination);
 
-  // M-2 démarre à cycleStartTime, M-1 démarre à cycleStartTime + beatsPerMeasure * beatDurationSec
-  const cueStartTime = cuePattern.measuresCount >= 2
-    ? cycleStartTime
-    : cycleStartTime + beatsPerMeasure * beatDurationSec;
+  // Temps 1 du cuePattern calé à cycleStartTime + 1 * measureDurationSec (fin de la mesure 0 de décompte)
+  // whenToStartCue = (cycleStartTime + measureDurationSec) - (measureDurationSec - trimStartSec) = cycleStartTime + trimStartSec
+  const whenToStartCue = cycleStartTime + trimStartSec;
 
   try {
-    source.start(cueStartTime);
+    source.start(whenToStartCue);
   } catch (err) {
     console.warn('Erreur au lancement du cue audio:', err);
     return null;

@@ -6,7 +6,7 @@
 import type { VocalStepData } from '../../types/vocalPack.types';
 import { midiToNoteName } from '../../utils/noteUtils';
 
-export type PianoRollTool = 'pointer' | 'glue' | 'cut' | 'erase' | 'text';
+export type PianoRollTool = 'pointer' | 'glue' | 'cut' | 'erase' | 'text' | 'draw_move' | 'paste' | 'split' | 'lyric' | 'melodyne_cut';
 
 export function findBrickRange(steps: VocalStepData[], stepIndex: number): { rootIndex: number; endIndex: number } | null {
   const target = steps[stepIndex];
@@ -105,3 +105,13 @@ export function createSingleNote(steps: VocalStepData[], stepIndex: number, midi
   };
   return next;
 }
+
+export function setMelodyneCutRatio(steps: VocalStepData[], stepIndex: number, ratio: number): VocalStepData[] {
+  const range = findBrickRange(steps, stepIndex);
+  if (!range) return steps;
+  const clamped = Math.max(0.0, Math.min(0.95, Math.round(ratio * 100) / 100));
+  const next = [...steps];
+  next[range.rootIndex] = { ...next[range.rootIndex], melodyneStartRatio: clamped };
+  return next;
+}
+

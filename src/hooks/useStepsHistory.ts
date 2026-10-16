@@ -1,13 +1,29 @@
 /**
  * useStepsHistory.ts
- * Hook d'historique Annuler / Rétablir (Ctrl+Z / Ctrl+Y) plafonné à 10 niveaux.
+ * Historique complet Annuler / Rétablir du Livret 2 (30 snapshots atomiques) (< 115 lignes).
+ * Sauvegarde atomiquement : steps, rawPitchCurve, melodyneRegions et assignedLyricsText.
  */
-import { useState, useCallback } from 'react';
-import type { VocalStepData } from '../types/vocalPack.types';
+import { useState, useCallback, useRef } from 'react';
+import type { VocalStepData, PitchCurvePoint, MelodyneRegion } from '../types/vocalPack.types';
+
+export interface LivretMelodiaSnapshot {
+  steps: VocalStepData[];
+  rawPitchCurve: PitchCurvePoint[];
+  melodyneRegions: MelodyneRegion[];
+  assignedLyricsText: string;
+}
+
+export interface UseStepsHistoryOptions {
+  initialSnapshot: LivretMelodiaSnapshot;
+  maxHistory?: number;
+  onRestore?: (snapshot: LivretMelodiaSnapshot) => void;
+}
 
 export interface UseStepsHistoryReturn {
+  currentSnapshot: LivretMelodiaSnapshot;
   steps: VocalStepData[];
   setSteps: (next: VocalStepData[] | ((prev: VocalStepData[]) => VocalStepData[]), commit?: boolean) => void;
+  commitSnapshot: (snapshot: LivretMelodiaSnapshot) => void;
   undo: () => void;
   redo: () => void;
   canUndo: boolean;
@@ -15,23 +31,48 @@ export interface UseStepsHistoryReturn {
   historyCount: number;
 }
 
-export function useStepsHistory(initialSteps: VocalStepData[], maxHistory = 10): UseStepsHistoryReturn {
-  const [current, setCurrent] = useState<VocalStepData[]>(initialSteps);
-  const [past, setPast] = useState<VocalStepData[][]>([]);
-  const [future, setFuture] = useState<VocalStepData[][]>([]);
+function cloneSnapshot(s: LivretMelodiaSnapshot): LivretMelodiaSnapshot {
+  return {
+    steps: s.steps.map((st) => ({ ...st })),
+    rawPitchCurve: s.rawPitchCurve.map((pt) => ({ ...pt })),
+    melodyneRegions: s.melodyneRegions.map((r) => ({ ...r })),
+    assignedLyricsText: s.assignedLyricsText ?? '',
+  };
+}
+
+export function useStepsHistory(options: UseStepsHistoryOptions): UseStepsHistoryReturn {
+  const { initialSnapshot, maxHistory = 30, onRestore } = options;
+  const [current, setCurrent] = useState<LivretMelodiaSnapshot>(() => cloneSnapshot(initialSnapshot));
+  const [past, setPast] = useState<LivretMelodiaSnapshot[]>([]);
+  const [future, setFuture] = useState<LivretMelodiaSnapshot[]>([]);
+  const onRestoreRef = useRef(onRestore);
+  onRestoreRef.current = onRestore;
+
+  const commitSnapshot = useCallback((nextSnapshot: LivretMelodiaSnapshot) => {
+    setCurrent((prevCurrent) => {
+      const clonedPrev = cloneSnapshot(prevCurrent);
+      setPast((prevPast) => {
+        const nextPast = [...prevPast, clonedPrev];
+        return nextPast.length > maxHistory ? nextPast.slice(nextPast.length - maxHistory) : nextPast;
+      });
+      setFuture([]);
+      return cloneSnapshot(nextSnapshot);
+    });
+  }, [maxHistory]);
 
   const setSteps = useCallback((next: VocalStepData[] | ((prev: VocalStepData[]) => VocalStepData[]), commit = true) => {
     setCurrent((prevCurrent) => {
-      const resolved = typeof next === 'function' ? next(prevCurrent) : next;
+      const resolvedSteps = typeof next === 'function' ? next(prevCurrent.steps) : next;
+      const nextSnap: LivretMelodiaSnapshot = { ...prevCurrent, steps: resolvedSteps };
       if (commit) {
+        const clonedPrev = cloneSnapshot(prevCurrent);
         setPast((prevPast) => {
-          const clonedPrev = prevCurrent.map((s) => ({ ...s }));
           const nextPast = [...prevPast, clonedPrev];
           return nextPast.length > maxHistory ? nextPast.slice(nextPast.length - maxHistory) : nextPast;
         });
         setFuture([]);
       }
-      return resolved;
+      return nextSnap;
     });
   }, [maxHistory]);
 
@@ -39,12 +80,13 @@ export function useStepsHistory(initialSteps: VocalStepData[], maxHistory = 10):
     setPast((prevPast) => {
       if (prevPast.length === 0) return prevPast;
       const previousState = prevPast[prevPast.length - 1];
-      const newPast = prevPast.slice(0, prevPast.length - 1);
+      const nextPast = prevPast.slice(0, prevPast.length - 1);
       setCurrent((curr) => {
-        setFuture((prevFuture) => [curr.map((s) => ({ ...s })), ...prevFuture]);
+        setFuture((prevFuture) => [cloneSnapshot(curr), ...prevFuture]);
+        onRestoreRef.current?.(previousState);
         return previousState;
       });
-      return newPast;
+      return nextPast;
     });
   }, []);
 
@@ -52,21 +94,24 @@ export function useStepsHistory(initialSteps: VocalStepData[], maxHistory = 10):
     setFuture((prevFuture) => {
       if (prevFuture.length === 0) return prevFuture;
       const nextState = prevFuture[0];
-      const newFuture = prevFuture.slice(1);
+      const nextFuture = prevFuture.slice(1);
       setCurrent((curr) => {
         setPast((prevPast) => {
-          const nextPast = [...prevPast, curr.map((s) => ({ ...s }))];
+          const nextPast = [...prevPast, cloneSnapshot(curr)];
           return nextPast.length > maxHistory ? nextPast.slice(nextPast.length - maxHistory) : nextPast;
         });
+        onRestoreRef.current?.(nextState);
         return nextState;
       });
-      return newFuture;
+      return nextFuture;
     });
   }, [maxHistory]);
 
   return {
-    steps: current,
+    currentSnapshot: current,
+    steps: current.steps,
     setSteps,
+    commitSnapshot,
     undo,
     redo,
     canUndo: past.length > 0,

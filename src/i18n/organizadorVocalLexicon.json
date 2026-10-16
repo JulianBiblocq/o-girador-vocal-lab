@@ -478,5 +478,65 @@
     "es": "La evaluación de afinación",
     "de": "Die Null-Rot Intonationsbewertung",
     "it": "La valutazione di intonazione"
+  },
+  {
+    "id": "correcao_melodyne",
+    "category": "estudio",
+    "br": "A correção de afinação Melodyne",
+    "fr": "La correction de hauteur Melodyne",
+    "en": "The Melodyne pitch correction",
+    "es": "La corrección de tono Melodyne",
+    "de": "Die Melodyne-Tonhöhenkorrektur",
+    "it": "La correzione di intonazione Melodyne"
+  },
+  {
+    "id": "ajuste_voz_midi",
+    "category": "estudio",
+    "br": "O ajuste de voz às notas MIDI",
+    "fr": "L'ajustement de la voix aux briques MIDI",
+    "en": "Voice adjustment to MIDI bricks",
+    "es": "Ajuste de voz a notas MIDI",
+    "de": "Stimmenanpassung an MIDI-Noten",
+    "it": "Regolazione voce su note MIDI"
+  },
+  {
+    "id": "voz_bruta",
+    "category": "estudio",
+    "br": "A voz bruta (sem correção)",
+    "fr": "La voix brute (sans correction)",
+    "en": "The raw voice (uncorrected)",
+    "es": "La voz cruda",
+    "de": "Die Rohstimme",
+    "it": "La voce grezza"
+  },
+  {
+    "id": "afinado_travado",
+    "category": "estudio",
+    "br": "A afinação cravada na nota MIDI",
+    "fr": "La hauteur calée sur la note MIDI",
+    "en": "Pitch locked to MIDI note",
+    "es": "Tono fijado a nota MIDI",
+    "de": "Auf MIDI-Note eingerastete Tonhöhe",
+    "it": "Intonazione bloccata su nota MIDI"
+  },
+  {
+    "id": "padrao_espelho",
+    "category": "estudio",
+    "br": "O padrão espelho (Puxador ↔ Coro)",
+    "fr": "Le pattern miroir (Puxador ↔ Coro)",
+    "en": "The mirrored pattern (Lead ↔ Chorus)",
+    "es": "El patrón espejo",
+    "de": "Das gespiegelte Pattern",
+    "it": "Il pattern speculare"
+  },
+  {
+    "id": "sincronizacao_vocal",
+    "category": "estudio",
+    "br": "A sincronização vocal contínua",
+    "fr": "La synchronisation vocale continue",
+    "en": "Continuous vocal synchronization",
+    "es": "Sincronización vocal continua",
+    "de": "Kontinuierliche Gesangssynchronisation",
+    "it": "Sincronizzazione vocale continua"
   }
 ]

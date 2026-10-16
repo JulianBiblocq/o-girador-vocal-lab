@@ -1,4 +1,4 @@
-﻿/**
+/**
  * MetronomeEngine.ts
  * Moteur d horloge Web Audio temps reel haute precision (60 FPS sync).
  * Cycle a 3 etages : Decompte (M-2) -> Anacrouse (M-1) -> Chant (M1..MN).
@@ -20,6 +20,7 @@ export interface MetronomeConfig {
   referencePitch: string;
   listeningMode: ListeningMode;
   outputDeviceId?: string;
+  preRollMeasures?: number;
 }
 
 export class MetronomeEngine {
@@ -30,6 +31,7 @@ export class MetronomeEngine {
   private beatDurationSec = 0;
   private beatsPerMeasure = 4;
   private measuresCount = 2;
+  private preRollMeasures = 2;
   private totalBeats = 16;
   private completionTimerId: number | null = null;
   private onCompleteCallback: (() => void) | null = null;
@@ -63,9 +65,10 @@ export class MetronomeEngine {
     this.measuresCount = Math.max(1, Math.min(4, config.measuresCount));
     this.beatsPerMeasure = getBeatsPerMeasure(config.timeSignature);
     this.beatDurationSec = 60 / config.bpm;
+    this.preRollMeasures = config.preRollMeasures ?? 2;
 
-    // 1 mesure de decompte (M-2) + 1 mesure d anacrouse (M-1) + N mesures de chant
-    this.totalBeats = (2 + this.measuresCount) * this.beatsPerMeasure;
+    // Décompte/écoute (preRollMeasures) + N mesures de chant
+    this.totalBeats = (this.preRollMeasures + this.measuresCount) * this.beatsPerMeasure;
     this.totalDurationSec = this.totalBeats * this.beatDurationSec;
     this.startTime = externalStartTime ?? (ctx.currentTime + 0.08);
 
@@ -106,7 +109,7 @@ export class MetronomeEngine {
       isRunning: this.isRunning, ctx: this.ctx, startTime: this.startTime,
       totalDurationSec: this.totalDurationSec, beatDurationSec: this.beatDurationSec,
       beatsPerMeasure: this.beatsPerMeasure, measuresCount: this.measuresCount,
-      totalBeats: this.totalBeats,
+      totalBeats: this.totalBeats, preRollMeasures: this.preRollMeasures,
     });
   }
 

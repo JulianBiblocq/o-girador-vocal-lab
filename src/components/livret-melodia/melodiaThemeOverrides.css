@@ -1,0 +1,84 @@
+/**
+ * melodiaThemeOverrides.css
+ * Adaptations ergonomiques de contraste pour LivretMelodia en Mode Clair (< 65 lignes).
+ * Préserve à 100% le rendu du Mode Sombre par défaut.
+ */
+
+/* Zone 1 : Bouton Aimant Octave -> Briques */
+.btn-octave-align {
+  background-color: rgba(15, 118, 110, 0.4);
+  color: #2dd4bf;
+  border: 1px solid rgba(45, 212, 191, 0.4);
+}
+.btn-octave-align:hover {
+  background-color: rgba(15, 118, 110, 0.7);
+}
+[data-theme='light'] .btn-octave-align {
+  background-color: #0f766e !important;
+  color: #f4ecd8 !important;
+  font-weight: 700 !important;
+  border: 1px solid #1a1a1a !important;
+  box-shadow: 1px 1px 0px #1a1a1a !important;
+}
+[data-theme='light'] .btn-octave-align:hover {
+  background-color: #115e59 !important;
+}
+
+/* Zone 2 : Champs Letra da Toada (select & input de phrase) */
+.letra-phrase-select {
+  background-color: rgba(0, 0, 0, 0.6);
+  border: 2px solid var(--cordel-border);
+  color: var(--cordel-text);
+}
+.letra-phrase-input {
+  background-color: rgba(0, 0, 0, 0.4);
+  border: 2px solid var(--cordel-border);
+  color: var(--cordel-text);
+}
+[data-theme='light'] .letra-phrase-select,
+[data-theme='light'] .letra-phrase-input {
+  background-color: #f4ecd8 !important;
+  color: #1a1a1a !important;
+  font-weight: 700 !important;
+  border: 2px solid #1a1a1a !important;
+}
+
+/* Zone 3.1 : Champs input des syllabes */
+.letra-syllable-input {
+  background-color: rgba(0, 0, 0, 0.6);
+  border: 1px solid rgba(244, 236, 216, 0.4);
+  color: var(--cordel-text);
+}
+[data-theme='light'] .letra-syllable-input {
+  background-color: #f4ecd8 !important;
+  color: #1a1a1a !important;
+  font-weight: 700 !important;
+  border: 1px solid #1a1a1a !important;
+}
+
+/* Zone 3.2 : Bouton Espace actif (texte blanc crème forcé) */
+.letra-space-btn-active {
+  background-color: var(--cordel-wood) !important;
+  color: #f4ecd8 !important;
+  font-weight: 700 !important;
+  border: 1px solid var(--cordel-border);
+}
+[data-theme='light'] .letra-space-btn-active {
+  background-color: #8b2a1a !important;
+  color: #f4ecd8 !important;
+  font-weight: 700 !important;
+  border: 1px solid #1a1a1a !important;
+}
+
+/* Zone 3.3 : Badge Mots reconstruits en bas */
+.letra-reconstructed-badge {
+  background-color: rgba(0, 0, 0, 0.3);
+  color: var(--cordel-accent-text);
+  border: 1px solid rgba(244, 236, 216, 0.3);
+}
+[data-theme='light'] .letra-reconstructed-badge {
+  background-color: #f4ecd8 !important;
+  color: #1a1a1a !important;
+  font-weight: 700 !important;
+  border: 1px solid #1a1a1a !important;
+}

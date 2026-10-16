@@ -20,6 +20,7 @@ export interface VocalStepData {
   velocity: number; // 0..127 ou 0..1
   decay: number; // Durée relative ou millisecondes
   microtiming?: number; // Décalage fin (nudge en ms ou fraction de pas)
+  melodyneStartRatio?: number; // 0.0 à 0.95 (défaut 0.25) découpe interne d'attaque naturelle
 }
 
 /** Données de calibration de l'anacrouse / mesure d'élan (M-1) */
@@ -80,3 +81,14 @@ export interface VocalPackExport {
   pitchCurve?: PitchCurvePoint[]; // Courbe continue pour affichage Piano Roll
   audio: VocalAudioPayload;
 }
+
+/** Zone de retouche continue Melodyne libre [ In ── Out ] */
+export interface MelodyneRegion {
+  id: string;
+  startSec: number;       // Point IN (en secondes sur la timeline du pattern)
+  endSec: number;         // Point OUT (en secondes sur la timeline du pattern)
+  pitchCenterPct: number; // 0 à 100 % : force de calage de la hauteur moyenne vers la note MIDI
+  flattenPct: number;     // 0 à 100 % : force d'aplatissement/stabilisation des fluctuations
+  targetMidiOverride?: number; // Optionnel : note MIDI cible forcée
+}
+

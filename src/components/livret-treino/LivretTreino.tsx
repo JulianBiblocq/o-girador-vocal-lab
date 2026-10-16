@@ -1,135 +1,75 @@
 /**
  * LivretTreino.tsx
- * Conteneur du Livret 3 : Entrainement Vocal (Karaoke, Appel-Reponse & Courbe Eleve Zero Rouge).
+ * Conteneur principal du Livret 3 (Entraînement Vocal) articulé en 4 ateliers Cordel.
+ * Intègre des icônes vectorielles SVG monochromes et un Kill-Switch audio strict au changement d'onglet.
+ * Strictement < 120 lignes.
  */
-import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
-import { useToadaProject } from '../../context/ToadaProjectContext';
+
+import React, { useState, useCallback, useEffect } from 'react';
 import { useLanguage } from '../../i18n/LanguageContext';
-import { TrainerConfigBar, type TrainerScope, type StudentRole, type TrainerGuideMode } from './TrainerConfigBar';
-import { KaraokeLyricsBanner, type KaraokeSyllableItem } from './KaraokeLyricsBanner';
-import { PianoRollEditor } from '../livret-melodia/PianoRollEditor';
-import { StudentTrainerEngine } from '../../audio/StudentTrainerEngine';
-import { analyzeStudentTake, type StudentAnalysisResult } from '../../audio/studentPitchAnalyzer';
-import { exportStudentEvaluationJson } from '../../utils/studentEvaluationExporter';
-import { getBeatsPerMeasure } from '../../utils/musicalMath';
-import { Play, Square, Download, Volume2 } from 'lucide-react';
+import { AmbitusFinderPanel } from './AmbitusFinderPanel';
+import { MaracatuVocalGames } from './MaracatuVocalGames';
+import { PronunciationCardsPanel } from './PronunciationCardsPanel';
+import { ChanterToadaWorkshop } from './ChanterToadaWorkshop';
+import { triggerTreinoKillSwitch } from '../../audio/maracatuVocalGameEngine';
+import { Compass, Target, Volume2, Mic } from 'lucide-react';
+
+export type TreinoSubTab = 'ambitus' | 'warmup' | 'posture_diction' | 'chanter_toada';
 
 export const LivretTreino: React.FC = () => {
-  const { project, activePattern } = useToadaProject();
   const { t } = useLanguage();
-  const engine = useMemo(() => new StudentTrainerEngine(), []);
-  const playheadSecRef = useRef<number>(0);
+  const [activeSubTab, setActiveSubTab] = useState<TreinoSubTab>('ambitus');
 
-  const [scope, setScope] = useState<TrainerScope>('pattern');
-  const [studentRole, setStudentRole] = useState<StudentRole>('coro');
-  const [guideMode, setGuideMode] = useState<TrainerGuideMode>('autonomous');
-  const [speedRatio, setSpeedRatio] = useState<number>(1.0);
+  useEffect(() => {
+    return () => {
+      triggerTreinoKillSwitch();
+    };
+  }, []);
 
-  const [isTraining, setIsTraining] = useState<boolean>(false);
-  const [isPlayingComparative, setIsPlayingComparative] = useState<boolean>(false);
-  const [activeStepIndex, setActiveStepIndex] = useState<number>(0);
-  const [studentPCM, setStudentPCM] = useState<Float32Array | null>(null);
-  const [analysisResult, setAnalysisResult] = useState<StudentAnalysisResult | null>(null);
+  const handleSelectTab = useCallback((nextTab: TreinoSubTab) => {
+    if (nextTab === activeSubTab) return;
+    // Sécurité Kill-Switch : coupe immédiatement flux micro, RAF et nœuds Web Audio de l'atelier précédent
+    triggerTreinoKillSwitch();
+    setActiveSubTab(nextTab);
+  }, [activeSubTab]);
 
-  const bpm = Math.max(30, Math.round(project.bpm * speedRatio));
-  const beatsPerMeasure = getBeatsPerMeasure(project.timeSignature);
-  const beatDur = 60 / bpm;
-  const measuresCount = activePattern.measuresCount;
-  const anacrusisDurationSec = beatsPerMeasure * beatDur;
-  const totalDurationSec = (1 + measuresCount) * beatsPerMeasure * beatDur;
-
-  const allSteps = useMemo(() => {
-    return activePattern.pack?.grid.steps ?? activePattern.mainSteps ?? [];
-  }, [activePattern]);
-
-  const syllables: KaraokeSyllableItem[] = useMemo(() => {
-    return allSteps.map((s, idx) => ({ text: s.syllable || '', stepIndex: idx })).filter((s) => s.text.length > 0);
-  }, [allSteps]);
-
-  useEffect(() => () => { engine.stop(); }, [engine]);
-
-  const handleStartTraining = useCallback(async () => {
-    setIsTraining(true); setAnalysisResult(null); setStudentPCM(null);
-    await engine.startTraining(
-      { pattern: activePattern, bpm, beatsPerMeasure, measuresCount, studentRole, guideMode },
-      (elapsedSec, step) => { playheadSecRef.current = elapsedSec; setActiveStepIndex(step); },
-      (pcm, sampleRate) => {
-        setIsTraining(false); setStudentPCM(pcm);
-        const analysis = analyzeStudentTake({ rawPCM: pcm, sampleRate, totalDurationSec, targetSteps: allSteps, bpm, shouldAnalyzeNotes: true });
-        setAnalysisResult(analysis);
-      }
-    );
-  }, [engine, activePattern, bpm, beatsPerMeasure, measuresCount, studentRole, guideMode, totalDurationSec, allSteps]);
-
-  const handleStop = useCallback(() => {
-    engine.stop(); setIsTraining(false); setIsPlayingComparative(false);
-  }, [engine]);
-
-  const handlePlayComparative = useCallback(async () => {
-    if (!studentPCM) return;
-    setIsPlayingComparative(true);
-    await engine.playComparative(studentPCM, 44100, () => setIsPlayingComparative(false));
-  }, [engine, studentPCM]);
-
-  const handleExport = useCallback(() => {
-    if (!analysisResult) return;
-    exportStudentEvaluationJson({
-      patternId: activePattern.id, patternName: activePattern.name, patternRole: activePattern.role,
-      accuracyScore: analysisResult.accuracyScore, okNotes: analysisResult.okNotes, totalNotes: analysisResult.totalNotes,
-      studentPitchCurve: analysisResult.studentPitchCurve, date: new Date().toISOString(),
-    });
-  }, [analysisResult, activePattern]);
+  const tabs: { id: TreinoSubTab; label: string; Icon: React.FC<{ className?: string }> }[] = [
+    { id: 'ambitus', label: t('tabAmbitus'), Icon: Compass },
+    { id: 'warmup', label: t('tabWarmup'), Icon: Target },
+    { id: 'posture_diction', label: t('tabPostureDiction'), Icon: Volume2 },
+    { id: 'chanter_toada', label: t('tabChanterToada'), Icon: Mic },
+  ];
 
   return (
-    <div className="flex flex-col gap-3 w-full max-w-none">
-      <TrainerConfigBar
-        scope={scope} onScopeChange={setScope} studentRole={studentRole} onStudentRoleChange={setStudentRole}
-        guideMode={guideMode} onGuideModeChange={setGuideMode} speedRatio={speedRatio} onSpeedRatioChange={setSpeedRatio}
-        disabled={isTraining || isPlayingComparative}
-      />
-      <KaraokeLyricsBanner
-        currentRole={activePattern.role} studentRole={studentRole} patternName={activePattern.name}
-        syllables={syllables} activeStepIndex={activeStepIndex}
-      />
-      <div className="w-full pointer-events-none">
-        <PianoRollEditor
-          allSteps={allSteps} pitchCurve={analysisResult?.studentPitchCurve ?? []}
-          totalDurationSec={totalDurationSec} anacrusisDurationSec={anacrusisDurationSec}
-          beatsPerMeasure={beatsPerMeasure} beatResolutions={[4, 4, 4, 4]} seekStartSec={0}
-          isPlaying={isTraining || isPlayingComparative} tonic="C" scaleType="chromatic" smoothingLevel={1}
-          getPlayheadSec={() => playheadSecRef.current} onUpdateSteps={() => {}} onSeek={() => {}}
-          onSetTonic={() => {}} onSetScaleType={() => {}} onSetSmoothingLevel={() => {}} onPlayNotePreview={() => {}}
-        />
+    <div className="w-full space-y-4">
+      {/* Barre de navigation des 4 sous-ateliers Cordel avec icônes SVG monochromes */}
+      <div className="flex flex-wrap gap-2 border-b-2 border-[#1a1a1a] pb-3 select-none">
+        {tabs.map(({ id, label, Icon }) => {
+          const isActive = activeSubTab === id;
+          return (
+            <button
+              key={id}
+              type="button"
+              onClick={() => handleSelectTab(id)}
+              className={`px-3 py-1.5 text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 border-2 border-[#1a1a1a] shadow-[2px_2px_0px_#1a1a1a] rounded-none transition-transform cursor-pointer ${
+                isActive
+                  ? 'bg-[#8b2a1a] text-[#f4ecd8] -translate-y-0.5 shadow-[3px_3px_0px_#1a1a1a]'
+                  : 'bg-[#fcfaf2] dark:bg-[#24211d] text-[#1a1a1a] dark:text-[#f4ecd8] hover:bg-[#f5edd6] dark:hover:bg-[#2f2b25]'
+              }`}
+            >
+              <Icon className="w-3.5 h-3.5 shrink-0 stroke-current" />
+              <span>{label}</span>
+            </button>
+          );
+        })}
       </div>
-      <div className="cordel-card p-2.5 w-full flex flex-wrap items-center justify-between gap-3 bg-black/60 select-none">
-        <div className="flex items-center gap-2">
-          {!isTraining ? (
-            <button type="button" onClick={handleStartTraining} className="cordel-btn-primary py-1 px-3.5 flex items-center gap-1.5 text-xs font-bold rounded-none cursor-pointer">
-              <Play className="w-4 h-4 fill-current text-emerald-400" /><span>{t('btn_start_training')}</span>
-            </button>
-          ) : (
-            <button type="button" onClick={handleStop} className="bg-red-800 text-white animate-pulse py-1 px-3.5 flex items-center gap-1.5 text-xs font-bold rounded-none cursor-pointer">
-              <Square className="w-4 h-4 fill-current" /><span>{t('btn_stop_training')}</span>
-            </button>
-          )}
-          {studentPCM && (
-            <button type="button" disabled={isTraining} onClick={isPlayingComparative ? handleStop : handlePlayComparative} className="cordel-btn-secondary py-1 px-3 flex items-center gap-1 text-xs font-mono font-bold rounded-none cursor-pointer">
-              <Volume2 className="w-3.5 h-3.5" /><span>{isPlayingComparative ? t('btn_stop_training') : t('btn_listen_student_solo')}</span>
-            </button>
-          )}
-        </div>
-        <div className="flex items-center gap-2.5">
-          {analysisResult && (
-            <span className="px-3 py-1 font-mono font-bold text-xs bg-black/80 border border-emerald-500/50 text-emerald-400">
-              {t('trainer_accuracy_badge', { score: analysisResult.accuracyScore, ok: analysisResult.okNotes, total: analysisResult.totalNotes })}
-            </span>
-          )}
-          {analysisResult && (
-            <button type="button" onClick={handleExport} className="cordel-btn py-1 px-2.5 flex items-center gap-1 text-xs font-mono rounded-none cursor-pointer text-stone-300">
-              <Download className="w-3.5 h-3.5" /><span>{t('export_student_report')}</span>
-            </button>
-          )}
-        </div>
+
+      {/* Rendu dynamique de l'atelier sélectionné */}
+      <div className="w-full">
+        {activeSubTab === 'ambitus' && <AmbitusFinderPanel />}
+        {activeSubTab === 'warmup' && <MaracatuVocalGames />}
+        {activeSubTab === 'posture_diction' && <PronunciationCardsPanel />}
+        {activeSubTab === 'chanter_toada' && <ChanterToadaWorkshop />}
       </div>
     </div>
   );

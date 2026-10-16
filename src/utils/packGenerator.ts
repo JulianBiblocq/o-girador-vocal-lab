@@ -1,4 +1,4 @@
-﻿import type { TimeSignatureString, VocalPackExport } from '../types/vocalPack.types';
+import type { TimeSignatureString, VocalPackExport } from '../types/vocalPack.types';
 import type { AlignmentResult } from './alignmentMath';
 import { extractCompensatedSlice, audioBufferToWavBase64 } from './wavEncoder';
 
@@ -17,6 +17,7 @@ export interface PackGeneratorParams {
   alignment: AlignmentResult;
   highPassFilterEnabled?: boolean;
   normalizeRMS?: boolean;
+  enableTonePolish?: boolean;
 }
 
 export function generateVocalPack(params: PackGeneratorParams): VocalPackExport {
@@ -24,11 +25,11 @@ export function generateVocalPack(params: PackGeneratorParams): VocalPackExport 
     rawPCM, sampleRate, trimStartSec, trimEndSec, latencyOffsetMs,
     bpm, timeSignature, measuresCount, beatsPerMeasure,
     beatResolutions, referencePitch, alignment,
-    highPassFilterEnabled = true, normalizeRMS = true,
+    highPassFilterEnabled = true, normalizeRMS = true, enableTonePolish = true,
   } = params;
 
   const cleanPCM = extractCompensatedSlice(
-    rawPCM, sampleRate, trimStartSec, trimEndSec, latencyOffsetMs, highPassFilterEnabled, normalizeRMS
+    rawPCM, sampleRate, trimStartSec, trimEndSec, latencyOffsetMs, highPassFilterEnabled, normalizeRMS, enableTonePolish
   );
   const audioBase64 = audioBufferToWavBase64(cleanPCM, sampleRate);
 

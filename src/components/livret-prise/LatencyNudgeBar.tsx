@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { Sliders, RotateCcw, ChevronDown, Check } from 'lucide-react';
 import {
   DEFAULT_LATENCY_OFFSET_MS,
@@ -66,6 +66,7 @@ export const LatencyNudgeBar: React.FC<LatencyNudgeBarProps> = ({
               value={latencyOffsetMs}
               disabled={disabled}
               onChange={(e) => updateOffset(Number(e.target.value))}
+              onMouseUp={(e) => e.currentTarget.blur()} onTouchEnd={(e) => e.currentTarget.blur()}
               className="flex-1 accent-[var(--cordel-wood)] cursor-pointer"
             />
 

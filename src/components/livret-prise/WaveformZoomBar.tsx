@@ -40,10 +40,10 @@ export const WaveformZoomBar: React.FC<WaveformZoomBarProps> = ({
               key={preset}
               type="button"
               onClick={() => onSetZoom(preset)}
-              className={`px-2 py-0.5 rounded font-mono text-[11px] transition-colors ${
+              className={`px-2 py-0.5 rounded-none font-mono text-[11px] transition-colors cursor-pointer ${
                 isActive
-                  ? 'bg-amber-500/30 text-amber-300 font-bold border border-amber-500/50 shadow-sm'
-                  : 'bg-white/5 hover:bg-white/10 text-theme-ink/80'
+                  ? 'bg-[#9a3412] text-[#f4ecd8] font-bold border-2 border-[#1a1a1a] shadow-[1px_1px_0px_#1a1a1a]'
+                  : 'bg-white/5 hover:bg-white/10 text-theme-ink/80 border border-transparent'
               }`}
             >
               {preset === 1 ? t('zoomComplete') : `${preset}x`}
@@ -55,7 +55,7 @@ export const WaveformZoomBar: React.FC<WaveformZoomBarProps> = ({
           onClick={onZoomIn}
           disabled={zoomLevel >= 7.95}
           title={t('zoomInTitle')}
-          className="px-2 py-0.5 rounded bg-white/5 hover:bg-white/10 active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed text-theme-ink font-mono"
+          className="px-2 py-0.5 rounded-none bg-white/5 hover:bg-white/10 active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed text-theme-ink font-mono cursor-pointer"
         >
           🔍+
         </button>
@@ -66,7 +66,7 @@ export const WaveformZoomBar: React.FC<WaveformZoomBarProps> = ({
           type="button"
           onClick={onSeeStart}
           title={t('zoomSeeStartTitle')}
-          className="px-2 py-0.5 rounded bg-sky-950/60 border border-sky-500/40 text-sky-300 hover:bg-sky-900/60 font-mono text-[11px] flex items-center gap-1 transition-all active:scale-95"
+          className="px-2 py-0.5 rounded-none bg-[#0f766e] border-2 border-[#1a1a1a] shadow-[1px_1px_0px_#1a1a1a] text-[#f4ecd8] hover:bg-[#115e59] font-mono text-[11px] font-bold flex items-center gap-1 transition-all active:scale-95 cursor-pointer"
         >
           {t('zoomSeeStart')}
         </button>
@@ -74,7 +74,7 @@ export const WaveformZoomBar: React.FC<WaveformZoomBarProps> = ({
           type="button"
           onClick={onSeeEnd}
           title={t('zoomSeeEndTitle')}
-          className="px-2 py-0.5 rounded bg-red-950/60 border border-red-500/40 text-red-300 hover:bg-red-900/60 font-mono text-[11px] flex items-center gap-1 transition-all active:scale-95"
+          className="px-2 py-0.5 rounded-none bg-[#b45309] border-2 border-[#1a1a1a] shadow-[1px_1px_0px_#1a1a1a] text-[#f4ecd8] hover:bg-[#92400e] font-mono text-[11px] font-bold flex items-center gap-1 transition-all active:scale-95 cursor-pointer"
         >
           {t('zoomSeeEnd')}
         </button>

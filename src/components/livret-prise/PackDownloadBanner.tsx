@@ -40,10 +40,10 @@ export const PackDownloadBanner: React.FC<PackDownloadBannerProps> = ({ exported
       <div className="flex items-center gap-2">
         <button
           type="button" onClick={handleDownloadToada}
-          className="cordel-btn-primary py-1 px-3 flex items-center gap-1.5 text-xs font-bold rounded-none cursor-pointer"
+          className="cordel-btn-primary py-1 px-3 flex items-center gap-1.5 text-xs font-bold rounded-none cursor-pointer !text-[#f4ecd8] text-[var(--cordel-on-primary)]"
         >
-          <Download className="w-3.5 h-3.5" />
-          <span>{t('export_toada_pack')}</span>
+          <Download className="w-3.5 h-3.5 !text-[#f4ecd8] text-[var(--cordel-on-primary)]" />
+          <span className="!text-[#f4ecd8] text-[var(--cordel-on-primary)]">{t('export_toada_pack')}</span>
         </button>
         <button
           type="button" onClick={handleDownloadLegacy}

@@ -6,10 +6,12 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "deploy": "tsc -b && vite build && firebase deploy --only hosting:vocal-lab",
     "lint": "oxlint",
     "preview": "vite preview"
   },
   "dependencies": {
+    "firebase": "^13.0.0",
     "lucide-react": "^1.57.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8"

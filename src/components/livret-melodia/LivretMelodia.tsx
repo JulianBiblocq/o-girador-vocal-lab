@@ -1,128 +1,148 @@
-/**
- * LivretMelodia.tsx
- * Conteneur du Livret 2 : Piano Roll zoomable avec règle Seek,
- * Transport centré entre Piano Roll et Letra, raccourcis Espace & Ctrl+Z/Y.
- */
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import type { PitchCurvePoint, VocalPackExport } from '../../types/vocalPack.types';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import type { PitchCurvePoint, VocalPackExport, VocalStepData } from '../../types/vocalPack.types';
+import { useToadaProject } from '../../context/ToadaProjectContext'; import { useStepsHistory, type LivretMelodiaSnapshot } from '../../hooks/useStepsHistory';
+import { useMelodyneAudioProcessor } from '../../hooks/useMelodyneAudioProcessor';
 import { MelodicPreviewPlayer, type MelodicPlayMode } from '../../audio/MelodicPreviewPlayer';
-import { quantizePitchToSteps } from '../../audio/stepQuantizer';
+import { quantizePitchToSteps } from '../../audio/pitchToStepsQuantizer';
+import { alignPitchCurveOctaveToBricks, applyOctaveShiftToMelodia } from '../../audio/pitchOctaveGuider';
 import type { ScaleType } from '../../audio/scaleQuantizer';
-import { useStepsHistory } from '../../hooks/useStepsHistory';
-import { PianoRollEditor } from './PianoRollEditor';
-import { LetraEditorPanel } from './LetraEditorPanel';
-import { MelodicControls } from './MelodicControls';
+import { applyLyricsSyllablesToSteps } from '../../utils/syllableAligner';
+import { downloadToadaPackJson } from '../../utils/toadaPackExporter';
+import { useVocalTransportStore } from '../../stores/useVocalTransportStore';
+import { PianoRollEditor } from './PianoRollEditor'; import { MelodyneControlsBar } from './MelodyneControlsBar';
+import { MelodicControls } from './MelodicControls'; import { LetraEditorPanel } from './LetraEditorPanel';
+import { moveBrick, eraseBrick, type PianoRollTool } from './pianoRollInteractions';
+import { getPatternT1OffsetSec } from '../../utils/anacrusisTimingHelper'; import { resetLivret1MelodicData, buildUpdatedVocalPackExport } from '../../audio/livretResetHelper';
+import { useLanguage } from '../../i18n/LanguageContext';
 
 interface LivretMelodiaProps {
-  initialPack: VocalPackExport;
-  cleanPCM: Float32Array;
-  sampleRate: number;
-  totalDurationSec: number;
-  anacrusisDurationSec: number;
-  beatsPerMeasure: number;
-  measuresCount: number;
-  pitchCurve: PitchCurvePoint[];
-  initialSteps: any[];
-  outputDeviceId?: string;
-  pitchShiftSemitones?: number;
-  onBackToPrise: () => void;
-  onPackUpdated: (pack: VocalPackExport) => void;
+  initialPack: VocalPackExport; cleanPCM: Float32Array; sampleRate: number; totalDurationSec: number;
+  anacrusisDurationSec: number; beatsPerMeasure: number; measuresCount: number; pitchCurve: PitchCurvePoint[];
+  initialSteps: VocalStepData[]; outputDeviceId?: string; pitchShiftSemitones?: number;
+  onBackToPrise: () => void; onPackUpdated: (pack: VocalPackExport) => void;
 }
 
-export const LivretMelodia: React.FC<LivretMelodiaProps> = (props) => {
-  const { initialPack, cleanPCM, sampleRate, totalDurationSec, anacrusisDurationSec, beatsPerMeasure, measuresCount, pitchCurve, initialSteps, outputDeviceId, pitchShiftSemitones = 0, onBackToPrise, onPackUpdated } = props;
+export const LivretMelodia: React.FC<LivretMelodiaProps> = ({
+  initialPack, cleanPCM, sampleRate, totalDurationSec, anacrusisDurationSec, beatsPerMeasure,
+  measuresCount, pitchCurve, initialSteps, outputDeviceId, pitchShiftSemitones = 0, onBackToPrise, onPackUpdated
+}) => {
+  const { t } = useLanguage(), { activePattern, updatePattern, project } = useToadaProject();
+  const [playMode, setPlayMode] = useState<MelodicPlayMode>('duo'), [clickEnabled, setClickEnabled] = useState(true), [isPlaying, setIsPlaying] = useState(false);
+  const [seekStartSec, setSeekStartSec] = useState(0), [activeTool, setActiveTool] = useState<PianoRollTool>('pointer'), [selectedStepIdx, setSelectedStepIdx] = useState<number | null>(null);
+  const [tonic, setTonic] = useState(() => initialPack.metadata.referencePitch?.replace(/\d+$/, '') || 'C'), [scaleType, setScaleType] = useState<ScaleType>('chromatic'), [smoothingLevel, setSmoothingLevel] = useState(0.5);
 
-  const { steps: allSteps, setSteps: setAllSteps, undo, redo, canUndo, canRedo, historyCount } = useStepsHistory(initialSteps, 10);
-  const [playMode, setPlayMode] = useState<MelodicPlayMode>('duo');
-  const [clickEnabled, setClickEnabled] = useState<boolean>(true);
-  const [isPlaying, setIsPlaying] = useState<boolean>(false);
-  const [seekStartSec, setSeekStartSec] = useState<number>(0);
-  const [tonic, setTonic] = useState<string>(() => initialPack.metadata.referencePitch?.replace(/\d+$/, '') || 'C');
-  const [scaleType, setScaleType] = useState<ScaleType>('chromatic');
-  const [smoothingLevel, setSmoothingLevel] = useState<number>(0.5);
+  const rawPCM = useMemo(() => activePattern.rawAudioSamples ?? cleanPCM, [activePattern.rawAudioSamples, cleanPCM]);
+  const rawPitchCurve = useMemo(() => activePattern.rawPitchCurve ?? pitchCurve, [activePattern.rawPitchCurve, pitchCurve]);
+  const hasAnac = activePattern.hasAnacrusis !== false, anacLen = hasAnac ? beatsPerMeasure * (initialPack.metadata.beatResolutions?.[0] || 4) : 0;
+  const t1OffsetSec = getPatternT1OffsetSec(hasAnac, beatsPerMeasure * (60 / initialPack.metadata.bpm));
+
+  const { regions, selectedRegionId, selectedRegion, displayedCurve, isProcessing, setSelectedRegionId, addRegion, addWholePhraseRegion, updateSelectedRegion, updateBounds, deleteSelected, clearAllRegions, restoreRegions } = useMelodyneAudioProcessor({
+    initialRegions: activePattern.melodyneRegions || [], rawAudio: rawPCM, sampleRate, totalDurationSec, rawPitchCurve, allSteps: initialSteps,
+    onAudioUpdated: (pcm, updatedRegions) => updatePattern(activePattern.id, { correctedAudioSamples: pcm, melodyneRegions: updatedRegions }),
+  });
+
+  const { steps: allSteps, setSteps: setAllSteps, commitSnapshot, undo, redo, canUndo, canRedo, historyCount } = useStepsHistory({
+    initialSnapshot: { steps: initialSteps, rawPitchCurve, melodyneRegions: regions, assignedLyricsText: activePattern.assignedLyricsText || '' }, maxHistory: 30,
+    onRestore: (snap) => {
+      restoreRegions(snap.melodyneRegions);
+      updatePattern(activePattern.id, { rawPitchCurve: snap.rawPitchCurve, pitchCurve: snap.rawPitchCurve, melodyneRegions: snap.melodyneRegions, assignedLyricsText: snap.assignedLyricsText, anacrusisSteps: hasAnac ? snap.steps.slice(0, anacLen) : [], mainSteps: (hasAnac ? snap.steps.slice(anacLen) : snap.steps).map((s, idx) => ({ ...s, stepIndex: idx })) });
+    },
+  });
+
+  const commitCurrentSnapshot = useCallback((partial?: Partial<LivretMelodiaSnapshot>) => {
+    commitSnapshot({ steps: partial?.steps ?? allSteps, rawPitchCurve: partial?.rawPitchCurve ?? rawPitchCurve, melodyneRegions: partial?.melodyneRegions ?? regions, assignedLyricsText: partial?.assignedLyricsText ?? (activePattern.assignedLyricsText || '') });
+  }, [commitSnapshot, allSteps, rawPitchCurve, regions, activePattern.assignedLyricsText]);
 
   const player = useMemo(() => new MelodicPreviewPlayer(), []);
   useEffect(() => () => player.stop(), [player]);
+  const activePCM = activePattern.correctedAudioSamples ?? rawPCM;
 
   const handleTogglePlay = useCallback(async () => {
     if (isPlaying) { player.stop(); setIsPlaying(false); return; }
     setIsPlaying(true);
-    await player.play({
-      cleanPCM, sampleRate, totalDurationSec, allSteps, bpm: initialPack.metadata.bpm,
-      beatsPerMeasure, playMode, clickEnabled, pitchShiftSemitones, seekStartSec, outputDeviceId, onEnded: () => setIsPlaying(false),
-    });
-  }, [player, isPlaying, cleanPCM, sampleRate, totalDurationSec, allSteps, initialPack, beatsPerMeasure, playMode, clickEnabled, seekStartSec, outputDeviceId]);
+    await player.play({ cleanPCM: activePCM, sampleRate, totalDurationSec, allSteps, bpm: initialPack.metadata.bpm, beatsPerMeasure, playMode, clickEnabled, pitchShiftSemitones, seekStartSec, hasAnacrusis: hasAnac, t1OffsetSec, outputDeviceId, onEnded: () => setIsPlaying(false) });
+  }, [player, isPlaying, activePCM, sampleRate, totalDurationSec, allSteps, initialPack, beatsPerMeasure, playMode, clickEnabled, pitchShiftSemitones, seekStartSec, hasAnac, t1OffsetSec, outputDeviceId]);
 
   const handleSeek = useCallback((sec: number) => {
     setSeekStartSec(sec);
     if (isPlaying) {
-      player.play({
-        cleanPCM, sampleRate, totalDurationSec, allSteps, bpm: initialPack.metadata.bpm,
-        beatsPerMeasure, playMode, clickEnabled, pitchShiftSemitones, seekStartSec: sec, outputDeviceId, onEnded: () => setIsPlaying(false),
-      });
+      player.stop();
+      player.play({ cleanPCM: activePCM, sampleRate, totalDurationSec, allSteps, bpm: initialPack.metadata.bpm, beatsPerMeasure, playMode, clickEnabled, pitchShiftSemitones, seekStartSec: sec, hasAnacrusis: hasAnac, t1OffsetSec, outputDeviceId, onEnded: () => setIsPlaying(false) });
     }
-  }, [isPlaying, player, cleanPCM, sampleRate, totalDurationSec, allSteps, initialPack, beatsPerMeasure, playMode, clickEnabled, outputDeviceId]);
+  }, [isPlaying, player, activePCM, sampleRate, totalDurationSec, allSteps, initialPack, beatsPerMeasure, playMode, clickEnabled, pitchShiftSemitones, hasAnac, t1OffsetSec, outputDeviceId]);
 
-  // Raccourcis Espace & Ctrl+Z / Ctrl+Y
+  const handleUpdateSteps = useCallback((newSteps: VocalStepData[], commit = true) => {
+    setAllSteps(newSteps, commit);
+    updatePattern(activePattern.id, { anacrusisSteps: hasAnac ? newSteps.slice(0, anacLen) : [], mainSteps: (hasAnac ? newSteps.slice(anacLen) : newSteps).map((s, idx) => ({ ...s, stepIndex: idx })), isMidiInitialized: true });
+  }, [setAllSteps, hasAnac, anacLen, activePattern.id, updatePattern]);
+
+  const recompute = useCallback((smooth: number, ton: string, sc: ScaleType) => {
+    const q = quantizePitchToSteps({ pitchCurve: rawPitchCurve, bpm: initialPack.metadata.bpm, beatsPerMeasure, measuresCount, beatResolutions: initialPack.metadata.beatResolutions, trimStartSec: 0, trimEndSec: totalDurationSec, hasAnacrusis: hasAnac, t1OffsetSec, smoothingLevel: smooth, tonic: ton, scaleType: sc, pcm: rawPCM, sampleRate });
+    const rawSteps = hasAnac ? [...q.anacrusisSteps, ...q.gridSteps] : q.gridSteps;
+    const steps = activePattern.assignedLyricsText ? applyLyricsSyllablesToSteps(rawSteps, activePattern.assignedLyricsText) : rawSteps;
+    commitCurrentSnapshot({ steps }); handleUpdateSteps(steps, false);
+  }, [rawPitchCurve, initialPack, beatsPerMeasure, measuresCount, totalDurationSec, hasAnac, t1OffsetSec, rawPCM, sampleRate, activePattern.assignedLyricsText, commitCurrentSnapshot, handleUpdateSteps]);
+
+  const handleResetFromLivret1 = useCallback(() => {
+    clearAllRegions();
+    const res = resetLivret1MelodicData({ rawAudio: rawPCM, sampleRate, totalDurationSec, activePattern, initialPack, beatsPerMeasure, measuresCount, hasAnacrusis: hasAnac, t1OffsetSec, smoothingLevel, tonic, scaleType });
+    commitCurrentSnapshot({ steps: res.newSteps, rawPitchCurve: res.freshCurve, melodyneRegions: [] });
+    setAllSteps(res.newSteps, false);
+    updatePattern(activePattern.id, { rawPitchCurve: res.freshCurve, pitchCurve: res.freshCurve, anacrusisSteps: res.anacrusisSteps, mainSteps: res.mainSteps, correctedAudioSamples: null, melodyneRegions: [], isMidiInitialized: true, midiLocked: false });
+    window.dispatchEvent(new CustomEvent('app-toast', { detail: { message: t('reExtractSuccessToast'), type: 'success' } }));
+  }, [clearAllRegions, rawPCM, sampleRate, totalDurationSec, activePattern, initialPack, beatsPerMeasure, measuresCount, hasAnac, t1OffsetSec, smoothingLevel, tonic, scaleType, commitCurrentSnapshot, setAllSteps, updatePattern, t]);
+
+  const handleShiftOctave = useCallback((delta: -1 | 1) => {
+    const { newCurve, newSteps } = applyOctaveShiftToMelodia(rawPitchCurve, allSteps, selectedRegion, totalDurationSec, delta, hasAnac, beatsPerMeasure, initialPack.metadata.beatResolutions?.[0] || 4);
+    commitCurrentSnapshot({ steps: newSteps, rawPitchCurve: newCurve }); handleUpdateSteps(newSteps, false);
+    updatePattern(activePattern.id, { rawPitchCurve: newCurve, pitchCurve: newCurve });
+  }, [rawPitchCurve, allSteps, selectedRegion, totalDurationSec, hasAnac, beatsPerMeasure, initialPack, commitCurrentSnapshot, handleUpdateSteps, updatePattern, activePattern.id]);
+
+  const handleAlignOctaveToBricks = useCallback(() => {
+    const stepDur = totalDurationSec / (allSteps.length || 1), newCurve = alignPitchCurveOctaveToBricks(rawPitchCurve, allSteps, stepDur, 0);
+    commitCurrentSnapshot({ rawPitchCurve: newCurve }); updatePattern(activePattern.id, { rawPitchCurve: newCurve, pitchCurve: newCurve });
+  }, [totalDurationSec, allSteps, rawPitchCurve, commitCurrentSnapshot, updatePattern, activePattern.id]);
+
+  const handleDeleteSelected = useCallback(() => {
+    if (selectedRegionId) { commitCurrentSnapshot({ melodyneRegions: regions.filter((r) => r.id !== selectedRegionId) }); deleteSelected(); }
+    else if (selectedStepIdx !== null) { const next = eraseBrick(allSteps, selectedStepIdx); commitCurrentSnapshot({ steps: next }); handleUpdateSteps(next, false); }
+  }, [selectedRegionId, selectedStepIdx, commitCurrentSnapshot, regions, deleteSelected, allSteps, handleUpdateSteps]);
+
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      const tag = (document.activeElement?.tagName || '').toUpperCase();
-      const isInput = tag === 'INPUT' || tag === 'TEXTAREA' || (document.activeElement as HTMLElement)?.isContentEditable;
-      if (e.code === 'Space' && !isInput) { e.preventDefault(); handleTogglePlay(); }
-      if ((e.ctrlKey || e.metaKey) && !isInput) {
-        if (e.key === 'z' || e.key === 'Z') { e.preventDefault(); if (e.shiftKey) redo(); else undo(); }
-        else if (e.key === 'y' || e.key === 'Y') { e.preventDefault(); redo(); }
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [handleTogglePlay, undo, redo]);
-
-  const recompute = useCallback((lvl: number, t: string, st: ScaleType) => {
-    const q = quantizePitchToSteps({
-      pitchCurve, bpm: initialPack.metadata.bpm, beatsPerMeasure, measuresCount,
-      beatResolutions: initialPack.metadata.beatResolutions, trimStartSec: 0, trimEndSec: totalDurationSec,
-      smoothingLevel: lvl, tonic: t, scaleType: st, pcm: cleanPCM, sampleRate,
+    const s = useVocalTransportStore.getState(); s.setActiveLivret('melodia');
+    s.registerHandlers({
+      togglePlay: handleTogglePlay, stop: () => { player.stop(); setIsPlaying(false); }, undo, redo, deleteSelected: handleDeleteSelected,
+      seekRelative: (d: number) => handleSeek(Math.max(0, Math.min(totalDurationSec, seekStartSec + d))),
+      onMidiNote: (m: number) => { if (selectedStepIdx !== null) handleUpdateSteps(moveBrick(allSteps, selectedStepIdx, m)); },
     });
-    const newSteps = [...q.anacrusisSteps, ...q.gridSteps];
-    setAllSteps((prev) => newSteps.map((s, idx) => ({ ...s, syllable: prev[idx]?.syllable || '' })));
-  }, [pitchCurve, initialPack, beatsPerMeasure, measuresCount, totalDurationSec, cleanPCM, sampleRate, setAllSteps]);
+  }, [handleTogglePlay, player, undo, redo, handleDeleteSelected, handleSeek, totalDurationSec, seekStartSec, selectedStepIdx, allSteps, handleUpdateSteps]);
 
-  const handleDownloadPack = useCallback(() => {
-    const anacrusisCount = beatsPerMeasure * (initialPack.metadata.beatResolutions[0] || 4);
-    const updatedPack: VocalPackExport = {
-      ...initialPack,
-      alignment: { ...initialPack.alignment, anacrusis: { ...initialPack.alignment.anacrusis, steps: allSteps.slice(0, anacrusisCount) } },
-      grid: { steps: allSteps.slice(anacrusisCount).map((s, idx) => ({ ...s, stepIndex: idx })), totalSteps: allSteps.length - anacrusisCount },
-      pitchCurve,
-    };
-    onPackUpdated(updatedPack);
-    const blob = new Blob([JSON.stringify(updatedPack, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a'); a.href = url;
-    a.download = `vocal-pack-${initialPack.metadata.timeSignature.replace('/', '-')}-${initialPack.metadata.bpm}bpm.json`;
-    a.click(); URL.revokeObjectURL(url);
-  }, [allSteps, beatsPerMeasure, initialPack, pitchCurve, onPackUpdated]);
+  useEffect(() => { useVocalTransportStore.getState().setIsPlaying(isPlaying); }, [isPlaying]);
 
   return (
     <div className="flex flex-col gap-3 w-full">
       <PianoRollEditor
-        allSteps={allSteps} pitchCurve={pitchCurve} totalDurationSec={totalDurationSec} anacrusisDurationSec={anacrusisDurationSec}
-        beatsPerMeasure={beatsPerMeasure} beatResolutions={initialPack.metadata.beatResolutions} seekStartSec={seekStartSec}
-        isPlaying={isPlaying} tonic={tonic} scaleType={scaleType} smoothingLevel={smoothingLevel} canUndo={canUndo} canRedo={canRedo} historyCount={historyCount}
-        getPlayheadSec={() => player.getCurrentPlayheadSec()} onSeek={handleSeek} onUndo={undo} onRedo={redo}
-        onSetTonic={(t) => { setTonic(t); recompute(smoothingLevel, t, scaleType); }}
-        onSetScaleType={(st) => { setScaleType(st); recompute(smoothingLevel, tonic, st); }}
-        onSetSmoothingLevel={(lvl) => { setSmoothingLevel(lvl); recompute(lvl, tonic, scaleType); }}
-        onUpdateSteps={(steps) => setAllSteps(steps, true)} onPlayNotePreview={(m) => player.playNotePreview(m)}
+        allSteps={allSteps} pitchCurve={displayedCurve} totalDurationSec={totalDurationSec} anacrusisDurationSec={anacrusisDurationSec}
+        beatsPerMeasure={beatsPerMeasure} beatResolutions={initialPack.metadata.beatResolutions} seekStartSec={seekStartSec} isPlaying={isPlaying}
+        tonic={tonic} scaleType={scaleType} smoothingLevel={smoothingLevel} canUndo={canUndo} canRedo={canRedo} historyCount={historyCount}
+        hasAnacrusis={hasAnac} bpm={initialPack.metadata.bpm} regions={regions} selectedRegionId={selectedRegionId} activeTool={activeTool} onSelectTool={setActiveTool}
+        selectedStepIdx={selectedStepIdx} onSelectStep={setSelectedStepIdx} getPlayheadSec={() => player.getCurrentPlayheadSec()} onSeek={handleSeek} onUndo={undo} onRedo={redo}
+        onSetTonic={(t) => { setTonic(t); recompute(smoothingLevel, t, scaleType); }} onSetScaleType={(st) => { setScaleType(st); recompute(smoothingLevel, tonic, st); }}
+        onSetSmoothingLevel={(lvl) => { setSmoothingLevel(lvl); recompute(lvl, tonic, scaleType); }} onUpdateSteps={handleUpdateSteps} onPlayNotePreview={(m) => player.playNotePreview(m)} onReExtractNotes={handleResetFromLivret1}
+        onSelectRegion={setSelectedRegionId} onAddRegion={(s0, s1) => { commitCurrentSnapshot(); addRegion(s0, s1); }} onUpdateRegionBounds={updateBounds} onDeleteSelectedRegion={() => { commitCurrentSnapshot(); deleteSelected(); }}
+      />
+      <MelodyneControlsBar
+        selectedRegion={selectedRegion} regionsCount={regions.length} isProcessing={isProcessing} isToolActive={activeTool === 'melodyne_cut'} onActivateTool={() => setActiveTool('melodyne_cut')}
+        onAddWholePhrase={() => { commitCurrentSnapshot(); addWholePhraseRegion(); }} onUpdateSelected={updateSelectedRegion} onDeleteSelected={() => { commitCurrentSnapshot(); deleteSelected(); }}
+        onShiftOctave={handleShiftOctave} onAlignOctaveToBricks={handleAlignOctaveToBricks}
+        onClearAllMelodyne={() => { commitCurrentSnapshot({ melodyneRegions: [] }); clearAllRegions(); window.dispatchEvent(new CustomEvent('app-toast', { detail: { message: t('melodynePurgeToast'), type: 'info' } })); }}
       />
       <MelodicControls
-        isPlaying={isPlaying} playMode={playMode} clickEnabled={clickEnabled} onTogglePlay={handleTogglePlay}
-        onResetSeek={() => handleSeek(0)} onSetPlayMode={(m) => { setPlayMode(m); player.setPlayMode(m, clickEnabled); }}
-        onToggleClick={() => setClickEnabled((p) => { const n = !p; player.setPlayMode(playMode, n); return n; })}
-        onBackToPrise={onBackToPrise} onDownloadPack={handleDownloadPack}
+        isPlaying={isPlaying} playMode={playMode} clickEnabled={clickEnabled} onTogglePlay={handleTogglePlay} onResetSeek={() => handleSeek(0)}
+        onSetPlayMode={(m) => { setPlayMode(m); player.setPlayMode(m, clickEnabled); }} onToggleClick={() => setClickEnabled((p) => { const n = !p; player.setPlayMode(playMode, n); return n; })}
+        onBackToPrise={onBackToPrise} onDownloadPack={() => { const u = buildUpdatedVocalPackExport(initialPack, allSteps, hasAnac, beatsPerMeasure, displayedCurve); onPackUpdated(u); downloadToadaPackJson(project, u); }}
       />
-      <LetraEditorPanel allSteps={allSteps} onUpdateSteps={(steps) => setAllSteps(steps, true)} />
+      <LetraEditorPanel allSteps={allSteps} onUpdateSteps={handleUpdateSteps} onCommitHistory={() => commitCurrentSnapshot()} />
     </div>
   );
 };

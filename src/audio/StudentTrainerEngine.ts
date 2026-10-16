@@ -41,7 +41,8 @@ export class StudentTrainerEngine {
     const sampleRate = await this.recorder.prepare(this.ctx, config.deviceId);
     const beatDur = 60 / config.bpm;
     const countdownSec = config.beatsPerMeasure * beatDur;
-    const singingSec = (1 + config.measuresCount) * config.beatsPerMeasure * beatDur;
+    const hasAnac = config.pattern.hasAnacrusis !== false;
+    const singingSec = (hasAnac ? 1 + config.measuresCount : config.measuresCount) * config.beatsPerMeasure * beatDur;
     const totalSec = countdownSec + singingSec;
     const startTime = this.ctx.currentTime + 0.08;
 
@@ -55,9 +56,13 @@ export class StudentTrainerEngine {
     const shouldMuteVoice = config.guideMode === 'autonomous' &&
       (config.studentRole === 'all' || config.studentRole === config.pattern.role);
 
-    if (!shouldMuteVoice && config.pattern.recordingResult?.pcm) {
-      const pcm = config.pattern.recordingResult.pcm;
-      const sr = config.pattern.recordingResult.sampleRate;
+    const voicePCM = (config.pattern.correctedAudioSamples && (config.pattern.pitchCorrectionAmount ?? 0) > 0)
+      ? config.pattern.correctedAudioSamples
+      : config.pattern.recordingResult?.pcm;
+
+    if (!shouldMuteVoice && voicePCM) {
+      const pcm = voicePCM;
+      const sr = config.pattern.recordingResult?.sampleRate ?? 44100;
       const buffer = this.ctx.createBuffer(1, pcm.length, sr);
       buffer.getChannelData(0).set(pcm);
 

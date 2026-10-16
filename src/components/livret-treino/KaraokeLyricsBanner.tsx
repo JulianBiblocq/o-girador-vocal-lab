@@ -32,14 +32,14 @@ export const KaraokeLyricsBanner: React.FC<KaraokeLyricsBannerProps> = ({
     <div className="cordel-card p-3 w-full flex flex-col md:flex-row md:items-center justify-between gap-3 bg-stone-950/80 border border-theme-border/60 select-none">
       {/* 1. Badges de role et de tour de chant */}
       <div className="flex items-center gap-2 shrink-0">
-        <span className={`px-2 py-0.5 text-xs font-black tracking-wider uppercase ${isPux ? 'bg-role-puxador text-white' : 'bg-role-coro text-white'}`}>
+        <span className={`px-2 py-0.5 text-xs font-black tracking-wider uppercase ${isPux ? 'bg-role-puxador text-[#f4ecd8]' : 'bg-role-coro text-[#f4ecd8]'}`}>
           {isPux ? t('rolePuxador') : t('roleCoro')}
         </span>
         <span className="text-xs font-mono font-bold text-theme-ink/80 truncate max-w-[120px]">
           {patternName}
         </span>
         <span className={`px-2 py-0.5 text-[11px] font-black font-mono tracking-wide ${
-          isStudentTurn ? 'bg-emerald-600 text-white animate-pulse' : 'bg-stone-800 text-stone-400'
+          isStudentTurn ? 'bg-emerald-600 text-[#f4ecd8] animate-pulse' : 'bg-stone-800 text-stone-400'
         }`}>
           {isStudentTurn ? t('karaoke_your_turn') : t('karaoke_listen_guide')}
         </span>

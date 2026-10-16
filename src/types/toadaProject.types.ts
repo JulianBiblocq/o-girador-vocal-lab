@@ -3,7 +3,8 @@
  * Modele de donnees de la Toada complete :
  * Multi-patterns (Puxador / Coro), Matrice de Declinaisons Audio & Frise Conducteur.
  */
-import type { TimeSignatureString, VocalStepData, PitchCurvePoint, VocalPackExport } from './vocalPack.types';
+import type { TimeSignatureString, VocalStepData, PitchCurvePoint, VocalPackExport, MelodyneRegion } from './vocalPack.types';
+import type { ToadaDocument } from './toadaDocument.types';
 
 export type VocalRole = 'puxador' | 'coro';
 
@@ -23,6 +24,7 @@ export interface VocalAudioVariant {
   trimStartSec: number;
   trimEndSec: number;
   lowCutEnabled: boolean;
+  enableTonePolish?: boolean;
 }
 
 export interface VocalPatternItem {
@@ -30,17 +32,29 @@ export interface VocalPatternItem {
   name: string;
   role: VocalRole;
   measuresCount: 1 | 2 | 3 | 4;
+  linkedSourcePatternId?: string | null;
+  baseBpm?: number;
+  referencePitch?: string;
+  pitchCorrectionAmount?: number;
+  rawAudioSamples?: Float32Array | null;
+  correctedAudioSamples?: Float32Array | null;
+  rawPitchCurve?: PitchCurvePoint[];
   variants: Record<string, VocalAudioVariant>;
   activeVariantKey: string;
   recordingResult: { pcm: Float32Array; sampleRate: number } | null;
-  trimStartSec: number;
-  trimEndSec: number;
-  lowCutEnabled: boolean;
-  anacrusisSteps: VocalStepData[];
-  mainSteps: VocalStepData[];
-  pitchCurve: PitchCurvePoint[];
-  pack?: VocalPackExport | null;
-  midiLocked?: boolean;
+  trimStartSec: number; trimEndSec: number; lowCutEnabled: boolean; enableTonePolish?: boolean;
+  anacrusisSteps: VocalStepData[]; mainSteps: VocalStepData[]; pitchCurve: PitchCurvePoint[];
+  pack?: VocalPackExport | null; midiLocked?: boolean; isMidiInitialized?: boolean; hasAnacrusis?: boolean;
+  melodyneRegions?: MelodyneRegion[]; assignedLyricsText?: string; assignedPhoneticText?: string;
+  variantPitchesConfig?: VariantPitchesConfig; variantSpeedsConfig?: VariantSpeedsConfig;
+}
+
+export interface VariantPitchesConfig {
+  refSemitones: number; lowSemitones: number; highSemitones: number; enableHigh: boolean;
+}
+
+export interface VariantSpeedsConfig {
+  speed1Pct: number; speed2Pct: number; speed3Pct: number; enableSpeed3: boolean;
 }
 
 export interface ToadaArrangementSlot {
@@ -57,6 +71,7 @@ export interface ToadaProject {
   patterns: VocalPatternItem[];
   slots: ToadaArrangementSlot[];
   activePatternId: string;
+  toadaMeta?: Partial<ToadaDocument>;
 }
 
 export function computeVariantCoverage(speedRatio: number, pitchShiftSemitones: number): VocalAudioVariantCoverage {
@@ -87,26 +102,31 @@ export function createDefaultVariant(speedRatio: number, pitchShiftSemitones: nu
     trimStartSec: 0,
     trimEndSec: 0,
     lowCutEnabled: true,
+    enableTonePolish: true,
   };
 }
 
 export function createDefaultVocalPattern(
   role: VocalRole = 'puxador',
   name = 'Appel 1',
-  measuresCount: 1 | 2 | 3 | 4 = 2
+  measuresCount: 1 | 2 | 3 | 4 = 2,
+  baseBpm = 55,
+  referencePitch = 'C4'
 ): VocalPatternItem {
   const v1 = createDefaultVariant(1.0, 0);
-  const v2 = createDefaultVariant(0.74, 0);
-  const v3 = createDefaultVariant(1.0, -8);
-  const v4 = createDefaultVariant(0.74, -8);
+  const v2 = createDefaultVariant(0.75, 0);
+  const v3 = createDefaultVariant(1.0, -4);
+  const v4 = createDefaultVariant(0.75, -4);
   const variants: Record<string, VocalAudioVariant> = {
     [v1.variantKey]: v1, [v2.variantKey]: v2, [v3.variantKey]: v3, [v4.variantKey]: v4,
   };
   return {
     id: `pat-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
-    name, role, measuresCount, variants, activeVariantKey: v1.variantKey,
-    recordingResult: null, trimStartSec: 0, trimEndSec: 0, lowCutEnabled: true,
-    anacrusisSteps: [], mainSteps: [], pitchCurve: [], pack: null,
+    name, role, measuresCount, baseBpm, referencePitch, variants, activeVariantKey: v1.variantKey,
+    recordingResult: null, trimStartSec: 0, trimEndSec: 0, lowCutEnabled: true, enableTonePolish: true,
+    anacrusisSteps: [], mainSteps: [], pitchCurve: [], pack: null, hasAnacrusis: true, melodyneRegions: [],
+    variantPitchesConfig: { refSemitones: 0, lowSemitones: -4, highSemitones: 4, enableHigh: false },
+    variantSpeedsConfig: { speed1Pct: 100, speed2Pct: 75, speed3Pct: 115, enableSpeed3: false },
   };
 }
 

@@ -19,6 +19,8 @@ interface PriseConfigGridProps {
   onMeasuresCountChange: (count: number) => void;
   beatResolutions: number[];
   onBeatResolutionsChange: (res: number[]) => void;
+  hasAnacrusis?: boolean;
+  onHasAnacrusisChange?: (has: boolean) => void;
   listeningMode: ListeningMode;
   onListeningModeChange: (mode: ListeningMode) => void;
   referencePitch: string;
@@ -36,6 +38,7 @@ interface PriseConfigGridProps {
 export const PriseConfigGrid: React.FC<PriseConfigGridProps> = ({
   timeSignature, onTimeSignatureChange, bpm, onBpmChange, measuresCount,
   onMeasuresCountChange, beatResolutions, onBeatResolutionsChange,
+  hasAnacrusis = true, onHasAnacrusisChange,
   listeningMode, onListeningModeChange, referencePitch, effectivePitch, onReferencePitchChange,
   engine, selectedDeviceId, onSelectedDeviceChange, selectedOutputDeviceId,
   onSelectedOutputDeviceChange, recordedSampleRate, isCycleActive,
@@ -46,7 +49,9 @@ export const PriseConfigGrid: React.FC<PriseConfigGridProps> = ({
         timeSignature={timeSignature} onTimeSignatureChange={onTimeSignatureChange}
         bpm={bpm} onBpmChange={onBpmChange} measuresCount={measuresCount}
         onMeasuresCountChange={onMeasuresCountChange} beatResolutions={beatResolutions}
-        onBeatResolutionsChange={onBeatResolutionsChange} disabled={isCycleActive}
+        onBeatResolutionsChange={onBeatResolutionsChange}
+        hasAnacrusis={hasAnacrusis} onHasAnacrusisChange={onHasAnacrusisChange}
+        disabled={isCycleActive}
       />
       <ListeningModePanel
         listeningMode={listeningMode} onListeningModeChange={onListeningModeChange}

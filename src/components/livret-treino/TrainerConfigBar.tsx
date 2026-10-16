@@ -57,7 +57,7 @@ export const TrainerConfigBar: React.FC<TrainerConfigBarProps> = ({
         <button
           type="button" disabled={disabled} onClick={() => onStudentRoleChange('coro')}
           className={`px-2 py-1 text-[11px] font-bold rounded-none cursor-pointer ${
-            studentRole === 'coro' ? 'bg-role-coro text-white font-black shadow' : 'cordel-btn opacity-60 hover:opacity-100'
+            studentRole === 'coro' ? 'bg-role-coro text-[#f4ecd8] font-black shadow' : 'cordel-btn opacity-60 hover:opacity-100'
           }`}
         >
           {t('trainer_role_coro')}
@@ -65,7 +65,7 @@ export const TrainerConfigBar: React.FC<TrainerConfigBarProps> = ({
         <button
           type="button" disabled={disabled} onClick={() => onStudentRoleChange('puxador')}
           className={`px-2 py-1 text-[11px] font-bold rounded-none cursor-pointer ${
-            studentRole === 'puxador' ? 'bg-role-puxador text-white font-black shadow' : 'cordel-btn opacity-60 hover:opacity-100'
+            studentRole === 'puxador' ? 'bg-role-puxador text-[#f4ecd8] font-black shadow' : 'cordel-btn opacity-60 hover:opacity-100'
           }`}
         >
           {t('trainer_role_puxador')}
@@ -102,7 +102,7 @@ export const TrainerConfigBar: React.FC<TrainerConfigBarProps> = ({
         <button
           type="button" disabled={disabled} onClick={() => onGuideModeChange('autonomous')}
           className={`px-2 py-1 text-[11px] font-bold rounded-none cursor-pointer ${
-            guideMode === 'autonomous' ? 'bg-amber-600 text-white font-black shadow' : 'cordel-btn opacity-60 hover:opacity-100'
+            guideMode === 'autonomous' ? 'bg-[#9a3412] text-[#f4ecd8] border-2 border-[#1a1a1a] font-black shadow' : 'cordel-btn opacity-60 hover:opacity-100'
           }`}
           title="La partie que vous devez chanter est mise en sourdine pour chanter seul !"
         >

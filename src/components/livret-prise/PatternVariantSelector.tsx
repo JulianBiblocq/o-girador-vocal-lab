@@ -1,14 +1,19 @@
 /**
  * PatternVariantSelector.tsx
- * Matrice visuelle de déclinaisons audio multi-vitesses et multi-hauteurs.
- * Contraste optimisé Mode Clair & Sombre selon les règles sémantiques Cordel.
+ * Matrice visuelle de déclinaisons audio multi-vitesses et multi-hauteurs symétriques.
+ * Support du Mode Fourchette libre en demi-tons et 3e vitesse configurable.
  */
-import React, { useState } from 'react';
+import React from 'react';
 import { useToadaProject } from '../../context/ToadaProjectContext';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { makeVariantKey, createDefaultVariant } from '../../types/toadaProject.types';
 import { getTransposedNoteDisplay } from '../../utils/musicalMath';
-import { Volume2 } from 'lucide-react';
+import { VariantConfigBar } from './VariantConfigBar';
+import { VariantCardTile } from './VariantCardTile';
+import {
+  DEFAULT_REF_SEMITONES, DEFAULT_LOW_SEMITONES, DEFAULT_HIGH_SEMITONES,
+  DEFAULT_SPEED_2_PCT, DEFAULT_SPEED_3_PCT,
+} from './variantConfigTypes';
 
 interface PatternVariantSelectorProps {
   baseBpm?: number;
@@ -20,15 +25,30 @@ interface PatternVariantSelectorProps {
 export const PatternVariantSelector: React.FC<PatternVariantSelectorProps> = ({
   baseBpm, referencePitch = 'C4', onPlayPitchPreview, disabled,
 }) => {
-  const { activePattern, activeVariant, setActiveVariantKey, ensureVariantExists, project } = useToadaProject();
+  const { activePattern, activeVariant, setActiveVariantKey, ensureVariantExists, project, updatePattern } = useToadaProject();
   const { t, locale } = useLanguage();
-  const [showTier3Speed, setShowTier3Speed] = useState(false);
-  const [showTier3Pitch, setShowTier3Pitch] = useState(false);
-  const [altPitch, setAltPitch] = useState<-8 | 8>(-8);
 
   const effectiveBaseBpm = baseBpm ?? project.bpm;
-  const speeds = showTier3Speed ? [1.0, 0.74, 0.55] : [1.0, 0.74];
-  const pitches = showTier3Pitch ? [-8, 0, 8] : [0, altPitch];
+  const pCfg = activePattern.variantPitchesConfig ?? {
+    refSemitones: DEFAULT_REF_SEMITONES, lowSemitones: DEFAULT_LOW_SEMITONES,
+    highSemitones: DEFAULT_HIGH_SEMITONES, enableHigh: false,
+  };
+  const sCfg = activePattern.variantSpeedsConfig ?? {
+    speed1Pct: 100, speed2Pct: DEFAULT_SPEED_2_PCT, speed3Pct: DEFAULT_SPEED_3_PCT, enableSpeed3: false,
+  };
+
+  const setPCfg = (patch: Partial<typeof pCfg>) => {
+    updatePattern(activePattern.id, { variantPitchesConfig: { ...pCfg, ...patch } });
+  };
+  const setSCfg = (patch: Partial<typeof sCfg>) => {
+    updatePattern(activePattern.id, { variantSpeedsConfig: { ...sCfg, ...patch } });
+  };
+
+  const speeds = [1.0, sCfg.speed2Pct / 100];
+  if (sCfg.enableSpeed3) speeds.push(sCfg.speed3Pct / 100);
+
+  const pitches = [pCfg.refSemitones, pCfg.lowSemitones];
+  if (pCfg.enableHigh) pitches.push(pCfg.highSemitones);
 
   const handleSelect = (s: number, p: number) => {
     if (disabled) return;
@@ -36,90 +56,57 @@ export const PatternVariantSelector: React.FC<PatternVariantSelectorProps> = ({
     setActiveVariantKey(activePattern.id, key);
   };
 
+  const roleBg = activePattern.role === 'puxador' ? 'bg-[#9a3412]' : 'bg-[#0f766e]';
+  const roleLabel = activePattern.role === 'puxador' ? t('rolePuxador') : t('roleCoro');
+  const activeNoteLabel = getTransposedNoteDisplay(referencePitch, pCfg.refSemitones, locale).label;
+
   return (
     <div className="cordel-card p-2.5 flex flex-col gap-2">
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--cordel-border)] pb-1.5">
-        <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--cordel-text)]">
-          {t('pattern_variants_title')}
-        </span>
-        <div className="flex items-center gap-1.5">
-          {!showTier3Pitch && (
-            <button
-              type="button" disabled={disabled} onClick={() => setAltPitch((prev) => (prev === -8 ? 8 : -8))}
-              className="cordel-btn px-1.5 py-0.5 text-[10px] rounded-none cursor-pointer"
-            >
-              {altPitch === -8 ? t('variant_pitch_low') : t('variant_pitch_high')}
-            </button>
-          )}
-          <button
-            type="button" disabled={disabled} onClick={() => setShowTier3Speed((v) => !v)}
-            className="cordel-btn px-1.5 py-0.5 text-[10px] rounded-none cursor-pointer"
-          >
-            {showTier3Speed ? '- 55%' : t('variant_add_speed_3')}
-          </button>
-          <button
-            type="button" disabled={disabled} onClick={() => setShowTier3Pitch((v) => !v)}
-            className="cordel-btn px-1.5 py-0.5 text-[10px] rounded-none cursor-pointer"
-          >
-            {showTier3Pitch ? '- 3e' : t('variant_add_pitch_3')}
-          </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <div className={`px-2 py-0.5 ${roleBg} text-[#f4ecd8] font-mono font-bold text-xs flex items-center gap-1.5 shadow-sm border border-amber-400`}>
+            <span className="uppercase tracking-wider">{roleLabel} :</span>
+            <span className="truncate max-w-[150px] sm:max-w-none">{activePattern.name}</span>
+            <span className="text-amber-200">•</span>
+            <span>{t('measureUnitShort', { n: activePattern.measuresCount })}</span>
+            <span className="text-amber-200">•</span>
+            <span>{activeNoteLabel}</span>
+            <span className="text-amber-200">•</span>
+            <span>{effectiveBaseBpm} BPM</span>
+          </div>
+          <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--cordel-text)] hidden md:inline">
+            {t('pattern_variants_title')}
+          </span>
         </div>
       </div>
+
+      <VariantConfigBar
+        refSemitones={pCfg.refSemitones} lowSemitones={pCfg.lowSemitones} highSemitones={pCfg.highSemitones}
+        enableHighPitch={pCfg.enableHigh} speed2Pct={sCfg.speed2Pct} speed3Pct={sCfg.speed3Pct}
+        enableSpeed3={sCfg.enableSpeed3} baseBpm={effectiveBaseBpm} referencePitch={referencePitch}
+        locale={locale} disabled={disabled}
+        onRefSemitonesChange={(v) => setPCfg({ refSemitones: v })}
+        onLowSemitonesChange={(v) => setPCfg({ lowSemitones: v })}
+        onHighSemitonesChange={(v) => setPCfg({ highSemitones: v })}
+        onToggleHighPitch={() => setPCfg({ enableHigh: !pCfg.enableHigh })}
+        onSpeed2Change={(v) => setSCfg({ speed2Pct: v })}
+        onSpeed3Change={(v) => setSCfg({ speed3Pct: v })}
+        onToggleSpeed3={() => setSCfg({ enableSpeed3: !sCfg.enableSpeed3 })}
+        t={t}
+      />
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
         {speeds.flatMap((s) =>
           pitches.map((p) => {
             const vKey = makeVariantKey(s, p);
             const variant = activePattern.variants[vKey] ?? createDefaultVariant(s, p);
-            const isRecorded = variant.recordingResult !== null;
-            const isActive = activeVariant.variantKey === vKey;
-            const bpmDisplay = Math.round(effectiveBaseBpm * s);
-            const speedPercent = Math.round(s * 100);
-            const noteDisplay = getTransposedNoteDisplay(referencePitch, p, locale);
-
             return (
-              <div
-                key={vKey} onClick={() => handleSelect(s, p)}
-                className={`p-2 border text-left flex flex-col justify-between gap-1 transition-all rounded-none cursor-pointer select-none ${
-                  isActive
-                    ? 'bg-[#9a3412] text-white border-2 border-[var(--cordel-border)] shadow-md font-bold'
-                    : 'bg-[var(--cordel-surface)] border border-[var(--cordel-border)] hover:border-amber-600'
-                }`}
-              >
-                <div className="flex items-center justify-between text-[11px] leading-tight">
-                  <span className={`font-bold ${isActive ? 'text-white' : 'text-[var(--cordel-text)]'}`}>
-                    {speedPercent} % ({bpmDisplay} BPM)
-                  </span>
-                  {onPlayPitchPreview && (
-                    <button
-                      type="button" title={`${t('listenPitch')} ${noteDisplay.noteCode}`}
-                      onClick={(e) => { e.stopPropagation(); onPlayPitchPreview(noteDisplay.noteCode); }}
-                      className={`p-0.5 cursor-pointer ${isActive ? 'text-white hover:text-[#fde68a]' : 'text-[var(--cordel-text)] hover:text-amber-500'}`}
-                    >
-                      <Volume2 className="w-3.5 h-3.5" />
-                    </button>
-                  )}
-                </div>
-                <div
-                  className={`text-[10px] font-mono truncate ${
-                    isActive ? 'text-[#fde68a] font-bold' : 'text-[var(--cordel-accent-text)] font-bold'
-                  }`}
-                  title={noteDisplay.label}
-                >
-                  {noteDisplay.label}
-                </div>
-                <div className="flex items-center gap-1 text-[10px] pt-0.5">
-                  {isRecorded ? (
-                    <span className={isActive ? 'text-white font-bold' : 'text-[#15803d] dark:text-emerald-400 font-bold'}>
-                      {t('variant_status_recorded')}
-                    </span>
-                  ) : (
-                    <span className={isActive ? 'text-white/90 font-semibold' : 'text-[#44403c] dark:text-stone-400 font-semibold'}>
-                      {t('variant_status_pending')}
-                    </span>
-                  )}
-                </div>
-              </div>
+              <VariantCardTile
+                key={vKey} speedRatio={s} pitchShiftSemitones={p} baseBpm={effectiveBaseBpm}
+                referencePitch={referencePitch} locale={locale} isRecorded={variant.recordingResult !== null}
+                isActive={activeVariant.variantKey === vKey} disabled={disabled}
+                onSelect={() => handleSelect(s, p)} onPlayPitchPreview={onPlayPitchPreview} t={t}
+              />
             );
           })
         )}

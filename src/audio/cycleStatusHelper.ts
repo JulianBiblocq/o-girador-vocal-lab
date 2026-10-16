@@ -1,4 +1,4 @@
-﻿/**
+/**
  * cycleStatusHelper.ts
  * Calcul de la phase (M-2 Décompte, M-1 Anacrouse, M1..MN Chant) et de la progression.
  */
@@ -23,12 +23,13 @@ export function computeCycleStatus(params: {
   beatsPerMeasure: number;
   measuresCount: number;
   totalBeats: number;
+  preRollMeasures?: number;
 }): CycleStatus {
-  const { isRunning, ctx, startTime, totalDurationSec, beatDurationSec, beatsPerMeasure, measuresCount, totalBeats } = params;
+  const { isRunning, ctx, startTime, totalDurationSec, beatDurationSec, beatsPerMeasure, measuresCount, totalBeats, preRollMeasures = 2 } = params;
 
   if (!isRunning || !ctx) {
     return {
-      phase: 'idle', currentMeasure: -2, currentBeat: 0,
+      phase: 'idle', currentMeasure: -preRollMeasures, currentBeat: 0,
       beatsPerMeasure, beatIndexInCycle: 0, beatProgress: 0, elapsedSec: 0, totalDurationSec
     };
   }
@@ -36,7 +37,7 @@ export function computeCycleStatus(params: {
   const elapsed = ctx.currentTime - startTime;
   if (elapsed < 0) {
     return {
-      phase: 'countdown', currentMeasure: -2, currentBeat: 0,
+      phase: 'countdown', currentMeasure: -preRollMeasures, currentBeat: 0,
       beatsPerMeasure, beatIndexInCycle: 0, beatProgress: 0, elapsedSec: 0, totalDurationSec
     };
   }
@@ -55,20 +56,34 @@ export function computeCycleStatus(params: {
   const beatProgress = totalBeatFraction - beatIndexInCycle;
 
   let phase: 'countdown' | 'anacrusis' | 'singing' = 'countdown';
-  let currentMeasure = -2;
+  let currentMeasure = -preRollMeasures;
   let currentBeat = beatIndexInCycle;
 
-  if (beatIndexInCycle < beatsPerMeasure) {
+  const anacrusisBeatStart = (preRollMeasures - 1) * beatsPerMeasure;
+  const singingBeatStart = preRollMeasures * beatsPerMeasure;
+
+  if (preRollMeasures <= 1) {
+    if (beatIndexInCycle < singingBeatStart) {
+      phase = 'countdown';
+      currentMeasure = -1;
+      currentBeat = beatIndexInCycle;
+    } else {
+      phase = 'singing';
+      const singingBeatIdx = beatIndexInCycle - singingBeatStart;
+      currentMeasure = Math.floor(singingBeatIdx / beatsPerMeasure);
+      currentBeat = singingBeatIdx % beatsPerMeasure;
+    }
+  } else if (beatIndexInCycle < anacrusisBeatStart) {
     phase = 'countdown';
-    currentMeasure = -2;
-    currentBeat = beatIndexInCycle;
-  } else if (beatIndexInCycle < 2 * beatsPerMeasure) {
+    currentMeasure = -preRollMeasures + Math.floor(beatIndexInCycle / beatsPerMeasure);
+    currentBeat = beatIndexInCycle % beatsPerMeasure;
+  } else if (beatIndexInCycle < singingBeatStart) {
     phase = 'anacrusis';
     currentMeasure = -1;
-    currentBeat = beatIndexInCycle - beatsPerMeasure;
+    currentBeat = beatIndexInCycle - anacrusisBeatStart;
   } else {
     phase = 'singing';
-    const singingBeatIdx = beatIndexInCycle - 2 * beatsPerMeasure;
+    const singingBeatIdx = beatIndexInCycle - singingBeatStart;
     currentMeasure = Math.floor(singingBeatIdx / beatsPerMeasure);
     currentBeat = singingBeatIdx % beatsPerMeasure;
   }

@@ -6,13 +6,18 @@
 import React, { useState, useEffect } from 'react';
 import { LanguageProvider, useLanguage } from './i18n/LanguageContext';
 import { ToadaProjectProvider } from './context/ToadaProjectContext';
-import { PatternLibraryBar } from './components/conductor/PatternLibraryBar';
-import { ToadaConductorStrip } from './components/conductor/ToadaConductorStrip';
 import { LivretPrise } from './components/livret-prise/LivretPrise';
+import { PackHeaderActions } from './components/header/PackHeaderActions';
+import { RoleModeSwitcher } from './components/header/RoleModeSwitcher';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { CordelDialogModal } from './components/ui/CordelDialogModal';
+import { useGlobalTransportShortcuts } from './hooks/useGlobalTransportShortcuts';
+import { useVocalLabMidi } from './hooks/useVocalLabMidi';
 import { Mic, Sun, Moon } from 'lucide-react';
 
 const AppContent: React.FC = () => {
+  useGlobalTransportShortcuts();
+  useVocalLabMidi();
   const { locale, setLocale, t } = useLanguage();
   const [theme, setTheme] = useState<'dark' | 'light'>(() => {
     try {
@@ -29,13 +34,36 @@ const AppContent: React.FC = () => {
     try { localStorage.setItem('ogirador_vocal_lab_theme', theme); } catch {}
   }, [theme]);
 
+  useEffect(() => {
+    let pattern = 'damas';
+    try {
+      const saved = localStorage.getItem('ogirador-wallpaper');
+      if (saved === 'none' || saved === 'rosace' || saved === 'damas' || saved === 'gravure') {
+        pattern = saved === 'rosace' ? 'gravure' : saved;
+      }
+    } catch {}
+    const classes = ['has-wallpaper-none', 'has-wallpaper-rosace', 'has-wallpaper-damas', 'has-wallpaper-gravure'];
+    classes.forEach((c) => document.body.classList.remove(c));
+    document.body.classList.add(`has-wallpaper-${pattern}`);
+  }, []);
+
+  useEffect(() => {
+    const blockContextMenu = (e: MouseEvent) => e.preventDefault();
+    window.addEventListener('contextmenu', blockContextMenu);
+    return () => window.removeEventListener('contextmenu', blockContextMenu);
+  }, []);
+
   const toggleTheme = () => {
     setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
   };
 
   return (
-    <div className="min-h-screen bg-theme-bg text-theme-ink flex flex-col p-2.5 sm:p-4 md:p-6 transition-colors duration-200">
-      <header className="w-full max-w-none mb-3 cordel-card p-3 sm:p-4 flex flex-wrap items-center justify-between gap-3">
+    <div className="relative min-h-screen bg-theme-bg text-theme-ink flex flex-col p-2.5 sm:p-4 md:p-6 transition-colors duration-200 overflow-x-hidden">
+      <div
+        className="fixed inset-0 pointer-events-none z-0 wallpaper-surface-bg"
+        aria-hidden="true"
+      />
+      <header className="relative z-10 w-full max-w-none mb-3 cordel-card p-3 sm:p-4 flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <div className="p-2 cordel-card-sm bg-theme-wood text-white shrink-0">
             <Mic className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
@@ -50,8 +78,10 @@ const AppContent: React.FC = () => {
           </div>
         </div>
 
-        {/* Controles a droite : Binome [ FR | BR ] & Theme */}
+        {/* Controles a droite : Pack Actions, Rôle Studio/Élève, Binome [ FR | BR ] & Theme */}
         <div className="flex items-center gap-2.5">
+          <PackHeaderActions />
+          <RoleModeSwitcher />
           <div className="h-9 cordel-card-sm inline-flex items-center p-0.5 text-xs font-mono select-none">
             <button
               type="button" onClick={() => setLocale('fr')}
@@ -83,21 +113,11 @@ const AppContent: React.FC = () => {
         </div>
       </header>
 
-      {/* Grille sur 1 ligne sur Desktop : Bibliotheque & Frise Conducteur cote a cote */}
-      <div className="w-full grid grid-cols-1 xl:grid-cols-12 gap-4 items-stretch mb-3.5">
-        <div className="xl:col-span-5 h-full">
-          <PatternLibraryBar />
-        </div>
-        <div className="xl:col-span-7 h-full">
-          <ToadaConductorStrip />
-        </div>
-      </div>
-
-      <main className="flex-1 flex flex-col items-center justify-start w-full max-w-none">
+      <main className="relative z-10 flex-1 flex flex-col items-center justify-start w-full max-w-none">
         <LivretPrise />
       </main>
 
-      <footer className="w-full max-w-none mt-6 text-center text-xs font-mono text-theme-ink/60 flex flex-col gap-1">
+      <footer className="relative z-10 w-full max-w-none mt-6 text-center text-xs font-mono text-theme-ink/60 flex flex-col gap-1">
         <div>{t('footerSandbox')}</div>
         <div>{t('footerPack')}</div>
       </footer>
@@ -110,6 +130,7 @@ export const App: React.FC = () => (
     <LanguageProvider>
       <ToadaProjectProvider>
         <AppContent />
+        <CordelDialogModal />
       </ToadaProjectProvider>
     </LanguageProvider>
   </ErrorBoundary>

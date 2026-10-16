@@ -2,6 +2,7 @@ import React from 'react';
 import { Sliders, Clock, Music2, Grid } from 'lucide-react';
 import type { TimeSignatureString } from '../../types/vocalPack.types';
 import { useLanguage } from '../../i18n/LanguageContext';
+import { NumericDraftInput } from '../ui/NumericDraftInput';
 
 interface MetricConfigPanelProps {
   timeSignature: TimeSignatureString;
@@ -12,13 +13,15 @@ interface MetricConfigPanelProps {
   onMeasuresCountChange: (count: number) => void;
   beatResolutions: number[];
   onBeatResolutionsChange: (resolutions: number[]) => void;
+  hasAnacrusis?: boolean;
+  onHasAnacrusisChange?: (has: boolean) => void;
   disabled?: boolean;
 }
 
 export const MetricConfigPanel: React.FC<MetricConfigPanelProps> = ({
   timeSignature, onTimeSignatureChange, bpm, onBpmChange,
   measuresCount, onMeasuresCountChange, beatResolutions,
-  onBeatResolutionsChange, disabled = false,
+  onBeatResolutionsChange, hasAnacrusis = true, onHasAnacrusisChange, disabled = false,
 }) => {
   const { t } = useLanguage();
 
@@ -42,13 +45,8 @@ export const MetricConfigPanel: React.FC<MetricConfigPanelProps> = ({
         <div className="grid grid-cols-4 gap-1">
           {(['2/4', '3/4', '4/4', '6/8'] as TimeSignatureString[]).map((sig) => (
             <button
-              key={sig}
-              type="button"
-              disabled={disabled}
-              onClick={() => onTimeSignatureChange(sig)}
-              className={`py-1 text-xs font-mono font-bold transition-all cursor-pointer ${
-                timeSignature === sig ? 'cordel-btn-primary' : 'cordel-btn'
-              }`}
+              key={sig} type="button" disabled={disabled} onClick={() => onTimeSignatureChange(sig)}
+              className={`py-1 text-xs font-mono font-bold transition-all cursor-pointer ${timeSignature === sig ? 'cordel-btn-primary' : 'cordel-btn'}`}
             >
               {sig}
             </button>
@@ -64,15 +62,15 @@ export const MetricConfigPanel: React.FC<MetricConfigPanelProps> = ({
               <Clock className="w-3.5 h-3.5 text-theme-accent" />
               BPM
             </span>
-            <input
-              type="number" min={30} max={240} value={bpm} disabled={disabled}
-              onChange={(e) => onBpmChange(Math.max(30, Math.min(240, Number(e.target.value))))}
+            <NumericDraftInput
+              min={30} max={240} value={bpm} disabled={disabled} onChange={onBpmChange}
               className="w-14 bg-black/30 border border-theme-border text-center font-mono font-bold text-xs p-1 focus:outline-none focus:border-theme-accent"
             />
           </div>
           <input
             type="range" min={30} max={240} value={bpm} disabled={disabled}
             onChange={(e) => onBpmChange(Number(e.target.value))}
+            onMouseUp={(e) => e.currentTarget.blur()} onTouchEnd={(e) => e.currentTarget.blur()}
             className="w-full accent-[var(--cordel-wood)] cursor-pointer"
           />
         </div>
@@ -114,6 +112,28 @@ export const MetricConfigPanel: React.FC<MetricConfigPanelProps> = ({
               <span className="font-bold text-xs">{res === 4 ? '4 (Bin)' : '3 (Tri)'}</span>
             </button>
           ))}
+        </div>
+      </div>
+
+      {/* 4. Option Anacrouse (M-1) */}
+      <div className="flex items-center justify-between text-xs font-bold uppercase text-theme-ink pt-1 border-t border-theme-border/20">
+        <span className="flex items-center gap-1.5">
+          <Clock className="w-3.5 h-3.5 text-theme-accent" />
+          {t('anacrusisOption')} (M-1)
+        </span>
+        <div className="inline-flex cordel-card-sm p-0.5 text-xs font-mono">
+          <button
+            type="button" disabled={disabled} onClick={() => onHasAnacrusisChange?.(true)}
+            className={`px-2.5 py-0.5 font-bold transition-all cursor-pointer ${hasAnacrusis !== false ? 'cordel-btn-primary' : 'opacity-60'}`}
+          >
+            {t('hasAnacrusisYes')}
+          </button>
+          <button
+            type="button" disabled={disabled} onClick={() => onHasAnacrusisChange?.(false)}
+            className={`px-2.5 py-0.5 font-bold transition-all cursor-pointer ${hasAnacrusis === false ? 'cordel-btn-primary' : 'opacity-60'}`}
+          >
+            {t('hasAnacrusisNo')}
+          </button>
         </div>
       </div>
     </div>

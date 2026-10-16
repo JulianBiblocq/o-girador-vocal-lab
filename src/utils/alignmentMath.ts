@@ -1,4 +1,4 @@
-﻿/**
+/**
  * alignmentMath.ts
  * Calcul déterministe de l'anacrouse et des offsets d'alignement pour Sequenciador.
  */
@@ -29,13 +29,14 @@ export function computeAlignmentMeta(
   temps1Sec: number,
   trimStartSec: number,
   trimEndSec: number,
-  bpm: number
+  bpm: number,
+  hasAnacrusis = true
 ): AlignmentResult {
   const cleanDurationSec = Math.max(0, trimEndSec - trimStartSec);
   const startOffsetSec = trimStartSec - temps1Sec;
   const beatDuration = 60 / bpm;
 
-  if (trimStartSec < temps1Sec) {
+  if (hasAnacrusis && trimStartSec < temps1Sec) {
     const durationSec = temps1Sec - trimStartSec;
     const beats = durationSec / beatDuration;
     const preRollSteps = Math.round(beats * 4);
@@ -54,13 +55,13 @@ export function computeAlignmentMeta(
   }
 
   return {
-    startOffsetSec,
+    startOffsetSec: hasAnacrusis ? startOffsetSec : 0,
     cleanDurationSec,
     anacrusis: {
       hasAnacrusis: false,
       durationSec: 0,
       beats: 0,
-      startOffsetSec,
+      startOffsetSec: 0,
       preRollSteps: 0,
     },
   };

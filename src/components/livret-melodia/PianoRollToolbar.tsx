@@ -6,48 +6,38 @@ import React from 'react';
 import type { PianoRollTool } from './pianoRollInteractions';
 import { SCALE_DEFINITIONS, type ScaleType } from '../../audio/scaleQuantizer';
 import { NOTE_NAMES } from '../../utils/noteUtils';
-import { MousePointer, Link2, Scissors, Eraser, Type, ZoomIn, Undo2, Redo2 } from 'lucide-react';
+import { MousePointer, Link2, Scissors, Eraser, Type, ZoomIn, Undo2, Redo2, RefreshCw, Wand2 } from 'lucide-react';
 import { useLanguage } from '../../i18n/LanguageContext';
 import type { TranslationKey } from '../../i18n/i18n.types';
+import { confirmAsync } from '../../stores/useCordelDialogStore';
 
 interface PianoRollToolbarProps {
-  activeTool: PianoRollTool;
-  onSelectTool: (tool: PianoRollTool) => void;
-  zoomLevel: number;
-  onSetZoom: (zoom: number) => void;
-  tonic: string;
-  onSetTonic: (t: string) => void;
-  scaleType: ScaleType;
-  onSetScaleType: (st: ScaleType) => void;
-  smoothingLevel: number;
-  onSetSmoothingLevel: (lvl: number) => void;
-  canUndo?: boolean;
-  canRedo?: boolean;
-  historyCount?: number;
-  onUndo?: () => void;
-  onRedo?: () => void;
+  activeTool: PianoRollTool; onSelectTool: (tool: PianoRollTool) => void;
+  zoomLevel: number; onSetZoom: (zoom: number) => void;
+  tonic: string; onSetTonic: (t: string) => void;
+  scaleType: ScaleType; onSetScaleType: (st: ScaleType) => void;
+  smoothingLevel: number; onSetSmoothingLevel: (lvl: number) => void;
+  canUndo?: boolean; canRedo?: boolean; historyCount?: number;
+  onUndo?: () => void; onRedo?: () => void; onReExtractNotes?: () => void;
 }
 
 const SCALE_I18N_KEYS: Record<ScaleType, TranslationKey> = {
-  chromatic: 'scaleChromatic',
-  major: 'scaleMajor',
-  natural_minor: 'scaleNaturalMinor',
-  mixolydian: 'scaleMixolydian',
-  dorian: 'scaleDorian',
-  pentatonic_minor: 'scalePentatonicMinor',
-  pentatonic_major: 'scalePentatonicMajor',
+  chromatic: 'scaleChromatic', major: 'scaleMajor', natural_minor: 'scaleNaturalMinor',
+  mixolydian: 'scaleMixolydian', dorian: 'scaleDorian', pentatonic_minor: 'scalePentatonicMinor', pentatonic_major: 'scalePentatonicMajor',
 };
 
 export const PianoRollToolbar: React.FC<PianoRollToolbarProps> = (props) => {
-  const { activeTool, onSelectTool, zoomLevel, onSetZoom, tonic, onSetTonic, scaleType, onSetScaleType, smoothingLevel, onSetSmoothingLevel, canUndo, canRedo, historyCount, onUndo, onRedo } = props;
+  const {
+    activeTool, onSelectTool, zoomLevel, onSetZoom, tonic, onSetTonic,
+    scaleType, onSetScaleType, smoothingLevel, onSetSmoothingLevel,
+    canUndo, canRedo, historyCount, onUndo, onRedo, onReExtractNotes,
+  } = props;
   const { t } = useLanguage();
 
   const tools: { id: PianoRollTool; label: string; icon: React.FC<{ className?: string }> }[] = [
-    { id: 'pointer', label: t('toolPointer'), icon: MousePointer },
-    { id: 'glue', label: t('toolGlue'), icon: Link2 },
-    { id: 'cut', label: t('toolCut'), icon: Scissors },
-    { id: 'erase', label: t('toolErase'), icon: Eraser },
-    { id: 'text', label: t('toolText'), icon: Type },
+    { id: 'pointer', label: t('toolPointer'), icon: MousePointer }, { id: 'glue', label: t('toolGlue'), icon: Link2 },
+    { id: 'cut', label: t('toolCut'), icon: Scissors }, { id: 'melodyne_cut', label: t('toolMelodyneCut'), icon: Wand2 },
+    { id: 'erase', label: t('toolErase'), icon: Eraser }, { id: 'text', label: t('toolText'), icon: Type },
   ];
 
   return (
@@ -62,7 +52,7 @@ export const PianoRollToolbar: React.FC<PianoRollToolbarProps> = (props) => {
               <button
                 key={item.id} type="button" onClick={() => onSelectTool(item.id)} title={item.label}
                 className={`px-2 py-1 text-xs font-mono flex items-center gap-1 border-r last:border-r-0 border-theme-border/40 transition-all rounded-none cursor-pointer ${
-                  isActive ? 'bg-theme-wood text-white font-bold' : 'text-theme-ink/75 hover:bg-white/10 hover:text-theme-ink'
+                  isActive ? 'bg-theme-wood text-[#f4ecd8] font-bold' : 'text-theme-ink/75 hover:bg-white/10 hover:text-theme-ink'
                 }`}
               >
                 <Icon className="w-3.5 h-3.5" />
@@ -91,6 +81,24 @@ export const PianoRollToolbar: React.FC<PianoRollToolbarProps> = (props) => {
             <Redo2 className="w-3.5 h-3.5" />
           </button>
         </div>
+
+        {onReExtractNotes && (
+          <button
+            type="button"
+            onClick={async () => {
+              const ok = await confirmAsync({
+                title: t('reExtractNotes'), message: t('reExtractNotesConfirm'),
+                confirmLabel: t('dialogConfirm'), cancelLabel: t('dialogCancel'), variant: 'warning',
+              });
+              if (ok) onReExtractNotes();
+            }}
+            title={t('reExtractNotesTooltip')}
+            className="px-2 py-1 text-xs font-mono flex items-center gap-1 border border-amber-500/50 bg-amber-950/30 text-amber-300 hover:bg-amber-900/50 transition-all rounded-none cursor-pointer"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+            <span className="hidden xl:inline">{t('reExtractNotes')}</span>
+          </button>
+        )}
       </div>
 
       {/* 2. Centre : Gamme & Lissage */}
@@ -112,7 +120,7 @@ export const PianoRollToolbar: React.FC<PianoRollToolbarProps> = (props) => {
         <div className="flex items-center gap-1.5">
           <span className="text-theme-ink/75 font-bold">{t('smoothingLabel')} :</span>
           <span className="text-[10px] text-theme-ink/50">{t('smoothingFine')}</span>
-          <input type="range" min={0} max={1} step={0.1} value={smoothingLevel} onChange={(e) => onSetSmoothingLevel(parseFloat(e.target.value))} className="w-16 accent-[var(--cordel-wood)] cursor-pointer" />
+          <input type="range" min={0} max={1} step={0.1} value={smoothingLevel} onChange={(e) => onSetSmoothingLevel(parseFloat(e.target.value))} onMouseUp={(e) => e.currentTarget.blur()} onTouchEnd={(e) => e.currentTarget.blur()} className="w-16 accent-[var(--cordel-wood)] cursor-pointer" />
           <span className="text-[10px] text-theme-ink/50">{t('smoothingWide')}</span>
         </div>
       </div>
@@ -124,7 +132,7 @@ export const PianoRollToolbar: React.FC<PianoRollToolbarProps> = (props) => {
           <button
             key={z} type="button" onClick={() => onSetZoom(z)}
             className={`px-2 py-0.5 text-[11px] font-mono border-r last:border-r-0 border-theme-border/40 transition-all rounded-none cursor-pointer ${
-              zoomLevel === z ? 'bg-theme-wood text-white font-bold' : 'text-theme-ink/70 hover:bg-white/10'
+              zoomLevel === z ? 'bg-theme-wood text-[#f4ecd8] font-bold' : 'text-theme-ink/70 hover:bg-white/10'
             }`}
           >
             {z}x

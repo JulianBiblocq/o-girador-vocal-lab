@@ -14,12 +14,15 @@ interface PianoRollRulerCanvasProps {
   anacrusisDurationSec: number;
   seekStartSec: number;
   isPlaying: boolean;
+  hasAnacrusis?: boolean;
+  t1OffsetSec?: number;
+  bpm?: number;
   getPlayheadSec?: () => number;
   onSeek: (sec: number) => void;
 }
 
 export const PianoRollRulerCanvas: React.FC<PianoRollRulerCanvasProps> = (props) => {
-  const { width, beatsPerMeasure, totalDurationSec, anacrusisDurationSec, seekStartSec, isPlaying, getPlayheadSec, onSeek } = props;
+  const { width, beatsPerMeasure, totalDurationSec, anacrusisDurationSec, seekStartSec, isPlaying, hasAnacrusis = true, t1OffsetSec, bpm, getPlayheadSec, onSeek } = props;
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const isDraggingRef = useRef<boolean>(false);
   const { t } = useLanguage();
@@ -38,11 +41,12 @@ export const PianoRollRulerCanvas: React.FC<PianoRollRulerCanvasProps> = (props)
     drawRulerBar(ctx, {
       width, height: RULER_HEIGHT, dpr, beatsPerMeasure, totalDurationSec,
       anacrusisDurationSec, seekStartSec, playheadSec: playhead, isPlaying,
+      hasAnacrusis, t1OffsetSec, bpm,
       elanLabel: t('rulerElan'),
       m1Label: t('rulerMeasure1'),
       measurePrefix: t('measureAbbr'),
     });
-  }, [width, beatsPerMeasure, totalDurationSec, anacrusisDurationSec, seekStartSec, isPlaying, getPlayheadSec, t]);
+  }, [width, beatsPerMeasure, totalDurationSec, anacrusisDurationSec, seekStartSec, isPlaying, hasAnacrusis, t1OffsetSec, bpm, getPlayheadSec, t]);
 
   useEffect(() => {
     draw();

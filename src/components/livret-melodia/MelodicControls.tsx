@@ -47,7 +47,7 @@ export const MelodicControls: React.FC<MelodicControlsProps> = (props) => {
             onClick={() => onSetPlayMode('voice')}
             className={`px-2.5 py-1 text-xs font-mono flex items-center gap-1.5 border-r border-theme-border/40 transition-all rounded-none cursor-pointer ${
               playMode === 'voice'
-                ? 'bg-theme-wood text-white font-bold shadow-sm'
+                ? 'bg-theme-wood text-[#f4ecd8] font-bold shadow-sm'
                 : 'text-theme-ink/75 hover:bg-white/10'
             }`}
           >
@@ -59,7 +59,7 @@ export const MelodicControls: React.FC<MelodicControlsProps> = (props) => {
             onClick={() => onSetPlayMode('synth')}
             className={`px-2.5 py-1 text-xs font-mono flex items-center gap-1.5 border-r border-theme-border/40 transition-all rounded-none cursor-pointer ${
               playMode === 'synth'
-                ? 'bg-theme-wood text-white font-bold shadow-sm'
+                ? 'bg-theme-wood text-[#f4ecd8] font-bold shadow-sm'
                 : 'text-theme-ink/75 hover:bg-white/10'
             }`}
           >
@@ -71,7 +71,7 @@ export const MelodicControls: React.FC<MelodicControlsProps> = (props) => {
             onClick={() => onSetPlayMode('duo')}
             className={`px-2.5 py-1 text-xs font-mono flex items-center gap-1.5 transition-all rounded-none cursor-pointer ${
               playMode === 'duo'
-                ? 'bg-theme-wood text-white font-bold shadow-sm'
+                ? 'bg-theme-wood text-[#f4ecd8] font-bold shadow-sm'
                 : 'text-theme-ink/75 hover:bg-white/10'
             }`}
           >
@@ -88,7 +88,7 @@ export const MelodicControls: React.FC<MelodicControlsProps> = (props) => {
           onClick={onToggleClick}
           className={`px-2.5 py-1 text-xs font-mono flex items-center gap-1 border border-theme-border/60 transition-all rounded-none cursor-pointer ${
             clickEnabled
-              ? 'bg-theme-wood text-white font-bold'
+              ? 'bg-theme-wood text-[#f4ecd8] font-bold'
               : 'text-theme-ink/40 hover:bg-white/5'
           }`}
           title={t('metronomeClick')}
@@ -116,21 +116,21 @@ export const MelodicControls: React.FC<MelodicControlsProps> = (props) => {
           type="button"
           onClick={onTogglePlay}
           className={`cordel-btn px-3.5 py-1.5 text-xs font-mono font-bold flex items-center gap-1.5 rounded-none cursor-pointer ${
-            isPlaying ? 'bg-red-800 text-white' : 'bg-theme-wood text-white'
+            isPlaying ? 'bg-red-800 text-[#f4ecd8]' : 'bg-theme-wood text-[#f4ecd8]'
           }`}
         >
-          {isPlaying ? <Square className="w-4 h-4 fill-current" /> : <Play className="w-4 h-4 fill-current text-white" />}
+          {isPlaying ? <Square className="w-4 h-4 fill-current" /> : <Play className="w-4 h-4 fill-current text-[#f4ecd8]" />}
           <span>{isPlaying ? t('recordBtnStop') : 'Play'}</span>
         </button>
 
         <button
           type="button"
           onClick={onDownloadPack}
-          className="cordel-btn-primary px-3 py-1.5 text-xs font-mono font-bold flex items-center gap-1.5 rounded-none cursor-pointer"
+          className="cordel-btn-primary px-3 py-1.5 text-xs font-mono font-bold flex items-center gap-1.5 rounded-none cursor-pointer !text-[#f4ecd8] text-[var(--cordel-on-primary)]"
           title="Pack JSON VocalPackExport"
         >
-          <Download className="w-3.5 h-3.5" />
-          <span>{t('downloadPack')}</span>
+          <Download className="w-3.5 h-3.5 !text-[#f4ecd8] text-[var(--cordel-on-primary)]" />
+          <span className="!text-[#f4ecd8] text-[var(--cordel-on-primary)]">{t('downloadPack')}</span>
         </button>
       </div>
     </div>

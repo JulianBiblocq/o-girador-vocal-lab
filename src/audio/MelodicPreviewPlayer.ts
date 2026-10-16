@@ -7,6 +7,7 @@ import type { VocalStepData } from '../types/vocalPack.types';
 import { getSharedAudioContext, setSharedSinkId } from './sharedAudioContext';
 import { getSavedClickVolume } from '../utils/clickVolumeStorage';
 import { playSingleSynthNote, scheduleMelodySteps, type SynthScheduledNode } from './synthVoiceHelper';
+import { getPatternT1OffsetSec } from '../utils/anacrusisTimingHelper';
 
 export type MelodicPlayMode = 'voice' | 'synth' | 'duo';
 
@@ -19,6 +20,8 @@ export interface MelodicPlayOptions {
   beatsPerMeasure: number;
   playMode: MelodicPlayMode;
   clickEnabled: boolean;
+  hasAnacrusis?: boolean;
+  t1OffsetSec?: number;
   pitchShiftSemitones?: number;
   seekStartSec?: number;
   outputDeviceId?: string;
@@ -70,19 +73,21 @@ export class MelodicPreviewPlayer {
     this.isPlaying = true;
     this.sourceNode.start(now, this.seekStartSec, this.playRemainingDuration);
 
-    const beatDuration = 60 / bpm;
-    const stepDuration = beatDuration / 4;
+    const beatDuration = 60 / bpm, stepDuration = beatDuration / 4;
+    const t1 = options.t1OffsetSec ?? getPatternT1OffsetSec(options.hasAnacrusis, beatsPerMeasure * beatDuration);
+    const startOffsetSec = options.hasAnacrusis === false ? t1 : 0;
     const effectiveSteps = (pitchShiftSemitones && pitchShiftSemitones !== 0)
       ? allSteps.map((s) => (s.active && s.midiNumber > 0 && s.note !== '───') ? { ...s, midiNumber: s.midiNumber + pitchShiftSemitones } : s)
       : allSteps;
-    this.synthNodes = scheduleMelodySteps(this.ctx, this.synthGainNode, effectiveSteps, stepDuration, now, this.seekStartSec);
+    this.synthNodes = scheduleMelodySteps(this.ctx, this.synthGainNode, effectiveSteps, stepDuration, now, this.seekStartSec, startOffsetSec);
 
-    const totalBeats = Math.ceil(totalDurationSec / beatDuration);
-    for (let b = 0; b < totalBeats; b++) {
-      const beatGridTime = b * beatDuration;
-      if (beatGridTime >= this.seekStartSec && beatGridTime < totalDurationSec - 0.01) {
-        this.scheduleClick(this.ctx, now + (beatGridTime - this.seekStartSec), b % beatsPerMeasure === 0);
-      }
+    for (let t = t1 - beatDuration; t >= 0; t -= beatDuration) {
+      if (t >= this.seekStartSec) this.scheduleClick(this.ctx, now + (t - this.seekStartSec), t < 0.01);
+    }
+    for (let k = 0; ; k++) {
+      const beatGridTime = t1 + k * beatDuration;
+      if (beatGridTime >= totalDurationSec - 0.01) break;
+      if (beatGridTime >= this.seekStartSec) this.scheduleClick(this.ctx, now + (beatGridTime - this.seekStartSec), k % beatsPerMeasure === 0);
     }
 
     this.stopTimerId = window.setTimeout(() => { this.stop(); onEnded?.(); }, (this.playRemainingDuration + 0.05) * 1000);

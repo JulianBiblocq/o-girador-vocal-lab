@@ -49,34 +49,41 @@ export function drawWaveformOverlay(ctx: CanvasRenderingContext2D, opts: DrawOve
   ctx.fillRect(0, 0, xTrimStart, height);
   ctx.fillRect(xTrimEnd, 0, width - xTrimEnd, height);
 
-  // Poignée Début (Cyan) avec fanion large
+  // Poignée Début (Vert Ciano profond Cordel) avec fanion et bordure noire
   ctx.font = 'bold 9px monospace';
   const startTextWidth = ctx.measureText(trimStartLabel).width;
   const flagStartWidth = Math.max(68, Math.round(startTextWidth + 12));
-  ctx.strokeStyle = '#38bdf8';
+  ctx.strokeStyle = '#0f766e';
   ctx.lineWidth = 2;
   ctx.beginPath(); ctx.moveTo(xTrimStart, 0); ctx.lineTo(xTrimStart, height); ctx.stroke();
-  ctx.fillStyle = '#0284c7';
+  ctx.fillStyle = '#0f766e';
   ctx.fillRect(xTrimStart, 0, flagStartWidth, 18);
+  ctx.strokeStyle = '#1a1a1a';
+  ctx.lineWidth = 1.5;
   ctx.strokeRect(xTrimStart, 0, flagStartWidth, 18);
-  ctx.fillStyle = '#ffffff';
+  ctx.fillStyle = '#f4ecd8';
   ctx.fillText(trimStartLabel, xTrimStart + 6, 12);
-  ctx.fillStyle = '#38bdf8';
+  ctx.fillStyle = '#0f766e';
   ctx.fillRect(xTrimStart - 4, height - 12, 8, 12);
+  ctx.strokeRect(xTrimStart - 4, height - 12, 8, 12);
 
-  // Poignée Fin (Corail) avec fanion large
+  // Poignée Fin (Ocre / Ambre Brûlé Cordel) avec fanion et bordure noire
   const endTextWidth = ctx.measureText(trimEndLabel).width;
   const flagEndWidth = Math.max(56, Math.round(endTextWidth + 12));
   const flagEndX = Math.max(0, xTrimEnd - flagEndWidth);
-  ctx.strokeStyle = '#f87171';
+  ctx.strokeStyle = '#b45309';
+  ctx.lineWidth = 2;
   ctx.beginPath(); ctx.moveTo(xTrimEnd, 0); ctx.lineTo(xTrimEnd, height); ctx.stroke();
-  ctx.fillStyle = '#b91c1c';
+  ctx.fillStyle = '#b45309';
   ctx.fillRect(flagEndX, 0, flagEndWidth, 18);
+  ctx.strokeStyle = '#1a1a1a';
+  ctx.lineWidth = 1.5;
   ctx.strokeRect(flagEndX, 0, flagEndWidth, 18);
-  ctx.fillStyle = '#ffffff';
+  ctx.fillStyle = '#f4ecd8';
   ctx.fillText(trimEndLabel, flagEndX + 6, 12);
-  ctx.fillStyle = '#f87171';
+  ctx.fillStyle = '#b45309';
   ctx.fillRect(xTrimEnd - 4, height - 12, 8, 12);
+  ctx.strokeRect(xTrimEnd - 4, height - 12, 8, 12);
 
   // Tête de lecture 60 FPS
   if (isPlaying && playheadSec >= 0) {

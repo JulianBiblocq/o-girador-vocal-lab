@@ -6,7 +6,9 @@ import { PreviewControls } from './PreviewControls';
 import { LatencyNudgeBar } from './LatencyNudgeBar';
 import { PreviewPlayer } from '../../audio/PreviewPlayer';
 import { useWaveformZoom } from '../../hooks/useWaveformZoom';
+import { usePlayheadTracker } from '../../hooks/usePlayheadTracker';
 import { computeAlignmentMeta } from '../../utils/alignmentMath';
+import { getPatternT1OffsetSec, getPatternTotalDurationSec } from '../../utils/anacrusisTimingHelper';
 import { generateVocalPack } from '../../utils/packGenerator';
 import { getSavedLatencyOffsetMs } from '../../utils/latencyStorage';
 import { useLanguage } from '../../i18n/LanguageContext';
@@ -21,13 +23,21 @@ interface WaveformTrimEditorProps {
   beatsPerMeasure: number;
   beatResolutions: number[];
   referencePitch: string;
+  initialTrimStartSec?: number;
+  initialTrimEndSec?: number;
+  hasAnacrusis?: boolean;
   outputDeviceId?: string;
   onReset: () => void;
+  onTrimChange?: (startSec: number, endSec: number) => void;
   onPackReady: (pack: VocalPackExport) => void;
 }
 
 export const WaveformTrimEditor: React.FC<WaveformTrimEditorProps> = (props) => {
-  const { rawPCM, sampleRate, bpm, timeSignature, measuresCount, beatsPerMeasure, beatResolutions, referencePitch, outputDeviceId, onReset, onPackReady } = props;
+  const {
+    rawPCM, sampleRate, bpm, timeSignature, measuresCount, beatsPerMeasure,
+    beatResolutions, referencePitch, initialTrimStartSec, initialTrimEndSec,
+    hasAnacrusis = true, outputDeviceId, onReset, onTrimChange, onPackReady,
+  } = props;
   const { t } = useLanguage();
   const containerRef = useRef<HTMLDivElement>(null);
   const [containerWidth, setContainerWidth] = useState<number>(600);
@@ -35,16 +45,20 @@ export const WaveformTrimEditor: React.FC<WaveformTrimEditorProps> = (props) => 
   const { zoomLevel, setZoom, zoomIn, zoomOut, scrollToSec, scrollContainerRef } = useWaveformZoom(1.0);
 
   const beatDuration = 60 / bpm;
-  const anacrusisDurationSec = beatsPerMeasure * beatDuration;
-  const totalDurationSec = (beatsPerMeasure + measuresCount * beatsPerMeasure) * beatDuration;
+  const measureDurationSec = beatsPerMeasure * beatDuration;
+  const t1OffsetSec = getPatternT1OffsetSec(hasAnacrusis, measureDurationSec);
+  const recordedDurationSec = rawPCM.length / sampleRate;
+  const totalDurationSec = Math.max(recordedDurationSec, getPatternTotalDurationSec(hasAnacrusis, measuresCount, measureDurationSec, 0.25));
 
-  const [trimStartSec, setTrimStartSec] = useState<number>(0);
-  const [trimEndSec, setTrimEndSec] = useState<number>(totalDurationSec);
+  const [trimStartSec, setTrimStartSec] = useState<number>(() => initialTrimStartSec ?? 0);
+  const [trimEndSec, setTrimEndSec] = useState<number>(() => (initialTrimEndSec && initialTrimEndSec > 0 ? initialTrimEndSec : totalDurationSec));
   const [latencyOffsetMs, setLatencyOffsetMs] = useState<number>(getSavedLatencyOffsetMs);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
-  const [playheadSec, setPlayheadSec] = useState<number>(-1);
   const [clickEnabled, setClickEnabled] = useState<boolean>(true);
   const [highPassEnabled, setHighPassEnabled] = useState<boolean>(true);
+  const [tonePolishEnabled, setTonePolishEnabled] = useState<boolean>(true);
+
+  const playheadSec = usePlayheadTracker(player, isPlaying, () => setIsPlaying(false));
 
   useEffect(() => {
     const el = containerRef.current;
@@ -56,32 +70,24 @@ export const WaveformTrimEditor: React.FC<WaveformTrimEditorProps> = (props) => 
 
   useEffect(() => () => player.stop(), [player]);
 
-  useEffect(() => {
-    if (!isPlaying) { setPlayheadSec(-1); return; }
-    let animId: number;
-    const tick = () => {
-      setPlayheadSec(player.getCurrentPlayheadSec());
-      if (player.getIsPlaying()) animId = requestAnimationFrame(tick);
-      else { setIsPlaying(false); setPlayheadSec(-1); }
-    };
-    animId = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(animId);
-  }, [isPlaying, player]);
-
-  const alignment = useMemo(() => computeAlignmentMeta(anacrusisDurationSec, trimStartSec, trimEndSec, bpm), [anacrusisDurationSec, trimStartSec, trimEndSec, bpm]);
+  const alignment = useMemo(() => computeAlignmentMeta(t1OffsetSec, trimStartSec, trimEndSec, bpm, hasAnacrusis), [t1OffsetSec, trimStartSec, trimEndSec, bpm, hasAnacrusis]);
 
   const handleTogglePlay = useCallback(async () => {
     if (isPlaying) { player.stop(); setIsPlaying(false); return; }
     setIsPlaying(true);
     await player.play(rawPCM, sampleRate, {
       trimStartSec, trimEndSec, latencyOffsetMs, bpm, beatsPerMeasure, totalDurationSec,
-      clickEnabled, highPassFilterEnabled: highPassEnabled, normalizeRMS: true, outputDeviceId,
+      clickEnabled, hasAnacrusis, t1OffsetSec, highPassFilterEnabled: highPassEnabled, enableTonePolish: tonePolishEnabled, normalizeRMS: true, outputDeviceId,
       onEnded: () => setIsPlaying(false),
     });
-  }, [player, isPlaying, rawPCM, sampleRate, trimStartSec, trimEndSec, latencyOffsetMs, bpm, beatsPerMeasure, totalDurationSec, clickEnabled, highPassEnabled, outputDeviceId]);
+  }, [player, isPlaying, rawPCM, sampleRate, trimStartSec, trimEndSec, latencyOffsetMs, bpm, beatsPerMeasure, totalDurationSec, clickEnabled, hasAnacrusis, t1OffsetSec, highPassEnabled, tonePolishEnabled, outputDeviceId]);
 
   const handleToggleClick = useCallback(() => {
     setClickEnabled((prev) => { const next = !prev; player.setClickEnabled(next); return next; });
+  }, [player]);
+
+  const handleToggleTonePolish = useCallback(() => {
+    setTonePolishEnabled((prev) => { const next = !prev; player.setTonePolishEnabled(next); return next; });
   }, [player]);
 
   const handleProceed = useCallback(() => {
@@ -90,9 +96,9 @@ export const WaveformTrimEditor: React.FC<WaveformTrimEditorProps> = (props) => 
     onPackReady(generateVocalPack({
       rawPCM, sampleRate, trimStartSec, trimEndSec, latencyOffsetMs, bpm, timeSignature,
       measuresCount, beatsPerMeasure, beatResolutions, referencePitch, alignment,
-      highPassFilterEnabled: highPassEnabled, normalizeRMS: true,
+      highPassFilterEnabled: highPassEnabled, enableTonePolish: tonePolishEnabled, normalizeRMS: true,
     }));
-  }, [player, rawPCM, sampleRate, trimStartSec, trimEndSec, latencyOffsetMs, bpm, timeSignature, measuresCount, beatsPerMeasure, beatResolutions, referencePitch, alignment, highPassEnabled, onPackReady]);
+  }, [player, rawPCM, sampleRate, trimStartSec, trimEndSec, latencyOffsetMs, bpm, timeSignature, measuresCount, beatsPerMeasure, beatResolutions, referencePitch, alignment, highPassEnabled, tonePolishEnabled, onPackReady]);
 
   const zoomedWidth = Math.max(containerWidth, Math.round(containerWidth * zoomLevel));
 
@@ -108,14 +114,14 @@ export const WaveformTrimEditor: React.FC<WaveformTrimEditorProps> = (props) => 
           <div style={{ width: `${zoomedWidth}px`, height: '144px', position: 'relative' }}>
             <WaveformGridCanvas
               width={zoomedWidth} height={144} totalDurationSec={totalDurationSec}
-              anacrusisDurationSec={anacrusisDurationSec} measuresCount={measuresCount}
-              beatsPerMeasure={beatsPerMeasure} beatResolutions={beatResolutions}
+              t1OffsetSec={t1OffsetSec} hasAnacrusis={hasAnacrusis} bpm={bpm}
+              measuresCount={measuresCount} beatsPerMeasure={beatsPerMeasure} beatResolutions={beatResolutions}
             />
             <WaveformOverlayCanvas
               rawPCM={rawPCM} sampleRate={sampleRate} width={zoomedWidth} height={144}
               totalDurationSec={totalDurationSec} trimStartSec={trimStartSec} trimEndSec={trimEndSec}
               latencyOffsetMs={latencyOffsetMs} playheadSec={playheadSec} isPlaying={isPlaying}
-              onTrimChange={(s, e) => { setTrimStartSec(s); setTrimEndSec(e); }}
+              onTrimChange={(s, e) => { setTrimStartSec(s); setTrimEndSec(e); onTrimChange?.(s, e); }}
               onLatencyOffsetChange={setLatencyOffsetMs}
             />
           </div>
@@ -129,7 +135,8 @@ export const WaveformTrimEditor: React.FC<WaveformTrimEditorProps> = (props) => 
         isPlaying={isPlaying} onTogglePlay={handleTogglePlay}
         clickEnabled={clickEnabled} onToggleClick={handleToggleClick}
         highPassEnabled={highPassEnabled} onToggleHighPass={() => setHighPassEnabled((v) => !v)}
-        onReset={onReset} onProceedToExtraction={handleProceed} alignment={alignment}
+        tonePolishEnabled={tonePolishEnabled} onToggleTonePolish={handleToggleTonePolish}
+        onReset={onReset} onProceedToExtraction={handleProceed} alignment={alignment} hasAnacrusis={hasAnacrusis}
       />
     </div>
   );

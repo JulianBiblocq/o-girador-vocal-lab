@@ -1,10 +1,13 @@
 /**
  * PianoRollStickyHeader.tsx
- * En-tête sticky top-0 combinant le coin 64 px (Mesures / Temps) et le Canvas de règle temporelle.
+ * En-tête sticky top-0 combinant les Mesures, les Temps et le rail de locators [ In ── Out ].
+ * Reste 100% visible quel que soit le défilement vertical (< 75 lignes).
  */
 import React from 'react';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { PianoRollRulerCanvas } from './PianoRollRulerCanvas';
+import { PianoRollLocatorRail } from './PianoRollLocatorRail';
+import type { MelodyneRegion } from '../../types/vocalPack.types';
 
 interface PianoRollStickyHeaderProps {
   gridWidth: number;
@@ -13,29 +16,59 @@ interface PianoRollStickyHeaderProps {
   anacrusisDurationSec: number;
   seekStartSec: number;
   isPlaying: boolean;
+  hasAnacrusis?: boolean;
+  t1OffsetSec?: number;
+  bpm?: number;
   getPlayheadSec?: () => number;
   onSeek: (sec: number) => void;
+  regions?: MelodyneRegion[];
+  selectedRegionId?: string | null;
+  onSelectRegion?: (id: string | null) => void;
+  onUpdateRegionBounds?: (id: string, startSec: number, endSec: number) => void;
+  onAddRegion?: (startSec: number, endSec: number) => void;
 }
 
 export const PianoRollStickyHeader: React.FC<PianoRollStickyHeaderProps> = (props) => {
-  const { gridWidth, beatsPerMeasure, totalDurationSec, anacrusisDurationSec, seekStartSec, isPlaying, getPlayheadSec, onSeek } = props;
+  const {
+    gridWidth, beatsPerMeasure, totalDurationSec, anacrusisDurationSec,
+    seekStartSec, isPlaying, hasAnacrusis = true, t1OffsetSec, bpm,
+    getPlayheadSec, onSeek, regions = [], selectedRegionId = null,
+    onSelectRegion, onUpdateRegionBounds, onAddRegion,
+  } = props;
   const { t } = useLanguage();
 
   return (
-    <div className="sticky top-0 z-20 flex bg-[#141210] border-b border-white/20" style={{ height: '42px', width: `${64 + gridWidth}px` }}>
-      <div className="sticky left-0 z-30 shrink-0 w-[64px] h-[42px] bg-[#141210] border-r-2 border-black/80 flex flex-col justify-between">
+    <div className="sticky top-0 z-20 flex bg-[#141210] border-b border-white/20 select-none" style={{ height: '66px', width: `${64 + gridWidth}px` }}>
+      {/* Colonne sticky gauche 64 px */}
+      <div className="sticky left-0 z-30 shrink-0 w-[64px] h-[66px] bg-[#141210] border-r-2 border-black/80 flex flex-col justify-between">
         <div className="w-full h-[21px] border-b border-white/10 flex items-center justify-center">
           <span className="text-[7.5px] font-mono font-bold text-amber-400/85 tracking-widest">{t('rulerMeasures')}</span>
         </div>
-        <div className="w-full h-[21px] flex items-center justify-center">
+        <div className="w-full h-[21px] border-b border-white/10 flex items-center justify-center">
           <span className="text-[7.5px] font-mono font-semibold text-stone-400/80 tracking-widest">{t('rulerBeats')}</span>
         </div>
+        <div className="w-full h-[24px] flex items-center justify-center bg-black/40">
+          <span className="text-[8px] font-mono font-bold text-[#d97706] tracking-wider">{t('melodyneRailLabel')}</span>
+        </div>
       </div>
-      <div className="relative" style={{ width: `${gridWidth}px`, height: '42px' }}>
-        <PianoRollRulerCanvas
-          width={gridWidth} beatsPerMeasure={beatsPerMeasure} totalDurationSec={totalDurationSec}
-          anacrusisDurationSec={anacrusisDurationSec} seekStartSec={seekStartSec} isPlaying={isPlaying}
-          getPlayheadSec={getPlayheadSec} onSeek={onSeek}
+
+      {/* Pistes temporelles droites (Règle 42 px + Rail Locators 24 px) */}
+      <div className="flex flex-col" style={{ width: `${gridWidth}px`, height: '66px' }}>
+        <div className="relative" style={{ width: `${gridWidth}px`, height: '42px' }}>
+          <PianoRollRulerCanvas
+            width={gridWidth} beatsPerMeasure={beatsPerMeasure} totalDurationSec={totalDurationSec}
+            anacrusisDurationSec={anacrusisDurationSec} seekStartSec={seekStartSec} isPlaying={isPlaying}
+            hasAnacrusis={hasAnacrusis} t1OffsetSec={t1OffsetSec} bpm={bpm}
+            getPlayheadSec={getPlayheadSec} onSeek={onSeek}
+          />
+        </div>
+        <PianoRollLocatorRail
+          gridWidth={gridWidth} totalDurationSec={totalDurationSec} anacrusisDurationSec={anacrusisDurationSec}
+          beatsPerMeasure={beatsPerMeasure} hasAnacrusis={hasAnacrusis} t1OffsetSec={t1OffsetSec} bpm={bpm}
+          regions={regions} selectedRegionId={selectedRegionId}
+          onSelectRegion={(id) => onSelectRegion?.(id)}
+          onUpdateRegionBounds={(id, s, e) => onUpdateRegionBounds?.(id, s, e)}
+          onAddRegion={(s, e) => onAddRegion?.(s, e)}
         />
       </div>
     </div>

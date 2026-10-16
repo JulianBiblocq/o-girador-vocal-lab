@@ -11,7 +11,7 @@
   --cordel-coro-hover: #14b8a6;
   --cordel-primary: var(--cordel-wood);
   --cordel-terracotta: var(--cordel-wood);
-  --cordel-on-primary: #ffffff;
+  --cordel-on-primary: #f4ecd8;
   --cordel-accent: #d4af37;
   --cordel-accent-text: #fbbf24;
   --cordel-surface: #262626;
@@ -21,7 +21,7 @@
   --cordel-shadow-color: #57534e;
   --cordel-shadow: 4px 4px 0px #57534e;
   --cordel-shadow-sm: 2px 2px 0px #57534e;
-  --cordel-btn-primary-text: #ffffff;
+  --cordel-btn-primary-text: #f4ecd8;
 }
 
 [data-theme='light'] {
@@ -36,7 +36,7 @@
   --cordel-coro-hover: #14b8a6;
   --cordel-primary: var(--cordel-wood);
   --cordel-terracotta: var(--cordel-wood);
-  --cordel-on-primary: #ffffff;
+  --cordel-on-primary: #f4ecd8;
   --cordel-accent: #9a3412;
   --cordel-accent-text: #9a3412;
   --cordel-surface: #efe6d0;
@@ -46,7 +46,7 @@
   --cordel-shadow-color: #8c857b;
   --cordel-shadow: 4px 4px 0px #8c857b;
   --cordel-shadow-sm: 2px 2px 0px #8c857b;
-  --cordel-btn-primary-text: #ffffff;
+  --cordel-btn-primary-text: #f4ecd8;
 }
 
 /* Utilitaires Cordel sémantiques */
@@ -54,7 +54,7 @@
 .bg-theme-surface { background-color: var(--cordel-surface); }
 .text-theme-ink { color: var(--cordel-text); }
 .border-theme-border { border-color: var(--cordel-border); }
-.bg-theme-wood { background-color: var(--cordel-wood) !important; }
+.bg-theme-wood { background-color: var(--cordel-wood) !important; color: #f4ecd8 !important; }
 .text-theme-accent { color: var(--cordel-accent-text); }
 .bg-theme-accent { background-color: var(--cordel-accent); }
 .border-theme-accent { border-color: var(--cordel-accent); }
@@ -62,9 +62,9 @@
 .text-theme-on-primary { color: var(--cordel-on-primary) !important; }
 
 /* Couleurs pupitres strictes Puxador / Coro */
-.bg-role-puxador { background-color: var(--cordel-puxador) !important; color: #ffffff !important; }
+.bg-role-puxador { background-color: var(--cordel-puxador) !important; color: #f4ecd8 !important; }
 .bg-role-puxador-hover:hover { background-color: var(--cordel-puxador-hover) !important; }
-.bg-role-coro { background-color: var(--cordel-coro) !important; color: #ffffff !important; }
+.bg-role-coro { background-color: var(--cordel-coro) !important; color: #f4ecd8 !important; }
 .bg-role-coro-hover:hover { background-color: var(--cordel-coro-hover) !important; }
 .border-role-puxador { border-color: var(--cordel-puxador) !important; }
 .border-role-coro { border-color: var(--cordel-coro) !important; }

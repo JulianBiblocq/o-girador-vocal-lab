@@ -60,7 +60,8 @@ export function scheduleMelodySteps(
   steps: VocalStepData[],
   stepDurationSec: number,
   startTime: number,
-  seekStartSec = 0
+  seekStartSec = 0,
+  startOffsetSec = 0
 ): SynthScheduledNode[] {
   const nodes: SynthScheduledNode[] = [];
   let i = 0;
@@ -72,8 +73,8 @@ export function scheduleMelodySteps(
       while (i + 1 + tieCount < steps.length && steps[i + 1 + tieCount].note === '───') {
         tieCount++;
       }
-      const noteStartTime = i * stepDurationSec;
-      const noteEndTime = (i + 1 + tieCount) * stepDurationSec;
+      const noteStartTime = startOffsetSec + i * stepDurationSec;
+      const noteEndTime = startOffsetSec + (i + 1 + tieCount) * stepDurationSec;
 
       if (noteEndTime > seekStartSec + 0.005) {
         let actualStart = startTime;

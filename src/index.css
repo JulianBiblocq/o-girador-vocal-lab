@@ -1,5 +1,6 @@
-﻿@import "tailwindcss";
+@import "tailwindcss";
 @import "./themeTokens.css";
+@import "./components/livret-melodia/melodiaThemeOverrides.css";
 
 * {
   box-sizing: border-box;
@@ -20,4 +21,58 @@ body {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+}
+
+/* ==========================================================================
+   PAPIER PEINT EN FOND DE PAGE (CORDEL MARACATU — ISOLATION GPU STRICTE)
+   ========================================================================== */
+:root {
+  --wallpaper-opacity: 0.16;
+}
+
+[data-theme='light'] {
+  --wallpaper-opacity: 0.12;
+}
+
+.wallpaper-surface-bg {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  opacity: var(--wallpaper-opacity, 0.16);
+  background-color: var(--cordel-text);
+  transform: translateZ(0);
+  will-change: transform;
+  transition: opacity 0.3s ease;
+  -webkit-mask-image: url('/textures/pattern-maracatu-damas.svg');
+  mask-image: url('/textures/pattern-maracatu-damas.svg');
+  -webkit-mask-repeat: repeat;
+  mask-repeat: repeat;
+  -webkit-mask-size: 120px 120px;
+  mask-size: 120px 120px;
+}
+
+body.has-wallpaper-gravure .wallpaper-surface-bg {
+  -webkit-mask-image: url('/textures/pattern-maracatu-gravure.svg');
+  mask-image: url('/textures/pattern-maracatu-gravure.svg');
+  -webkit-mask-size: 140px 140px;
+  mask-size: 140px 140px;
+}
+
+body.has-wallpaper-rosace .wallpaper-surface-bg {
+  -webkit-mask-image: url('/textures/pattern-maracatu-rosace.svg');
+  mask-image: url('/textures/pattern-maracatu-rosace.svg');
+  -webkit-mask-size: 120px 120px;
+  mask-size: 120px 120px;
+}
+
+body.has-wallpaper-damas .wallpaper-surface-bg {
+  -webkit-mask-image: url('/textures/pattern-maracatu-damas.svg');
+  mask-image: url('/textures/pattern-maracatu-damas.svg');
+  -webkit-mask-size: 120px 120px;
+  mask-size: 120px 120px;
+}
+
+body.has-wallpaper-none .wallpaper-surface-bg {
+  opacity: 0 !important;
 }

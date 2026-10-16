@@ -5,6 +5,8 @@
 import type { ToadaProject, VocalPatternItem } from '../../types/toadaProject.types';
 import { getSharedAudioContext, setSharedSinkId } from '../../audio/sharedAudioContext';
 import { getBeatsPerMeasure } from '../../utils/musicalMath';
+import { getPatternT1OffsetSec } from '../../utils/anacrusisTimingHelper';
+import { selectBestAudioVariant } from '../../utils/variantMatcher';
 
 export class ToadaPlayerEngine {
   private isRunning = false;
@@ -29,31 +31,34 @@ export class ToadaPlayerEngine {
 
     const beatsPerMeasure = getBeatsPerMeasure(project.timeSignature);
     const beatDuration = 60 / project.bpm;
+    const measureDurationSec = beatsPerMeasure * beatDuration;
     this.isRunning = true;
 
-    let currentScheduleTime = ctx.currentTime + 0.05;
+    const audioCtxStart = ctx.currentTime + 0.08;
+    let currentMeasure = 1; // Mesure 0 d'élan initial réservée à l'anacrouse du Bloc 1
 
     project.slots.forEach((slot, idx) => {
       const puxPat = project.patterns.find((p) => p.id === slot.puxadorPatternId);
       const coroPat = project.patterns.find((p) => p.id === slot.coroPatternId);
       const measuresInSlot = Math.max(puxPat?.measuresCount ?? 2, coroPat?.measuresCount ?? 2, 2);
-      const slotDuration = measuresInSlot * beatsPerMeasure * beatDuration;
+      const blockT1Sec = currentMeasure * measureDurationSec;
+      const blockTime = audioCtxStart + blockT1Sec;
 
-      // Timer pour mise à jour visuelle du slot actif
-      const delayMs = Math.max(0, (currentScheduleTime - ctx.currentTime) * 1000);
+      // Timer pour mise à jour visuelle du slot actif calé sur son Temps 1
+      const delayMs = Math.max(0, (blockTime - ctx.currentTime) * 1000);
       const tId = window.setTimeout(() => {
         if (this.isRunning && onProgress) onProgress(idx);
       }, delayMs);
       this.timers.push(tId);
 
-      // Planification des deux pistes (Puxador et Coro peuvent se superposer !)
-      if (puxPat) this.schedulePattern(ctx, puxPat, currentScheduleTime);
-      if (coroPat) this.schedulePattern(ctx, coroPat, currentScheduleTime);
+      // Planification Puxador et Coro avec tuilage musical
+      if (puxPat) this.schedulePattern(ctx, puxPat, audioCtxStart, blockT1Sec, measureDurationSec);
+      if (coroPat) this.schedulePattern(ctx, coroPat, audioCtxStart, blockT1Sec, measureDurationSec);
 
-      currentScheduleTime += slotDuration;
+      currentMeasure += measuresInSlot;
     });
 
-    const totalDurationMs = Math.max(10, (currentScheduleTime - ctx.currentTime) * 1000);
+    const totalDurationMs = Math.max(10, (audioCtxStart + currentMeasure * measureDurationSec + 0.5 - ctx.currentTime) * 1000);
     const finalTimer = window.setTimeout(() => {
       this.stop();
       if (onComplete) onComplete();
@@ -74,11 +79,17 @@ export class ToadaPlayerEngine {
     this.activeSources = [];
   }
 
-  private schedulePattern(ctx: AudioContext, pat: VocalPatternItem, slotStartTime: number): void {
-    if (!pat.recordingResult || !pat.recordingResult.pcm) return;
-    const { pcm, sampleRate } = pat.recordingResult;
-    const sStart = Math.max(0, Math.floor((pat.trimStartSec || 0) * sampleRate));
-    const sEnd = pat.trimEndSec > 0 ? Math.min(pcm.length, Math.floor(pat.trimEndSec * sampleRate)) : pcm.length;
+  private schedulePattern(ctx: AudioContext, pat: VocalPatternItem, audioCtxStart: number, blockT1Sec: number, measureDurationSec: number): void {
+    const match = selectBestAudioVariant(pat.variants, 1.0, 0, pat.baseBpm ?? 100);
+    const variant = match?.variant ?? pat.variants?.[pat.activeVariantKey];
+    const rec = variant?.recordingResult ?? pat.recordingResult;
+    if (!rec || !rec.pcm || rec.pcm.length === 0) return;
+    const { pcm, sampleRate } = rec;
+    const trimStartSec = variant?.trimStartSec || pat.trimStartSec || 0;
+    const trimEndSec = (variant?.trimEndSec || pat.trimEndSec || 0) > 0 ? (variant?.trimEndSec || pat.trimEndSec || 0) : pcm.length / sampleRate;
+
+    const sStart = Math.max(0, Math.floor(trimStartSec * sampleRate));
+    const sEnd = Math.min(pcm.length, Math.floor(trimEndSec * sampleRate));
     const len = Math.max(0, sEnd - sStart);
     if (len === 0) return;
 
@@ -89,8 +100,17 @@ export class ToadaPlayerEngine {
     source.buffer = buffer;
     source.connect(ctx.destination);
 
+    // Tuilage : startTime = audioCtxStart + blockT1Sec - anacrusisSec
+    const t1OffsetSec = getPatternT1OffsetSec(pat.hasAnacrusis, measureDurationSec);
+    const anacrusisSec = Math.max(0, t1OffsetSec - trimStartSec);
+    const startTime = audioCtxStart + blockT1Sec - anacrusisSec;
+
+    if (match && match.residualSemitones !== 0) {
+      try { source.detune.setValueAtTime(match.residualSemitones * 100, startTime); } catch {}
+    }
+
     try {
-      source.start(slotStartTime);
+      source.start(startTime);
       this.activeSources.push(source);
     } catch {}
   }
