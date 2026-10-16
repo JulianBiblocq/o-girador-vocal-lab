@@ -1,6 +1,8 @@
 import type {
   ToadaProject, VocalPatternItem, VocalRole, VocalAudioVariant,
 } from './toadaProject.types';
+import type { TimeSignatureString } from './vocalPack.types';
+import type { MetricApplyScope } from '../utils/projectBatchOps';
 
 export interface ToadaProjectContextValue {
   project: ToadaProject;
@@ -24,4 +26,16 @@ export interface ToadaProjectContextValue {
   getPreviousConductorPattern: () => VocalPatternItem | null;
   swapAllRoles: () => void;
   duplicateVariation: (patternId: string) => string;
+  // Gestion de la portée métrique & sélection de patterns
+  applyScope: MetricApplyScope;
+  setApplyScope: (scope: MetricApplyScope) => void;
+  selectedPatternIds: string[];
+  toggleSelectPattern: (id: string) => void;
+  selectAllPatterns: (select: boolean) => void;
+  clearSelectedPatterns: () => void;
+  updateScopedBpm: (bpm: number) => void;
+  updateScopedMeasuresCount: (count: 1 | 2 | 3 | 4) => void;
+  updateScopedHasAnacrusis: (has: boolean) => void;
+  updateScopedReferencePitch: (pitch: string) => void;
+  updateScopedTimeSignature: (sig: TimeSignatureString) => void;
 }

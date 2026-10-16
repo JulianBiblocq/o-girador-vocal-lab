@@ -18,16 +18,16 @@ export const translationsFr: VocalLabTranslations = {
   rolePuxador: 'PUXADOR', roleCoro: 'CORO',
   patternAudioRecorded: 'Audio', patternAudioMissing: 'Vide',
   editPatternNameTooltip: 'Renommer le pattern', deletePatternTooltip: 'Supprimer le pattern',
-  conductorTitle: 'FRISE CONDUCTEUR DE LA TOADA', addConductorBlock: 'Bloc',
-  playFullToada: 'Ecouter la Toada complete', stopFullToada: 'Arreter la Toada',
+  conductorTitle: 'FRISE CONDUCTEUR DE LA TOADA', addConductorBlock: 'Bloc', playFullToada: 'Ecouter la Toada complete', stopFullToada: 'Arreter la Toada',
   railPuxador: 'Rail Puxador', railCoro: 'Rail Coro', emptySlot: '- Vide -', blockLabel: 'Bloc {n}',
   cueSelectorLabel: 'Appel avant la prise (M-2 & M-1) :', cueNone: 'Aucun (Clic seul)',
   cueAutoPrevious: 'Pattern precedent du Conducteur', cueCustomPrefix: 'Pattern :', cueReadyBadge: 'Pret ({measures} M)',
   swapPuxadorCoroBtn: '⇄ Inverser Puxador ↔ Coro', swapRolesTooltip: 'Inverser globalement les rôles Puxador et Coro (patterns, conducteur et fiche)',
   duplicateVariation: '❐ (2)', duplicateVariationTooltip: 'Dupliquer ce pattern en une variation indépendante (2)',
+  scopeAll: '🌍 Tout le chant', scopeActive: '🎯 Ce bloc seul', scopeSelected: '☑ Blocs cochés ({n})', selectAll: 'Tout cocher', deselectAll: 'Tout décocher', selectPatternCheckbox: 'Sélectionner ce bloc',
+  importPreconfigTitle: 'RÉGLAGES PAR DÉFAUT DU CHANT', importDefaultBpm: 'BPM :', importMeasuresPerLine: 'Mesures / ligne :', importAnacrusisDefault: 'Anacrouse :',
 
-  export_toada_pack: 'Telecharger Pack Toada JSON',
-  export_toada_pack_success: 'Pack Toada multi-declinaisons pret pour Sequenciad\'Or !',
+  export_toada_pack: 'Telecharger Pack Toada JSON', export_toada_pack_success: 'Pack Toada multi-declinaisons pret pour Sequenciad\'Or !',
 
   // Jalon 4.C : Livret 3 - Entrainement Vocal & Karaoke
   trainer_scope_pattern: 'Motif actif', trainer_scope_toada: 'Toada complete (Regie)',

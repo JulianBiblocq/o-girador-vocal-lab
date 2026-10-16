@@ -33,6 +33,8 @@ export interface ParsedLyricsSegment {
   role: VocalRole;
   text: string;
   phoneticText?: string;
+  measuresCount?: 1 | 2 | 3 | 4;
+  hasAnacrusis?: boolean;
 }
 
 export interface ParsedToadaSheetResult {

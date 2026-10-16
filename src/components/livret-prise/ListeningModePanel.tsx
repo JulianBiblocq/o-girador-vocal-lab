@@ -1,12 +1,13 @@
 /**
  * ListeningModePanel.tsx
- * Panneau du Mode d'Écoute (Casque / Visuel) et de la Note Repère (Note + Octave) bilingue.
+ * Panneau du Mode d'Écoute (Casque / Visuel) et de la Note Repère avec rappel de portée (< 125 lignes).
  */
 import React, { useState } from 'react';
 import { Headphones, VolumeX, Volume2, Play, Sliders } from 'lucide-react';
 import type { ListeningMode } from '../../audio/MetronomeEngine';
 import { getSavedClickVolume, saveClickVolume } from '../../utils/clickVolumeStorage';
 import { useLanguage } from '../../i18n/LanguageContext';
+import { useToadaProject } from '../../context/ToadaProjectContext';
 import type { TranslationKey } from '../../i18n/i18n.types';
 
 interface ListeningModePanelProps {
@@ -28,12 +29,19 @@ export const ListeningModePanel: React.FC<ListeningModePanelProps> = ({
   listeningMode, onListeningModeChange, referencePitch, onReferencePitchChange, onPlayReferencePreview, disabled = false,
 }) => {
   const { t } = useLanguage();
+  const { applyScope, selectedPatternIds } = useToadaProject();
   const [clickVolume, setClickVolume] = useState<number>(getSavedClickVolume);
   const handleVolumeChange = (newVal: number) => { setClickVolume(newVal); saveClickVolume(newVal); };
 
   const match = referencePitch.match(/^([A-Ga-g][#b]?)(\d+)$/);
   const currentNote = match ? match[1].toUpperCase() : 'C';
   const currentOctave = match ? match[2] : '4';
+
+  const scopeLabel = applyScope === 'all'
+    ? t('scopeAll')
+    : applyScope === 'selected'
+    ? t('scopeSelected', { n: selectedPatternIds.length })
+    : t('scopeActive');
 
   return (
     <div className="cordel-card p-3 h-full flex flex-col justify-between gap-2.5">
@@ -75,11 +83,14 @@ export const ListeningModePanel: React.FC<ListeningModePanelProps> = ({
         </div>
       )}
 
-      {/* Double Sélecteur : Note + Octave */}
+      {/* Double Sélecteur : Note + Octave avec rappel du Scope */}
       <div className="flex flex-col gap-1.5 pt-1 border-t border-theme-border/20">
-        <div className="text-xs font-bold uppercase text-theme-ink flex items-center gap-1.5">
-          <Volume2 className="w-3.5 h-3.5 text-theme-accent" />
-          <span>{t('referencePitch')}</span>
+        <div className="text-xs font-bold uppercase text-theme-ink flex items-center justify-between">
+          <span className="flex items-center gap-1.5">
+            <Volume2 className="w-3.5 h-3.5 text-theme-accent" />
+            <span>{t('referencePitch')}</span>
+          </span>
+          <span className="text-[10px] font-mono text-amber-400 opacity-90">{scopeLabel}</span>
         </div>
         <div className="flex items-center gap-2">
           <select

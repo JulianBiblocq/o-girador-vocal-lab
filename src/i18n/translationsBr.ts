@@ -18,16 +18,16 @@ export const translationsBr: VocalLabTranslations = {
   rolePuxador: 'PUXADOR', roleCoro: 'CORO',
   patternAudioRecorded: 'Audio', patternAudioMissing: 'Vazio',
   editPatternNameTooltip: 'Renomear padrao', deletePatternTooltip: 'Excluir padrao',
-  conductorTitle: 'LINHA DE REGENCIA DA TOADA', addConductorBlock: 'Bloco',
-  playFullToada: 'Ouvir Toada Completa', stopFullToada: 'Parar Toada',
+  conductorTitle: 'LINHA DE REGENCIA DA TOADA', addConductorBlock: 'Bloco', playFullToada: 'Ouvir Toada Completa', stopFullToada: 'Parar Toada',
   railPuxador: 'Puxador', railCoro: 'Coro', emptySlot: '- Vazio -', blockLabel: 'Bloco {n}',
   cueSelectorLabel: 'Chamada antes da tomada (C-2 e C-1) :', cueNone: 'Nenhuma (Apenas clique)',
   cueAutoPrevious: 'Padrao anterior da Regencia', cueCustomPrefix: 'Padrao :', cueReadyBadge: 'Pronto ({measures} C)',
   swapPuxadorCoroBtn: '⇄ Inverter Puxador ↔ Coro', swapRolesTooltip: 'Inverter globalmente os papéis Puxador e Coro (padrões, condutor e ficha)',
   duplicateVariation: '❐ (2)', duplicateVariationTooltip: 'Duplicar este padrão em uma variação independente (2)',
+  scopeAll: '🌍 Toda a toada', scopeActive: '🎯 Apenas este bloco', scopeSelected: '☑ Blocos marcados ({n})', selectAll: 'Marcar todos', deselectAll: 'Desmarcar todos', selectPatternCheckbox: 'Selecionar este bloco',
+  importPreconfigTitle: 'CONFIGURAÇÕES PADRÃO DO CANTO', importDefaultBpm: 'BPM :', importMeasuresPerLine: 'Compassos / linha :', importAnacrusisDefault: 'Anacruse :',
 
-  export_toada_pack: 'Baixar Pack Toada JSON',
-  export_toada_pack_success: 'Pack Toada multi-declinacoes pronto para Sequenciad\'Or !',
+  export_toada_pack: 'Baixar Pack Toada JSON', export_toada_pack_success: 'Pack Toada multi-declinacoes pronto para Sequenciad\'Or !',
 
   // Jalon 4.C : Livret 3 - Entrainement Vocal & Karaoke
   trainer_scope_pattern: 'Padrao ativo', trainer_scope_toada: 'Toada completa (Regencia)',

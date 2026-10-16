@@ -31,7 +31,10 @@ import { createPaddedPreviewBuffer } from '../../utils/wavEncoder';
 import { decodeAudioFile } from '../../utils/directAudioImporter';
 
 export const LivretPrise: React.FC = () => {
-  const { project, activePattern, activeVariant, updatePattern, updateVariant, cueMode, getPreviousConductorPattern } = useToadaProject();
+  const {
+    project, activePattern, activeVariant, updatePattern, updateVariant, cueMode, getPreviousConductorPattern,
+    updateScopedBpm, updateScopedMeasuresCount, updateScopedHasAnacrusis, updateScopedReferencePitch, updateScopedTimeSignature,
+  } = useToadaProject();
   const { t } = useLanguage();
   const engine = useMemo(() => new MetronomeEngine(), []);
   const recorder = useMemo(() => new VocalRecorderEngine(), []);
@@ -125,10 +128,13 @@ export const LivretPrise: React.FC = () => {
             <div className="xl:col-span-5 h-full"><PatternLibraryBar /></div> <div className="xl:col-span-7 h-full"><ToadaConductorStrip /></div>
           </div>
           <PriseConfigGrid
-            timeSignature={timeSignature} onTimeSignatureChange={setTimeSignature} bpm={bpm} onBpmChange={(v) => { setBpm(v); updatePattern(activePattern.id, { baseBpm: v }); }}
-            measuresCount={measuresCount} onMeasuresCountChange={(c) => updatePattern(activePattern.id, { measuresCount: c as 1|2|3|4 })}
-            beatResolutions={beatResolutions} onBeatResolutionsChange={setBeatResolutions} hasAnacrusis={hasAnacrusis} onHasAnacrusisChange={(has) => updatePattern(activePattern.id, { hasAnacrusis: has })}
-            listeningMode={listeningMode} onListeningModeChange={setListeningMode} referencePitch={referencePitch} effectivePitch={effectivePitch} onReferencePitchChange={(p) => { setReferencePitch(p); updatePattern(activePattern.id, { referencePitch: p }); }}
+            timeSignature={timeSignature} onTimeSignatureChange={(ts) => { setTimeSignature(ts); updateScopedTimeSignature(ts); }}
+            bpm={bpm} onBpmChange={(v) => { setBpm(v); updateScopedBpm(v); }}
+            measuresCount={measuresCount} onMeasuresCountChange={(c) => updateScopedMeasuresCount(c as 1|2|3|4)}
+            beatResolutions={beatResolutions} onBeatResolutionsChange={setBeatResolutions}
+            hasAnacrusis={hasAnacrusis} onHasAnacrusisChange={(has) => updateScopedHasAnacrusis(has)}
+            listeningMode={listeningMode} onListeningModeChange={setListeningMode}
+            referencePitch={referencePitch} effectivePitch={effectivePitch} onReferencePitchChange={(p) => { setReferencePitch(p); updateScopedReferencePitch(p); }}
             engine={engine} selectedDeviceId={selectedDeviceId} onSelectedDeviceChange={setSelectedDeviceId} selectedOutputDeviceId={selectedOutputDeviceId} onSelectedOutputDeviceChange={setSelectedOutputDeviceId} recordedSampleRate={recordedSampleRate} isCycleActive={isCycleActive}
           />
         </>

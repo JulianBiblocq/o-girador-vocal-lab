@@ -26,6 +26,8 @@ export interface VocalLabTranslationsCore {
   railPuxador: string; railCoro: string; emptySlot: string; blockLabel: string;
   cueSelectorLabel: string; cueNone: string; cueAutoPrevious: string; cueCustomPrefix: string; cueReadyBadge: string;
   swapPuxadorCoroBtn: string; swapRolesTooltip: string; duplicateVariation: string; duplicateVariationTooltip: string;
+  scopeAll: string; scopeActive: string; scopeSelected: string; selectAll: string; deselectAll: string; selectPatternCheckbox: string;
+  importPreconfigTitle: string; importDefaultBpm: string; importMeasuresPerLine: string; importAnacrusisDefault: string;
 
   // Jalon 4.B : Matrice de Declinaisons Audio
   pattern_variants_title: string; variant_speed_nominal: string; variant_speed_slow: string; variant_speed_extra: string;
@@ -59,12 +61,8 @@ export interface VocalLabTranslationsCore {
   // Livret 1 - Ecoute & Repere
   listeningModeTitle: string; modeHeadphones: string; modeVisual: string;
   referencePitch: string; octave: string; octaveShort: string; testPitch: string; clickVolumeLabel: string;
-  note_C: string; note_Cs: string; note_D: string; note_Ds: string;
-  note_E: string; note_F: string; note_Fs: string; note_G: string;
-  note_Gs: string; note_A: string; note_As: string; note_B: string;
-  solfege_C: string; solfege_Cs: string; solfege_D: string; solfege_Ds: string;
-  solfege_E: string; solfege_F: string; solfege_Fs: string; solfege_G: string;
-  solfege_Gs: string; solfege_A: string; solfege_As: string; solfege_B: string;
+  note_C: string; note_Cs: string; note_D: string; note_Ds: string; note_E: string; note_F: string; note_Fs: string; note_G: string; note_Gs: string; note_A: string; note_As: string; note_B: string;
+  solfege_C: string; solfege_Cs: string; solfege_D: string; solfege_Ds: string; solfege_E: string; solfege_F: string; solfege_Fs: string; solfege_G: string; solfege_Gs: string; solfege_A: string; solfege_As: string; solfege_B: string;
 
   // Livret 1 - Materiel & Calibration
   audioDevices: string; soundCardDevices: string; devicePanelTitle: string;

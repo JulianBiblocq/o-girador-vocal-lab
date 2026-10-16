@@ -2,7 +2,9 @@ import React from 'react';
 import { Sliders, Clock, Music2, Grid } from 'lucide-react';
 import type { TimeSignatureString } from '../../types/vocalPack.types';
 import { useLanguage } from '../../i18n/LanguageContext';
+import { useToadaProject } from '../../context/ToadaProjectContext';
 import { NumericDraftInput } from '../ui/NumericDraftInput';
+import { MetricScopeSelector } from './MetricScopeSelector';
 
 interface MetricConfigPanelProps {
   timeSignature: TimeSignatureString;
@@ -24,6 +26,7 @@ export const MetricConfigPanel: React.FC<MetricConfigPanelProps> = ({
   onBeatResolutionsChange, hasAnacrusis = true, onHasAnacrusisChange, disabled = false,
 }) => {
   const { t } = useLanguage();
+  const { applyScope, setApplyScope, selectedPatternIds } = useToadaProject();
 
   const toggleBeatResolution = (idx: number) => {
     const next = [...beatResolutions];
@@ -32,14 +35,17 @@ export const MetricConfigPanel: React.FC<MetricConfigPanelProps> = ({
   };
 
   return (
-    <div className="cordel-card p-3 h-full flex flex-col justify-between gap-2.5">
+    <div className="cordel-card p-3 h-full flex flex-col justify-between gap-2">
+      {/* 0. Commutateur de portée (Tout le chant / Ce bloc seul / Blocs cochés) */}
+      <MetricScopeSelector
+        applyScope={applyScope} onApplyScopeChange={setApplyScope}
+        selectedCount={selectedPatternIds.length} disabled={disabled}
+      />
+
       {/* 1. Signature Rythmique */}
-      <div className="flex flex-col gap-1.5">
+      <div className="flex flex-col gap-1">
         <div className="flex items-center justify-between text-xs font-bold uppercase text-theme-ink">
-          <span className="flex items-center gap-1.5">
-            <Sliders className="w-3.5 h-3.5 text-theme-accent" />
-            {t('timeSignature')}
-          </span>
+          <span className="flex items-center gap-1.5"><Sliders className="w-3.5 h-3.5 text-theme-accent" />{t('timeSignature')}</span>
           <span className="font-mono text-theme-accent text-xs">{timeSignature}</span>
         </div>
         <div className="grid grid-cols-4 gap-1">
@@ -58,10 +64,7 @@ export const MetricConfigPanel: React.FC<MetricConfigPanelProps> = ({
       <div className="grid grid-cols-2 gap-3 pt-1 border-t border-theme-border/20">
         <div className="flex flex-col gap-1">
           <div className="flex items-center justify-between text-xs font-bold uppercase text-theme-ink">
-            <span className="flex items-center gap-1.5">
-              <Clock className="w-3.5 h-3.5 text-theme-accent" />
-              BPM
-            </span>
+            <span className="flex items-center gap-1.5"><Clock className="w-3.5 h-3.5 text-theme-accent" />BPM</span>
             <NumericDraftInput
               min={30} max={240} value={bpm} disabled={disabled} onChange={onBpmChange}
               className="w-14 bg-black/30 border border-theme-border text-center font-mono font-bold text-xs p-1 focus:outline-none focus:border-theme-accent"
@@ -75,10 +78,9 @@ export const MetricConfigPanel: React.FC<MetricConfigPanelProps> = ({
           />
         </div>
 
-        <div className="flex flex-col gap-1.5">
+        <div className="flex flex-col gap-1">
           <span className="flex items-center gap-1.5 text-xs font-bold uppercase text-theme-ink">
-            <Music2 className="w-3.5 h-3.5 text-theme-accent" />
-            {t('measuresCount')} (N)
+            <Music2 className="w-3.5 h-3.5 text-theme-accent" />{t('measuresCount')} (N)
           </span>
           <div className="grid grid-cols-4 gap-1">
             {[1, 2, 3, 4].map((count) => (
@@ -94,12 +96,9 @@ export const MetricConfigPanel: React.FC<MetricConfigPanelProps> = ({
       </div>
 
       {/* 3. Subdivisions par temps */}
-      <div className="flex flex-col gap-1.5 pt-1 border-t border-theme-border/20">
+      <div className="flex flex-col gap-1 pt-1 border-t border-theme-border/20">
         <div className="flex items-center justify-between text-xs font-bold uppercase text-theme-ink">
-          <span className="flex items-center gap-1.5">
-            <Grid className="w-3.5 h-3.5 text-theme-accent" />
-            {t('subdivisions')}
-          </span>
+          <span className="flex items-center gap-1.5"><Grid className="w-3.5 h-3.5 text-theme-accent" />{t('subdivisions')}</span>
           <span className="text-[10px] font-normal opacity-70">Bin / Tri</span>
         </div>
         <div className="grid grid-flow-col auto-cols-fr gap-1.5">
@@ -117,10 +116,7 @@ export const MetricConfigPanel: React.FC<MetricConfigPanelProps> = ({
 
       {/* 4. Option Anacrouse (M-1) */}
       <div className="flex items-center justify-between text-xs font-bold uppercase text-theme-ink pt-1 border-t border-theme-border/20">
-        <span className="flex items-center gap-1.5">
-          <Clock className="w-3.5 h-3.5 text-theme-accent" />
-          {t('anacrusisOption')} (M-1)
-        </span>
+        <span className="flex items-center gap-1.5"><Clock className="w-3.5 h-3.5 text-theme-accent" />{t('anacrusisOption')} (M-1)</span>
         <div className="inline-flex cordel-card-sm p-0.5 text-xs font-mono">
           <button
             type="button" disabled={disabled} onClick={() => onHasAnacrusisChange?.(true)}

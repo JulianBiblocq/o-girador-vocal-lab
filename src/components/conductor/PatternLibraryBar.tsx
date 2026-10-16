@@ -1,7 +1,7 @@
 /**
  * PatternLibraryBar.tsx
- * Bibliothèque de Patterns en 2 Blocs Verticaux (Puxador / Coro) scrollables (< 115 lignes).
- * Bouton d'inversion globale [⇄ Puxador ↔ Coro] et duplication de variations [❐ (2)].
+ * Bibliothèque de Patterns en 2 Blocs Verticaux (Puxador / Coro) scrollables (< 125 lignes).
+ * Bouton d'inversion globale [⇄ Puxador ↔ Coro], sélection multiple et duplication [❐ (2)].
  */
 import React from 'react';
 import { useToadaProject } from '../../context/ToadaProjectContext';
@@ -14,61 +14,66 @@ export const PatternLibraryBar: React.FC = () => {
   const {
     project, activePattern, setActivePatternId, addPattern, updatePattern,
     removePattern, mirrorPatternToRole, unlinkPattern, swapAllRoles, duplicateVariation,
+    selectedPatternIds, toggleSelectPattern, selectAllPatterns,
   } = useToadaProject();
   const { t } = useLanguage();
 
   const puxPatterns = project.patterns.filter((p) => p.role === 'puxador');
   const coroPatterns = project.patterns.filter((p) => p.role === 'coro');
+  const allSelected = project.patterns.length > 0 && selectedPatternIds.length === project.patterns.length;
 
   const handleDeletePattern = async (id: string, name: string) => {
     const ok = await confirmAsync({
-      title: t('deletePatternTitle'),
-      message: `${t('deletePatternConfirm')} "${name}" ?`,
-      confirmLabel: t('dialogConfirm'),
-      cancelLabel: t('dialogCancel'),
-      variant: 'danger',
+      title: t('deletePatternTitle'), message: `${t('deletePatternConfirm')} "${name}" ?`,
+      confirmLabel: t('dialogConfirm'), cancelLabel: t('dialogCancel'), variant: 'danger',
     });
     if (ok) removePattern(id);
   };
 
   const renderCard = (pat: typeof project.patterns[0]) => {
     const sourceName = pat.linkedSourcePatternId
-      ? project.patterns.find((p) => p.id === pat.linkedSourcePatternId)?.name ?? null
-      : null;
+      ? project.patterns.find((p) => p.id === pat.linkedSourcePatternId)?.name ?? null : null;
 
     return (
       <PatternCardItem
-        key={pat.id}
-        pat={pat}
-        isActive={pat.id === activePattern.id}
-        sourcePatternName={sourceName}
-        onSelect={() => setActivePatternId(pat.id)}
+        key={pat.id} pat={pat} isActive={pat.id === activePattern.id}
+        isSelected={selectedPatternIds.includes(pat.id)}
+        sourcePatternName={sourceName} onSelect={() => setActivePatternId(pat.id)}
+        onToggleSelect={() => toggleSelectPattern(pat.id)}
         onRename={(name) => updatePattern(pat.id, { name })}
         onDelete={() => handleDeletePattern(pat.id, pat.name)}
         onMirrorToRole={(targetRole) => mirrorPatternToRole(pat.id, targetRole)}
         onDuplicateVariation={() => duplicateVariation(pat.id)}
-        onUnlink={() => unlinkPattern(pat.id)}
-        canDelete={project.patterns.length > 1}
+        onUnlink={() => unlinkPattern(pat.id)} canDelete={project.patterns.length > 1}
       />
     );
   };
 
   return (
     <div className="cordel-card p-2 w-full h-full flex flex-col justify-between select-none">
-      {/* Barre d'outils bibliothèque avec inversion globale 1-clic */}
+      {/* Barre d'outils bibliothèque avec sélection et inversion */}
       <div className="flex items-center justify-between pb-1.5 mb-1.5 border-b border-[var(--cordel-border)]">
         <span className="text-[10px] font-mono font-bold tracking-wider uppercase text-[var(--cordel-text)]/80">
           {t('patternLibraryTitle')}
         </span>
-        <button
-          type="button"
-          onClick={swapAllRoles}
-          title={t('swapRolesTooltip')}
-          className="cordel-btn-secondary px-2 py-0.5 text-[9.5px] font-bold font-mono flex items-center gap-1 cursor-pointer"
-        >
-          <ArrowLeftRight className="w-3 h-3 text-amber-500" />
-          <span>{t('swapPuxadorCoroBtn')}</span>
-        </button>
+        <div className="flex items-center gap-1.5">
+          <button
+            type="button" onClick={() => selectAllPatterns(!allSelected)}
+            title={allSelected ? t('deselectAll') : t('selectAll')}
+            className={`px-1.5 py-0.5 text-[9px] font-bold font-mono border cursor-pointer rounded-none ${
+              selectedPatternIds.length > 0 ? 'bg-amber-500/20 text-amber-300 border-amber-500/50' : 'cordel-btn-secondary text-[var(--cordel-text)]/70'
+            }`}
+          >
+            {allSelected ? t('deselectAll') : selectedPatternIds.length > 0 ? `${t('selectAll')} (${selectedPatternIds.length})` : t('selectAll')}
+          </button>
+          <button
+            type="button" onClick={swapAllRoles} title={t('swapRolesTooltip')}
+            className="cordel-btn-secondary px-2 py-0.5 text-[9.5px] font-bold font-mono flex items-center gap-1 cursor-pointer"
+          >
+            <ArrowLeftRight className="w-3 h-3 text-amber-500" />
+            <span>{t('swapPuxadorCoroBtn')}</span>
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-3 h-full">

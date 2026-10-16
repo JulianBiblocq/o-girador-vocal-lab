@@ -3,9 +3,16 @@ import {
   type ToadaProject, type VocalPatternItem, type VocalRole, type VocalAudioVariant,
   createDefaultToadaProject, createDefaultVocalPattern, createDefaultVariant,
 } from '../types/toadaProject.types';
+import type { TimeSignatureString } from '../types/vocalPack.types';
 import type { ToadaProjectContextValue } from '../types/toadaProjectContext.types';
 import { createMirroredPattern, propagateSourceUpdatesToLinkedPatterns, unlinkPattern } from '../utils/patternMirrorHelper';
 import { swapProjectRoles, duplicatePatternAsVariation } from '../utils/projectRoleOps';
+import {
+  batchUpdateProjectBpm, batchUpdateProjectMeasures, batchUpdateProjectAnacrusis,
+  batchUpdateProjectPitch, batchUpdateProjectTimeSignature,
+} from '../utils/projectBatchOps';
+import { applySetActiveVariantKey, applyUpdateVariant, applyEnsureVariantExists } from '../utils/variantContextOps';
+import { usePatternSelection } from '../hooks/usePatternSelection';
 import { useProjectAutoSave } from '../hooks/useProjectAutoSave';
 
 const ToadaContext = createContext<ToadaProjectContextValue | null>(null);
@@ -15,48 +22,25 @@ export const ToadaProjectProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const [cueMode, setCueMode] = useState<string>('auto_previous');
   useProjectAutoSave(project, setProject);
 
+  const patternIds = useMemo(() => project.patterns.map((p) => p.id), [project.patterns]);
+  const {
+    applyScope, setApplyScope, selectedPatternIds, toggleSelectPattern, selectAllPatterns, clearSelectedPatterns,
+  } = usePatternSelection(patternIds);
+
   const activePattern = useMemo(() => project.patterns.find((p) => p.id === project.activePatternId) ?? project.patterns[0], [project.patterns, project.activePatternId]);
   const activeVariant = useMemo(() => activePattern.variants[activePattern.activeVariantKey] ?? Object.values(activePattern.variants)[0] ?? createDefaultVariant(1.0, 0), [activePattern]);
   const setActivePatternId = useCallback((id: string) => setProject((prev) => ({ ...prev, activePatternId: id })), []);
 
-  const setActiveVariantKey = useCallback((patternId: string, variantKey: string) => {
-    setProject((prev) => ({
-      ...prev,
-      patterns: prev.patterns.map((p) => {
-        if (p.id !== patternId) return p;
-        const v = p.variants[variantKey];
-        return {
-          ...p, activeVariantKey: variantKey, recordingResult: v?.recordingResult ?? null,
-          trimStartSec: v?.trimStartSec ?? 0, trimEndSec: v?.trimEndSec ?? 0, lowCutEnabled: v?.lowCutEnabled ?? true,
-        };
-      }),
-    }));
-  }, []);
-
-  const updateVariant = useCallback((patternId: string, variantKey: string, partial: Partial<VocalAudioVariant>) => {
-    setProject((prev) => {
-      const updated = prev.patterns.map((p) => {
-        if (p.id !== patternId) return p;
-        const oldV = p.variants[variantKey] ?? createDefaultVariant(1.0, 0);
-        const updatedV: VocalAudioVariant = { ...oldV, ...partial };
-        const isCurrent = p.activeVariantKey === variantKey;
-        return {
-          ...p, variants: { ...p.variants, [variantKey]: updatedV },
-          recordingResult: isCurrent ? (updatedV.recordingResult ?? null) : p.recordingResult,
-          trimStartSec: isCurrent ? updatedV.trimStartSec : p.trimStartSec, trimEndSec: isCurrent ? updatedV.trimEndSec : p.trimEndSec,
-        };
-      });
-      return { ...prev, patterns: propagateSourceUpdatesToLinkedPatterns(updated, patternId) };
-    });
-  }, []);
-
+  const setActiveVariantKey = useCallback((patternId: string, variantKey: string) => setProject((prev) => applySetActiveVariantKey(prev, patternId, variantKey)), []);
+  const updateVariant = useCallback((patternId: string, variantKey: string, partial: Partial<VocalAudioVariant>) => setProject((prev) => applyUpdateVariant(prev, patternId, variantKey, partial)), []);
   const ensureVariantExists = useCallback((patternId: string, speedRatio: number, pitchShiftSemitones: number): string => {
-    const v = createDefaultVariant(speedRatio, pitchShiftSemitones);
-    setProject((prev) => ({
-      ...prev,
-      patterns: prev.patterns.map((p) => (p.id !== patternId || p.variants[v.variantKey] ? p : { ...p, variants: { ...p.variants, [v.variantKey]: v } })),
-    }));
-    return v.variantKey;
+    let key = '';
+    setProject((prev) => {
+      const res = applyEnsureVariantExists(prev, patternId, speedRatio, pitchShiftSemitones);
+      key = res.variantKey;
+      return res.updatedProject;
+    });
+    return key;
   }, []);
 
   const addPattern = useCallback((role: VocalRole, name?: string): string => {
@@ -68,10 +52,7 @@ export const ToadaProjectProvider: React.FC<{ children: React.ReactNode }> = ({ 
   }, [project.bpm, activePattern?.hasAnacrusis]);
 
   const updatePattern = useCallback((id: string, partial: Partial<VocalPatternItem>) => {
-    setProject((prev) => {
-      const updated = prev.patterns.map((p) => (p.id === id ? { ...p, ...partial } : p));
-      return { ...prev, patterns: propagateSourceUpdatesToLinkedPatterns(updated, id) };
-    });
+    setProject((prev) => ({ ...prev, patterns: propagateSourceUpdatesToLinkedPatterns(prev.patterns.map((p) => (p.id === id ? { ...p, ...partial } : p)), id) }));
   }, []);
 
   const mirrorPatternToRole = useCallback((sourcePatternId: string, targetRole: VocalRole): string => {
@@ -86,9 +67,7 @@ export const ToadaProjectProvider: React.FC<{ children: React.ReactNode }> = ({ 
     return newId;
   }, []);
 
-  const handleUnlink = useCallback((patternId: string) => {
-    setProject((prev) => ({ ...prev, patterns: prev.patterns.map((p) => (p.id === patternId ? unlinkPattern(p) : p)) }));
-  }, []);
+  const handleUnlink = useCallback((patternId: string) => setProject((prev) => ({ ...prev, patterns: prev.patterns.map((p) => (p.id === patternId ? unlinkPattern(p) : p)) })), []);
 
   const removePattern = useCallback((id: string) => {
     setProject((prev) => {
@@ -118,6 +97,13 @@ export const ToadaProjectProvider: React.FC<{ children: React.ReactNode }> = ({ 
     return createdId;
   }, []);
 
+  // Scoped metric & pitch updates (Micro-sécurité 1)
+  const updateScopedBpm = useCallback((bpm: number) => setProject((prev) => batchUpdateProjectBpm(prev, applyScope, selectedPatternIds, bpm)), [applyScope, selectedPatternIds]);
+  const updateScopedMeasuresCount = useCallback((count: 1 | 2 | 3 | 4) => setProject((prev) => batchUpdateProjectMeasures(prev, applyScope, selectedPatternIds, count)), [applyScope, selectedPatternIds]);
+  const updateScopedHasAnacrusis = useCallback((has: boolean) => setProject((prev) => batchUpdateProjectAnacrusis(prev, applyScope, selectedPatternIds, has)), [applyScope, selectedPatternIds]);
+  const updateScopedReferencePitch = useCallback((pitch: string) => setProject((prev) => batchUpdateProjectPitch(prev, applyScope, selectedPatternIds, pitch)), [applyScope, selectedPatternIds]);
+  const updateScopedTimeSignature = useCallback((sig: TimeSignatureString) => setProject((prev) => batchUpdateProjectTimeSignature(prev, applyScope, selectedPatternIds, sig)), [applyScope, selectedPatternIds]);
+
   const getPreviousConductorPattern = useCallback((): VocalPatternItem | null => {
     const slotIdx = project.slots.findIndex((s) => s.puxadorPatternId === project.activePatternId || s.coroPatternId === project.activePatternId);
     if (slotIdx > 0) {
@@ -133,7 +119,9 @@ export const ToadaProjectProvider: React.FC<{ children: React.ReactNode }> = ({ 
     addPattern, updatePattern, removePattern, mirrorPatternToRole, unlinkPattern: handleUnlink,
     loadProject, addSlot, removeSlot, updateSlot, setCueMode, getPreviousConductorPattern,
     swapAllRoles, duplicateVariation,
-  }), [project, activePattern, activeVariant, cueMode, setActivePatternId, setActiveVariantKey, updateVariant, ensureVariantExists, addPattern, updatePattern, removePattern, mirrorPatternToRole, handleUnlink, loadProject, addSlot, removeSlot, updateSlot, setCueMode, getPreviousConductorPattern, swapAllRoles, duplicateVariation]);
+    applyScope, setApplyScope, selectedPatternIds, toggleSelectPattern, selectAllPatterns, clearSelectedPatterns,
+    updateScopedBpm, updateScopedMeasuresCount, updateScopedHasAnacrusis, updateScopedReferencePitch, updateScopedTimeSignature,
+  }), [project, activePattern, activeVariant, cueMode, setActivePatternId, setActiveVariantKey, updateVariant, ensureVariantExists, addPattern, updatePattern, removePattern, mirrorPatternToRole, handleUnlink, loadProject, addSlot, removeSlot, updateSlot, setCueMode, getPreviousConductorPattern, swapAllRoles, duplicateVariation, applyScope, setApplyScope, selectedPatternIds, toggleSelectPattern, selectAllPatterns, clearSelectedPatterns, updateScopedBpm, updateScopedMeasuresCount, updateScopedHasAnacrusis, updateScopedReferencePitch, updateScopedTimeSignature]);
 
   return <ToadaContext.Provider value={value}>{children}</ToadaContext.Provider>;
 };

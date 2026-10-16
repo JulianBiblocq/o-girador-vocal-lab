@@ -1,29 +1,37 @@
 /**
  * toadaSheetParser.ts
- * Parser universel des fiches ToadaDocument d'organizador (.json & texte/HTML) (< 135 lignes).
- * Gère le gras commutable (boldRole), les lignes mixtes et l'alignement phonétique.
+ * Parser universel des fiches ToadaDocument d'organizador (.json & texte/HTML) (< 125 lignes).
+ * Gère le gras commutable (boldRole), directives en ligne ((1m), (sans ana)...) et phonétique.
  */
 import type { VocalRole } from '../types/toadaProject.types';
 import type { ToadaDocument, ParsedLyricsSegment, ParsedToadaSheetResult } from '../types/toadaDocument.types';
 import { splitHtmlOrTextIntoRawLines, parseRichLineIntoSegments } from './htmlLyricsHelper';
+import { extractInlineLineDirectives } from './sheetDirectiveHelper';
 
 export function parseStructuredArrayLyrics(origList: any[], phonList?: any[]): ParsedLyricsSegment[] {
   const segments: ParsedLyricsSegment[] = [];
   origList.forEach((item, idx) => {
     const phonItem = phonList?.[idx];
     const isMixed = item.isMixed || (item.puxador && (item.coro || item.choeur));
+    const addSeg = (role: VocalRole, rawText?: string, rawPhon?: string) => {
+      if (!rawText?.trim()) return;
+      const dir = extractInlineLineDirectives(rawText.trim());
+      segments.push({
+        role,
+        text: dir.cleanText || rawText.trim(),
+        phoneticText: rawPhon?.trim(),
+        measuresCount: dir.measuresCount,
+        hasAnacrusis: dir.hasAnacrusis,
+      });
+    };
+
     if (isMixed) {
-      if (item.puxador?.trim()) {
-        segments.push({ role: 'puxador', text: item.puxador.trim(), phoneticText: phonItem?.puxador?.trim() });
-      }
-      const coroTxt = (item.coro || item.choeur)?.trim();
-      if (coroTxt) {
-        segments.push({ role: 'coro', text: coroTxt, phoneticText: (phonItem?.coro || phonItem?.choeur)?.trim() });
-      }
+      addSeg('puxador', item.puxador, phonItem?.puxador);
+      addSeg('coro', item.coro || item.choeur, phonItem?.coro || phonItem?.choeur);
     } else if (item.puxador?.trim()) {
-      segments.push({ role: 'puxador', text: item.puxador.trim(), phoneticText: phonItem?.puxador?.trim() });
+      addSeg('puxador', item.puxador, phonItem?.puxador);
     } else if ((item.coro || item.choeur)?.trim()) {
-      segments.push({ role: 'coro', text: (item.coro || item.choeur).trim(), phoneticText: (phonItem?.coro || phonItem?.choeur)?.trim() });
+      addSeg('coro', item.coro || item.choeur, phonItem?.coro || phonItem?.choeur);
     }
   });
   return segments;
@@ -40,12 +48,14 @@ export function parseRichTextLyricsAndPhonetics(rawOriginal: string, rawPhonetic
     const phonSegs = phonLine ? parseRichLineIntoSegments(phonLine, boldRole) : [];
 
     rawSegs.forEach((seg, sIdx) => {
-      // Find matching phonetic segment by index or by role
       const matchedPhon = phonSegs[sIdx] ?? phonSegs.find((p) => p.role === seg.role) ?? (phonSegs.length === 1 ? phonSegs[0] : undefined);
+      const dir = extractInlineLineDirectives(seg.text);
       segments.push({
         role: seg.role,
-        text: seg.text,
+        text: dir.cleanText || seg.text,
         phoneticText: matchedPhon?.text,
+        measuresCount: dir.measuresCount,
+        hasAnacrusis: dir.hasAnacrusis,
       });
     });
   });
@@ -54,17 +64,9 @@ export function parseRichTextLyricsAndPhonetics(rawOriginal: string, rawPhonetic
 
 export function parseToadaDocument(doc: ToadaDocument, boldRole: VocalRole = 'puxador'): ParsedToadaSheetResult {
   const docMeta: Partial<ToadaDocument> = {
-    id: doc.id,
-    titre: doc.titre,
-    nacao: doc.nacao,
-    rythme: doc.rythme,
-    annee: doc.annee,
-    traduction: doc.traduction,
-    anecdote: doc.anecdote,
-    notesLexique: doc.notesLexique,
-    questionsQcm: doc.questionsQcm,
-    bpmDefaut: doc.bpmDefaut,
-    tonaliteDefaut: doc.tonaliteDefaut,
+    id: doc.id, titre: doc.titre, nacao: doc.nacao, rythme: doc.rythme, annee: doc.annee,
+    traduction: doc.traduction, anecdote: doc.anecdote, notesLexique: doc.notesLexique,
+    questionsQcm: doc.questionsQcm, bpmDefaut: doc.bpmDefaut, tonaliteDefaut: doc.tonaliteDefaut,
   };
 
   let segments: ParsedLyricsSegment[] = [];
@@ -90,20 +92,17 @@ export function parseToadaJsonOrText(input: string, boldRole: VocalRole = 'puxad
     try {
       const data = JSON.parse(trimmed);
       if (Array.isArray(data) && data.length > 0) {
-        const docs = data as ToadaDocument[];
-        return { isJsonArray: true, docs, parsed: parseToadaDocument(docs[0], boldRole) };
+        return { isJsonArray: true, docs: data, parsed: parseToadaDocument(data[0], boldRole) };
       }
       if (data && typeof data === 'object' && (data.titre || data.parolesOriginales)) {
-        const doc = data as ToadaDocument;
-        return { isJsonArray: false, docs: [doc], parsed: parseToadaDocument(doc, boldRole) };
+        return { isJsonArray: false, docs: [data], parsed: parseToadaDocument(data, boldRole) };
       }
     } catch {
-      // Fallback to text parsing
+      // Fallback text
     }
   }
   return {
-    isJsonArray: false,
-    docs: [],
+    isJsonArray: false, docs: [],
     parsed: { segments: parseRichTextLyricsAndPhonetics(trimmed, undefined, boldRole) },
   };
 }
