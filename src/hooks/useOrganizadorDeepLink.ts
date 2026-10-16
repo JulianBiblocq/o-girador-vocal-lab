@@ -63,7 +63,7 @@ export function useOrganizadorDeepLink(groupId: string | null) {
         try {
           const doc = await fetchOrganizadorToadaById(songId, groupId);
           if (doc) {
-            const parsed = parseToadaDocument(doc, 'coro');
+            const parsed = parseToadaDocument(doc, 'puxador');
             const updated = generateToadaFromSheet(project, parsed);
             loadProject(updated);
             window.dispatchEvent(

@@ -72,6 +72,7 @@ export interface ToadaProject {
   slots: ToadaArrangementSlot[];
   activePatternId: string;
   toadaMeta?: Partial<ToadaDocument>;
+  sheetLines?: Array<{ role: VocalRole; text: string; phoneticText?: string; [key: string]: any }>;
 }
 
 export function computeVariantCoverage(speedRatio: number, pitchShiftSemitones: number): VocalAudioVariantCoverage {

@@ -4,13 +4,11 @@
  */
 import type { VocalLabTranslations } from './i18n.types';
 import { slicerTranslationsFr } from './slicerTranslationsFr';
-import { toadaSheetTranslationsFr } from './toadaSheetTranslationsFr'; import { treinoSubTranslationsFr } from './treinoSubTranslationsFr';
-import { variantTranslationsFr } from './variantTranslationsFr';
+import { toadaSheetTranslationsFr } from './toadaSheetTranslationsFr'; import { treinoSubTranslationsFr } from './treinoSubTranslationsFr'; import { variantTranslationsFr } from './variantTranslationsFr';
 
 export const translationsFr: VocalLabTranslations = {
   // En-tete
-  appTitle: 'O Girador — Cantador',
-  appSubtitle: 'Atelier Vocal - Prosodie & Chant Maracatu',
+  appTitle: 'O Girador — Cantador', appSubtitle: 'Atelier Vocal - Prosodie & Chant Maracatu',
   themeToggle: 'Changer de theme (Clair / Sombre)',
   tabLivret1: 'Livret 1 : Prise', tabLivret2: 'Livret 2 : Melodia & Letra', tabLivret3: 'Livret 3 : Entrainement',
 
@@ -25,6 +23,8 @@ export const translationsFr: VocalLabTranslations = {
   railPuxador: 'Rail Puxador', railCoro: 'Rail Coro', emptySlot: '- Vide -', blockLabel: 'Bloc {n}',
   cueSelectorLabel: 'Appel avant la prise (M-2 & M-1) :', cueNone: 'Aucun (Clic seul)',
   cueAutoPrevious: 'Pattern precedent du Conducteur', cueCustomPrefix: 'Pattern :', cueReadyBadge: 'Pret ({measures} M)',
+  swapPuxadorCoroBtn: '⇄ Inverser Puxador ↔ Coro', swapRolesTooltip: 'Inverser globalement les rôles Puxador et Coro (patterns, conducteur et fiche)',
+  duplicateVariation: '❐ (2)', duplicateVariationTooltip: 'Dupliquer ce pattern en une variation indépendante (2)',
 
   export_toada_pack: 'Telecharger Pack Toada JSON',
   export_toada_pack_success: 'Pack Toada multi-declinaisons pret pour Sequenciad\'Or !',

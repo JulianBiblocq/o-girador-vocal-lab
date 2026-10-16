@@ -29,7 +29,7 @@ export function parseStructuredArrayLyrics(origList: any[], phonList?: any[]): P
   return segments;
 }
 
-export function parseRichTextLyricsAndPhonetics(rawOriginal: string, rawPhonetic?: string, boldRole: VocalRole = 'coro'): ParsedLyricsSegment[] {
+export function parseRichTextLyricsAndPhonetics(rawOriginal: string, rawPhonetic?: string, boldRole: VocalRole = 'puxador'): ParsedLyricsSegment[] {
   const origLines = splitHtmlOrTextIntoRawLines(rawOriginal);
   const phonLines = rawPhonetic ? splitHtmlOrTextIntoRawLines(rawPhonetic) : [];
   const segments: ParsedLyricsSegment[] = [];
@@ -52,7 +52,7 @@ export function parseRichTextLyricsAndPhonetics(rawOriginal: string, rawPhonetic
   return segments;
 }
 
-export function parseToadaDocument(doc: ToadaDocument, boldRole: VocalRole = 'coro'): ParsedToadaSheetResult {
+export function parseToadaDocument(doc: ToadaDocument, boldRole: VocalRole = 'puxador'): ParsedToadaSheetResult {
   const docMeta: Partial<ToadaDocument> = {
     id: doc.id,
     titre: doc.titre,
@@ -84,7 +84,7 @@ export interface ParseSheetOutput {
   parsed: ParsedToadaSheetResult;
 }
 
-export function parseToadaJsonOrText(input: string, boldRole: VocalRole = 'coro'): ParseSheetOutput {
+export function parseToadaJsonOrText(input: string, boldRole: VocalRole = 'puxador'): ParseSheetOutput {
   const trimmed = input.trim();
   if ((trimmed.startsWith('{') && trimmed.endsWith('}')) || (trimmed.startsWith('[') && trimmed.endsWith(']'))) {
     try {

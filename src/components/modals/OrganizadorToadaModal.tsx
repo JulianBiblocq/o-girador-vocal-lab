@@ -48,7 +48,7 @@ export const OrganizadorToadaModal: React.FC<OrganizadorToadaModalProps> = ({
   }, [docs, search]);
 
   const applyDoc = (doc: ToadaDocument) => {
-    const parsed = parseToadaDocument(doc, 'coro');
+    const parsed = parseToadaDocument(doc, 'puxador');
     loadProject(generateToadaFromSheet(project, parsed));
     window.dispatchEvent(new CustomEvent('app-toast', { detail: { type: 'success', message: `${doc.titre} chargée !` } }));
     onClose();
@@ -59,7 +59,7 @@ export const OrganizadorToadaModal: React.FC<OrganizadorToadaModalProps> = ({
     if (!f) return;
     const r = new FileReader();
     r.onload = (ev) => {
-      const res = parseToadaJsonOrText(ev.target?.result as string, 'coro');
+      const res = parseToadaJsonOrText(ev.target?.result as string, 'puxador');
       loadProject(generateToadaFromSheet(project, res.parsed));
       window.dispatchEvent(new CustomEvent('app-toast', { detail: { type: 'success', message: `${f.name} importé !` } }));
       onClose();

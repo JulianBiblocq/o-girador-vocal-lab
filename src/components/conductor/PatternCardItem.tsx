@@ -17,6 +17,7 @@ interface PatternCardItemProps {
   onRename: (newName: string) => void;
   onDelete: () => void;
   onMirrorToRole: (targetRole: VocalRole) => void;
+  onDuplicateVariation?: () => void;
   onUnlink: () => void;
   canDelete: boolean;
 }
@@ -32,7 +33,7 @@ const getSolfegeNoteName = (pitch: string | undefined, t: (k: TranslationKey) =>
 };
 
 export const PatternCardItem: React.FC<PatternCardItemProps> = ({
-  pat, isActive, sourcePatternName, onSelect, onRename, onDelete, onMirrorToRole, onUnlink, canDelete,
+  pat, isActive, sourcePatternName, onSelect, onRename, onDelete, onMirrorToRole, onDuplicateVariation, onUnlink, canDelete,
 }) => {
   const { t } = useLanguage();
   const [isEditing, setIsEditing] = useState(false);
@@ -85,27 +86,41 @@ export const PatternCardItem: React.FC<PatternCardItemProps> = ({
         )}
       </div>
 
-      {/* Rangée Miroir / Synchronisation */}
+      {/* Rangée Miroir / Synchronisation & Variation */}
       <div className="flex items-center justify-between gap-1 text-[9.5px] font-mono">
-        {isLinked ? (
-          <div className={`flex items-center gap-1 border px-1 py-0.2 truncate ${isActive ? '!bg-white/20 !text-[#f4ecd8] border-white/40' : 'bg-emerald-950/70 text-emerald-300 border-emerald-500/40'}`}>
-            <span className="truncate">{t('syncBadge', { source: sourcePatternName || '...' })}</span>
-            <button type="button" title={t('unlinkTooltip')} onClick={(e) => { e.stopPropagation(); onUnlink(); }} className="hover:text-red-300 p-0.2 cursor-pointer shrink-0">
-              <X className="w-2.5 h-2.5" />
+        <div className="flex items-center gap-1 min-w-0">
+          {isLinked ? (
+            <div className={`flex items-center gap-1 border px-1 py-0.2 truncate ${isActive ? '!bg-white/20 !text-[#f4ecd8] border-white/40' : 'bg-emerald-950/70 text-emerald-300 border-emerald-500/40'}`}>
+              <span className="truncate">{t('syncBadge', { source: sourcePatternName || '...' })}</span>
+              <button type="button" title={t('unlinkTooltip')} onClick={(e) => { e.stopPropagation(); onUnlink(); }} className="hover:text-red-300 p-0.2 cursor-pointer shrink-0">
+                <X className="w-2.5 h-2.5" />
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button" onClick={(e) => { e.stopPropagation(); onMirrorToRole(targetRole); }}
+              title={pat.role === 'puxador' ? t('mirrorToCoroTooltip') : t('mirrorToPuxadorTooltip')}
+              className={`px-1.5 py-0.2 flex items-center gap-1 border font-bold cursor-pointer rounded-none ${
+                isActive ? '!bg-white/20 hover:!bg-white/30 !text-[#f4ecd8] border-white/40' : 'bg-white/5 hover:bg-white/10 text-theme-ink/80 border-theme-border/50'
+              }`}
+            >
+              <ArrowLeftRight className="w-2.5 h-2.5" />
+              <span>{pat.role === 'puxador' ? t('mirrorToCoro') : t('mirrorToPuxador')}</span>
             </button>
-          </div>
-        ) : (
-          <button
-            type="button" onClick={(e) => { e.stopPropagation(); onMirrorToRole(targetRole); }}
-            title={pat.role === 'puxador' ? t('mirrorToCoroTooltip') : t('mirrorToPuxadorTooltip')}
-            className={`px-1.5 py-0.2 flex items-center gap-1 border font-bold cursor-pointer rounded-none ${
-              isActive ? '!bg-white/20 hover:!bg-white/30 !text-[#f4ecd8] border-white/40' : 'bg-white/5 hover:bg-white/10 text-theme-ink/80 border-theme-border/50'
-            }`}
-          >
-            <ArrowLeftRight className="w-2.5 h-2.5" />
-            <span>{pat.role === 'puxador' ? t('mirrorToCoro') : t('mirrorToPuxador')}</span>
-          </button>
-        )}
+          )}
+          {onDuplicateVariation && (
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); onDuplicateVariation(); }}
+              title={t('duplicateVariationTooltip')}
+              className={`px-1 py-0.2 font-mono font-bold border cursor-pointer rounded-none text-[9px] ${
+                isActive ? '!bg-white/20 hover:!bg-white/30 !text-[#f4ecd8] border-white/40' : 'bg-white/5 hover:bg-white/10 text-theme-ink/80 border-theme-border/50'
+              }`}
+            >
+              {t('duplicateVariation')}
+            </button>
+          )}
+        </div>
         <span className={`text-[9px] font-mono shrink-0 ${isActive ? '!text-[#f4ecd8]' : 'text-[var(--cordel-text)]/60'}`}>{recCount}/{totCount} decl.</span>
       </div>
 

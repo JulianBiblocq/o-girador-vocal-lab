@@ -3,28 +3,16 @@ import {
   type ToadaProject, type VocalPatternItem, type VocalRole, type VocalAudioVariant,
   createDefaultToadaProject, createDefaultVocalPattern, createDefaultVariant,
 } from '../types/toadaProject.types';
+import type { ToadaProjectContextValue } from '../types/toadaProjectContext.types';
 import { createMirroredPattern, propagateSourceUpdatesToLinkedPatterns, unlinkPattern } from '../utils/patternMirrorHelper';
+import { swapProjectRoles, duplicatePatternAsVariation } from '../utils/projectRoleOps';
 import { useProjectAutoSave } from '../hooks/useProjectAutoSave';
-
-interface ToadaProjectContextValue {
-  project: ToadaProject; activePattern: VocalPatternItem; activeVariant: VocalAudioVariant; cueMode: string;
-  setActivePatternId: (id: string) => void; setActiveVariantKey: (patternId: string, variantKey: string) => void;
-  updateVariant: (patternId: string, variantKey: string, partial: Partial<VocalAudioVariant>) => void;
-  ensureVariantExists: (patternId: string, speedRatio: number, pitchShiftSemitones: number) => string;
-  addPattern: (role: VocalRole, name?: string) => string; updatePattern: (id: string, partial: Partial<VocalPatternItem>) => void;
-  removePattern: (id: string) => void; mirrorPatternToRole: (sourcePatternId: string, targetRole: VocalRole) => string;
-  unlinkPattern: (patternId: string) => void; loadProject: (newProject: ToadaProject) => void;
-  addSlot: () => void; removeSlot: (slotId: string) => void;
-  updateSlot: (slotId: string, puxadorId: string | null, coroId: string | null) => void;
-  setCueMode: (mode: string) => void; getPreviousConductorPattern: () => VocalPatternItem | null;
-}
 
 const ToadaContext = createContext<ToadaProjectContextValue | null>(null);
 
 export const ToadaProjectProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [project, setProject] = useState<ToadaProject>(() => createDefaultToadaProject());
   const [cueMode, setCueMode] = useState<string>('auto_previous');
-
   useProjectAutoSave(project, setProject);
 
   const activePattern = useMemo(() => project.patterns.find((p) => p.id === project.activePatternId) ?? project.patterns[0], [project.patterns, project.activePatternId]);
@@ -38,10 +26,8 @@ export const ToadaProjectProvider: React.FC<{ children: React.ReactNode }> = ({ 
         if (p.id !== patternId) return p;
         const v = p.variants[variantKey];
         return {
-          ...p, activeVariantKey: variantKey,
-          recordingResult: v?.recordingResult ?? null,
-          trimStartSec: v?.trimStartSec ?? 0, trimEndSec: v?.trimEndSec ?? 0,
-          lowCutEnabled: v?.lowCutEnabled ?? true,
+          ...p, activeVariantKey: variantKey, recordingResult: v?.recordingResult ?? null,
+          trimStartSec: v?.trimStartSec ?? 0, trimEndSec: v?.trimEndSec ?? 0, lowCutEnabled: v?.lowCutEnabled ?? true,
         };
       }),
     }));
@@ -120,6 +106,17 @@ export const ToadaProjectProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const addSlot = useCallback(() => setProject((prev) => ({ ...prev, slots: [...prev.slots, { slotId: `slot-${Date.now().toString(36)}`, puxadorPatternId: null, coroPatternId: null }] })), []);
   const removeSlot = useCallback((slotId: string) => setProject((prev) => (prev.slots.length <= 1 ? prev : { ...prev, slots: prev.slots.filter((s) => s.slotId !== slotId) })), []);
   const updateSlot = useCallback((slotId: string, puxadorId: string | null, coroId: string | null) => setProject((prev) => ({ ...prev, slots: prev.slots.map((s) => (s.slotId === slotId ? { ...s, puxadorPatternId: puxadorId, coroPatternId: coroId } : s)) })), []);
+  const swapAllRoles = useCallback(() => setProject((prev) => swapProjectRoles(prev)), []);
+
+  const duplicateVariation = useCallback((patternId: string): string => {
+    let createdId = '';
+    setProject((prev) => {
+      const res = duplicatePatternAsVariation(prev, patternId);
+      createdId = res.newId;
+      return res.updatedProject;
+    });
+    return createdId;
+  }, []);
 
   const getPreviousConductorPattern = useCallback((): VocalPatternItem | null => {
     const slotIdx = project.slots.findIndex((s) => s.puxadorPatternId === project.activePatternId || s.coroPatternId === project.activePatternId);
@@ -135,7 +132,8 @@ export const ToadaProjectProvider: React.FC<{ children: React.ReactNode }> = ({ 
     setActiveVariantKey, updateVariant, ensureVariantExists,
     addPattern, updatePattern, removePattern, mirrorPatternToRole, unlinkPattern: handleUnlink,
     loadProject, addSlot, removeSlot, updateSlot, setCueMode, getPreviousConductorPattern,
-  }), [project, activePattern, activeVariant, cueMode, setActivePatternId, setActiveVariantKey, updateVariant, ensureVariantExists, addPattern, updatePattern, removePattern, mirrorPatternToRole, handleUnlink, loadProject, addSlot, removeSlot, updateSlot, setCueMode, getPreviousConductorPattern]);
+    swapAllRoles, duplicateVariation,
+  }), [project, activePattern, activeVariant, cueMode, setActivePatternId, setActiveVariantKey, updateVariant, ensureVariantExists, addPattern, updatePattern, removePattern, mirrorPatternToRole, handleUnlink, loadProject, addSlot, removeSlot, updateSlot, setCueMode, getPreviousConductorPattern, swapAllRoles, duplicateVariation]);
 
   return <ToadaContext.Provider value={value}>{children}</ToadaContext.Provider>;
 };

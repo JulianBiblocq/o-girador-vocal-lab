@@ -5,8 +5,7 @@
  */
 
 import type { slicerTranslationsFr } from './slicerTranslationsFr';
-import type { toadaSheetTranslationsFr } from './toadaSheetTranslationsFr';
-import type { treinoSubTranslationsFr } from './treinoSubTranslationsFr';
+import type { toadaSheetTranslationsFr } from './toadaSheetTranslationsFr'; import type { treinoSubTranslationsFr } from './treinoSubTranslationsFr';
 
 export type Locale = 'fr' | 'br';
 export type TranslationParams = Record<string, string | number>;
@@ -26,6 +25,7 @@ export interface VocalLabTranslationsCore {
   conductorTitle: string; addConductorBlock: string; playFullToada: string; stopFullToada: string;
   railPuxador: string; railCoro: string; emptySlot: string; blockLabel: string;
   cueSelectorLabel: string; cueNone: string; cueAutoPrevious: string; cueCustomPrefix: string; cueReadyBadge: string;
+  swapPuxadorCoroBtn: string; swapRolesTooltip: string; duplicateVariation: string; duplicateVariationTooltip: string;
 
   // Jalon 4.B : Matrice de Declinaisons Audio
   pattern_variants_title: string; variant_speed_nominal: string; variant_speed_slow: string; variant_speed_extra: string;
