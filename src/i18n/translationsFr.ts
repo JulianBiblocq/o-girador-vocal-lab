@@ -5,6 +5,7 @@
 import type { VocalLabTranslations } from './i18n.types';
 import { slicerTranslationsFr } from './slicerTranslationsFr';
 import { toadaSheetTranslationsFr } from './toadaSheetTranslationsFr'; import { treinoSubTranslationsFr } from './treinoSubTranslationsFr'; import { variantTranslationsFr } from './variantTranslationsFr';
+import { tessituraTranslationsFr } from './tessituraTranslationsFr';
 
 export const translationsFr: VocalLabTranslations = {
   // En-tete
@@ -14,9 +15,7 @@ export const translationsFr: VocalLabTranslations = {
 
   // Jalon 4.A : Bibliotheque & Conducteur de Toada
   patternLibraryTitle: 'BIBLIOTHEQUE DES PATTERNS (TOADA)',
-  addPuxadorPattern: 'Pattern Puxador', addCoroPattern: 'Pattern Coro',
-  rolePuxador: 'PUXADOR', roleCoro: 'CORO',
-  patternAudioRecorded: 'Audio', patternAudioMissing: 'Vide',
+  addPuxadorPattern: 'Pattern Puxador', addCoroPattern: 'Pattern Coro', rolePuxador: 'PUXADOR', roleCoro: 'CORO', patternAudioRecorded: 'Audio', patternAudioMissing: 'Vide',
   editPatternNameTooltip: 'Renommer le pattern', deletePatternTooltip: 'Supprimer le pattern',
   conductorTitle: 'FRISE CONDUCTEUR DE LA TOADA', addConductorBlock: 'Bloc', playFullToada: 'Ecouter la Toada complete', stopFullToada: 'Arreter la Toada',
   railPuxador: 'Rail Puxador', railCoro: 'Rail Coro', emptySlot: '- Vide -', blockLabel: 'Bloc {n}',
@@ -142,7 +141,6 @@ export const translationsFr: VocalLabTranslations = {
   midiBadge: 'MIDI', midiConnectedTitle: 'Contrôleur MIDI connecté : {device}', midiNotConnectedTitle: 'Aucun contrôleur MIDI détecté', roleStudio: 'Studio', roleEleve: 'Élève', rulerClickSeekHint: 'Règle cliquable = Départ lecture',
   fichesOrganizador: 'Fiches Organizador', sendToSequencer: 'Envoyer vers Sequenciador', sendToSequencerTooltip: 'Téléverser les enregistrements et publier la Toada pour Sequenciador',
   openInSequencer: 'Ouvrir dans Sequenciador', toadaPublishedSuccess: 'Toada publiée dans le Cloud avec succès !', toadaPublishing: 'Publication de la Toada...', toadaImportTxt: 'Importer un fichier .txt',
-  organizadorSearchPlaceholder: 'Rechercher une fiche ou toada...', noOrganizadorToadas: 'Aucune fiche trouvée',
-  authLogin: 'Connexion', authLoginTooltip: 'Se connecter avec Google / SSO Organizador', authLogout: 'Déconnexion', authLoginRequiredNotice: 'Connexion requise pour accéder aux fiches de votre troupe.',
-  ...slicerTranslationsFr, ...toadaSheetTranslationsFr, ...treinoSubTranslationsFr, ...variantTranslationsFr,
+  organizadorSearchPlaceholder: 'Rechercher une fiche ou toada...', noOrganizadorToadas: 'Aucune fiche trouvée', authLogin: 'Connexion', authLoginTooltip: 'Se connecter avec Google / SSO Organizador', authLogout: 'Déconnexion', authLoginRequiredNotice: 'Connexion requise pour accéder aux fiches de votre troupe.',
+  ...slicerTranslationsFr, ...toadaSheetTranslationsFr, ...treinoSubTranslationsFr, ...variantTranslationsFr, ...tessituraTranslationsFr,
 };

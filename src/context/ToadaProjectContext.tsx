@@ -9,7 +9,7 @@ import { createMirroredPattern, propagateSourceUpdatesToLinkedPatterns, unlinkPa
 import { swapProjectRoles, duplicatePatternAsVariation } from '../utils/projectRoleOps';
 import {
   batchUpdateProjectBpm, batchUpdateProjectMeasures, batchUpdateProjectAnacrusis,
-  batchUpdateProjectPitch, batchUpdateProjectTimeSignature,
+  batchUpdateProjectPitch, batchUpdateProjectTimeSignature, batchUpdateProjectTessitura,
 } from '../utils/projectBatchOps';
 import { applySetActiveVariantKey, applyUpdateVariant, applyEnsureVariantExists } from '../utils/variantContextOps';
 import { usePatternSelection } from '../hooks/usePatternSelection';
@@ -103,6 +103,7 @@ export const ToadaProjectProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const updateScopedHasAnacrusis = useCallback((has: boolean) => setProject((prev) => batchUpdateProjectAnacrusis(prev, applyScope, selectedPatternIds, has)), [applyScope, selectedPatternIds]);
   const updateScopedReferencePitch = useCallback((pitch: string) => setProject((prev) => batchUpdateProjectPitch(prev, applyScope, selectedPatternIds, pitch)), [applyScope, selectedPatternIds]);
   const updateScopedTimeSignature = useCallback((sig: TimeSignatureString) => setProject((prev) => batchUpdateProjectTimeSignature(prev, applyScope, selectedPatternIds, sig)), [applyScope, selectedPatternIds]);
+  const updateScopedTessitura = useCallback((tessitura: import('../types/tessitura.types').TessituraRange) => setProject((prev) => batchUpdateProjectTessitura(prev, applyScope, selectedPatternIds, tessitura)), [applyScope, selectedPatternIds]);
 
   const getPreviousConductorPattern = useCallback((): VocalPatternItem | null => {
     const slotIdx = project.slots.findIndex((s) => s.puxadorPatternId === project.activePatternId || s.coroPatternId === project.activePatternId);
@@ -120,8 +121,8 @@ export const ToadaProjectProvider: React.FC<{ children: React.ReactNode }> = ({ 
     loadProject, addSlot, removeSlot, updateSlot, setCueMode, getPreviousConductorPattern,
     swapAllRoles, duplicateVariation,
     applyScope, setApplyScope, selectedPatternIds, toggleSelectPattern, selectAllPatterns, clearSelectedPatterns,
-    updateScopedBpm, updateScopedMeasuresCount, updateScopedHasAnacrusis, updateScopedReferencePitch, updateScopedTimeSignature,
-  }), [project, activePattern, activeVariant, cueMode, setActivePatternId, setActiveVariantKey, updateVariant, ensureVariantExists, addPattern, updatePattern, removePattern, mirrorPatternToRole, handleUnlink, loadProject, addSlot, removeSlot, updateSlot, setCueMode, getPreviousConductorPattern, swapAllRoles, duplicateVariation, applyScope, setApplyScope, selectedPatternIds, toggleSelectPattern, selectAllPatterns, clearSelectedPatterns, updateScopedBpm, updateScopedMeasuresCount, updateScopedHasAnacrusis, updateScopedReferencePitch, updateScopedTimeSignature]);
+    updateScopedBpm, updateScopedMeasuresCount, updateScopedHasAnacrusis, updateScopedReferencePitch, updateScopedTimeSignature, updateScopedTessitura,
+  }), [project, activePattern, activeVariant, cueMode, setActivePatternId, setActiveVariantKey, updateVariant, ensureVariantExists, addPattern, updatePattern, removePattern, mirrorPatternToRole, handleUnlink, loadProject, addSlot, removeSlot, updateSlot, setCueMode, getPreviousConductorPattern, swapAllRoles, duplicateVariation, applyScope, setApplyScope, selectedPatternIds, toggleSelectPattern, selectAllPatterns, clearSelectedPatterns, updateScopedBpm, updateScopedMeasuresCount, updateScopedHasAnacrusis, updateScopedReferencePitch, updateScopedTimeSignature, updateScopedTessitura]);
 
   return <ToadaContext.Provider value={value}>{children}</ToadaContext.Provider>;
 };

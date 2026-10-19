@@ -41,6 +41,7 @@ export function resetLivret1MelodicData(params: ResetLivret1Params): ResetLivret
     totalDurationSec,
     trimStartSec: 0,
     trimEndSec: totalDurationSec,
+    tessitura: activePattern.tessitura,
   });
 
   // 2. Quantification totale MIDI avec forçage de déverrouillage

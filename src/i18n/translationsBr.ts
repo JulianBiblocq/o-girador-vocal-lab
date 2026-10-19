@@ -5,6 +5,7 @@
 import type { VocalLabTranslations } from './i18n.types';
 import { slicerTranslationsBr } from './slicerTranslationsBr';
 import { toadaSheetTranslationsBr } from './toadaSheetTranslationsBr'; import { treinoSubTranslationsBr } from './treinoSubTranslationsBr'; import { variantTranslationsBr } from './variantTranslationsBr';
+import { tessituraTranslationsBr } from './tessituraTranslationsBr';
 
 export const translationsBr: VocalLabTranslations = {
   // Cabecalho
@@ -14,9 +15,7 @@ export const translationsBr: VocalLabTranslations = {
 
   // Jalon 4.A : Biblioteca & Regencia de Toada
   patternLibraryTitle: 'BIBLIOTECA DE PADROES (TOADA)',
-  addPuxadorPattern: 'Padrao Puxador', addCoroPattern: 'Padrao Coro',
-  rolePuxador: 'PUXADOR', roleCoro: 'CORO',
-  patternAudioRecorded: 'Audio', patternAudioMissing: 'Vazio',
+  addPuxadorPattern: 'Padrao Puxador', addCoroPattern: 'Padrao Coro', rolePuxador: 'PUXADOR', roleCoro: 'CORO', patternAudioRecorded: 'Audio', patternAudioMissing: 'Vazio',
   editPatternNameTooltip: 'Renomear padrao', deletePatternTooltip: 'Excluir padrao',
   conductorTitle: 'LINHA DE REGENCIA DA TOADA', addConductorBlock: 'Bloco', playFullToada: 'Ouvir Toada Completa', stopFullToada: 'Parar Toada',
   railPuxador: 'Puxador', railCoro: 'Coro', emptySlot: '- Vazio -', blockLabel: 'Bloco {n}',
@@ -141,7 +140,6 @@ export const translationsBr: VocalLabTranslations = {
   midiBadge: 'MIDI', midiConnectedTitle: 'Controlador MIDI conectado: {device}', midiNotConnectedTitle: 'Nenhum controlador MIDI detectado', roleStudio: 'Estúdio', roleEleve: 'Aluno', rulerClickSeekHint: 'Régua clicável = Início da reprodução',
   fichesOrganizador: 'Fichas Organizador', sendToSequencer: 'Enviar ao Sequenciador', sendToSequencerTooltip: 'Enviar gravações e publicar Toada para o Sequenciador',
   openInSequencer: 'Abrir no Sequenciador', toadaPublishedSuccess: 'Toada publicada na Nuvem com sucesso!', toadaPublishing: 'Publicando Toada na nuvem...', toadaImportTxt: 'Importar arquivo .txt',
-  organizadorSearchPlaceholder: 'Buscar ficha ou toada...', noOrganizadorToadas: 'Nenhuma ficha encontrada',
-  authLogin: 'Conexão', authLoginTooltip: 'Conectar com Google / SSO Organizador', authLogout: 'Desconectar', authLoginRequiredNotice: 'Conexão necessária para acessar as fichas do grupo.',
-  ...slicerTranslationsBr, ...toadaSheetTranslationsBr, ...treinoSubTranslationsBr, ...variantTranslationsBr,
+  organizadorSearchPlaceholder: 'Buscar ficha ou toada...', noOrganizadorToadas: 'Nenhuma ficha encontrada', authLogin: 'Conexão', authLoginTooltip: 'Conectar com Google / SSO Organizador', authLogout: 'Desconectar', authLoginRequiredNotice: 'Conexão necessária para acessar as fichas do grupo.',
+  ...slicerTranslationsBr, ...toadaSheetTranslationsBr, ...treinoSubTranslationsBr, ...variantTranslationsBr, ...tessituraTranslationsBr,
 };

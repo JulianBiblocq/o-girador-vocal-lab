@@ -1,12 +1,14 @@
 /**
  * PriseConfigGrid.tsx
- * Colonnes de configuration de la prise : Metrique, Mode d ecoute / Note repere, Audio & Calibration.
+ * Colonnes de configuration : Métrique, Mode d'écoute / Note repère, Tessiture Plancher/Plafond, Audio & Calibration (< 95 lignes).
  */
 import React from 'react';
 import type { TimeSignatureString } from '../../types/vocalPack.types';
+import type { TessituraRange } from '../../types/tessitura.types';
 import type { ListeningMode, MetronomeEngine } from '../../audio/MetronomeEngine';
 import { MetricConfigPanel } from './MetricConfigPanel';
 import { ListeningModePanel } from './ListeningModePanel';
+import { TessituraBoundsPanel } from './TessituraBoundsPanel';
 import { DeviceSelector } from './DeviceSelector';
 import { CalibrationBanner } from './CalibrationBanner';
 
@@ -26,6 +28,10 @@ interface PriseConfigGridProps {
   referencePitch: string;
   effectivePitch?: string;
   onReferencePitchChange: (pitch: string) => void;
+  tessitura?: TessituraRange;
+  onTessituraChange?: (t: TessituraRange) => void;
+  onRecalculatePitch?: () => void;
+  hasRecording?: boolean;
   engine: MetronomeEngine;
   selectedDeviceId: string;
   onSelectedDeviceChange: (id: string) => void;
@@ -40,6 +46,7 @@ export const PriseConfigGrid: React.FC<PriseConfigGridProps> = ({
   onMeasuresCountChange, beatResolutions, onBeatResolutionsChange,
   hasAnacrusis = true, onHasAnacrusisChange,
   listeningMode, onListeningModeChange, referencePitch, effectivePitch, onReferencePitchChange,
+  tessitura, onTessituraChange, onRecalculatePitch, hasRecording = false,
   engine, selectedDeviceId, onSelectedDeviceChange, selectedOutputDeviceId,
   onSelectedOutputDeviceChange, recordedSampleRate, isCycleActive,
 }) => {
@@ -53,12 +60,23 @@ export const PriseConfigGrid: React.FC<PriseConfigGridProps> = ({
         hasAnacrusis={hasAnacrusis} onHasAnacrusisChange={onHasAnacrusisChange}
         disabled={isCycleActive}
       />
-      <ListeningModePanel
-        listeningMode={listeningMode} onListeningModeChange={onListeningModeChange}
-        referencePitch={referencePitch} onReferencePitchChange={onReferencePitchChange}
-        onPlayReferencePreview={() => engine.playReferencePitchPreview(effectivePitch || referencePitch, 1.5, selectedOutputDeviceId)}
-        disabled={isCycleActive}
-      />
+      <div className="h-full flex flex-col justify-between gap-3">
+        <ListeningModePanel
+          listeningMode={listeningMode} onListeningModeChange={onListeningModeChange}
+          referencePitch={referencePitch} onReferencePitchChange={onReferencePitchChange}
+          onPlayReferencePreview={() => engine.playReferencePitchPreview(effectivePitch || referencePitch, 1.5, selectedOutputDeviceId)}
+          disabled={isCycleActive}
+        />
+        {onTessituraChange && (
+          <TessituraBoundsPanel
+            tessitura={tessitura}
+            onChange={onTessituraChange}
+            onRecalculate={onRecalculatePitch}
+            hasRecording={hasRecording}
+            disabled={isCycleActive}
+          />
+        )}
+      </div>
       <div className="h-full flex flex-col justify-between gap-4">
         <CalibrationBanner
           inputDeviceId={selectedDeviceId} outputDeviceId={selectedOutputDeviceId}

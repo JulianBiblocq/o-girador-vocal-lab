@@ -107,3 +107,12 @@ export function batchUpdateProjectTimeSignature(
     patterns: updatedPatterns,
   };
 }
+
+export function batchUpdateProjectTessitura(
+  project: ToadaProject, scope: MetricApplyScope, selectedIds: string[], tessitura: import('../types/tessitura.types').TessituraRange
+): ToadaProject {
+  const targets = getTargetPatternIds(project, scope, selectedIds);
+  const updatedPatterns = project.patterns.map((p) => (targets.has(p.id) ? { ...p, tessitura } : p));
+  return { ...project, patterns: updatedPatterns };
+}
+

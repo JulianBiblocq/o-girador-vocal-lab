@@ -38,4 +38,5 @@ export interface ToadaProjectContextValue {
   updateScopedHasAnacrusis: (has: boolean) => void;
   updateScopedReferencePitch: (pitch: string) => void;
   updateScopedTimeSignature: (sig: TimeSignatureString) => void;
+  updateScopedTessitura: (tessitura: import('./tessitura.types').TessituraRange) => void;
 }

@@ -3,13 +3,12 @@
  * Livret 1 : Prise vocale calée en haut, Bibliothèque & Conducteur regroupés avec réglages métriques (< 125 lignes).
  */
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import type { TimeSignatureString, VocalPackExport, PitchCurvePoint, VocalStepData } from '../../types/vocalPack.types';
+import type { TimeSignatureString } from '../../types/vocalPack.types';
+import type { TessituraRange } from '../../types/tessitura.types';
+import { DEFAULT_TESSITURA } from '../../types/tessitura.types';
 import { MetronomeEngine, type ListeningMode } from '../../audio/MetronomeEngine';
 import { VocalRecorderEngine } from '../../audio/VocalRecorderEngine';
 import { closeSharedAudioContext } from '../../audio/sharedAudioContext';
-import { extractContinuousPitchCurve } from '../../audio/pitchExtractor';
-import { quantizePitchToSteps } from '../../audio/stepQuantizer';
-import { applyLyricsSyllablesToSteps } from '../../utils/syllableAligner';
 import { LivretTabsBar } from './LivretTabsBar';
 import { PriseRecordingSection } from './PriseRecordingSection';
 import { PatternLibraryBar } from '../conductor/PatternLibraryBar';
@@ -20,6 +19,7 @@ import { LivretTreino } from '../livret-treino/LivretTreino';
 import { PatternLyricsBanner } from './PatternLyricsBanner';
 import { MasterTakeSlicerModal } from '../slicer/MasterTakeSlicerModal';
 import { usePriseRecorder } from './usePriseRecorder';
+import { useLivretMelodicInit, type MelodicData } from './useLivretMelodicInit';
 import { useToadaProject } from '../../context/ToadaProjectContext';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { confirmAsync } from '../../stores/useCordelDialogStore';
@@ -27,13 +27,12 @@ import { useVocalTransportStore } from '../../stores/useVocalTransportStore';
 import { getBeatsPerMeasure, transposePitchNote } from '../../utils/musicalMath';
 import { getDefaultBeatResolutions } from '../../utils/alignmentMath';
 import { getPatternT1OffsetSec, getPatternTotalDurationSec } from '../../utils/anacrusisTimingHelper';
-import { createPaddedPreviewBuffer } from '../../utils/wavEncoder';
 import { decodeAudioFile } from '../../utils/directAudioImporter';
 
 export const LivretPrise: React.FC = () => {
   const {
     project, activePattern, activeVariant, updatePattern, updateVariant, cueMode, getPreviousConductorPattern,
-    updateScopedBpm, updateScopedMeasuresCount, updateScopedHasAnacrusis, updateScopedReferencePitch, updateScopedTimeSignature,
+    updateScopedBpm, updateScopedMeasuresCount, updateScopedHasAnacrusis, updateScopedReferencePitch, updateScopedTimeSignature, updateScopedTessitura,
   } = useToadaProject();
   const { t } = useLanguage();
   const engine = useMemo(() => new MetronomeEngine(), []);
@@ -47,7 +46,7 @@ export const LivretPrise: React.FC = () => {
   const [beatResolutions, setBeatResolutions] = useState<number[]>(() => getDefaultBeatResolutions('4/4'));
   const [listeningMode, setListeningMode] = useState<ListeningMode>('headphones');
   const [recordedSampleRate, setRecordedSampleRate] = useState(44100);
-  const [melodicData, setMelodicData] = useState<{ pitchCurve: PitchCurvePoint[]; allSteps: VocalStepData[]; pack: VocalPackExport; cleanPCM: Float32Array } | null>(null);
+  const [melodicData, setMelodicData] = useState<MelodicData | null>(null);
   const [isSlicerOpen, setIsSlicerOpen] = useState(false);
 
   useEffect(() => { setBpm(activePattern.baseBpm ?? project.bpm ?? 55); setReferencePitch(activePattern.referencePitch ?? 'C4'); }, [activePattern.id]);
@@ -68,6 +67,11 @@ export const LivretPrise: React.FC = () => {
     listeningMode, selectedDeviceId, selectedOutputDeviceId, updateVariant, recordedSampleRate, setRecordedSampleRate, activeLivret,
   });
 
+  const { handlePackReady, handleRecalculatePitch } = useLivretMelodicInit({
+    recordedPCM, recordedSampleRate, totalDurationSec, effectiveBpm, beatsPerMeasure, measuresCount, beatResolutions,
+    hasAnacrusis, t1OffsetSec, activePattern, activeVariant, updatePattern, setActiveLivret, setMelodicData,
+  });
+
   const handleResetRecording = useCallback(async () => {
     const ok = await confirmAsync({ title: t('resetRecordingTitle'), message: t('resetRecordingConfirm'), confirmLabel: t('dialogConfirm'), cancelLabel: t('dialogCancel'), variant: 'warning' });
     if (ok) updateVariant(activePattern.id, activeVariant.variantKey, { recordingResult: null });
@@ -79,27 +83,11 @@ export const LivretPrise: React.FC = () => {
     setRecordedSampleRate(res.sampleRate);
   }, [activePattern.id, activeVariant.variantKey, totalDurationSec, updateVariant]);
 
-  const handlePackReady = useCallback((pack: VocalPackExport) => {
-    if (!recordedPCM) return;
-    const vTrimStart = activeVariant.trimStartSec > 0 ? activeVariant.trimStartSec : (pack.audio.trim.startSec ?? 0);
-    const vTrimEnd = activeVariant.trimEndSec > 0 ? activeVariant.trimEndSec : (pack.audio.trim.endSec ?? totalDurationSec);
-    const cleanPCM = createPaddedPreviewBuffer(recordedPCM, recordedSampleRate, totalDurationSec, vTrimStart, vTrimEnd, 0, activeVariant.lowCutEnabled, true, activeVariant.enableTonePolish !== false);
-    const shouldInitMidi = !activePattern.isMidiInitialized || !activePattern.midiLocked;
-    if (shouldInitMidi && !activePattern.isMidiInitialized) {
-      const pitchCurve = extractContinuousPitchCurve(cleanPCM, { sampleRate: recordedSampleRate, totalDurationSec, trimStartSec: vTrimStart, trimEndSec: vTrimEnd });
-      const q = quantizePitchToSteps({ pitchCurve, bpm: effectiveBpm, beatsPerMeasure, measuresCount, beatResolutions, trimStartSec: vTrimStart, trimEndSec: vTrimEnd, pcm: cleanPCM, sampleRate: recordedSampleRate, hasAnacrusis, t1OffsetSec, pitchOffsetSemitones: activeVariant.pitchShiftSemitones });
-      const rawSteps = hasAnacrusis ? [...q.anacrusisSteps, ...q.gridSteps] : q.gridSteps;
-      const allSteps = activePattern.assignedLyricsText ? applyLyricsSyllablesToSteps(rawSteps, activePattern.assignedLyricsText) : rawSteps;
-      const anacCount = hasAnacrusis ? q.anacrusisSteps.length : 0;
-      setMelodicData({ pitchCurve, allSteps, pack, cleanPCM });
-      updatePattern(activePattern.id, { pack, midiLocked: true, isMidiInitialized: true, anacrusisSteps: hasAnacrusis ? allSteps.slice(0, anacCount) : [], mainSteps: allSteps.slice(anacCount), pitchCurve, rawAudioSamples: cleanPCM, rawPitchCurve: pitchCurve, pitchCorrectionAmount: 0, correctedAudioSamples: null });
-    } else {
-      const steps = hasAnacrusis ? [...(activePattern.anacrusisSteps || []), ...(activePattern.mainSteps || [])] : (activePattern.mainSteps || []);
-      setMelodicData({ pitchCurve: activePattern.pitchCurve || [], allSteps: steps, pack, cleanPCM });
-      updatePattern(activePattern.id, { rawAudioSamples: cleanPCM, rawPitchCurve: activePattern.pitchCurve || [] });
-    }
-    setActiveLivret('melodia');
-  }, [recordedPCM, recordedSampleRate, totalDurationSec, effectiveBpm, beatsPerMeasure, measuresCount, beatResolutions, activePattern, activeVariant, updatePattern, updateVariant, hasAnacrusis, t1OffsetSec, setActiveLivret]);
+  const handleTessituraChange = useCallback((newTessitura: TessituraRange) => {
+    updatePattern(activePattern.id, { tessitura: newTessitura });
+    updateScopedTessitura(newTessitura);
+    if (recordedPCM) handleRecalculatePitch(newTessitura);
+  }, [activePattern.id, updatePattern, updateScopedTessitura, recordedPCM, handleRecalculatePitch]);
 
   return (
     <div className="flex flex-col gap-3.5 w-full max-w-none">
@@ -135,6 +123,7 @@ export const LivretPrise: React.FC = () => {
             hasAnacrusis={hasAnacrusis} onHasAnacrusisChange={(has) => updateScopedHasAnacrusis(has)}
             listeningMode={listeningMode} onListeningModeChange={setListeningMode}
             referencePitch={referencePitch} effectivePitch={effectivePitch} onReferencePitchChange={(p) => { setReferencePitch(p); updateScopedReferencePitch(p); }}
+            tessitura={activePattern.tessitura ?? DEFAULT_TESSITURA} onTessituraChange={handleTessituraChange} onRecalculatePitch={() => handleRecalculatePitch()} hasRecording={!!recordedPCM}
             engine={engine} selectedDeviceId={selectedDeviceId} onSelectedDeviceChange={setSelectedDeviceId} selectedOutputDeviceId={selectedOutputDeviceId} onSelectedOutputDeviceChange={setSelectedOutputDeviceId} recordedSampleRate={recordedSampleRate} isCycleActive={isCycleActive}
           />
         </>
