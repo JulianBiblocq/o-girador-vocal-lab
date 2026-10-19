@@ -13,6 +13,7 @@ import { RoleModeSwitcher } from './components/header/RoleModeSwitcher';
 import { UserAvatarMenu } from './components/header/UserAvatarMenu';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { CordelDialogModal } from './components/ui/CordelDialogModal';
+import { AppUpdateBanner } from './components/common/AppUpdateBanner';
 import { useGlobalTransportShortcuts } from './hooks/useGlobalTransportShortcuts';
 import { useVocalLabMidi } from './hooks/useVocalLabMidi';
 import { Sun, Moon } from 'lucide-react';
@@ -118,6 +119,7 @@ export const App: React.FC = () => (
       <ToadaProjectProvider>
         <AppContent />
         <CordelDialogModal />
+        <AppUpdateBanner />
       </ToadaProjectProvider>
     </LanguageProvider>
   </ErrorBoundary>

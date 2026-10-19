@@ -1,1 +1,81 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="48" height="46" fill="none" viewBox="0 0 48 46"><path fill="#863bff" d="M25.946 44.938c-.664.845-2.021.375-2.021-.698V33.937a2.26 2.26 0 0 0-2.262-2.262H10.287c-.92 0-1.456-1.04-.92-1.788l7.48-10.471c1.07-1.497 0-3.578-1.842-3.578H1.237c-.92 0-1.456-1.04-.92-1.788L10.013.474c.214-.297.556-.474.92-.474h28.894c.92 0 1.456 1.04.92 1.788l-7.48 10.471c-1.07 1.498 0 3.579 1.842 3.579h11.377c.943 0 1.473 1.088.89 1.83L25.947 44.94z" style="fill:#863bff;fill:color(display-p3 .5252 .23 1);fill-opacity:1"/><mask id="a" width="48" height="46" x="0" y="0" maskUnits="userSpaceOnUse" style="mask-type:alpha"><path fill="#000" d="M25.842 44.938c-.664.844-2.021.375-2.021-.698V33.937a2.26 2.26 0 0 0-2.262-2.262H10.183c-.92 0-1.456-1.04-.92-1.788l7.48-10.471c1.07-1.498 0-3.579-1.842-3.579H1.133c-.92 0-1.456-1.04-.92-1.787L9.91.473c.214-.297.556-.474.92-.474h28.894c.92 0 1.456 1.04.92 1.788l-7.48 10.471c-1.07 1.498 0 3.578 1.842 3.578h11.377c.943 0 1.473 1.088.89 1.832L25.843 44.94z" style="fill:#000;fill-opacity:1"/></mask><g mask="url(#a)"><g filter="url(#b)"><ellipse cx="5.508" cy="14.704" fill="#ede6ff" rx="5.508" ry="14.704" style="fill:#ede6ff;fill:color(display-p3 .9275 .9033 1);fill-opacity:1" transform="matrix(.00324 1 1 -.00324 -4.47 31.516)"/></g><g filter="url(#c)"><ellipse cx="10.399" cy="29.851" fill="#ede6ff" rx="10.399" ry="29.851" style="fill:#ede6ff;fill:color(display-p3 .9275 .9033 1);fill-opacity:1" transform="matrix(.00324 1 1 -.00324 -39.328 7.883)"/></g><g filter="url(#d)"><ellipse cx="5.508" cy="30.487" fill="#7e14ff" rx="5.508" ry="30.487" style="fill:#7e14ff;fill:color(display-p3 .4922 .0767 1);fill-opacity:1" transform="rotate(89.814 -25.913 -14.639)scale(1 -1)"/></g><g filter="url(#e)"><ellipse cx="5.508" cy="30.599" fill="#7e14ff" rx="5.508" ry="30.599" style="fill:#7e14ff;fill:color(display-p3 .4922 .0767 1);fill-opacity:1" transform="rotate(89.814 -32.644 -3.334)scale(1 -1)"/></g><g filter="url(#f)"><ellipse cx="5.508" cy="30.599" fill="#7e14ff" rx="5.508" ry="30.599" style="fill:#7e14ff;fill:color(display-p3 .4922 .0767 1);fill-opacity:1" transform="matrix(.00324 1 1 -.00324 -34.34 30.47)"/></g><g filter="url(#g)"><ellipse cx="14.072" cy="22.078" fill="#ede6ff" rx="14.072" ry="22.078" style="fill:#ede6ff;fill:color(display-p3 .9275 .9033 1);fill-opacity:1" transform="rotate(93.35 24.506 48.493)scale(-1 1)"/></g><g filter="url(#h)"><ellipse cx="3.47" cy="21.501" fill="#7e14ff" rx="3.47" ry="21.501" style="fill:#7e14ff;fill:color(display-p3 .4922 .0767 1);fill-opacity:1" transform="rotate(89.009 28.708 47.59)scale(-1 1)"/></g><g filter="url(#i)"><ellipse cx="3.47" cy="21.501" fill="#7e14ff" rx="3.47" ry="21.501" style="fill:#7e14ff;fill:color(display-p3 .4922 .0767 1);fill-opacity:1" transform="rotate(89.009 28.708 47.59)scale(-1 1)"/></g><g filter="url(#j)"><ellipse cx=".387" cy="8.972" fill="#7e14ff" rx="4.407" ry="29.108" style="fill:#7e14ff;fill:color(display-p3 .4922 .0767 1);fill-opacity:1" transform="rotate(39.51 .387 8.972)"/></g><g filter="url(#k)"><ellipse cx="47.523" cy="-6.092" fill="#7e14ff" rx="4.407" ry="29.108" style="fill:#7e14ff;fill:color(display-p3 .4922 .0767 1);fill-opacity:1" transform="rotate(37.892 47.523 -6.092)"/></g><g filter="url(#l)"><ellipse cx="41.412" cy="6.333" fill="#47bfff" rx="5.971" ry="9.665" style="fill:#47bfff;fill:color(display-p3 .2799 .748 1);fill-opacity:1" transform="rotate(37.892 41.412 6.333)"/></g><g filter="url(#m)"><ellipse cx="-1.879" cy="38.332" fill="#7e14ff" rx="4.407" ry="29.108" style="fill:#7e14ff;fill:color(display-p3 .4922 .0767 1);fill-opacity:1" transform="rotate(37.892 -1.88 38.332)"/></g><g filter="url(#n)"><ellipse cx="-1.879" cy="38.332" fill="#7e14ff" rx="4.407" ry="29.108" style="fill:#7e14ff;fill:color(display-p3 .4922 .0767 1);fill-opacity:1" transform="rotate(37.892 -1.88 38.332)"/></g><g filter="url(#o)"><ellipse cx="35.651" cy="29.907" fill="#7e14ff" rx="4.407" ry="29.108" style="fill:#7e14ff;fill:color(display-p3 .4922 .0767 1);fill-opacity:1" transform="rotate(37.892 35.651 29.907)"/></g><g filter="url(#p)"><ellipse cx="38.418" cy="32.4" fill="#47bfff" rx="5.971" ry="15.297" style="fill:#47bfff;fill:color(display-p3 .2799 .748 1);fill-opacity:1" transform="rotate(37.892 38.418 32.4)"/></g></g><defs><filter id="b" width="60.045" height="41.654" x="-19.77" y="16.149" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17158" stdDeviation="7.659"/></filter><filter id="c" width="90.34" height="51.437" x="-54.613" y="-7.533" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17158" stdDeviation="7.659"/></filter><filter id="d" width="79.355" height="29.4" x="-49.64" y="2.03" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17158" stdDeviation="4.596"/></filter><filter id="e" width="79.579" height="29.4" x="-45.045" y="20.029" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17158" stdDeviation="4.596"/></filter><filter id="f" width="79.579" height="29.4" x="-43.513" y="21.178" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17158" stdDeviation="4.596"/></filter><filter id="g" width="74.749" height="58.852" x="15.756" y="-17.901" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17158" stdDeviation="7.659"/></filter><filter id="h" width="61.377" height="25.362" x="23.548" y="2.284" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17158" stdDeviation="4.596"/></filter><filter id="i" width="61.377" height="25.362" x="23.548" y="2.284" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17158" stdDeviation="4.596"/></filter><filter id="j" width="56.045" height="63.649" x="-27.636" y="-22.853" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17158" stdDeviation="4.596"/></filter><filter id="k" width="54.814" height="64.646" x="20.116" y="-38.415" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17158" stdDeviation="4.596"/></filter><filter id="l" width="33.541" height="35.313" x="24.641" y="-11.323" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17158" stdDeviation="4.596"/></filter><filter id="m" width="54.814" height="64.646" x="-29.286" y="6.009" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17158" stdDeviation="4.596"/></filter><filter id="n" width="54.814" height="64.646" x="-29.286" y="6.009" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17158" stdDeviation="4.596"/></filter><filter id="o" width="54.814" height="64.646" x="8.244" y="-2.416" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17158" stdDeviation="4.596"/></filter><filter id="p" width="39.409" height="43.623" x="18.713" y="10.588" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"/><feGaussianBlur result="effect1_foregroundBlur_2002_17158" stdDeviation="4.596"/></filter></defs></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <!-- Arrière-plan Parchemin et Bordure Terracotta -->
+  <defs>
+    <!-- Filtre ombrage doux gravure -->
+    <filter id="cordel-shadow" x="-8%" y="-8%" width="116%" height="116%">
+      <feDropShadow dx="0" dy="5" stdDeviation="6" flood-color="#1a1a1a" flood-opacity="0.32" />
+    </filter>
+    <filter id="swirl-glow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="1" dy="2" stdDeviation="2" flood-color="#000000" flood-opacity="0.25" />
+    </filter>
+  </defs>
+
+  <!-- Disque Parchemin d'origine -->
+  <circle cx="256" cy="256" r="240" fill="#f4ecd8" filter="url(#cordel-shadow)" />
+
+  <!-- Anneau extérieur Rouge Terracotta (#9a3412) -->
+  <circle cx="256" cy="256" r="236" fill="none" stroke="#9a3412" stroke-width="16" />
+
+  <!-- Filet d'encre intérieur (#1a1a1a) -->
+  <circle cx="256" cy="256" r="224" fill="none" stroke="#1a1a1a" stroke-width="4" />
+  <circle cx="256" cy="256" r="218" fill="none" stroke="#c88a2b" stroke-width="2" stroke-dasharray="5 7" opacity="0.8" />
+
+  <!-- Tourbillon de Rubans Courbes (Girador Vortex) -->
+  <g filter="url(#swirl-glow)">
+    <!-- Ruban 1 : Rouge Terracotta (#9a3412) -->
+    <path d="M 256,44 C 362,44 452,126 464,232 C 468,272 448,310 416,334 C 380,360 332,364 290,344 C 238,320 206,270 216,212 C 220,186 236,166 256,156 C 266,151 278,150 286,156 C 294,162 298,174 294,184 C 286,204 266,220 252,240 C 236,262 238,294 256,312 C 278,334 316,336 344,318 C 374,298 390,260 384,224 C 374,152 306,94 234,92 C 196,91 160,105 132,128 C 122,136 108,124 116,114 C 152,70 202,44 256,44 Z" fill="#9a3412" />
+
+    <!-- Ruban 2 : Bleu Ciano (#0f766e) -->
+    <path d="M 468,256 C 468,362 386,452 280,464 C 240,468 202,448 178,416 C 152,380 148,332 168,290 C 192,238 242,206 300,216 C 326,220 346,236 356,256 C 361,266 362,278 356,286 C 350,294 338,298 328,294 C 308,286 292,266 272,252 C 250,236 218,238 200,256 C 178,278 176,316 194,344 C 214,374 252,390 288,384 C 360,374 418,306 420,234 C 421,196 407,160 384,132 C 376,122 388,108 398,116 C 442,152 468,202 468,256 Z" fill="#0f766e" />
+
+    <!-- Ruban 3 : Or Ocre (#c88a2b) -->
+    <path d="M 256,468 C 150,468 60,386 48,280 C 44,240 64,202 96,178 C 132,152 180,148 222,168 C 274,192 306,242 296,300 C 292,326 276,346 256,356 C 246,361 234,362 226,356 C 218,350 214,338 218,328 C 226,308 246,292 260,272 C 276,250 274,218 256,200 C 234,178 196,176 168,194 C 138,214 122,252 128,288 C 138,360 206,418 278,420 C 316,421 352,407 380,384 C 390,376 404,388 396,398 C 360,442 310,468 256,468 Z" fill="#c88a2b" />
+
+    <!-- Ruban 4 : Noir Encre (#1a1a1a) -->
+    <path d="M 44,256 C 44,150 126,60 232,48 C 272,44 310,64 334,96 C 360,132 364,180 344,222 C 320,274 270,306 212,296 C 186,292 166,276 156,256 C 151,246 150,234 156,226 C 162,218 174,214 184,218 C 204,226 220,246 240,260 C 262,276 294,274 312,256 C 334,234 336,196 318,168 C 298,138 260,122 224,128 C 152,138 94,206 92,278 C 91,316 105,352 128,380 C 136,390 124,404 114,396 C 70,360 44,310 44,256 Z" fill="#1a1a1a" />
+  </g>
+
+  <!-- Ondes Acoustiques Circulaires Émanantes -->
+  <circle cx="256" cy="256" r="112" fill="none" stroke="#9a3412" stroke-width="3.5" stroke-dasharray="10 8" opacity="0.9" />
+  <circle cx="256" cy="256" r="124" fill="none" stroke="#0f766e" stroke-width="3" stroke-dasharray="14 10" opacity="0.85" />
+  <circle cx="256" cy="256" r="136" fill="none" stroke="#c88a2b" stroke-width="2.5" stroke-dasharray="18 12" opacity="0.8" />
+
+  <!-- Médaillon Central Parchemin pour le Microphone -->
+  <circle cx="256" cy="256" r="88" fill="#f4ecd8" stroke="#1a1a1a" stroke-width="7" />
+  <circle cx="256" cy="256" r="78" fill="#fcf7ec" stroke="#c88a2b" stroke-width="2" stroke-dasharray="4 4" />
+
+  <!-- Microphone Vintage Central Studio Épuré (Gravure Cordel) -->
+  <g id="vintage-mic">
+    <!-- Arche / Étrier pivotant (Swivel mount) -->
+    <path d="M 218,236 C 218,278 234,300 256,300 C 278,300 294,278 294,236" fill="none" stroke="#1a1a1a" stroke-width="7" stroke-linecap="round" />
+    
+    <!-- Molettes latérales de serrage de l'étrier -->
+    <circle cx="218" cy="236" r="6" fill="#9a3412" stroke="#1a1a1a" stroke-width="3" />
+    <circle cx="294" cy="236" r="6" fill="#9a3412" stroke="#1a1a1a" stroke-width="3" />
+
+    <!-- Tige centrale verticale -->
+    <rect x="252" y="300" width="8" height="24" fill="#1a1a1a" />
+
+    <!-- Socle circulaire biseauté (Pied vintage) -->
+    <ellipse cx="256" cy="326" rx="38" ry="11" fill="#1a1a1a" />
+    <ellipse cx="256" cy="324" rx="32" ry="7" fill="#c88a2b" opacity="0.8" />
+    <ellipse cx="256" cy="323" rx="26" ry="4.5" fill="#f4ecd8" />
+
+    <!-- Capsule / Corps principal du micro (Pill-shape studio) -->
+    <!-- Fond capsule -->
+    <rect x="234" y="184" width="44" height="74" rx="22" fill="#1a1a1a" />
+
+    <!-- Bague centrale cuivrée de séparation -->
+    <rect x="232" y="220" width="48" height="6" rx="2" fill="#c88a2b" stroke="#1a1a1a" stroke-width="1.5" />
+
+    <!-- Grille acoustique supérieure (Fentes gravées en parchemin) -->
+    <line x1="242" y1="194" x2="270" y2="194" stroke="#f4ecd8" stroke-width="2.5" stroke-linecap="round" />
+    <line x1="239" y1="200" x2="273" y2="200" stroke="#f4ecd8" stroke-width="2.5" stroke-linecap="round" />
+    <line x1="238" y1="206" x2="274" y2="206" stroke="#f4ecd8" stroke-width="2.5" stroke-linecap="round" />
+    <line x1="238" y1="212" x2="274" y2="212" stroke="#f4ecd8" stroke-width="2.5" stroke-linecap="round" />
+
+    <!-- Corps inférieur avec accent Terracotta et Ciano -->
+    <rect x="240" y="231" width="32" height="18" rx="4" fill="#9a3412" stroke="#1a1a1a" stroke-width="1" />
+    <circle cx="256" cy="240" r="3.5" fill="#0f766e" />
+  </g>
+</svg>

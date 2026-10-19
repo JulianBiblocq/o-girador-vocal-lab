@@ -8,6 +8,8 @@ import { db } from '../firebase/config';
 import { storage } from './firebaseClient';
 import type { ToadaProject } from '../types/toadaProject.types';
 
+import { getSequenciadorToadaUrl } from '../utils/ecosystemUrls';
+
 function pcmToWavBlob(pcm: Float32Array, sampleRate: number): Blob {
   const numChannels = 1, bitsPerSample = 16;
   const byteRate = sampleRate * numChannels * (bitsPerSample / 8);
@@ -43,9 +45,7 @@ function pcmToWavBlob(pcm: Float32Array, sampleRate: number): Blob {
 }
 
 export function getSequenciadorUrl(toadaId: string): string {
-  const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
-  const base = isLocal ? 'http://localhost:5174' : 'https://o-girador-sequenciador.web.app';
-  return `${base}/?loadToadaId=${encodeURIComponent(toadaId)}`;
+  return getSequenciadorToadaUrl(toadaId);
 }
 
 export async function publishToadaToSequencer(
