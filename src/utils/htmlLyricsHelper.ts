@@ -32,7 +32,7 @@ export function cleanHtmlText(text: string): string {
 
 export function parseRichLineIntoSegments(rawLine: string, boldRole: VocalRole): RawTextSegment[] {
   // Convert Markdown **bold** to <b>bold</b>
-  let line = rawLine.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>');
+  let line = rawLine.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>').replace(/\*([^*]+)\*/g, '<b>$1</b>');
 
   // Detect explicit role prefixes
   let forcedRole: VocalRole | null = null;

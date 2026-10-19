@@ -1,61 +1,61 @@
 /**
  * toadaSheetParser.ts
- * Parser universel des fiches ToadaDocument d'organizador (.json & texte/HTML) (< 125 lignes).
- * Gère le gras commutable (boldRole), directives en ligne ((1m), (sans ana)...) et phonétique.
+ * Parser universel des fiches Toada (.txt, .json et HTML) (< 125 lignes).
+ * Gère les retours visuels (lignes indentées), les mesures mixtes (Puxador + Coro),
+ * les liaisons (/), anacrouses (+) et sections.
  */
 import type { VocalRole } from '../types/toadaProject.types';
 import type { ToadaDocument, ParsedLyricsSegment, ParsedToadaSheetResult } from '../types/toadaDocument.types';
 import { splitHtmlOrTextIntoRawLines, parseRichLineIntoSegments } from './htmlLyricsHelper';
 import { extractInlineLineDirectives } from './sheetDirectiveHelper';
 
-export function parseStructuredArrayLyrics(origList: any[], phonList?: any[]): ParsedLyricsSegment[] {
-  const segments: ParsedLyricsSegment[] = [];
-  origList.forEach((item, idx) => {
-    const phonItem = phonList?.[idx];
-    const isMixed = item.isMixed || (item.puxador && (item.coro || item.choeur));
-    const addSeg = (role: VocalRole, rawText?: string, rawPhon?: string) => {
-      if (!rawText?.trim()) return;
-      const dir = extractInlineLineDirectives(rawText.trim());
-      segments.push({
-        role,
-        text: dir.cleanText || rawText.trim(),
-        phoneticText: rawPhon?.trim(),
-        measuresCount: dir.measuresCount,
-        hasAnacrusis: dir.hasAnacrusis,
-      });
-    };
-
-    if (isMixed) {
-      addSeg('puxador', item.puxador, phonItem?.puxador);
-      addSeg('coro', item.coro || item.choeur, phonItem?.coro || phonItem?.choeur);
-    } else if (item.puxador?.trim()) {
-      addSeg('puxador', item.puxador, phonItem?.puxador);
-    } else if ((item.coro || item.choeur)?.trim()) {
-      addSeg('coro', item.coro || item.choeur, phonItem?.coro || phonItem?.choeur);
-    }
-  });
-  return segments;
-}
-
 export function parseRichTextLyricsAndPhonetics(rawOriginal: string, rawPhonetic?: string, boldRole: VocalRole = 'puxador'): ParsedLyricsSegment[] {
-  const origLines = splitHtmlOrTextIntoRawLines(rawOriginal);
+  const lines = rawOriginal.split(/\r?\n/);
+  const mergedLines: string[] = [];
+  for (const line of lines) {
+    if (/^\s+/.test(line) && mergedLines.length > 0) {
+      mergedLines[mergedLines.length - 1] += ' ' + line.trim();
+    } else if (line.trim().length > 0) {
+      mergedLines.push(line);
+    }
+  }
+
+  const normalizedInput = mergedLines.join('\n');
+  const origLines = splitHtmlOrTextIntoRawLines(normalizedInput);
   const phonLines = rawPhonetic ? splitHtmlOrTextIntoRawLines(rawPhonetic) : [];
   const segments: ParsedLyricsSegment[] = [];
 
-  origLines.forEach((line, idx) => {
+  origLines.forEach((rawL, idx) => {
+    let line = rawL.trim();
+    let hasLineAnacrusis = false;
+    let isLineLinked = false;
+
+    if (line.startsWith('+')) {
+      hasLineAnacrusis = true;
+      line = line.replace(/^\+\s*/, '');
+    } else if (line.startsWith('/')) {
+      isLineLinked = true;
+      line = line.replace(/^\/\s*/, '');
+    }
+
     const rawSegs = parseRichLineIntoSegments(line, boldRole);
     const phonLine = phonLines[idx];
     const phonSegs = phonLine ? parseRichLineIntoSegments(phonLine, boldRole) : [];
+    const isMixedLine = rawSegs.length > 1;
 
     rawSegs.forEach((seg, sIdx) => {
-      const matchedPhon = phonSegs[sIdx] ?? phonSegs.find((p) => p.role === seg.role) ?? (phonSegs.length === 1 ? phonSegs[0] : undefined);
+      const matchedPhon = phonSegs[sIdx] ?? phonSegs.find((p) => p.role === seg.role);
       const dir = extractInlineLineDirectives(seg.text);
+      if (!dir.cleanText && !dir.sectionName) return;
+
       segments.push({
         role: seg.role,
         text: dir.cleanText || seg.text,
         phoneticText: matchedPhon?.text,
         measuresCount: dir.measuresCount,
-        hasAnacrusis: dir.hasAnacrusis,
+        hasAnacrusis: dir.hasAnacrusis ?? (sIdx === 0 ? hasLineAnacrusis : false),
+        isLinkedMeasure: dir.isLinkedMeasure ?? (sIdx === 0 ? isLineLinked : false),
+        isMixedPair: isMixedLine && (sIdx === 0 || sIdx === 1)
       });
     });
   });
@@ -67,15 +67,12 @@ export function parseToadaDocument(doc: ToadaDocument, boldRole: VocalRole = 'pu
     id: doc.id, titre: doc.titre, nacao: doc.nacao, rythme: doc.rythme, annee: doc.annee,
     traduction: doc.traduction, anecdote: doc.anecdote, notesLexique: doc.notesLexique,
     questionsQcm: doc.questionsQcm, bpmDefaut: doc.bpmDefaut, tonaliteDefaut: doc.tonaliteDefaut,
+    rawTxtCode: doc.rawTxtCode, signature: doc.signature || doc.timeSignature
   };
 
-  let segments: ParsedLyricsSegment[] = [];
-  if (Array.isArray(doc.parolesOriginales)) {
-    segments = parseStructuredArrayLyrics(doc.parolesOriginales, Array.isArray(doc.parolesPhonetiques) ? doc.parolesPhonetiques : undefined);
-  } else if (typeof doc.parolesOriginales === 'string') {
-    const phonStr = typeof doc.parolesPhonetiques === 'string' ? doc.parolesPhonetiques : undefined;
-    segments = parseRichTextLyricsAndPhonetics(doc.parolesOriginales, phonStr, boldRole);
-  }
+  const sourceLyrics = doc.rawTxtCode || (typeof doc.parolesOriginales === 'string' ? doc.parolesOriginales : '');
+  const phonStr = typeof doc.parolesPhonetiques === 'string' ? doc.parolesPhonetiques : undefined;
+  const segments = parseRichTextLyricsAndPhonetics(sourceLyrics, phonStr, boldRole);
 
   return { docMeta, segments };
 }
@@ -94,12 +91,10 @@ export function parseToadaJsonOrText(input: string, boldRole: VocalRole = 'puxad
       if (Array.isArray(data) && data.length > 0) {
         return { isJsonArray: true, docs: data, parsed: parseToadaDocument(data[0], boldRole) };
       }
-      if (data && typeof data === 'object' && (data.titre || data.parolesOriginales)) {
+      if (data && typeof data === 'object' && (data.titre || data.parolesOriginales || data.rawTxtCode)) {
         return { isJsonArray: false, docs: [data], parsed: parseToadaDocument(data, boldRole) };
       }
-    } catch {
-      // Fallback text
-    }
+    } catch {}
   }
   return {
     isJsonArray: false, docs: [],
