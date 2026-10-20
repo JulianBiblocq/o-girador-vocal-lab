@@ -89,18 +89,27 @@ export const ToadaPhoneticLinesCard: React.FC<Props> = ({ phrases, activeCardId 
   }, [playingKey, stopPlayback, playBuffer]);
 
   return (
-    <div className="bg-[#fcfaf2] dark:bg-[#1f1d1a] border-2 border-[#1a1a1a] shadow-[4px_4px_0px_#1a1a1a] p-4 text-[#1a1a1a] dark:text-[#f4ecd8] rounded-none space-y-3">
-      <h4 className="font-bold text-xs tracking-wider uppercase border-b border-[#1a1a1a]/20 pb-1.5">{t('toadaPhoneticsSectionTitle')}</h4>
+    <div className="cordel-card p-4 space-y-3">
+      <h4 className="font-bold text-xs tracking-wider uppercase border-b border-[var(--cordel-border-sub)] pb-1.5 text-[var(--cordel-text)]">{t('toadaPhoneticsSectionTitle')}</h4>
       <div className="space-y-3">
         {phrases.map((ph) => (
-          <div key={ph.id} className="p-3 bg-[#f5edd6] dark:bg-[#2b2722] border border-[#1a1a1a]/25 space-y-2">
+          <div key={ph.id} className="cordel-card-sm p-3 space-y-2 rounded">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <span className="text-[11px] font-bold uppercase px-2 py-0.5 bg-[#1a1a1a] text-[#f4ecd8]">{ph.roleLabel}</span>
+              <span className={`text-[11px] font-bold uppercase px-2 py-0.5 rounded text-[#f4ecd8] ${ph.roleLabel.toLowerCase().includes('puxador') ? 'bg-role-puxador' : 'bg-role-coro'}`}>
+                {ph.roleLabel}
+              </span>
               <div className="flex items-center gap-1.5">
                 {([100, 75] as const).map((spd) => {
                   const isActive = playingKey === `${ph.id}_${spd}`;
                   return (
-                    <button key={spd} type="button" onClick={() => handlePlayPhrase(ph, spd)} className={`px-2.5 py-1 text-[11px] font-bold flex items-center gap-1 border border-[#1a1a1a] shadow-[2px_2px_0px_#1a1a1a] text-white cursor-pointer ${isActive ? 'bg-[#d97706]' : 'bg-[#2a9d8f]'}`}>
+                    <button
+                      key={spd}
+                      type="button"
+                      onClick={() => handlePlayPhrase(ph, spd)}
+                      className={`cordel-btn px-2.5 py-1 text-[11px] rounded flex items-center gap-1 cursor-pointer ${
+                        isActive ? 'bg-[#c25e38] text-white border-[#c25e38]' : ''
+                      }`}
+                    >
                       {isActive ? <Square className="w-3 h-3" /> : <Volume2 className="w-3 h-3" />}
                       <span>{isActive ? t('stopMestreBtn') : spd === 100 ? t('listenMestre100Btn') : t('listenMestre75Btn')}</span>
                     </button>
@@ -109,17 +118,17 @@ export const ToadaPhoneticLinesCard: React.FC<Props> = ({ phrases, activeCardId 
               </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
-              <div className="p-2 bg-[#fcfaf2] dark:bg-[#1f1d1a] border border-[#1a1a1a]/15">
-                <span className="block text-[10px] font-bold uppercase opacity-70 mb-0.5">{t('toadaOrigLabel')}</span>
+              <div className="p-2 bg-[var(--cordel-surface)] border border-[var(--cordel-border-sub)] rounded">
+                <span className="block text-[10px] font-bold uppercase text-[var(--cordel-secondary-text)] mb-0.5">{t('toadaOrigLabel')}</span>
                 <p className="font-serif text-sm leading-relaxed flex flex-wrap gap-x-1">
                   {ph.originalText.split(/\s+/).map((word, wIdx) => (
-                    <span key={wIdx} className={wordMatchesSoundCard(word, activeCardId) ? 'bg-[#2a9d8f] text-white font-bold px-1 border border-[#1a1a1a]' : ''}>{word}</span>
+                    <span key={wIdx} className={wordMatchesSoundCard(word, activeCardId) ? 'bg-[var(--cordel-coro)] text-white font-bold px-1 rounded' : ''}>{word}</span>
                   ))}
                 </p>
               </div>
-              <div className="p-2 bg-[#f0ebd9] dark:bg-[#26231e] border border-[#1a1a1a]/15">
-                <span className="block text-[10px] font-bold uppercase opacity-70 mb-0.5">{t('toadaPhonLabel')}</span>
-                <p className="font-mono text-sm text-[#8b2a1a] dark:text-[#f4a261] leading-relaxed">{formatNaturalPhoneticLine(ph.phoneticText)}</p>
+              <div className="p-2 bg-[var(--cordel-surface)] border border-[var(--cordel-border-sub)] rounded">
+                <span className="block text-[10px] font-bold uppercase text-[var(--cordel-secondary-text)] mb-0.5">{t('toadaPhonLabel')}</span>
+                <p className="font-mono text-sm text-[#9a3412] dark:text-[#f4a261] leading-relaxed">{formatNaturalPhoneticLine(ph.phoneticText)}</p>
               </div>
             </div>
           </div>

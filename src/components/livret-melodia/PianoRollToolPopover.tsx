@@ -56,7 +56,7 @@ export const PianoRollToolPopover: React.FC<PianoRollToolPopoverProps> = ({
     <div
       ref={popoverRef}
       style={{ left: `${clampedX}px`, top: `${clampedY}px` }}
-      className="fixed z-50 p-1.5 bg-stone-900/95 backdrop-blur-md border-2 border-amber-400 rounded-none shadow-[3px_3px_0px_0px_rgba(0,0,0,0.85)] flex items-center gap-1 animate-in fade-in zoom-in-95 duration-100"
+      className="fixed z-50 p-1.5 cordel-card shadow-lg flex items-center gap-1 rounded animate-in fade-in zoom-in-95 duration-100"
     >
       {tools.map((item) => {
         const Icon = item.icon;
@@ -67,10 +67,10 @@ export const PianoRollToolPopover: React.FC<PianoRollToolPopoverProps> = ({
             type="button"
             title={item.label}
             onClick={() => { onSelectTool(item.id); onClose(); }}
-            className={`w-9 h-9 rounded-none flex items-center justify-center transition-all cursor-pointer ${
+            className={`w-9 h-9 flex items-center justify-center transition-all cursor-pointer rounded ${
               isActive
-                ? 'bg-theme-wood text-[#f4ecd8] shadow-md border border-amber-400 font-bold'
-                : 'bg-white/5 text-stone-200 hover:bg-white/15 hover:text-white'
+                ? 'bg-[#9a3412] text-[#f4ecd8] shadow-md border border-[#9a3412] font-bold'
+                : 'cordel-btn'
             }`}
           >
             <Icon className="w-4 h-4 text-current" />

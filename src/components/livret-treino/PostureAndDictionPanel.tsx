@@ -62,13 +62,13 @@ export const PostureAndDictionPanel: React.FC = () => {
           {MARACATU_POSTURE_TIPS.map((tip) => (
             <div
               key={tip.id}
-              className="bg-[#fcfaf2] dark:bg-[#1f1d1a] border-2 border-[#1a1a1a] shadow-[3px_3px_0px_#1a1a1a] p-3 text-[#1a1a1a] dark:text-[#f4ecd8] rounded-none"
+              className="cordel-card-sm p-3 rounded"
             >
-              <div className="font-bold text-xs flex items-center gap-1.5 mb-1 text-[#8b2a1a] dark:text-[#f4a261]">
+              <div className="font-bold text-xs flex items-center gap-1.5 mb-1 text-[#9a3412] dark:text-[#f4a261]">
                 <span>{tip.icon}</span>
                 <span>{locale === 'br' ? tip.titleBr : tip.titleFr}</span>
               </div>
-              <p className="text-[11px] leading-relaxed opacity-90">
+              <p className="text-[11px] leading-relaxed text-[var(--cordel-secondary-text)]">
                 {locale === 'br' ? tip.descBr : tip.descFr}
               </p>
             </div>
@@ -77,17 +77,15 @@ export const PostureAndDictionPanel: React.FC = () => {
       </div>
 
       {/* 2. Atelier Diction & Phonétique du Pattern Actif */}
-      <div className="bg-[#fcfaf2] dark:bg-[#1f1d1a] border-2 border-[#1a1a1a] shadow-[4px_4px_0px_#1a1a1a] p-4 text-[#1a1a1a] dark:text-[#f4ecd8] rounded-none space-y-3">
-        <div className="flex items-center justify-between border-b border-[#1a1a1a]/20 pb-2">
-          <span className="font-bold text-xs tracking-wider uppercase">
+      <div className="cordel-card p-4 space-y-3">
+        <div className="flex items-center justify-between border-b border-[var(--cordel-border-sub)] pb-2">
+          <span className="font-bold text-xs tracking-wider uppercase text-[var(--cordel-text)]">
             🗣️ Diction : {activePattern.name} ({activePattern.role.toUpperCase()})
           </span>
           <button
             onClick={handlePlayDiction}
-            className={`px-3 py-1.5 text-xs font-bold flex items-center gap-1.5 border-2 border-[#1a1a1a] shadow-[2px_2px_0px_#1a1a1a] transition-all rounded-none ${
-              isSpeaking
-                ? 'bg-[#d97706] text-[#f4ecd8] hover:bg-[#b45309]'
-                : 'bg-[#2a9d8f] text-[#f4ecd8] hover:bg-[#21867a]'
+            className={`cordel-btn px-3 py-1.5 text-xs rounded flex items-center gap-1.5 cursor-pointer ${
+              isSpeaking ? 'bg-[#c25e38] text-white border-[#c25e38]' : ''
             }`}
           >
             {isSpeaking ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
@@ -96,13 +94,13 @@ export const PostureAndDictionPanel: React.FC = () => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
-          <div className="bg-[#f5edd6] dark:bg-[#2b2722] p-2.5 border border-[#1a1a1a]/20">
-            <span className="font-bold text-[10px] opacity-75 uppercase block mb-1">Paroles (Letra)</span>
+          <div className="cordel-card-sm p-2.5 rounded">
+            <span className="font-bold text-[10px] text-[var(--cordel-secondary-text)] uppercase block mb-1">Paroles (Letra)</span>
             <p className="font-serif italic text-sm">{activePattern.assignedLyricsText || '(Aucune parole assignée)'}</p>
           </div>
-          <div className="bg-[#f0ebd9] dark:bg-[#26231e] p-2.5 border border-[#1a1a1a]/20">
-            <span className="font-bold text-[10px] opacity-75 uppercase block mb-1">Phonétique chantée (Fonética)</span>
-            <p className="font-mono text-sm text-[#8b2a1a] dark:text-[#f4a261]">
+          <div className="cordel-card-sm p-2.5 rounded">
+            <span className="font-bold text-[10px] text-[var(--cordel-secondary-text)] uppercase block mb-1">Phonétique chantée (Fonética)</span>
+            <p className="font-mono text-sm text-[#9a3412] dark:text-[#f4a261]">
               {activePattern.assignedPhoneticText || activePattern.assignedLyricsText || '(Non renseigné)'}
             </p>
           </div>

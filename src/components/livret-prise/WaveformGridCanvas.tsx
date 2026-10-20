@@ -27,6 +27,13 @@ export const WaveformGridCanvas: React.FC<WaveformGridCanvasProps> = ({
   beatResolutions,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [themeTick, setThemeTick] = React.useState(0);
+
+  useEffect(() => {
+    const obs = new MutationObserver(() => setThemeTick((v) => v + 1));
+    obs.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+    return () => obs.disconnect();
+  }, []);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -41,6 +48,7 @@ export const WaveformGridCanvas: React.FC<WaveformGridCanvasProps> = ({
     ctx.scale(dpr, dpr);
     ctx.clearRect(0, 0, width, height);
 
+    const isLight = document.documentElement.getAttribute('data-theme') === 'light';
     const beatDuration = bpm ? 60 / bpm : (beatsPerMeasure > 0 ? (anacrusisDurationSec || 2) / beatsPerMeasure : 0.6);
     const measureDurationSec = beatsPerMeasure * beatDuration;
     const t1Offset = t1OffsetSec ?? getPatternT1OffsetSec(hasAnacrusis, measureDurationSec);
@@ -49,10 +57,10 @@ export const WaveformGridCanvas: React.FC<WaveformGridCanvasProps> = ({
 
     // 1. Fond hachuré pour la zone d'élan M-1 (uniquement si avec anacrouse)
     if (hasAnac && xTemps1 > 0) {
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
+      ctx.fillStyle = isLight ? 'rgba(0, 0, 0, 0.05)' : 'rgba(0, 0, 0, 0.45)';
       ctx.fillRect(0, 0, xTemps1, height);
 
-      ctx.strokeStyle = 'rgba(244, 236, 216, 0.05)';
+      ctx.strokeStyle = isLight ? 'rgba(26, 26, 26, 0.08)' : 'rgba(244, 236, 216, 0.05)';
       ctx.lineWidth = 1;
       for (let x = -height; x < xTemps1; x += 12) {
         ctx.beginPath();
@@ -71,7 +79,9 @@ export const WaveformGridCanvas: React.FC<WaveformGridCanvasProps> = ({
         const x = (t / totalDurationSec) * width;
         const isMeasureStart = bm === 0;
 
-        ctx.strokeStyle = isMeasureStart ? 'rgba(244, 236, 216, 0.35)' : 'rgba(244, 236, 216, 0.15)';
+        ctx.strokeStyle = isMeasureStart
+          ? (isLight ? 'rgba(26, 26, 26, 0.35)' : 'rgba(244, 236, 216, 0.35)')
+          : (isLight ? 'rgba(26, 26, 26, 0.15)' : 'rgba(244, 236, 216, 0.15)');
         ctx.lineWidth = isMeasureStart ? 1.5 : 1;
         ctx.beginPath();
         ctx.moveTo(x, 16);
@@ -80,7 +90,7 @@ export const WaveformGridCanvas: React.FC<WaveformGridCanvasProps> = ({
 
         const resolution = beatResolutions[bm] || 4;
         const subStepDuration = beatDuration / resolution;
-        ctx.strokeStyle = 'rgba(244, 236, 216, 0.05)';
+        ctx.strokeStyle = isLight ? 'rgba(26, 26, 26, 0.08)' : 'rgba(244, 236, 216, 0.05)';
         ctx.lineWidth = 0.5;
         for (let s = 1; s < resolution; s++) {
           const subX = ((t + s * subStepDuration) / totalDurationSec) * width;
@@ -103,7 +113,7 @@ export const WaveformGridCanvas: React.FC<WaveformGridCanvasProps> = ({
     // 4. Libellés textuels d'en-tête
     ctx.font = 'bold 9px monospace';
     if (hasAnac) {
-      ctx.fillStyle = 'rgba(244, 236, 216, 0.7)';
+      ctx.fillStyle = isLight ? 'rgba(26, 26, 26, 0.7)' : 'rgba(244, 236, 216, 0.7)';
       ctx.fillText('ÉLAN (M-1)', 6, 12);
     }
 
@@ -113,10 +123,10 @@ export const WaveformGridCanvas: React.FC<WaveformGridCanvasProps> = ({
     for (let m = 0; m < measuresCount; m++) {
       const mStartSec = t1Offset + m * measureDurationSec;
       const mX = (mStartSec / totalDurationSec) * width;
-      ctx.fillStyle = 'rgba(244, 236, 216, 0.7)';
+      ctx.fillStyle = isLight ? 'rgba(26, 26, 26, 0.7)' : 'rgba(244, 236, 216, 0.7)';
       ctx.fillText(`M${m + 1}`, mX + (m === 0 ? 65 : 4), 12);
     }
-  }, [width, height, totalDurationSec, anacrusisDurationSec, t1OffsetSec, hasAnacrusis, bpm, measuresCount, beatsPerMeasure, beatResolutions]);
+  }, [width, height, totalDurationSec, anacrusisDurationSec, t1OffsetSec, hasAnacrusis, bpm, measuresCount, beatsPerMeasure, beatResolutions, themeTick]);
 
   return (
     <canvas

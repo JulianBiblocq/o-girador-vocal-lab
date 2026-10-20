@@ -22,13 +22,13 @@ export const SlicerExtractionPanel: React.FC<SlicerExtractionPanelProps> = ({
   const { t } = useLanguage();
 
   return (
-    <div className="flex flex-col gap-2.5 p-3 cordel-card bg-theme-bg/80 border border-theme-border/70 text-xs font-mono">
+    <div className="flex flex-col gap-2.5 p-3 cordel-card rounded text-xs font-mono">
       {/* 1. Choix du Role (Puxador / Coro) & Nom */}
       <div className="flex flex-wrap items-center gap-2">
-        <div className="flex items-center p-0.5 cordel-card-sm select-none">
+        <div className="flex items-center p-0.5 cordel-card-sm rounded select-none">
           <button
             type="button" onClick={() => onRoleChange('puxador')}
-            className={`h-7 px-2.5 text-xs font-bold cursor-pointer transition-colors ${
+            className={`h-7 px-2.5 text-xs font-bold rounded cursor-pointer transition-colors ${
               role === 'puxador' ? 'bg-role-puxador text-[#f4ecd8] font-black' : 'opacity-60 hover:opacity-100'
             }`}
           >
@@ -36,7 +36,7 @@ export const SlicerExtractionPanel: React.FC<SlicerExtractionPanelProps> = ({
           </button>
           <button
             type="button" onClick={() => onRoleChange('coro')}
-            className={`h-7 px-2.5 text-xs font-bold cursor-pointer transition-colors ${
+            className={`h-7 px-2.5 text-xs font-bold rounded cursor-pointer transition-colors ${
               role === 'coro' ? 'bg-role-coro text-[#f4ecd8] font-black' : 'opacity-60 hover:opacity-100'
             }`}
           >
@@ -48,7 +48,7 @@ export const SlicerExtractionPanel: React.FC<SlicerExtractionPanelProps> = ({
           type="text" value={patternName}
           onChange={(e) => onNameChange(e.target.value)}
           placeholder={t('slicerPatternNamePlaceholder')}
-          className="flex-1 min-w-[160px] h-7 px-2.5 cordel-card-sm bg-black/30 border border-theme-border/60 text-xs font-mono text-theme-ink outline-none"
+          className="flex-1 min-w-[160px] h-7 px-2.5 cordel-card-sm bg-[var(--cordel-surface)] border border-[var(--cordel-border-panel)] rounded text-xs font-mono text-theme-ink outline-none"
         />
       </div>
 
@@ -75,8 +75,8 @@ export const SlicerExtractionPanel: React.FC<SlicerExtractionPanelProps> = ({
 
       {/* 3. Feedback d'extraction reussie */}
       {lastExtractedName && (
-        <div className="flex items-center gap-1.5 p-1.5 bg-emerald-950/40 border border-emerald-500/50 text-[11px] text-emerald-300">
-          <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+        <div className="flex items-center gap-1.5 p-1.5 bg-emerald-500/10 border border-emerald-500/30 rounded text-[11px] text-emerald-800 dark:text-emerald-300">
+          <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
           <span>Pattern « <strong>{lastExtractedName}</strong> » créé avec succès ! Prêt pour le Piano Roll.</span>
         </div>
       )}

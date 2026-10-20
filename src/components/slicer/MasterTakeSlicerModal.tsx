@@ -104,14 +104,14 @@ export const MasterTakeSlicerModal: React.FC<{ isOpen: boolean; onClose: () => v
 
   if (!isOpen) return null;
   return (
-    <div className="fixed inset-0 z-50 bg-black/85 flex items-center justify-center p-2 sm:p-4">
-      <div className="w-full max-w-5xl cordel-card bg-theme-bg border-2 border-stone-900 shadow-[6px_6px_0px_#1a1a1a] flex flex-col gap-3 p-3 sm:p-4 text-theme-ink max-h-[95vh] overflow-y-auto cordel-scrollbar rounded-none">
+    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4">
+      <div className="w-full max-w-5xl cordel-card flex flex-col gap-3 p-3 sm:p-4 text-theme-ink max-h-[95vh] overflow-y-auto cordel-scrollbar rounded">
         <div className="flex items-center justify-between border-b border-theme-border/60 pb-2">
           <h2 className="text-sm sm:text-base font-black tracking-widest uppercase m-0 text-theme-wood">{t('slicerModalTitle')}</h2>
-          <button type="button" onClick={onClose} className="p-1 cordel-card-sm hover:bg-red-950/40 cursor-pointer"><X className="w-4 h-4" /></button>
+          <button type="button" onClick={onClose} className="p-1 cordel-card-sm hover:bg-red-500/10 cursor-pointer rounded"><X className="w-4 h-4" /></button>
         </div>
         {!audio ? (
-          <div onClick={() => fileInputRef.current?.click()} className="border-2 border-dashed border-theme-border/70 p-8 flex flex-col items-center justify-center gap-2 cursor-pointer hover:bg-stone-900/30">
+          <div onClick={() => fileInputRef.current?.click()} className="border-2 border-dashed border-[var(--cordel-border-panel)] rounded p-8 flex flex-col items-center justify-center gap-2 cursor-pointer hover:bg-[var(--cordel-subcard-bg)]">
             <Upload className="w-8 h-8 text-theme-accent animate-bounce" />
             <span className="font-bold text-sm text-center">{t('slicerDropzoneTitle')}</span>
             <span className="text-xs text-theme-ink/60 text-center">{t('slicerDropzoneSub')}</span>

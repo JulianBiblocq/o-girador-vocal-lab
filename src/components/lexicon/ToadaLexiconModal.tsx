@@ -68,41 +68,49 @@ export const ToadaLexiconModal: React.FC<Props> = ({ isOpen, onClose, isReadOnly
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[120] bg-black/75 flex items-center justify-center p-3 font-mono">
-      <div className="bg-[#fcfaf2] dark:bg-[#1f1d1a] border-4 border-[#1a1a1a] shadow-[8px_8px_0px_#000] w-full max-w-3xl max-h-[90vh] flex flex-col text-[#1a1a1a] dark:text-[#f4ecd8] rounded-none">
-        <div className="p-3 border-b-2 border-[#1a1a1a] bg-[#f5edd6] dark:bg-[#2b2722] flex items-center justify-between">
+    <div className="fixed inset-0 z-[120] bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 font-mono">
+      <div className="cordel-card w-full max-w-3xl max-h-[90vh] flex flex-col p-0 overflow-hidden rounded shadow-xl">
+        <div className="p-3 border-b border-[var(--cordel-border-sub)] cordel-card-sm flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <BookOpen className="w-5 h-5 text-[#8b2a1a] dark:text-[#f4a261]" />
-            <h3 className="font-bold text-sm uppercase tracking-wider">{t('lexiconModalTitle')}</h3>
+            <BookOpen className="w-5 h-5 text-[#9a3412] dark:text-[#f4a261]" />
+            <h3 className="font-bold text-sm uppercase tracking-wider text-[var(--cordel-text)]">{t('lexiconModalTitle')}</h3>
           </div>
-          <button type="button" onClick={onClose} className="p-1 bg-[#1a1a1a] text-white cursor-pointer"><X className="w-4 h-4" /></button>
+          <button type="button" onClick={onClose} className="cordel-btn p-1 rounded cursor-pointer"><X className="w-4 h-4" /></button>
         </div>
 
-        <div className="p-3 border-b border-[#1a1a1a]/20 flex flex-wrap items-center justify-between gap-2 bg-[#f0ebd9] dark:bg-[#26231e]">
+        <div className="p-3 border-b border-[var(--cordel-border-sub)] flex flex-wrap items-center justify-between gap-2 cordel-card-sm">
           <div className="flex gap-2">
-            <button type="button" onClick={() => setActiveTab('toada')} className={`px-3 py-1 text-xs font-bold border border-[#1a1a1a] cursor-pointer ${activeTab === 'toada' ? 'bg-[#8b2a1a] text-white' : 'bg-[#fcfaf2] dark:bg-[#1f1d1a]'}`}>
+            <button
+              type="button"
+              onClick={() => setActiveTab('toada')}
+              className={`cordel-btn px-3 py-1 text-xs rounded cursor-pointer ${activeTab === 'toada' ? 'cordel-btn-primary' : ''}`}
+            >
               {t('lexiconToadaTermsTab')} ({toadaEntries.length})
             </button>
-            <button type="button" onClick={() => setActiveTab('catalog')} className={`px-3 py-1 text-xs font-bold border border-[#1a1a1a] cursor-pointer ${activeTab === 'catalog' ? 'bg-[#8b2a1a] text-white' : 'bg-[#fcfaf2] dark:bg-[#1f1d1a]'}`}>
+            <button
+              type="button"
+              onClick={() => setActiveTab('catalog')}
+              className={`cordel-btn px-3 py-1 text-xs rounded cursor-pointer ${activeTab === 'catalog' ? 'cordel-btn-primary' : ''}`}
+            >
               {t('lexiconAllTermsTab')} ({ORGANIZADOR_VOCAL_LEXICON.length})
             </button>
           </div>
           {!isReadOnly && (
             <div className="flex items-center gap-2">
-              <button type="button" onClick={handleAutoDetect} className="px-2.5 py-1 text-xs font-bold bg-[#2a9d8f] text-white border border-[#1a1a1a] shadow-[2px_2px_0px_#1a1a1a] flex items-center gap-1 cursor-pointer">
+              <button type="button" onClick={handleAutoDetect} className="cordel-btn px-2.5 py-1 text-xs rounded bg-[var(--cordel-coro)] text-white border-[var(--cordel-coro)] flex items-center gap-1 cursor-pointer">
                 <Sparkles className="w-3.5 h-3.5" /><span>{t('lexiconDetectBtn')}</span>
               </button>
-              <button type="button" onClick={handleGenerateQuiz} className="px-2.5 py-1 text-xs font-bold bg-[#d97706] text-white border border-[#1a1a1a] shadow-[2px_2px_0px_#1a1a1a] flex items-center gap-1 cursor-pointer">
+              <button type="button" onClick={handleGenerateQuiz} className="cordel-btn px-2.5 py-1 text-xs rounded bg-[#c88a2b] text-white border-[#c88a2b] flex items-center gap-1 cursor-pointer">
                 <HelpCircle className="w-3.5 h-3.5" /><span>Quiz Organizador</span>
               </button>
             </div>
           )}
         </div>
 
-        <div className="p-3 overflow-y-auto flex-1 space-y-2">
+        <div className="p-3 overflow-y-auto flex-1 space-y-2 cordel-scrollbar">
           {activeTab === 'toada' ? (
             toadaEntries.length === 0 ? (
-              <p className="p-4 text-xs italic text-center opacity-70 bg-[#f5edd6] dark:bg-[#2b2722] border border-[#1a1a1a]/20">{t('lexiconEmptyNotice')}</p>
+              <p className="cordel-card-sm p-4 text-xs italic text-center rounded">{t('lexiconEmptyNotice')}</p>
             ) : (
               toadaEntries.map((e, idx) => <ToadaLexiconItemRow key={`${e.mot}_${idx}`} entry={e} onDelete={handleDelete} isReadOnly={isReadOnly} />)
             )

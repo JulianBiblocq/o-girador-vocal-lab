@@ -39,9 +39,9 @@ export const ChordGridBar: React.FC<ChordGridBarProps> = ({
     <div className="flex items-center gap-1 w-full overflow-x-auto cordel-scrollbar select-none text-xs py-1">
       {/* 1. Colonne Élan M-1 si Anacrouse */}
       {hasAnacrusis && (
-        <div className="flex flex-col border border-dashed border-amber-600/40 bg-amber-950/20 px-2 py-1 shrink-0">
-          <span className="text-[9px] font-mono text-amber-500/70 tracking-wider">ÉLAN (M-1)</span>
-          <span className="text-[10px] font-mono text-stone-500 italic">libre</span>
+        <div className="flex flex-col border border-dashed border-amber-600/40 bg-amber-500/10 px-2 py-1 shrink-0 rounded">
+          <span className="text-[9px] font-mono text-amber-600 dark:text-amber-500/70 tracking-wider">ÉLAN (M-1)</span>
+          <span className="text-[10px] font-mono text-[var(--cordel-secondary-text)] italic">libre</span>
         </div>
       )}
 
@@ -49,8 +49,8 @@ export const ChordGridBar: React.FC<ChordGridBarProps> = ({
       {measuresArray.map((mIdx) => {
         const measureData = harmonyGrid?.measures?.find((m) => m.measureIndex === mIdx);
         return (
-          <div key={mIdx} className="flex flex-col border border-stone-800 bg-black/40 px-2 py-1 shrink-0 min-w-[140px]">
-            <span className="text-[9px] font-mono font-bold text-stone-400 tracking-wider">MESURE {mIdx + 1}</span>
+          <div key={mIdx} className="flex flex-col cordel-card-sm px-2 py-1 shrink-0 min-w-[140px] rounded">
+            <span className="text-[9px] font-mono font-bold text-[var(--cordel-secondary-text)] tracking-wider">MESURE {mIdx + 1}</span>
             <div className="flex items-center gap-1 mt-0.5">
               {Array.from({ length: beatsPerMeasure }, (_, bIdx) => {
                 const chord = measureData?.chordsByBeat?.[bIdx];
@@ -62,10 +62,10 @@ export const ChordGridBar: React.FC<ChordGridBarProps> = ({
                       type="button"
                       disabled={readOnly}
                       onClick={() => !readOnly && setActiveCell({ measureIndex: mIdx, beatIndex: bIdx })}
-                      className={`px-1.5 py-0.5 min-w-[28px] font-mono text-[10.5px] border cursor-pointer transition-colors ${
+                      className={`px-1.5 py-0.5 min-w-[28px] font-mono text-[10.5px] border rounded cursor-pointer transition-colors ${
                         chord
-                          ? 'border-amber-500/80 bg-amber-500/20 text-amber-300 font-bold shadow-[1px_1px_0px_#000]'
-                          : 'border-stone-800 text-stone-600 hover:border-stone-600 hover:text-stone-400'
+                          ? 'border-amber-500/80 bg-amber-500/20 text-amber-800 dark:text-amber-300 font-bold'
+                          : 'border-[var(--cordel-border-sub)] text-[var(--cordel-secondary-text)] hover:border-[var(--cordel-border-panel)]'
                       } ${isSelected ? 'ring-1 ring-amber-400' : ''}`}
                       title={readOnly ? undefined : `Temps ${bIdx + 1} : cliquer pour modifier l'accord`}
                     >

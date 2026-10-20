@@ -112,7 +112,7 @@ export const PianoRollEditor: React.FC<PianoRollEditorProps> = (p) => {
           <span className="text-[10px] text-theme-ink/70 hidden sm:inline">{t('pianoRollHint')}</span>
         )}
       </div>
-      <div ref={scrollRef} className="w-full cordel-card overflow-x-auto overflow-y-auto cordel-scrollbar bg-stone-950/80 border border-theme-border/60 max-h-[380px] rounded-none">
+      <div ref={scrollRef} className="w-full cordel-card overflow-x-auto overflow-y-auto cordel-scrollbar max-h-[380px] rounded">
         <div style={{ width: `${64 + gridWidth}px`, height: `${66 + canvasHeight}px` }}>
           <PianoRollStickyHeader
             gridWidth={gridWidth} beatsPerMeasure={p.beatsPerMeasure} totalDurationSec={p.totalDurationSec}

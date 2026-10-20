@@ -41,17 +41,17 @@ export const PianoRollToolbar: React.FC<PianoRollToolbarProps> = (props) => {
   ];
 
   return (
-    <div className="cordel-card p-2 w-full flex flex-wrap items-center justify-between gap-3 bg-black/60 rounded-none">
+    <div className="cordel-card p-2 w-full flex flex-wrap items-center justify-between gap-3 select-none">
       {/* 1. Gauche : 5 Outils + Bloc jumelé Undo/Redo */}
       <div className="flex items-center gap-2">
-        <div className="flex items-center border border-theme-border/60">
+        <div className="flex items-center border border-[var(--cordel-border-sub)] rounded overflow-hidden">
           {tools.map((item) => {
             const Icon = item.icon;
             const isActive = activeTool === item.id;
             return (
               <button
                 key={item.id} type="button" onClick={() => onSelectTool(item.id)} title={item.label}
-                className={`px-2 py-1 text-xs font-mono flex items-center gap-1 border-r last:border-r-0 border-theme-border/40 transition-all rounded-none cursor-pointer ${
+                className={`px-2 py-1 text-xs font-mono flex items-center gap-1 border-r last:border-r-0 border-[var(--cordel-border-sub)] transition-all cursor-pointer ${
                   isActive ? 'bg-theme-wood text-[#f4ecd8] font-bold' : 'text-theme-ink/75 hover:bg-white/10 hover:text-theme-ink'
                 }`}
               >
@@ -62,10 +62,10 @@ export const PianoRollToolbar: React.FC<PianoRollToolbarProps> = (props) => {
           })}
         </div>
 
-        <div className="flex items-center border border-theme-border/60">
+        <div className="flex items-center border border-[var(--cordel-border-sub)] rounded overflow-hidden">
           <button
             type="button" onClick={onUndo} disabled={!canUndo} title={t('undo')}
-            className={`px-2 py-1 text-xs font-mono flex items-center gap-1 border-r border-theme-border/40 transition-all rounded-none cursor-pointer ${
+            className={`px-2 py-1 text-xs font-mono flex items-center gap-1 border-r border-[var(--cordel-border-sub)] transition-all cursor-pointer ${
               canUndo ? 'text-theme-ink hover:bg-white/10' : 'text-stone-600 cursor-not-allowed opacity-40'
             }`}
           >
@@ -74,7 +74,7 @@ export const PianoRollToolbar: React.FC<PianoRollToolbarProps> = (props) => {
           </button>
           <button
             type="button" onClick={onRedo} disabled={!canRedo} title={t('redo')}
-            className={`px-2 py-1 text-xs font-mono flex items-center gap-1 transition-all rounded-none cursor-pointer ${
+            className={`px-2 py-1 text-xs font-mono flex items-center gap-1 transition-all cursor-pointer ${
               canRedo ? 'text-theme-ink hover:bg-white/10' : 'text-stone-600 cursor-not-allowed opacity-40'
             }`}
           >
@@ -93,7 +93,7 @@ export const PianoRollToolbar: React.FC<PianoRollToolbarProps> = (props) => {
               if (ok) onReExtractNotes();
             }}
             title={t('reExtractNotesTooltip')}
-            className="px-2 py-1 text-xs font-mono flex items-center gap-1 border border-amber-500/50 bg-amber-950/30 text-amber-300 hover:bg-amber-900/50 transition-all rounded-none cursor-pointer"
+            className="px-2 py-1 text-xs font-mono flex items-center gap-1 border border-amber-500/50 bg-amber-950/30 text-amber-300 hover:bg-amber-900/50 transition-all rounded cursor-pointer"
           >
             <RefreshCw className="w-3.5 h-3.5" />
             <span className="hidden xl:inline">{t('reExtractNotes')}</span>
@@ -105,10 +105,10 @@ export const PianoRollToolbar: React.FC<PianoRollToolbarProps> = (props) => {
       <div className="flex items-center gap-3 text-[11px] font-mono">
         <div className="flex items-center gap-1.5">
           <span className="text-theme-ink/75 font-bold">{t('scaleLabel')} :</span>
-          <select value={tonic} onChange={(e) => onSetTonic(e.target.value)} className="px-1.5 py-0.5 bg-black/40 border border-theme-border/50 text-theme-accent font-bold outline-none rounded-none cursor-pointer">
+          <select value={tonic} onChange={(e) => onSetTonic(e.target.value)} className="cordel-card-sm px-1.5 py-0.5 text-theme-accent font-bold outline-none rounded cursor-pointer">
             {NOTE_NAMES.map((n) => <option key={n} value={n} className="bg-theme-bg text-theme-ink">{n}</option>)}
           </select>
-          <select value={scaleType} onChange={(e) => onSetScaleType(e.target.value as ScaleType)} className="px-1.5 py-0.5 bg-black/40 border border-theme-border/50 text-theme-accent font-bold outline-none rounded-none cursor-pointer">
+          <select value={scaleType} onChange={(e) => onSetScaleType(e.target.value as ScaleType)} className="cordel-card-sm px-1.5 py-0.5 text-theme-accent font-bold outline-none rounded cursor-pointer">
             {Object.keys(SCALE_DEFINITIONS).map((key) => (
               <option key={key} value={key} className="bg-theme-bg text-theme-ink">
                 {t(SCALE_I18N_KEYS[key as ScaleType])}

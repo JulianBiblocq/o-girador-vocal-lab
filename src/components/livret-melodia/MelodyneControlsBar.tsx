@@ -31,7 +31,7 @@ export const MelodyneControlsBar: React.FC<MelodyneControlsBarProps> = ({
   const { t } = useLanguage();
 
   return (
-    <div className="cordel-card p-2 w-full flex flex-wrap items-center justify-between gap-3 bg-black/60 border border-theme-border/60 select-none rounded-none">
+    <div className="cordel-card p-2 w-full flex flex-wrap items-center justify-between gap-3 select-none rounded">
       {/* 1. Titre & Badge d'état de zone */}
       <div className="flex items-center gap-2">
         <span className="text-xs font-mono font-bold text-theme-accent flex items-center gap-1.5 uppercase">
@@ -40,7 +40,7 @@ export const MelodyneControlsBar: React.FC<MelodyneControlsBarProps> = ({
         </span>
         {selectedRegion ? (
           <div className="flex items-center gap-2">
-            <span className="px-2 py-0.5 text-[9.5px] font-mono font-bold bg-amber-950/70 text-amber-300 border border-amber-500/40">
+            <span className="px-2 py-0.5 text-[9.5px] font-mono font-bold bg-amber-950/70 text-amber-300 border border-amber-500/40 rounded">
               {t('melodyneZoneActiveBadge', { start: selectedRegion.startSec.toFixed(2), end: selectedRegion.endSec.toFixed(2) })}
             </span>
             <span className="text-[10px] font-mono text-amber-300/80 hidden 2xl:inline">• {t('melodyneZoneHelpHint')}</span>
@@ -63,7 +63,7 @@ export const MelodyneControlsBar: React.FC<MelodyneControlsBarProps> = ({
             <input
               type="range" min={0} max={100} step={1} value={selectedRegion.pitchCenterPct}
               onChange={(e) => onUpdateSelected({ pitchCenterPct: Number(e.target.value) })}
-              className="w-full accent-[var(--cordel-wood)] cursor-pointer h-1.5 bg-black/40 border border-theme-border/40"
+              className="w-full accent-[var(--cordel-wood)] cursor-pointer h-1.5 bg-[var(--cordel-subcard-bg)] border border-[var(--cordel-border-sub)] rounded"
             />
           </div>
           <div className="flex-1 flex flex-col gap-0.5 border-l border-theme-border/40 pl-3">
@@ -73,7 +73,7 @@ export const MelodyneControlsBar: React.FC<MelodyneControlsBarProps> = ({
             <input
               type="range" min={0} max={100} step={1} value={selectedRegion.flattenPct}
               onChange={(e) => onUpdateSelected({ flattenPct: Number(e.target.value) })}
-              className="w-full accent-amber-500 cursor-pointer h-1.5 bg-black/40 border border-theme-border/40"
+              className="w-full accent-amber-500 cursor-pointer h-1.5 bg-[var(--cordel-subcard-bg)] border border-[var(--cordel-border-sub)] rounded"
             />
           </div>
         </div>
@@ -83,10 +83,10 @@ export const MelodyneControlsBar: React.FC<MelodyneControlsBarProps> = ({
       <div className="flex items-center gap-1.5 flex-wrap">
         {onShiftOctave && (
           <div className="flex items-center gap-1 border-r border-theme-border/40 pr-1.5">
-            <button type="button" onClick={() => onShiftOctave(-1)} className="px-2 py-1 text-[10px] font-mono font-bold bg-[#1e293b] hover:bg-[#334155] text-amber-300 border border-amber-500/40 cursor-pointer rounded-none" title={selectedRegion ? `Courbe -1 Oct (${selectedRegion.startSec}s-${selectedRegion.endSec}s)` : 'Courbe -1 Oct phrase'}>
+            <button type="button" onClick={() => onShiftOctave(-1)} className="cordel-btn px-2 py-1 text-[10px] font-mono font-bold text-amber-700 dark:text-amber-300 border border-amber-500/40 cursor-pointer rounded" title={selectedRegion ? `Courbe -1 Oct (${selectedRegion.startSec}s-${selectedRegion.endSec}s)` : 'Courbe -1 Oct phrase'}>
               <span>{t('melodyneShiftDownOct')}</span>
             </button>
-            <button type="button" onClick={() => onShiftOctave(1)} className="px-2 py-1 text-[10px] font-mono font-bold bg-[#1e293b] hover:bg-[#334155] text-amber-300 border border-amber-500/40 cursor-pointer rounded-none" title={selectedRegion ? `Courbe +1 Oct (${selectedRegion.startSec}s-${selectedRegion.endSec}s)` : 'Courbe +1 Oct phrase'}>
+            <button type="button" onClick={() => onShiftOctave(1)} className="cordel-btn px-2 py-1 text-[10px] font-mono font-bold text-amber-700 dark:text-amber-300 border border-amber-500/40 cursor-pointer rounded" title={selectedRegion ? `Courbe +1 Oct (${selectedRegion.startSec}s-${selectedRegion.endSec}s)` : 'Courbe +1 Oct phrase'}>
               <span>{t('melodyneShiftUpOct')}</span>
             </button>
           </div>
@@ -95,15 +95,15 @@ export const MelodyneControlsBar: React.FC<MelodyneControlsBarProps> = ({
         {onAlignOctaveToBricks && (
           <button
             type="button" onClick={onAlignOctaveToBricks}
-            className="btn-octave-align px-2 py-1 text-[10px] font-mono font-bold cursor-pointer rounded-none transition-colors"
+            className="btn-octave-align px-2 py-1 text-[10px] font-mono font-bold cursor-pointer rounded transition-colors"
             title="Aimanter l'octave de la courbe verte vers les briques MIDI"
           ><span>{t('melodyneAlignToBricks')}</span></button>
         )}
 
         <button
           type="button" onClick={onActivateTool}
-          className={`px-2.5 py-1 text-[10.5px] font-mono font-bold flex items-center gap-1 cursor-pointer rounded-none border ${
-            isToolActive ? 'bg-[#9a3412] text-[#f4ecd8] border-2 border-[#1a1a1a] shadow-sm' : 'bg-white/5 hover:bg-white/10 text-theme-ink/80 border-theme-border/40'
+          className={`px-2.5 py-1 text-[10.5px] font-mono font-bold flex items-center gap-1 cursor-pointer rounded border ${
+            isToolActive ? 'bg-[#9a3412] text-[#f4ecd8] border border-[#9a3412] shadow-sm' : 'cordel-btn'
           }`}
         >
           <Plus className="w-3 h-3" />
@@ -112,19 +112,19 @@ export const MelodyneControlsBar: React.FC<MelodyneControlsBarProps> = ({
 
         <button
           type="button" onClick={onAddWholePhrase}
-          className="px-2 py-1 text-[10px] font-mono font-bold bg-white/5 hover:bg-white/10 text-theme-ink/75 border border-theme-border/40 cursor-pointer rounded-none"
+          className="cordel-btn px-2 py-1 text-[10px] font-mono font-bold cursor-pointer rounded"
         ><span>{t('melodyneWholePhraseBtn')}</span></button>
 
         {selectedRegion && (
           <>
             <button
               type="button" onClick={() => onUpdateSelected({ pitchCenterPct: 0, flattenPct: 0 })}
-              className="px-2 py-1 text-[10px] font-mono font-bold bg-white/5 hover:bg-white/10 text-theme-ink/70 border border-theme-border/40 flex items-center gap-1 cursor-pointer rounded-none"
+              className="cordel-btn px-2 py-1 text-[10px] font-mono font-bold flex items-center gap-1 cursor-pointer rounded"
               title={t('melodyneResetZoneBtn')}
             ><RotateCcw className="w-3 h-3" /><span className="hidden sm:inline">0%</span></button>
             <button
               type="button" onClick={onDeleteSelected}
-              className="px-2 py-1 text-[10px] font-mono font-bold bg-red-950/50 hover:bg-red-900/60 text-red-300 border border-red-500/40 flex items-center gap-1 cursor-pointer rounded-none"
+              className="cordel-btn px-2 py-1 text-[10px] font-mono font-bold text-red-700 dark:text-red-300 hover:bg-red-500/10 border-red-500/30 flex items-center gap-1 cursor-pointer rounded"
               title={t('melodyneDeleteZoneBtn')}
             ><Trash2 className="w-3 h-3" /></button>
           </>
@@ -133,7 +133,7 @@ export const MelodyneControlsBar: React.FC<MelodyneControlsBarProps> = ({
         {regionsCount > 0 && onClearAllMelodyne && (
           <button
             type="button" onClick={onClearAllMelodyne}
-            className="px-2 py-1 text-[10px] font-mono font-bold bg-amber-950/40 hover:bg-amber-900/60 text-amber-200 border border-amber-600/40 cursor-pointer rounded-none"
+            className="cordel-btn px-2 py-1 text-[10px] font-mono font-bold text-amber-800 dark:text-amber-300 border-amber-600/40 cursor-pointer rounded"
             title={t('melodynePurgeTooltip')}
           ><span>{t('melodynePurgeBtn')}</span></button>
         )}

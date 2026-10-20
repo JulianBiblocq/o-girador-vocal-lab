@@ -45,7 +45,7 @@ export const LivretTreino: React.FC = () => {
   return (
     <div className="w-full space-y-4">
       {/* Barre de navigation des 4 sous-ateliers Cordel avec icônes SVG monochromes */}
-      <div className="flex flex-wrap gap-2 border-b-2 border-[#1a1a1a] pb-3 select-none">
+      <div className="flex flex-wrap gap-2 border-b border-[var(--cordel-border-panel)] pb-3 select-none">
         {tabs.map(({ id, label, Icon }) => {
           const isActive = activeSubTab === id;
           return (
@@ -53,10 +53,10 @@ export const LivretTreino: React.FC = () => {
               key={id}
               type="button"
               onClick={() => handleSelectTab(id)}
-              className={`px-3 py-1.5 text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 border-2 border-[#1a1a1a] shadow-[2px_2px_0px_#1a1a1a] rounded-none transition-transform cursor-pointer ${
+              className={`px-3 py-1.5 text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 border rounded transition-transform cursor-pointer ${
                 isActive
-                  ? 'bg-[#8b2a1a] text-[#f4ecd8] -translate-y-0.5 shadow-[3px_3px_0px_#1a1a1a]'
-                  : 'bg-[#fcfaf2] dark:bg-[#24211d] text-[#1a1a1a] dark:text-[#f4ecd8] hover:bg-[#f5edd6] dark:hover:bg-[#2f2b25]'
+                  ? 'bg-[#9a3412] text-[#f4ecd8] border-[#9a3412] -translate-y-0.5 shadow-[var(--cordel-shadow-sm)]'
+                  : 'bg-[var(--cordel-surface)] text-[var(--cordel-text)] border-[var(--cordel-border-panel)] hover:bg-[var(--cordel-subcard-bg)] hover:border-[var(--cordel-accent)] shadow-[var(--cordel-shadow-sm)]'
               }`}
             >
               <Icon className="w-3.5 h-3.5 shrink-0 stroke-current" />

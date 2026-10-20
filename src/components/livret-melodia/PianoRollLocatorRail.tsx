@@ -87,10 +87,10 @@ export const PianoRollLocatorRail: React.FC<Props> = ({
   return (
     <div
       ref={railRef} onPointerDown={handleRailDown} onPointerMove={handlePointerMove} onPointerUp={() => setDrag(null)}
-      className="relative w-full h-[24px] bg-[#1a1815] border-b border-white/20 select-none overflow-hidden cursor-crosshair"
+      className="relative w-full h-[24px] bg-[var(--cordel-surface)] border-b border-[var(--cordel-border-sub)] select-none overflow-hidden cursor-crosshair"
       style={{ width: `${gridWidth}px` }}
     >
-      <div className="absolute inset-0 bg-stone-900/40 pointer-events-none" />
+      <div className="absolute inset-0 bg-[var(--cordel-subcard-bg)]/40 pointer-events-none" />
       {regions.map((r) => {
         const xIn = secToX(r.startSec), xOut = secToX(r.endSec), isSel = r.id === selectedRegionId, w = Math.max(4, xOut - xIn);
         return (

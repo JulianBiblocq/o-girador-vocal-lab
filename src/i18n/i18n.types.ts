@@ -130,6 +130,7 @@ export interface VocalLabTranslationsCore {
   melodynePitchCenter: string; melodyneFlatten: string; melodyneCreateZoneBtn: string; melodyneWholePhraseBtn: string;
   melodyneDeleteZoneBtn: string; melodyneResetZoneBtn: string; melodyneNoZoneSelected: string; melodyneZoneActiveBadge: string; melodyneZoneHelpHint: string; melodyneRailLabel: string;
   melodyneShiftDownOct: string; melodyneShiftUpOct: string; melodyneAlignToBricks: string; melodynePurgeBtn: string; melodynePurgeTooltip: string; melodynePurgeToast: string;
+  pwaInstallBtn: string;
 }
 
 import type { CloudToadaTranslations } from './cloudToadaTranslations.types';

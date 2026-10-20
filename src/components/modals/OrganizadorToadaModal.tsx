@@ -74,23 +74,23 @@ export const OrganizadorToadaModal: React.FC<OrganizadorToadaModalProps> = ({
   if (!isOpen) return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-3" onClick={onClose}>
+    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3" onClick={onClose}>
       <div
-        className="w-full max-w-xl cordel-card bg-theme-bg border-2 border-stone-900 shadow-[6px_6px_0px_#1a1a1a] flex flex-col gap-2.5 p-4 text-theme-ink max-h-[90vh] rounded-none animate-in fade-in zoom-in-95 duration-100"
+        className="w-full max-w-xl cordel-card flex flex-col gap-2.5 p-4 text-[var(--cordel-text)] max-h-[90vh] rounded shadow-xl animate-in fade-in zoom-in-95 duration-100"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between border-b border-[var(--cordel-border)] pb-2">
+        <div className="flex items-center justify-between border-b border-[var(--cordel-border-sub)] pb-2">
           <h2 className="text-sm font-black tracking-widest uppercase m-0 text-theme-wood flex items-center gap-2">
             <Scroll className="w-4 h-4 text-[var(--cordel-accent-text)]" /><span>{t('fichesOrganizador')}</span>
           </h2>
-          <button type="button" onClick={onClose} className="p-1 cordel-card-sm hover:bg-stone-800 cursor-pointer"><X className="w-4 h-4" /></button>
+          <button type="button" onClick={onClose} className="cordel-btn p-1 rounded cursor-pointer"><X className="w-4 h-4" /></button>
         </div>
 
         {!isUserLoggedIn && (
-          <div className="p-2 border border-amber-500/50 bg-amber-500/10 text-amber-200 text-xs font-mono flex items-center justify-between gap-2">
+          <div className="p-2 border border-amber-500/50 bg-amber-500/10 text-amber-200 text-xs font-mono flex items-center justify-between gap-2 rounded">
             <span>{t('authLoginRequiredNotice') || 'Connexion requise pour accéder aux fiches.'}</span>
             {onLogin && (
-              <button type="button" onClick={onLogin} className="px-2 py-1 bg-amber-600 hover:bg-amber-500 text-stone-900 font-bold flex items-center gap-1 shrink-0 cursor-pointer">
+              <button type="button" onClick={onLogin} className="px-2 py-1 bg-amber-600 hover:bg-amber-500 text-stone-900 font-bold flex items-center gap-1 shrink-0 rounded cursor-pointer">
                 <LogIn className="w-3.5 h-3.5" /><span>{t('authLogin') || 'Connexion'}</span>
               </button>
             )}
@@ -104,31 +104,31 @@ export const OrganizadorToadaModal: React.FC<OrganizadorToadaModalProps> = ({
         />
 
         <div className="relative">
-          <Search className="w-4 h-4 absolute left-2.5 top-1/2 -translate-y-1/2 text-stone-400" />
+          <Search className="w-4 h-4 absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--cordel-secondary-text)]" />
           <input
             type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t('organizadorSearchPlaceholder')}
-            className="w-full pl-8 pr-3 py-1.5 bg-black/50 border border-[var(--cordel-border)] text-xs font-mono text-stone-200 focus:outline-none rounded-none"
+            className="w-full pl-8 pr-3 py-1.5 cordel-card-sm text-xs font-mono text-[var(--cordel-text)] focus:outline-none rounded"
           />
         </div>
 
         <div className="flex-1 overflow-y-auto flex flex-col gap-1.5 min-h-[160px] max-h-[300px] pr-1 cordel-scrollbar">
           {isLoading ? (
-            <div className="flex flex-col items-center justify-center py-10 gap-2 text-stone-400">
+            <div className="flex flex-col items-center justify-center py-10 gap-2 text-[var(--cordel-secondary-text)]">
               <Loader2 className="w-6 h-6 animate-spin text-theme-wood" /><span className="text-xs font-mono">Chargement...</span>
             </div>
           ) : filtered.length === 0 ? (
-            <div className="text-center py-10 text-stone-500 text-xs font-mono">{t('noOrganizadorToadas')}</div>
+            <div className="text-center py-10 text-[var(--cordel-secondary-text)] text-xs font-mono">{t('noOrganizadorToadas')}</div>
           ) : (
             filtered.map((item) => <OrganizadorDocRow key={item.id} item={item} onSelect={applyDoc} />)
           )}
         </div>
 
-        <div className="flex items-center justify-between border-t border-[var(--cordel-border)] pt-2">
-          <button type="button" onClick={() => fileInputRef.current?.click()} className="text-[11px] font-mono text-stone-400 hover:text-stone-200 flex items-center gap-1.5 cursor-pointer">
+        <div className="flex items-center justify-between border-t border-[var(--cordel-border-sub)] pt-2">
+          <button type="button" onClick={() => fileInputRef.current?.click()} className="text-[11px] font-mono text-[var(--cordel-secondary-text)] hover:text-[var(--cordel-text)] flex items-center gap-1.5 cursor-pointer">
             <FileText className="w-3.5 h-3.5" /><span>{t('toadaImportTxt')}</span>
           </button>
           <input ref={fileInputRef} type="file" accept=".txt,.html" onChange={handleTxtFile} className="hidden" />
-          <button type="button" onClick={onClose} className="px-3 py-1.5 cordel-card-sm text-xs font-mono hover:bg-stone-800 cursor-pointer">{t('dialogCancel')}</button>
+          <button type="button" onClick={onClose} className="cordel-btn px-3 py-1.5 text-xs font-mono rounded cursor-pointer">{t('dialogCancel')}</button>
         </div>
       </div>
     </div>,

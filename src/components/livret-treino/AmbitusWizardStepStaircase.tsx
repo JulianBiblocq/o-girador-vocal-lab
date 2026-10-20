@@ -88,31 +88,31 @@ export const AmbitusWizardStepStaircase: React.FC<AmbitusWizardStepStaircaseProp
         <p className="text-[var(--cordel-text)]">{t('ambitusStaircaseDesc')}</p>
         <button
           type="button" disabled={isTesting} onClick={handleListenStaircase}
-          className="px-2.5 py-1 text-[11px] font-bold border border-[#1a1a1a] bg-[#1e293b] hover:bg-[#334155] text-amber-300 flex items-center gap-1.5 cursor-pointer shadow-sm select-none"
+          className="cordel-btn px-2.5 py-1 text-[11px] flex items-center gap-1.5 cursor-pointer rounded text-[var(--cordel-accent-text)] select-none"
         >
-          <Volume2 className="w-3.5 h-3.5 text-amber-400" /><span>{t('ambitusListenStaircaseBtn')}</span>
+          <Volume2 className="w-3.5 h-3.5" /><span>{t('ambitusListenStaircaseBtn')}</span>
         </button>
       </div>
 
       {/* 5 Marches d'escalier interactives */}
-      <div className="grid grid-cols-5 gap-1.5 p-2 bg-[#f4ecd8]/60 dark:bg-[#1f1d1a]/80 border-2 border-[#1a1a1a]">
+      <div className="grid grid-cols-5 gap-1.5 p-2 bg-[var(--cordel-subcard-bg)] border border-[var(--cordel-border-sub)] rounded">
         {plan.steps.map((st, idx) => {
           const isActive = activeStepIdx === idx;
           const isDone = verifiedSteps[idx];
           return (
             <div
               key={st.midi}
-              className={`p-2 text-center border transition-all flex flex-col items-center justify-center gap-0.5 rounded-none ${
+              className={`p-2 text-center border transition-all flex flex-col items-center justify-center gap-0.5 rounded ${
                 isActive
-                  ? 'bg-amber-500/25 border-amber-500 text-amber-400 scale-105 shadow-md animate-pulse'
+                  ? 'bg-[#c88a2b]/20 border-[#c88a2b] text-[#9a3412] dark:text-[#f4a261] scale-105 shadow-md animate-pulse'
                   : isDone
-                  ? 'bg-emerald-600/25 border-emerald-500 text-emerald-400 font-bold'
-                  : 'bg-black/20 border-[#1a1a1a]/40 text-[#1a1a1a] dark:text-[#f4ecd8]'
+                  ? 'bg-[#0f766e]/15 border-[#0f766e]/40 text-[#0f766e] dark:text-[#2dd4bf] font-bold'
+                  : 'bg-[var(--cordel-surface)] border-[var(--cordel-border-sub)] text-[var(--cordel-text)]/70'
               }`}
             >
               <span className="text-[10px] font-mono opacity-60">#{idx + 1}</span>
               <span className="text-sm font-bold font-mono">{st.noteName}</span>
-              {isDone ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <span className="text-[9px] font-mono opacity-50">{midiToNoteName(st.midi)}</span>}
+              {isDone ? <Check className="w-3.5 h-3.5 text-[#0f766e] dark:text-[#2dd4bf]" /> : <span className="text-[9px] font-mono opacity-50">{midiToNoteName(st.midi)}</span>}
             </div>
           );
         })}
@@ -124,7 +124,7 @@ export const AmbitusWizardStepStaircase: React.FC<AmbitusWizardStepStaircaseProp
       {/* Bouton de lancement de l'escalier */}
       <button
         type="button" disabled={isTesting} onClick={handleSingStaircase}
-        className="w-full py-2.5 cordel-btn-primary font-bold text-xs flex items-center justify-center gap-2 cursor-pointer shadow-md select-none"
+        className="w-full py-2.5 cordel-btn-primary font-bold text-xs flex items-center justify-center gap-2 cursor-pointer shadow-md select-none rounded"
       >
         <Play className="w-4 h-4 fill-current" />
         <span>

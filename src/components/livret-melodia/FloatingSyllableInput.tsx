@@ -53,7 +53,7 @@ export const FloatingSyllableInput: React.FC<FloatingSyllableInputProps> = (prop
         height: `${height}px`,
       }}
       placeholder="Syllabe..."
-      className="absolute z-30 px-1 py-0 bg-stone-900 border-2 border-theme-accent rounded-none text-theme-ink font-mono text-[11px] font-bold text-center shadow-xl outline-none"
+      className="absolute z-30 px-1 py-0 bg-[var(--cordel-surface)] border-2 border-theme-accent rounded text-theme-ink font-mono text-[11px] font-bold text-center shadow-xl outline-none"
     />
   );
 };

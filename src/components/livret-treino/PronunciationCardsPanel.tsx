@@ -78,18 +78,26 @@ export const PronunciationCardsPanel: React.FC = () => {
     <div className="space-y-4 font-mono">
       <ActiveToadaLexiconStrip entries={activeLexicon} activeCardId={activeCardId} onSelectCard={setActiveCardId} onOpenLexiconModal={() => setIsLexiconModalOpen(true)} />
 
-      <div className="bg-[#fcfaf2] dark:bg-[#1f1d1a] border-2 border-[#1a1a1a] shadow-[4px_4px_0px_#1a1a1a] p-4 text-[#1a1a1a] dark:text-[#f4ecd8] space-y-3">
-        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#1a1a1a]/20 pb-2">
+      <div className="cordel-card p-4 space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--cordel-border-sub)] pb-2">
           <div>
-            <h3 className="font-bold text-sm tracking-wider uppercase">{t('soundCardsSectionTitle')}</h3>
-            <p className="text-[11px] opacity-80">{t('soundCardsSubtitle')}</p>
+            <h3 className="font-bold text-sm tracking-wider uppercase text-[var(--cordel-text)]">{t('soundCardsSectionTitle')}</h3>
+            <p className="text-[11px] text-[var(--cordel-secondary-text)]">{t('soundCardsSubtitle')}</p>
           </div>
           <div className="flex items-center gap-2">
-            <button type="button" onClick={() => setShowOnlySongCards((prev) => !prev)} className={`px-2.5 py-1 text-xs font-bold border border-[#1a1a1a] cursor-pointer ${showOnlySongCards ? 'bg-[#2a9d8f] text-white' : 'bg-[#f4ecd8] dark:bg-[#2b2722]'}`}>
+            <button
+              type="button"
+              onClick={() => setShowOnlySongCards((prev) => !prev)}
+              className={`cordel-btn px-2.5 py-1 text-xs rounded cursor-pointer ${showOnlySongCards ? 'bg-[var(--cordel-coro)] text-[#f4ecd8] border-[var(--cordel-coro)]' : ''}`}
+            >
               {showOnlySongCards ? '⭐ Dans ce chant' : '📚 Toutes les cartes (6)'}
             </button>
             {activeCardId && (
-              <button type="button" onClick={() => setActiveCardId(null)} className="px-2 py-1 text-xs font-bold border border-[#1a1a1a] bg-[#8b2a1a] text-white cursor-pointer">
+              <button
+                type="button"
+                onClick={() => setActiveCardId(null)}
+                className="cordel-btn px-2 py-1 text-xs rounded bg-[#9a3412] text-[#f4ecd8] border-[#9a3412] cursor-pointer"
+              >
                 ✕ Retirer filtre
               </button>
             )}

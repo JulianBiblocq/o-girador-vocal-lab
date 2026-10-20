@@ -28,11 +28,12 @@ export function drawSlicerWaveform(ctx: CanvasRenderingContext2D, opts: SlicerDr
 
   const secToX = (s: number) => (durationSec > 0 ? (s / durationSec) * width : 0);
   const midY = height / 2;
+  const isLight = typeof document !== 'undefined' && document.documentElement.getAttribute('data-theme') === 'light';
 
   // 1. Voiles d'exclusion avant Trim In et apres Trim Out
   const xIn = secToX(trimInSec);
   const xOut = secToX(trimOutSec);
-  ctx.fillStyle = 'rgba(0, 0, 0, 0.65)';
+  ctx.fillStyle = isLight ? 'rgba(0, 0, 0, 0.12)' : 'rgba(0, 0, 0, 0.65)';
   if (xIn > 0) ctx.fillRect(0, 0, xIn, height);
   if (xOut < width) ctx.fillRect(xOut, 0, width - xOut, height);
 
@@ -49,7 +50,7 @@ export function drawSlicerWaveform(ctx: CanvasRenderingContext2D, opts: SlicerDr
         if (val > max) max = val;
       }
       const isInside = x >= xIn && x <= xOut;
-      ctx.strokeStyle = isInside ? '#f5f5f4' : 'rgba(245, 245, 244, 0.22)';
+      ctx.strokeStyle = isInside ? (isLight ? '#2a211b' : '#f5f5f4') : (isLight ? 'rgba(42, 33, 27, 0.22)' : 'rgba(245, 245, 244, 0.22)');
       ctx.beginPath();
       ctx.moveTo(x, midY + min * midY * 0.9);
       ctx.lineTo(x, midY + max * midY * 0.9);
@@ -117,7 +118,7 @@ export function drawSlicerWaveform(ctx: CanvasRenderingContext2D, opts: SlicerDr
   // 6. Playhead
   if (playheadSec >= 0) {
     const xPlay = secToX(playheadSec);
-    ctx.strokeStyle = '#ffffff';
+    ctx.strokeStyle = isLight ? '#1a1a1a' : '#ffffff';
     ctx.lineWidth = 2;
     ctx.beginPath(); ctx.moveTo(xPlay, 0); ctx.lineTo(xPlay, height); ctx.stroke();
   }

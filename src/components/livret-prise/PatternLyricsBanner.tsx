@@ -83,7 +83,7 @@ export const PatternLyricsBanner: React.FC = () => {
             type="button"
             onClick={handleRealignSyllables}
             title={t('realignSyllablesBtn')}
-            className="px-2.5 py-1 cordel-card-sm text-[10px] font-mono font-bold flex items-center gap-1 hover:bg-white/10 text-amber-300 cursor-pointer rounded"
+            className="px-2.5 py-1 cordel-card-sm text-[10px] font-mono font-bold flex items-center gap-1 hover:bg-[var(--cordel-border-sub)] text-amber-700 dark:text-amber-300 cursor-pointer rounded"
           >
             <Sparkles className="w-3 h-3" />
             <span className="hidden sm:inline">{t('realignSyllablesBtn')}</span>
@@ -92,8 +92,8 @@ export const PatternLyricsBanner: React.FC = () => {
       </div>
 
       {activePattern.assignedPhoneticText && (
-        <div className="text-[10px] font-mono text-stone-400 italic px-1 flex items-center gap-1">
-          <span className="text-stone-500">🔤</span>
+        <div className="text-[10px] font-mono text-[var(--cordel-secondary-text)] italic px-1 flex items-center gap-1">
+          <span className="opacity-60">🔤</span>
           <span>{activePattern.assignedPhoneticText}</span>
         </div>
       )}

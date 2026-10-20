@@ -16,22 +16,22 @@ export const TrimSummaryBar: React.FC<TrimSummaryBarProps> = ({ alignment, hasAn
   const { t } = useLanguage();
 
   return (
-    <div className="flex items-center justify-between text-xs font-mono bg-black/30 p-2 border border-theme-border/30">
+    <div className="cordel-card-sm p-2 rounded flex items-center justify-between text-xs font-mono">
       <div className="flex items-center gap-1.5">
         {hasAnacrusis ? (
           <>
             <span className="opacity-70">{t('offsetMeasure1')}</span>
-            <span className={`font-bold ${alignment.startOffsetSec < 0 ? 'text-theme-accent' : 'text-emerald-400'}`}>
+            <span className={`font-bold ${alignment.startOffsetSec < 0 ? 'text-theme-accent' : 'text-emerald-700 dark:text-emerald-400'}`}>
               {alignment.startOffsetSec >= 0 ? '+' : ''}{alignment.startOffsetSec.toFixed(3)}s
             </span>
             {alignment.anacrusis.hasAnacrusis && (
-              <span className="text-[10px] text-theme-accent border border-theme-accent/50 px-1 py-0.5">
+              <span className="text-[10px] text-theme-accent border border-theme-accent/50 px-1 py-0.5 rounded">
                 {t('anacrusisLabel')} ({t('anacrusisBeats', { beats: alignment.anacrusis.beats.toFixed(1) })})
               </span>
             )}
           </>
         ) : (
-          <span className="text-xs font-bold text-emerald-400 bg-emerald-950/50 border border-emerald-500/40 px-2 py-0.5">
+          <span className="text-xs font-bold text-emerald-800 dark:text-emerald-300 bg-emerald-500/10 border border-emerald-500/30 px-2 py-0.5 rounded">
             {t('noAnacrusisBadge')}
           </span>
         )}

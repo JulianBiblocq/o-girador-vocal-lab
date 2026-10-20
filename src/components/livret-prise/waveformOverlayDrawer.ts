@@ -31,6 +31,8 @@ export function drawWaveformOverlay(ctx: CanvasRenderingContext2D, opts: DrawOve
   const xTrimEnd = Math.min(width, (trimEndSec / totalDurationSec) * width);
   const cy = height / 2;
 
+  const isLight = typeof document !== 'undefined' && document.documentElement.getAttribute('data-theme') === 'light';
+
   if (peaks) {
     const bins = peaks.length;
     const barWidth = width / bins;
@@ -39,13 +41,13 @@ export function drawWaveformOverlay(ctx: CanvasRenderingContext2D, opts: DrawOve
       if (x < -barWidth || x > width) continue;
       const amp = peaks[i] * (height / 2);
       const isInTrim = x >= xTrimStart && x <= xTrimEnd;
-      ctx.fillStyle = isInTrim ? '#ab3a26' : 'rgba(244, 236, 216, 0.2)';
+      ctx.fillStyle = isInTrim ? '#ab3a26' : (isLight ? 'rgba(26, 26, 26, 0.25)' : 'rgba(244, 236, 216, 0.2)');
       ctx.fillRect(x, cy - amp, Math.max(1, barWidth - 0.5), amp * 2);
     }
   }
 
   // Assombrissement des zones rognées
-  ctx.fillStyle = 'rgba(10, 10, 10, 0.65)';
+  ctx.fillStyle = isLight ? 'rgba(0, 0, 0, 0.15)' : 'rgba(10, 10, 10, 0.65)';
   ctx.fillRect(0, 0, xTrimStart, height);
   ctx.fillRect(xTrimEnd, 0, width - xTrimEnd, height);
 
@@ -88,7 +90,7 @@ export function drawWaveformOverlay(ctx: CanvasRenderingContext2D, opts: DrawOve
   // Tête de lecture 60 FPS
   if (isPlaying && playheadSec >= 0) {
     const xPlay = (playheadSec / totalDurationSec) * width;
-    ctx.strokeStyle = '#ffffff';
+    ctx.strokeStyle = isLight ? '#1a1a1a' : '#ffffff';
     ctx.lineWidth = 2;
     ctx.beginPath(); ctx.moveTo(xPlay, 0); ctx.lineTo(xPlay, height); ctx.stroke();
   }

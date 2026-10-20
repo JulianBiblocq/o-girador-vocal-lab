@@ -134,6 +134,7 @@ export const translationsBr: VocalLabTranslations = {
   melodynePurgeBtn: '✕ Limpar Melodyne (Som bruto)',
   melodynePurgeTooltip: 'Exclui todas as zonas Melodyne para ouvir o som 100% bruto do Folheto 1 mantendo as notas MIDI',
   melodynePurgeToast: 'Som bruto do Folheto 1 restaurado (zonas Melodyne limpas)',
+  pwaInstallBtn: 'Instalar',
 
   ...cloudToadaTranslationsBr,
   ...lexiconTranslationsBr,

@@ -86,25 +86,25 @@ export const AmbitusWizardStepToneCheck: React.FC<AmbitusWizardStepToneCheckProp
       {/* 1. Note cible + Ajustement manuel 1/2 ton + Bouton d'écoute libre */}
       <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
         <div className="flex items-center gap-1.5">
-          <span className="font-bold">{label} :</span>
-          <button type="button" disabled={isTesting} onClick={() => onSetCurrentMidi((m) => m - 1)} className="px-2 py-1 border border-[#1a1a1a] bg-[#f4ecd8] dark:bg-[#2b2722] font-mono font-bold cursor-pointer flex items-center gap-0.5" title="- 1 demi-ton"><ChevronLeft className="w-3 h-3" /><span>½</span></button>
-          <span className="font-mono font-bold text-base px-2.5 py-0.5 bg-[#f5edd6] dark:bg-[#2b2722] border-2 border-[#1a1a1a] shadow-[1px_1px_0px_#1a1a1a]">{noteName}</span>
-          <button type="button" disabled={isTesting} onClick={() => onSetCurrentMidi((m) => m + 1)} className="px-2 py-1 border border-[#1a1a1a] bg-[#f4ecd8] dark:bg-[#2b2722] font-mono font-bold cursor-pointer flex items-center gap-0.5" title="+ 1 demi-ton"><span>½</span><ChevronRight className="w-3 h-3" /></button>
+          <span className="font-bold text-[var(--cordel-text)]">{label} :</span>
+          <button type="button" disabled={isTesting} onClick={() => onSetCurrentMidi((m) => m - 1)} className="cordel-btn px-2 py-1 font-mono font-bold cursor-pointer flex items-center gap-0.5 rounded" title="- 1 demi-ton"><ChevronLeft className="w-3 h-3" /><span>½</span></button>
+          <span className="font-mono font-bold text-base px-2.5 py-0.5 cordel-card-sm rounded border border-[var(--cordel-border-panel)] text-[var(--cordel-text)]">{noteName}</span>
+          <button type="button" disabled={isTesting} onClick={() => onSetCurrentMidi((m) => m + 1)} className="cordel-btn px-2 py-1 font-mono font-bold cursor-pointer flex items-center gap-0.5 rounded" title="+ 1 demi-ton"><span>½</span><ChevronRight className="w-3 h-3" /></button>
         </div>
-        <button type="button" disabled={isTesting} onClick={handleListenFree} className="px-2.5 py-1 text-[11px] font-bold border border-[#1a1a1a] bg-[#1e293b] hover:bg-[#334155] text-amber-300 flex items-center gap-1.5 cursor-pointer shadow-sm">
-          <Volume2 className="w-3.5 h-3.5 text-amber-400" /><span>{t('ambitusListenTargetBtn', { note: noteName })}</span>
+        <button type="button" disabled={isTesting} onClick={handleListenFree} className="cordel-btn px-2.5 py-1 text-[11px] flex items-center gap-1.5 cursor-pointer rounded text-[var(--cordel-accent-text)]">
+          <Volume2 className="w-3.5 h-3.5" /><span>{t('ambitusListenTargetBtn', { note: noteName })}</span>
         </button>
       </div>
 
       {/* 2. Bannière de statut de phase guidée (Écoute ➔ Chante) */}
       {isTesting && (
-        <div className={`p-2 border-2 border-[#1a1a1a] text-center text-xs font-bold transition-all shadow-[2px_2px_0px_#1a1a1a] ${phase === 'listen' ? 'bg-amber-500/20 text-amber-300 border-amber-500' : 'bg-emerald-500/20 text-emerald-300 border-emerald-500'}`}>
+        <div className={`p-2 border rounded text-center text-xs font-bold transition-all shadow-[var(--cordel-shadow-sm)] ${phase === 'listen' ? 'bg-[#c88a2b]/15 text-[#9a3412] dark:text-[#f4a261] border-[#c88a2b]/40' : 'bg-[#0f766e]/15 text-[#0f766e] dark:text-[#2dd4bf] border-[#0f766e]/40'}`}>
           {phase === 'listen' ? (
             <div className="flex items-center justify-center gap-2 animate-pulse"><Volume2 className="w-4 h-4" /><span>{t('ambitusListenPhasePrompt', { note: noteName })}</span></div>
           ) : (
             <div className="flex items-center justify-between px-2">
               <span className="animate-bounce">🎙️ {t('ambitusSingPhasePrompt', { note: noteName })}</span>
-              {liveHint && <span className="px-2 py-0.5 bg-black/40 text-amber-300 font-mono text-[11px] border border-amber-500/40">{liveHint}</span>}
+              {liveHint && <span className="px-2 py-0.5 bg-[var(--cordel-subcard-bg)] text-[var(--cordel-accent-text)] font-mono text-[11px] border border-[var(--cordel-border-sub)] rounded">{liveHint}</span>}
               <span className="font-mono text-[11px]">{progress}%</span>
             </div>
           )}
@@ -116,10 +116,10 @@ export const AmbitusWizardStepToneCheck: React.FC<AmbitusWizardStepToneCheckProp
 
       {/* 4. Actions : Tester la note & Valider */}
       <div className="flex gap-2">
-        <button type="button" disabled={isTesting} onClick={handleRunGuidedTest} className="flex-1 py-2.5 cordel-btn-primary font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer shadow-sm">
+        <button type="button" disabled={isTesting} onClick={handleRunGuidedTest} className="flex-1 py-2.5 cordel-btn-primary font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer rounded shadow-sm">
           <Play className="w-4 h-4 fill-current" /><span>{isTesting ? t('ambitusHoldProgress', { percent: progress }) : t('ambitusTestNoteBtn')}</span>
         </button>
-        <button type="button" disabled={isTesting} onClick={onValidateAndNext} className="py-2.5 px-4 border-2 border-[#1a1a1a] bg-[#2a9d8f] text-[#f4ecd8] font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-[2px_2px_0px_#1a1a1a] hover:bg-[#238276] active:translate-y-0.5">
+        <button type="button" disabled={isTesting} onClick={onValidateAndNext} className="py-2.5 px-4 border border-[var(--cordel-coro)] bg-[var(--cordel-coro)] text-[#f4ecd8] font-bold text-xs flex items-center gap-1.5 cursor-pointer rounded shadow-sm hover:opacity-95 active:translate-y-0.5">
           <Check className="w-4 h-4" /><span>{t('ambitusValidateAndNext')}</span>
         </button>
       </div>

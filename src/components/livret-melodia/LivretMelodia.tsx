@@ -112,7 +112,7 @@ export const LivretMelodia: React.FC<LivretMelodiaProps> = ({
 
   return (
     <div className="flex flex-col gap-3 w-full">
-      <div className="flex items-center justify-between gap-2 border border-stone-800 bg-stone-900/60 p-1.5 cordel-card">
+      <div className="cordel-card flex items-center justify-between gap-2 p-1.5 rounded">
         <ChordGridBar harmonyGrid={activePattern.harmonyGrid} measuresCount={measuresCount} beatsPerMeasure={beatsPerMeasure} hasAnacrusis={hasAnac} onUpdateGrid={(g) => updatePattern(activePattern.id, { harmonyGrid: g })} />
         <HarmonyProfileSelector config={harmonyConfig} onChange={updateHarmonyConfig} />
       </div>

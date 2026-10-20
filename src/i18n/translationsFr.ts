@@ -135,6 +135,7 @@ export const translationsFr: VocalLabTranslations = {
   melodynePurgeBtn: '✕ Purger Melodyne (Son brut)',
   melodynePurgeTooltip: 'Supprime toutes les zones Melodyne pour écouter le son 100% brut du Livret 1 tout en conservant les notes MIDI',
   melodynePurgeToast: 'Son brut du Livret 1 rétabli (zones Melodyne purgées)',
+  pwaInstallBtn: 'Installer',
 
   ...cloudToadaTranslationsFr,
   ...lexiconTranslationsFr,

@@ -21,6 +21,13 @@ export const AmbitusPitchGraph: React.FC<Props> = ({
   mode, targetMidi, samples, staircaseSteps = [], targetHoldSec = 2.0,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const [themeTick, setThemeTick] = React.useState(0);
+
+  React.useEffect(() => {
+    const obs = new MutationObserver(() => setThemeTick((t) => t + 1));
+    obs.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+    return () => obs.disconnect();
+  }, []);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -32,22 +39,27 @@ export const AmbitusPitchGraph: React.FC<Props> = ({
     const h = canvas.height;
     ctx.clearRect(0, 0, w, h);
 
+    const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+    const bgFill = isLight ? '#fbf8f0' : '#1e1813';
+    const textFill = isLight ? '#2a211b' : '#efe6d2';
+    const borderStroke = isLight ? 'rgba(26, 26, 26, 0.2)' : 'rgba(239, 230, 210, 0.12)';
+
     // Fond surface Cordel
-    ctx.fillStyle = '#fdfbf7';
+    ctx.fillStyle = bgFill;
     ctx.fillRect(0, 0, w, h);
 
     if (mode === 'single') {
       const centerY = h / 2;
-      const semitonePx = h / 5; // +/- 2.5 demi-tons de vue verticale
+      const semitonePx = h / 5;
       const tolPx = 0.45 * semitonePx;
 
       // Couloir de tolérance (+/- 45 cents)
-      ctx.fillStyle = 'rgba(42, 157, 143, 0.15)';
+      ctx.fillStyle = isLight ? 'rgba(15, 118, 110, 0.12)' : 'rgba(42, 157, 143, 0.20)';
       ctx.fillRect(0, centerY - tolPx, w, tolPx * 2);
 
       // Ligne cible centrale
-      ctx.strokeStyle = '#2a9d8f';
-      ctx.lineWidth = 2;
+      ctx.strokeStyle = '#0f766e';
+      ctx.lineWidth = 1.5;
       ctx.setLineDash([4, 4]);
       ctx.beginPath();
       ctx.moveTo(0, centerY);
@@ -56,7 +68,7 @@ export const AmbitusPitchGraph: React.FC<Props> = ({
       ctx.setLineDash([]);
 
       // Label note cible
-      ctx.fillStyle = '#1a1a1a';
+      ctx.fillStyle = textFill;
       ctx.font = 'bold 11px monospace';
       ctx.fillText(`${midiToNoteName(targetMidi)} (Cible ±45 cents)`, 10, 16);
 
@@ -70,8 +82,8 @@ export const AmbitusPitchGraph: React.FC<Props> = ({
           const y2 = centerY - (s2.pitchMidi - targetMidi) * semitonePx;
           const isGood = Math.abs(s2.pitchMidi - targetMidi) <= 0.45;
 
-          ctx.strokeStyle = isGood ? '#2a9d8f' : '#d97706';
-          ctx.lineWidth = 3;
+          ctx.strokeStyle = isGood ? '#0f766e' : '#c25e38';
+          ctx.lineWidth = 2.5;
           ctx.beginPath();
           ctx.moveTo(x1, y1);
           ctx.lineTo(x2, y2);
@@ -81,50 +93,48 @@ export const AmbitusPitchGraph: React.FC<Props> = ({
     } else {
       // Mode Escalier multi-marches
       const n = staircaseSteps.length;
-      if (n === 0) return;
-      const stepW = w / n;
-      const minM = staircaseSteps[0].midi;
-      const maxM = staircaseSteps[n - 1].midi;
-      const span = Math.max(1, maxM - minM);
+      if (n > 0) {
+        const stepW = w / n;
+        const minM = staircaseSteps[0].midi;
+        const maxM = staircaseSteps[n - 1].midi;
+        const span = Math.max(1, maxM - minM);
 
-      staircaseSteps.forEach((st, idx) => {
-        const x = idx * stepW;
-        const normY = (st.midi - minM) / span;
-        const y = h - 35 - normY * (h - 70);
+        staircaseSteps.forEach((st, idx) => {
+          const x = idx * stepW;
+          const normY = (st.midi - minM) / span;
+          const y = h - 35 - normY * (h - 70);
 
-        // Brique marche
-        ctx.fillStyle = 'rgba(42, 157, 143, 0.2)';
-        ctx.strokeStyle = '#2a9d8f';
-        ctx.lineWidth = 2;
-        ctx.fillRect(x + 4, y - 8, stepW - 8, 16);
-        ctx.strokeRect(x + 4, y - 8, stepW - 8, 16);
+          ctx.fillStyle = isLight ? 'rgba(15, 118, 110, 0.15)' : 'rgba(42, 157, 143, 0.22)';
+          ctx.strokeStyle = '#0f766e';
+          ctx.lineWidth = 1.5;
+          ctx.fillRect(x + 4, y - 8, stepW - 8, 16);
+          ctx.strokeRect(x + 4, y - 8, stepW - 8, 16);
 
-        // Label marche
-        ctx.fillStyle = '#1a1a1a';
-        ctx.font = 'bold 10px monospace';
-        ctx.fillText(st.noteName, x + 8, y + 4);
+          ctx.fillStyle = textFill;
+          ctx.font = 'bold 10px monospace';
+          ctx.fillText(st.noteName, x + 8, y + 4);
 
-        // Analyse échantillons de cette marche
-        const stepSamples = samples.filter((s) => s.timeSec >= idx * 1.8 && s.timeSec < (idx + 1) * 1.8);
-        if (stepSamples.length > 2) {
-          const avgP = stepSamples.reduce((a, s) => a + s.pitchMidi, 0) / stepSamples.length;
-          const diff = avgP - st.midi;
-          const ok = Math.abs(diff) <= 0.45;
-          ctx.fillStyle = ok ? '#2a9d8f' : '#d97706';
-          ctx.font = 'bold 12px monospace';
-          ctx.fillText(ok ? '✓' : (diff > 0 ? '↓' : '↑'), x + stepW - 20, y + 4);
-        }
-      });
+          const stepSamples = samples.filter((s) => s.timeSec >= idx * 1.8 && s.timeSec < (idx + 1) * 1.8);
+          if (stepSamples.length > 2) {
+            const avgP = stepSamples.reduce((a, s) => a + s.pitchMidi, 0) / stepSamples.length;
+            const diff = avgP - st.midi;
+            const ok = Math.abs(diff) <= 0.45;
+            ctx.fillStyle = ok ? '#0f766e' : '#c25e38';
+            ctx.font = 'bold 12px monospace';
+            ctx.fillText(ok ? '✓' : (diff > 0 ? '↓' : '↑'), x + stepW - 20, y + 4);
+          }
+        });
+      }
     }
 
     // Bordure cadre Cordel
-    ctx.strokeStyle = '#1a1a1a';
-    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = borderStroke;
+    ctx.lineWidth = 1;
     ctx.strokeRect(0, 0, w, h);
-  }, [mode, targetMidi, samples, staircaseSteps, targetHoldSec]);
+  }, [mode, targetMidi, samples, staircaseSteps, targetHoldSec, themeTick]);
 
   return (
-    <div className="w-full bg-[#fdfbf7] border border-[#1a1a1a] shadow-[2px_2px_0px_#1a1a1a]">
+    <div className="w-full cordel-card-sm overflow-hidden rounded">
       <canvas ref={canvasRef} width={560} height={150} className="w-full h-[150px] block" />
     </div>
   );

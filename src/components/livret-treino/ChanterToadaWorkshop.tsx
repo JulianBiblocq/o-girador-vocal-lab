@@ -105,19 +105,19 @@ export const ChanterToadaWorkshop: React.FC = () => {
           onSetTonic={() => {}} onSetScaleType={() => {}} onSetSmoothingLevel={() => {}} onPlayNotePreview={() => {}}
         />
       </div>
-      <div className="cordel-card p-2.5 w-full flex flex-wrap items-center justify-between gap-3 bg-black/60 select-none">
+      <div className="cordel-card p-2.5 w-full flex flex-wrap items-center justify-between gap-3 select-none">
         <div className="flex items-center gap-2">
           {!isTraining ? (
-            <button type="button" onClick={handleStartTraining} className="cordel-btn-primary py-1 px-3.5 flex items-center gap-1.5 text-xs font-bold rounded-none cursor-pointer">
-              <Play className="w-4 h-4 fill-current text-emerald-400" /><span>{t('btn_start_training')}</span>
+            <button type="button" onClick={handleStartTraining} className="cordel-btn-primary py-1 px-3.5 flex items-center gap-1.5 text-xs font-bold rounded cursor-pointer">
+              <Play className="w-4 h-4 fill-current text-[var(--cordel-on-primary)]" /><span>{t('btn_start_training')}</span>
             </button>
           ) : (
-            <button type="button" onClick={handleStop} className="bg-[#d97706] text-[#f4ecd8] animate-pulse py-1 px-3.5 flex items-center gap-1.5 text-xs font-bold rounded-none cursor-pointer">
+            <button type="button" onClick={handleStop} className="bg-[#c25e38] text-white border border-[#c25e38] animate-pulse py-1 px-3.5 flex items-center gap-1.5 text-xs font-bold rounded cursor-pointer">
               <Square className="w-4 h-4 fill-current" /><span>{t('btn_stop_training')}</span>
             </button>
           )}
           {studentPCM && (
-            <button type="button" disabled={isTraining} onClick={isPlayingComparative ? handleStop : handlePlayComparative} className="cordel-btn-secondary py-1 px-3 flex items-center gap-1 text-xs font-mono font-bold rounded-none cursor-pointer">
+            <button type="button" disabled={isTraining} onClick={isPlayingComparative ? handleStop : handlePlayComparative} className="cordel-btn py-1 px-3 flex items-center gap-1 text-xs font-mono font-bold rounded cursor-pointer">
               <Volume2 className="w-3.5 h-3.5" /><span>{isPlayingComparative ? t('btn_stop_training') : t('btn_listen_student_solo')}</span>
             </button>
           )}
@@ -125,12 +125,12 @@ export const ChanterToadaWorkshop: React.FC = () => {
         </div>
         <div className="flex items-center gap-2.5">
           {analysisResult && (
-            <span className="px-3 py-1 font-mono font-bold text-xs bg-black/80 border border-emerald-500/50 text-emerald-400">
+            <span className="px-3 py-1 font-mono font-bold text-xs cordel-card-sm border border-[var(--cordel-coro)] text-[var(--cordel-coro)] rounded">
               {t('trainer_accuracy_badge', { score: analysisResult.accuracyScore, ok: analysisResult.okNotes, total: analysisResult.totalNotes })}
             </span>
           )}
           {analysisResult && (
-            <button type="button" onClick={handleExport} className="cordel-btn py-1 px-2.5 flex items-center gap-1 text-xs font-mono rounded-none cursor-pointer text-stone-300">
+            <button type="button" onClick={handleExport} className="cordel-btn py-1 px-2.5 flex items-center gap-1 text-xs font-mono rounded cursor-pointer">
               <Download className="w-3.5 h-3.5" /><span>{t('export_student_report')}</span>
             </button>
           )}

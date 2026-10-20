@@ -123,7 +123,7 @@ export const PendulumVisualizer: React.FC<PendulumVisualizerProps> = ({
         <span ref={rightBumperRef} className="px-2 py-0.5 bg-[var(--cordel-subcard-bg)] text-[var(--cordel-text)] border border-[var(--cordel-border-sub)] font-bold opacity-90 transition-all duration-75 rounded" />
       </div>
 
-      <div ref={containerRef} className="w-full h-11 bg-black/40 border border-[var(--cordel-border-sub)] relative flex items-center px-1 overflow-hidden rounded">
+      <div ref={containerRef} className="w-full h-11 bg-[var(--cordel-subcard-bg)] border border-[var(--cordel-border-sub)] relative flex items-center px-1 overflow-hidden rounded">
         <div className="absolute left-1/2 top-0 bottom-0 w-0.5 bg-theme-border/20 -translate-x-1/2 pointer-events-none" />
         <div ref={shuttleRef} style={{ willChange: 'transform' }} className="w-9 h-8 cordel-card-sm flex items-center justify-center font-bold text-xs bg-theme-wood text-[#efe6d2] shadow-md cursor-default pointer-events-none rounded">
           ▲

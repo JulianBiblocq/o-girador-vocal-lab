@@ -34,11 +34,13 @@ export function drawRulerBar(ctx: CanvasRenderingContext2D, opts: DrawRulerOptio
   const gridDur = totalBeats * beatDur;
   const t1Offset = opts.t1OffsetSec ?? (hasAnacrusis ? 0 : 0.15);
 
-  ctx.fillStyle = 'rgba(18, 16, 15, 0.96)';
+  const isLight = typeof document !== 'undefined' && document.documentElement.getAttribute('data-theme') === 'light';
+
+  ctx.fillStyle = isLight ? 'rgba(244, 236, 216, 0.96)' : 'rgba(18, 16, 15, 0.96)';
   ctx.fillRect(0, 0, width, height);
-  ctx.strokeStyle = 'rgba(245, 240, 230, 0.15)';
+  ctx.strokeStyle = isLight ? 'rgba(26, 26, 26, 0.15)' : 'rgba(245, 240, 230, 0.15)';
   ctx.beginPath(); ctx.moveTo(0, 21); ctx.lineTo(width, 21); ctx.stroke();
-  ctx.strokeStyle = 'rgba(245, 240, 230, 0.25)';
+  ctx.strokeStyle = isLight ? 'rgba(26, 26, 26, 0.25)' : 'rgba(245, 240, 230, 0.25)';
   ctx.beginPath(); ctx.moveTo(0, height); ctx.lineTo(width, height); ctx.stroke();
 
   for (let b = 0; b < totalBeats; b++) {
@@ -49,21 +51,21 @@ export function drawRulerBar(ctx: CanvasRenderingContext2D, opts: DrawRulerOptio
 
     if (bm === 0) {
       ctx.lineWidth = isT1 ? 2.5 : 1.5;
-      ctx.strokeStyle = isT1 ? '#d4af37' : 'rgba(245, 240, 230, 0.45)';
+      ctx.strokeStyle = isT1 ? '#d4af37' : (isLight ? 'rgba(26, 26, 26, 0.40)' : 'rgba(245, 240, 230, 0.45)');
       ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, height); ctx.stroke();
 
       ctx.font = isT1 ? 'bold 10px monospace' : 'bold 9.5px monospace';
-      ctx.fillStyle = isT1 ? '#d4af37' : (hasAnacrusis && m === 0) ? '#fbbf24' : 'rgba(245, 240, 230, 0.85)';
+      ctx.fillStyle = isT1 ? '#d4af37' : (hasAnacrusis && m === 0) ? (isLight ? '#b45309' : '#fbbf24') : (isLight ? 'rgba(26, 26, 26, 0.85)' : 'rgba(245, 240, 230, 0.85)');
       const label = hasAnacrusis ? (m === 0 ? elanLabel : isT1 ? m1Label : `${measurePrefix}${m}`) : (m === 0 ? m1Label : `${measurePrefix}${m + 1}`);
       ctx.fillText(label, x + 6, 14.5);
     } else {
       ctx.lineWidth = 1;
-      ctx.strokeStyle = 'rgba(245, 240, 230, 0.22)';
+      ctx.strokeStyle = isLight ? 'rgba(26, 26, 26, 0.18)' : 'rgba(245, 240, 230, 0.22)';
       ctx.beginPath(); ctx.moveTo(x, 21); ctx.lineTo(x, height); ctx.stroke();
     }
 
     ctx.font = isT1 ? 'bold 9.5px monospace' : '9px monospace';
-    ctx.fillStyle = isT1 ? '#d4af37' : 'rgba(245, 240, 230, 0.65)';
+    ctx.fillStyle = isT1 ? '#d4af37' : (isLight ? 'rgba(26, 26, 26, 0.65)' : 'rgba(245, 240, 230, 0.65)');
     ctx.fillText(`T${bm + 1}`, x + 5, 34);
   }
 
@@ -76,7 +78,7 @@ export function drawRulerBar(ctx: CanvasRenderingContext2D, opts: DrawRulerOptio
   if (isPlaying && playheadSec >= 0) {
     const pRel = hasAnacrusis ? playheadSec : (playheadSec - t1Offset);
     const xp = (pRel / gridDur) * width;
-    ctx.fillStyle = '#ffffff';
+    ctx.fillStyle = isLight ? '#1a1a1a' : '#ffffff';
     ctx.beginPath(); ctx.moveTo(xp - 5, 0); ctx.lineTo(xp + 5, 0); ctx.lineTo(xp, 9); ctx.fill();
   }
   ctx.restore();

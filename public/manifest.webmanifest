@@ -1,6 +1,7 @@
 {
-  "name": "O Girador — Cantador (Atelier Vocal)",
+  "name": "O Girador — Cantador",
   "short_name": "Cantador",
+  "id": "/",
   "description": "Atelier vocal et laboratoire de toadas — O Girador",
   "start_url": "/",
   "scope": "/",
@@ -12,13 +13,25 @@
       "src": "/icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
       "src": "/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ]
 }

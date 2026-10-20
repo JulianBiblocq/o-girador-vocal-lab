@@ -21,7 +21,7 @@ export const WaveformZoomBar: React.FC<WaveformZoomBarProps> = ({
   const presets = [1, 2, 4, 8];
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-1.5 px-2 py-1 bg-black/40 border border-theme-border/40 rounded-lg text-xs">
+    <div className="cordel-card-sm flex flex-wrap items-center justify-between gap-1.5 px-2 py-1 text-xs rounded">
       <div className="flex items-center gap-1">
         <span className="text-[11px] font-mono text-theme-ink/70 font-semibold mr-1">ZOOM</span>
         <button
@@ -29,7 +29,7 @@ export const WaveformZoomBar: React.FC<WaveformZoomBarProps> = ({
           onClick={onZoomOut}
           disabled={zoomLevel <= 1.05}
           title={t('zoomOutTitle')}
-          className="px-2 py-0.5 rounded bg-white/5 hover:bg-white/10 active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed text-theme-ink font-mono"
+          className="cordel-btn px-2 py-0.5 rounded active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed font-mono text-[11px]"
         >
           🔍-
         </button>
@@ -40,10 +40,10 @@ export const WaveformZoomBar: React.FC<WaveformZoomBarProps> = ({
               key={preset}
               type="button"
               onClick={() => onSetZoom(preset)}
-              className={`px-2 py-0.5 rounded-none font-mono text-[11px] transition-colors cursor-pointer ${
+              className={`px-2 py-0.5 rounded font-mono text-[11px] transition-colors cursor-pointer ${
                 isActive
-                  ? 'bg-[#9a3412] text-[#f4ecd8] font-bold border-2 border-[#1a1a1a] shadow-[1px_1px_0px_#1a1a1a]'
-                  : 'bg-white/5 hover:bg-white/10 text-theme-ink/80 border border-transparent'
+                  ? 'bg-[#9a3412] text-[#f4ecd8] font-bold border border-[#9a3412]'
+                  : 'cordel-btn'
               }`}
             >
               {preset === 1 ? t('zoomComplete') : `${preset}x`}
@@ -55,7 +55,7 @@ export const WaveformZoomBar: React.FC<WaveformZoomBarProps> = ({
           onClick={onZoomIn}
           disabled={zoomLevel >= 7.95}
           title={t('zoomInTitle')}
-          className="px-2 py-0.5 rounded-none bg-white/5 hover:bg-white/10 active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed text-theme-ink font-mono cursor-pointer"
+          className="cordel-btn px-2 py-0.5 rounded active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed font-mono text-[11px]"
         >
           🔍+
         </button>
@@ -66,7 +66,7 @@ export const WaveformZoomBar: React.FC<WaveformZoomBarProps> = ({
           type="button"
           onClick={onSeeStart}
           title={t('zoomSeeStartTitle')}
-          className="px-2 py-0.5 rounded-none bg-[#0f766e] border-2 border-[#1a1a1a] shadow-[1px_1px_0px_#1a1a1a] text-[#f4ecd8] hover:bg-[#115e59] font-mono text-[11px] font-bold flex items-center gap-1 transition-all active:scale-95 cursor-pointer"
+          className="px-2 py-0.5 rounded bg-[#0f766e] border border-[#0f766e] text-[#f4ecd8] hover:bg-[#115e59] font-mono text-[11px] font-bold flex items-center gap-1 transition-all active:scale-95 cursor-pointer"
         >
           {t('zoomSeeStart')}
         </button>
@@ -74,7 +74,7 @@ export const WaveformZoomBar: React.FC<WaveformZoomBarProps> = ({
           type="button"
           onClick={onSeeEnd}
           title={t('zoomSeeEndTitle')}
-          className="px-2 py-0.5 rounded-none bg-[#b45309] border-2 border-[#1a1a1a] shadow-[1px_1px_0px_#1a1a1a] text-[#f4ecd8] hover:bg-[#92400e] font-mono text-[11px] font-bold flex items-center gap-1 transition-all active:scale-95 cursor-pointer"
+          className="px-2 py-0.5 rounded bg-[#b45309] border border-[#b45309] text-[#f4ecd8] hover:bg-[#92400e] font-mono text-[11px] font-bold flex items-center gap-1 transition-all active:scale-95 cursor-pointer"
         >
           {t('zoomSeeEnd')}
         </button>

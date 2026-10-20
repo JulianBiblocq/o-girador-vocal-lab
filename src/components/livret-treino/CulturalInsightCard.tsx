@@ -31,16 +31,16 @@ export const CulturalInsightCard: React.FC<Props> = ({ onOpenLexicon }) => {
   if (!hasContent) return null;
 
   return (
-    <div className="bg-[#fcfaf2] dark:bg-[#1f1d1a] border-2 border-[#1a1a1a] shadow-[4px_4px_0px_#1a1a1a] p-4 text-[#1a1a1a] dark:text-[#f4ecd8] space-y-3 rounded-none">
-      <div className="font-bold uppercase tracking-wider text-xs border-b border-[#1a1a1a]/20 dark:border-white/20 pb-1 flex items-center justify-between">
+    <div className="cordel-card p-4 space-y-3">
+      <div className="font-bold uppercase tracking-wider text-xs border-b border-[var(--cordel-border-sub)] pb-1.5 flex items-center justify-between text-[var(--cordel-text)]">
         <span>📜 {meta.titre || project.title || 'Toada'}</span>
-        {meta.nacao && <span className="text-[10px] opacity-75 font-normal">Nação : {meta.nacao}</span>}
+        {meta.nacao && <span className="text-[10px] text-[var(--cordel-secondary-text)] font-normal">Nação : {meta.nacao}</span>}
       </div>
 
       {meta.traduction && (
         <div className="text-xs">
-          <span className="font-bold block text-[11px] opacity-80">{t('culturalTraductionLabel')}</span>
-          <p className="italic mt-0.5 leading-relaxed bg-[#f5edd6] dark:bg-[#2b2722] p-2 border border-[#1a1a1a]/15">
+          <span className="font-bold block text-[11px] text-[var(--cordel-secondary-text)] mb-1">{t('culturalTraductionLabel')}</span>
+          <p className="italic leading-relaxed cordel-card-sm p-2 rounded text-[var(--cordel-text)]">
             {meta.traduction}
           </p>
         </div>
@@ -48,38 +48,38 @@ export const CulturalInsightCard: React.FC<Props> = ({ onOpenLexicon }) => {
 
       {meta.anecdote && (
         <div className="text-xs">
-          <span className="font-bold block text-[11px] opacity-80">{t('culturalAnecdoteLabel')}</span>
-          <p className="mt-0.5 leading-relaxed">{meta.anecdote}</p>
+          <span className="font-bold block text-[11px] text-[var(--cordel-secondary-text)]">{t('culturalAnecdoteLabel')}</span>
+          <p className="mt-0.5 leading-relaxed text-[var(--cordel-text)]">{meta.anecdote}</p>
         </div>
       )}
 
       {meta.notesLexique && meta.notesLexique.length > 0 && (
         <div className="text-xs">
           <div className="flex items-center justify-between pb-1">
-            <span className="font-bold block text-[11px] opacity-80">{t('culturalLexiqueLabel')}</span>
+            <span className="font-bold block text-[11px] text-[var(--cordel-secondary-text)]">{t('culturalLexiqueLabel')}</span>
             {onOpenLexicon && (
               <button
                 type="button"
                 onClick={onOpenLexicon}
-                className="px-2 py-0.5 text-[10px] font-bold bg-[#1a1a1a] text-[#f4ecd8] flex items-center gap-1 cursor-pointer hover:opacity-90"
+                className="cordel-btn px-2 py-0.5 text-[10px] rounded flex items-center gap-1 cursor-pointer"
               >
                 <BookOpen className="w-3 h-3" />
                 <span>Enrichir</span>
               </button>
             )}
           </div>
-          <div className="mt-0.5 space-y-1.5 bg-[#f0ebd9] dark:bg-[#26231e] p-2 border border-[#1a1a1a]/15 font-mono text-[11px]">
+          <div className="mt-0.5 space-y-1.5 cordel-card-sm p-2 rounded font-mono text-[11px]">
             {meta.notesLexique.map((item, idx) => (
-              <div key={idx} className="flex items-center justify-between gap-2 border-b border-[#1a1a1a]/10 dark:border-white/10 pb-1 last:border-0 last:pb-0">
+              <div key={idx} className="flex items-center justify-between gap-2 border-b border-[var(--cordel-border-sub)] pb-1 last:border-0 last:pb-0">
                 <div>
-                  <strong className="text-[#8b2a1a] dark:text-[#f4a261]">{item.mot}</strong> : {item.traductionFr || item.explication}
-                  {item.phonetique && <span className="opacity-70 text-[10px] ml-1.5 font-sans">({item.phonetique})</span>}
+                  <strong className="text-[#9a3412] dark:text-[#f4a261]">{item.mot}</strong> : {item.traductionFr || item.explication}
+                  {item.phonetique && <span className="text-[var(--cordel-secondary-text)] text-[10px] ml-1.5 font-sans">({item.phonetique})</span>}
                 </div>
                 <button
                   type="button"
                   onClick={(e) => handleSpeak(item.mot, e)}
                   title="Écouter la prononciation"
-                  className="p-1 bg-[#1a1a1a] text-white hover:bg-stone-800 shrink-0"
+                  className="cordel-btn p-1 rounded shrink-0"
                 >
                   <Volume2 className="w-3 h-3" />
                 </button>

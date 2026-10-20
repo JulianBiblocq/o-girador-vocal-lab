@@ -28,6 +28,13 @@ export const WaveformOverlayCanvas: React.FC<WaveformOverlayCanvasProps> = ({
   const dragStartXRef = useRef<number>(0);
   const initialOffsetMsRef = useRef<number>(0);
   const { t } = useLanguage();
+  const [themeTick, setThemeTick] = React.useState(0);
+
+  useEffect(() => {
+    const obs = new MutationObserver(() => setThemeTick((v) => v + 1));
+    obs.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+    return () => obs.disconnect();
+  }, []);
 
   useEffect(() => {
     peaksCacheRef.current = extractNormalizedPeaks(rawPCM, Math.min(rawPCM.length, Math.max(600, width * 2)));
@@ -49,7 +56,7 @@ export const WaveformOverlayCanvas: React.FC<WaveformOverlayCanvasProps> = ({
       trimStartLabel: t('trimStartFlag'),
       trimEndLabel: t('trimEndFlag'),
     });
-  }, [width, height, totalDurationSec, trimStartSec, trimEndSec, latencyOffsetMs, playheadSec, isPlaying, t]);
+  }, [width, height, totalDurationSec, trimStartSec, trimEndSec, latencyOffsetMs, playheadSec, isPlaying, t, themeTick]);
 
   useEffect(() => { draw(); }, [draw]);
 

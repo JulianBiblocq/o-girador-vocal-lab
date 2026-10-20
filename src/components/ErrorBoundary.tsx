@@ -1,4 +1,4 @@
-﻿import { Component, type ErrorInfo, type ReactNode } from 'react';
+import { Component, type ErrorInfo, type ReactNode } from 'react';
 import { AlertTriangle, RotateCcw } from 'lucide-react';
 
 interface Props {
@@ -46,7 +46,7 @@ export class ErrorBoundary extends Component<Props, State> {
               </div>
             </div>
 
-            <div className="bg-black/40 border border-theme-border p-3 rounded-none font-mono text-xs overflow-x-auto text-red-300">
+            <div className="cordel-card-sm p-3 rounded font-mono text-xs overflow-x-auto text-red-600 dark:text-red-300">
               {this.state.error?.message || 'Erreur d\'exécution inconnue'}
             </div>
 

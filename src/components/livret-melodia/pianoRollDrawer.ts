@@ -42,6 +42,8 @@ export function drawPianoRollGrid(ctx: CanvasRenderingContext2D, opts: DrawGridO
   const gridDur = totalBeats * beatDur;
   const t1Offset = opts.t1OffsetSec ?? (hasAnacrusis ? 0 : 0.15);
 
+  const isLight = typeof document !== 'undefined' && document.documentElement.getAttribute('data-theme') === 'light';
+
   // 1. Rangées de demi-tons et surbrillance harmonique dynamique
   drawPianoRollRows({
     ctx, width, minMidi, maxMidi, rowHeight, harmonyGrid, playheadSec, seekStartSec,
@@ -51,11 +53,13 @@ export function drawPianoRollGrid(ctx: CanvasRenderingContext2D, opts: DrawGridO
   // 2. Grille temporelle & subdivisions
   for (let b = 0; b < totalBeats; b++) {
     const xStart = (b / totalBeats) * width, xEnd = ((b + 1) / totalBeats) * width;
-    ctx.fillStyle = b % 2 === 0 ? 'rgba(255, 255, 255, 0.015)' : 'rgba(0, 0, 0, 0.12)';
+    ctx.fillStyle = b % 2 === 0
+      ? (isLight ? 'rgba(0, 0, 0, 0.015)' : 'rgba(255, 255, 255, 0.015)')
+      : (isLight ? 'rgba(0, 0, 0, 0.05)' : 'rgba(0, 0, 0, 0.12)');
     ctx.fillRect(xStart, 0, xEnd - xStart, height);
 
     const res = beatResolutions[b % beatsPerMeasure] || 4;
-    ctx.strokeStyle = 'rgba(245, 240, 230, 0.12)';
+    ctx.strokeStyle = isLight ? 'rgba(26, 26, 26, 0.10)' : 'rgba(245, 240, 230, 0.12)';
     ctx.setLineDash([2, 3]);
     for (let s = 1; s < res; s++) {
       const xs = ((b + s / res) / totalBeats) * width;
@@ -65,7 +69,7 @@ export function drawPianoRollGrid(ctx: CanvasRenderingContext2D, opts: DrawGridO
 
     const isT1 = hasAnacrusis ? (b === beatsPerMeasure) : (b === 0);
     ctx.lineWidth = isT1 ? 2.5 : b % beatsPerMeasure === 0 ? 1.5 : 1;
-    ctx.strokeStyle = isT1 ? '#d4af37' : b % beatsPerMeasure === 0 ? 'rgba(245, 240, 230, 0.45)' : 'rgba(245, 240, 230, 0.22)';
+    ctx.strokeStyle = isT1 ? '#d4af37' : b % beatsPerMeasure === 0 ? (isLight ? 'rgba(26, 26, 26, 0.35)' : 'rgba(245, 240, 230, 0.45)') : (isLight ? 'rgba(26, 26, 26, 0.15)' : 'rgba(245, 240, 230, 0.22)');
     ctx.beginPath(); ctx.moveTo(xStart, 0); ctx.lineTo(xStart, height); ctx.stroke();
   }
 
@@ -132,7 +136,7 @@ export function drawPianoRollGrid(ctx: CanvasRenderingContext2D, opts: DrawGridO
   if (isPlaying && playheadSec >= 0) {
     const pRel = hasAnacrusis ? playheadSec : (playheadSec - t1Offset);
     const xp = (pRel / gridDur) * width;
-    ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2;
+    ctx.strokeStyle = isLight ? '#1a1a1a' : '#ffffff'; ctx.lineWidth = 2;
     ctx.beginPath(); ctx.moveTo(xp, 0); ctx.lineTo(xp, height); ctx.stroke();
   }
   ctx.restore();

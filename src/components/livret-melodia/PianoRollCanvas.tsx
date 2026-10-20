@@ -8,21 +8,21 @@ import { findBrickRange, moveBrick, resizeBrick, glueBrickToPrevious, splitTieAt
 import { getToolCursorStyle } from '../../utils/toolCursors';
 
 export interface PianoRollCanvasProps {
-  width: number; height: number; minMidi: number; maxMidi: number; rowHeight: number;
-  beatsPerMeasure: number; beatResolutions: number[]; allSteps: VocalStepData[]; pitchCurve: PitchCurvePoint[];
-  totalDurationSec: number; anacrusisDurationSec: number; seekStartSec: number; isPlaying: boolean; activeTool: PianoRollTool;
-  regions?: MelodyneRegion[]; selectedRegionId?: string | null; hasAnacrusis?: boolean; t1OffsetSec?: number; bpm?: number;
-  selectedStepIdx?: number | null; getPlayheadSec?: () => number; onOpenContextMenu: (x: number, y: number) => void;
-  onUpdateSteps: (newSteps: VocalStepData[], commit?: boolean) => void; onPlayNotePreview: (midi: number) => void;
-  onOpenTextInput: (stepIndex: number, rect: { x: number; y: number; w: number; h: number }) => void;
-  onSelectRegion?: (id: string | null) => void; onAddRegion?: (startSec: number, endSec: number) => void;
-  onUpdateRegionBounds?: (id: string, startSec: number, endSec: number) => void; onSelectStep?: (idx: number | null) => void;
-  harmonyGrid?: PatternHarmonyGrid; pitchShiftSemitones?: number; readOnly?: boolean;
+  width: number; height: number; minMidi: number; maxMidi: number; rowHeight: number; beatsPerMeasure: number; beatResolutions: number[]; allSteps: VocalStepData[]; pitchCurve: PitchCurvePoint[]; totalDurationSec: number; anacrusisDurationSec: number; seekStartSec: number; isPlaying: boolean; activeTool: PianoRollTool;
+  regions?: MelodyneRegion[]; selectedRegionId?: string | null; hasAnacrusis?: boolean; t1OffsetSec?: number; bpm?: number; selectedStepIdx?: number | null; getPlayheadSec?: () => number; onOpenContextMenu: (x: number, y: number) => void; onUpdateSteps: (newSteps: VocalStepData[], commit?: boolean) => void; onPlayNotePreview: (midi: number) => void; onOpenTextInput: (stepIndex: number, rect: { x: number; y: number; w: number; h: number }) => void;
+  onSelectRegion?: (id: string | null) => void; onAddRegion?: (startSec: number, endSec: number) => void; onUpdateRegionBounds?: (id: string, startSec: number, endSec: number) => void; onSelectStep?: (idx: number | null) => void; harmonyGrid?: PatternHarmonyGrid; pitchShiftSemitones?: number; readOnly?: boolean;
 }
 
 export const PianoRollCanvas: React.FC<PianoRollCanvasProps> = (p) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const dragRef = useRef<any>(null);
+  const [themeTick, setThemeTick] = React.useState(0);
+
+  useEffect(() => {
+    const obs = new MutationObserver(() => setThemeTick((t) => t + 1));
+    obs.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+    return () => obs.disconnect();
+  }, []);
 
   const draw = useCallback(() => {
     const canvas = canvasRef.current;
@@ -36,7 +36,7 @@ export const PianoRollCanvas: React.FC<PianoRollCanvasProps> = (p) => {
     const playhead = p.isPlaying && p.getPlayheadSec ? p.getPlayheadSec() : -1;
     drawPianoRollGrid(ctx, { ...p, dpr, playheadSec: playhead });
     drawMelodyneRegions(ctx, { ...p, regions: p.regions || [], selectedRegionId: p.selectedRegionId ?? null });
-  }, [p]);
+  }, [p, themeTick]);
 
   useEffect(() => {
     draw();

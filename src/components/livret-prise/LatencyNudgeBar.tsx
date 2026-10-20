@@ -32,7 +32,7 @@ export const LatencyNudgeBar: React.FC<LatencyNudgeBarProps> = ({
   };
 
   return (
-    <div className="cordel-card p-2 flex flex-col gap-2 bg-black/40 text-xs font-mono">
+    <div className="cordel-card-sm p-2 flex flex-col gap-2 text-xs font-mono rounded">
       <button
         type="button"
         onClick={() => setIsOpen((prev) => !prev)}
@@ -44,7 +44,7 @@ export const LatencyNudgeBar: React.FC<LatencyNudgeBarProps> = ({
         </span>
         <span className="text-[10px] text-theme-accent font-mono flex items-center gap-1">
           {latencyOffsetMs === 0 ? (
-            <span className="text-emerald-400 flex items-center gap-1">
+            <span className="text-emerald-700 dark:text-emerald-400 flex items-center gap-1">
               <Check className="w-3 h-3" />
               <span>Auto-cale (0 ms)</span>
             </span>

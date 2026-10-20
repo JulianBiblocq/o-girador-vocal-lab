@@ -64,7 +64,7 @@ export const LetraEditorPanel: React.FC<LetraEditorPanelProps> = ({ allSteps, on
   const reconstructedWords = useMemo(() => reconstructWordsFromSteps(allSteps), [allSteps]);
 
   return (
-    <div className="cordel-card p-3 flex flex-col gap-2.5 bg-black/50 rounded-none">
+    <div className="cordel-card p-3 flex flex-col gap-2.5 rounded">
       <div className="flex items-center justify-between text-xs font-mono">
         <span className="font-bold text-theme-accent flex items-center gap-1.5">
           <CordelScroll className="w-4 h-4" /><span>{t('letraTitle')}</span>
@@ -74,7 +74,7 @@ export const LetraEditorPanel: React.FC<LetraEditorPanelProps> = ({ allSteps, on
 
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
         {availablePhrases.length > 0 && (
-          <select value={rawText} onChange={(e) => handleSelectPhrase(e.target.value)} className="letra-phrase-select px-2 py-1.5 text-xs font-mono focus:outline-none rounded-none max-w-full sm:max-w-[200px]">
+          <select value={rawText} onChange={(e) => handleSelectPhrase(e.target.value)} className="letra-phrase-select px-2 py-1.5 text-xs font-mono focus:outline-none rounded max-w-full sm:max-w-[200px]">
             <option value="">{t('patternPhraseCustom')}</option>
             {availablePhrases.map((phrase, i) => <option key={i} value={phrase}>{phrase}</option>)}
           </select>
@@ -83,9 +83,9 @@ export const LetraEditorPanel: React.FC<LetraEditorPanelProps> = ({ allSteps, on
           type="text" value={rawText} placeholder="Ex: Eu vou va-di-ar..." onFocus={(e) => setFocusPhrase(e.target.value)}
           onChange={(e) => { setRawText(e.target.value); updatePattern(activePattern.id, { assignedLyricsText: e.target.value }); }}
           onBlur={(e) => { if (e.target.value !== focusPhrase) onCommitHistory?.(); }} onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
-          className="letra-phrase-input flex-1 px-3 py-1.5 text-xs font-mono focus:outline-none focus:border-theme-accent rounded-none"
+          className="letra-phrase-input flex-1 px-3 py-1.5 text-xs font-mono focus:outline-none focus:border-theme-accent rounded"
         />
-        <button type="button" onClick={handleAlign} className="cordel-btn-primary px-3 py-1.5 text-xs font-mono flex items-center gap-1 font-bold rounded-none cursor-pointer">
+        <button type="button" onClick={handleAlign} className="cordel-btn-primary px-3 py-1.5 text-xs font-mono flex items-center gap-1 font-bold rounded cursor-pointer">
           <CordelSpark className="w-3.5 h-3.5" /><span>{t('alignBtn')}</span>
         </button>
       </div>

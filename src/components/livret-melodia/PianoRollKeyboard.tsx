@@ -53,7 +53,7 @@ export const PianoRollKeyboard: React.FC<PianoRollKeyboardProps> = ({ minMidi, m
           title={`Note ${noteName}`}
           className={`relative w-full cursor-pointer select-none flex items-center justify-end pr-1.5 transition-colors group ${
             isC ? 'bg-[#fffdf7]' : 'bg-[#f5f0e6]'
-          } ${isBorderBoundary ? 'border-b-2 border-stone-800/40' : 'border-b border-black/15'} hover:bg-[#fff9ea]`}
+          } ${isBorderBoundary ? 'border-b-2 border-[var(--cordel-border-panel)]' : 'border-b border-black/15'} hover:bg-[#fff9ea]`}
         >
           <span className={`text-[8.5px] font-mono tracking-tight ${isC ? 'font-black text-amber-900' : 'font-semibold text-stone-700'} group-hover:text-amber-800`}>
             {noteName}
@@ -66,7 +66,7 @@ export const PianoRollKeyboard: React.FC<PianoRollKeyboardProps> = ({ minMidi, m
   return (
     <div
       style={{ width: `${KEYBOARD_WIDTH}px` }}
-      className="sticky left-0 z-10 shrink-0 bg-[#1c1917] border-r-2 border-black/80 flex flex-col shadow-lg"
+      className="sticky left-0 z-10 shrink-0 bg-[var(--cordel-surface)] border-r-2 border-[var(--cordel-border-panel)] flex flex-col shadow-lg"
     >
       {rows}
     </div>

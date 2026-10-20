@@ -27,37 +27,37 @@ export const ToadaLexiconItemRow: React.FC<Props> = ({ entry, onDelete, isReadOn
   }, [entry.mot]);
 
   return (
-    <div className="p-2.5 bg-[#f5edd6] dark:bg-[#2b2722] border border-[#1a1a1a]/25 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+    <div className="cordel-card-sm p-2.5 rounded text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2 border">
       <div className="flex-1 space-y-1">
         <div className="flex flex-wrap items-center gap-2">
-          <strong className="text-sm font-serif text-[#8b2a1a] dark:text-[#f4a261]">{entry.mot}</strong>
+          <strong className="text-sm font-serif text-[#9a3412] dark:text-[#f4a261]">{entry.mot}</strong>
           {entry.categorie && (
-            <span className="px-1.5 py-0.5 text-[9px] uppercase font-bold tracking-wider bg-[#1a1a1a] text-[#f4ecd8]">
+            <span className="px-1.5 py-0.5 text-[9px] uppercase font-bold tracking-wider bg-[var(--cordel-surface)] text-[var(--cordel-text)] border border-[var(--cordel-border-sub)] rounded">
               {entry.categorie}
             </span>
           )}
           {entry.soundCardId && (
-            <span className="px-1.5 py-0.5 text-[9px] font-mono font-bold bg-[#2a9d8f] text-white border border-[#1a1a1a]">
+            <span className="px-1.5 py-0.5 text-[9px] font-mono font-bold bg-[var(--cordel-coro)] text-[#f4ecd8] rounded">
               Carte: {entry.soundCardId}
             </span>
           )}
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-[11px] pt-1 border-t border-[#1a1a1a]/10 dark:border-white/10">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-[11px] pt-1 border-t border-[var(--cordel-border-sub)]">
           <div>
-            <span className="opacity-70 font-semibold">FR : </span>
-            <span className="italic">{entry.traductionFr || entry.explication}</span>
+            <span className="text-[var(--cordel-secondary-text)] font-semibold">FR : </span>
+            <span className="italic text-[var(--cordel-text)]">{entry.traductionFr || entry.explication}</span>
           </div>
           {entry.phonetique && (
             <div>
-              <span className="opacity-70 font-semibold">Phonétique : </span>
-              <span className="font-mono text-[#8b2a1a] dark:text-[#f4a261]">{entry.phonetique}</span>
+              <span className="text-[var(--cordel-secondary-text)] font-semibold">Phonétique : </span>
+              <span className="font-mono text-[#9a3412] dark:text-[#f4a261]">{entry.phonetique}</span>
             </div>
           )}
         </div>
 
         {entry.conseilDiction && (
-          <p className="text-[10px] opacity-80 pt-0.5">
+          <p className="text-[10px] text-[var(--cordel-secondary-text)] pt-0.5">
             💡 {entry.conseilDiction}
           </p>
         )}
@@ -68,7 +68,7 @@ export const ToadaLexiconItemRow: React.FC<Props> = ({ entry, onDelete, isReadOn
           type="button"
           onClick={handleSpeak}
           title={t('lexiconListenTermBtn')}
-          className="p-1.5 bg-[#1a1a1a] text-[#f4ecd8] border border-[#1a1a1a] shadow-[2px_2px_0px_#000] cursor-pointer hover:opacity-90 flex items-center gap-1 text-[11px] font-bold"
+          className="cordel-btn p-1.5 rounded cursor-pointer flex items-center gap-1 text-[11px] font-bold"
         >
           <Volume2 className="w-3.5 h-3.5" />
           <span className="hidden sm:inline">Écouter</span>
@@ -79,7 +79,7 @@ export const ToadaLexiconItemRow: React.FC<Props> = ({ entry, onDelete, isReadOn
             type="button"
             onClick={() => onDelete(entry.mot)}
             title={t('lexiconDeleteTermTooltip')}
-            className="p-1.5 bg-red-800 text-white border border-[#1a1a1a] shadow-[2px_2px_0px_#000] cursor-pointer hover:bg-red-700"
+            className="cordel-btn p-1.5 rounded cursor-pointer text-[#9a3412] hover:bg-[#9a3412]/10"
           >
             <Trash2 className="w-3.5 h-3.5" />
           </button>

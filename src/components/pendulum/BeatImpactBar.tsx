@@ -31,7 +31,7 @@ export const BeatImpactBar: React.FC<BeatImpactBarProps> = ({
       </div>
 
       {/* 2. Barre verte bidirectionnelle (suit le sens du balancier) */}
-      <div className="w-full h-1.5 bg-black/40 border border-[var(--cordel-border-sub)] rounded-sm overflow-hidden relative">
+      <div className="w-full h-1.5 bg-[var(--cordel-subcard-bg)] border border-[var(--cordel-border-sub)] rounded-sm overflow-hidden relative">
         <div
           ref={progressBarRef}
           style={{ transform: 'scaleX(0)', transformOrigin: 'left center', willChange: 'transform' }}

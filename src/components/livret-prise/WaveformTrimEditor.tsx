@@ -86,7 +86,7 @@ export const WaveformTrimEditor: React.FC<WaveformTrimEditorProps> = (props) => 
   return (
     <div className="flex flex-col gap-2 w-full">
       {harmonyConfig && onUpdateGrid && onUpdateHarmonyConfig && (
-        <div className="flex items-center justify-between gap-2 border border-stone-800 bg-stone-900/60 p-1.5 cordel-card">
+        <div className="cordel-card flex items-center justify-between gap-2 p-1.5 rounded">
           <ChordGridBar harmonyGrid={harmonyGrid} measuresCount={measuresCount} beatsPerMeasure={beatsPerMeasure} hasAnacrusis={hasAnacrusis} onUpdateGrid={onUpdateGrid} />
           <HarmonyProfileSelector config={harmonyConfig} onChange={onUpdateHarmonyConfig} />
         </div>
@@ -96,7 +96,7 @@ export const WaveformTrimEditor: React.FC<WaveformTrimEditorProps> = (props) => 
         onSeeStart={() => scrollToSec(trimStartSec, totalDurationSec, containerWidth)}
         onSeeEnd={() => scrollToSec(trimEndSec, totalDurationSec, containerWidth)}
       />
-      <div ref={containerRef} className="w-full cordel-card overflow-hidden select-none bg-black/40">
+      <div ref={containerRef} className="w-full cordel-card overflow-hidden select-none rounded">
         <div ref={scrollContainerRef} className="w-full h-36 overflow-x-auto overflow-y-hidden relative cordel-scrollbar">
           <div style={{ width: `${zoomedWidth}px`, height: '144px', position: 'relative' }}>
             <WaveformGridCanvas width={zoomedWidth} height={144} totalDurationSec={totalDurationSec} t1OffsetSec={t1OffsetSec} hasAnacrusis={hasAnacrusis} bpm={bpm} measuresCount={measuresCount} beatsPerMeasure={beatsPerMeasure} beatResolutions={beatResolutions} />

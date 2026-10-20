@@ -18,9 +18,9 @@ export const AmbitusFinderPanel: React.FC = () => {
 
   return (
     <div className="space-y-4">
-      <div className="bg-[#fcfaf2] dark:bg-[#1f1d1a] border-2 border-[#1a1a1a] shadow-[4px_4px_0px_#1a1a1a] p-4 text-[#1a1a1a] dark:text-[#f4ecd8] rounded-none space-y-3.5">
-        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#1a1a1a]/20 pb-1">
-          <h3 className="font-bold text-sm tracking-wider uppercase">{t('ambitusTitle')}</h3>
+      <div className="cordel-card p-4 space-y-3.5">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--cordel-border-sub)] pb-1.5">
+          <h3 className="font-bold text-sm tracking-wider uppercase text-[var(--cordel-text)]">{t('ambitusTitle')}</h3>
           <button type="button" onClick={() => { j.setStage('sweep'); j.setFeedback(null); }} className="text-[11px] font-mono text-[var(--cordel-accent-text)] hover:underline cursor-pointer">
             {t('ambitusRestartJourney')}
           </button>
@@ -79,7 +79,7 @@ export const AmbitusFinderPanel: React.FC = () => {
         )}
 
         {j.feedback && (
-          <div className={`p-2.5 text-xs font-bold border-2 border-[#1a1a1a] shadow-[2px_2px_0px_#1a1a1a] ${j.feedback.isGood ? 'bg-[#2a9d8f]/15 text-[#2a9d8f]' : 'bg-[#d97706]/15 text-[#d97706]'}`}>
+          <div className={`p-2.5 text-xs font-bold border rounded ${j.feedback.isGood ? 'bg-[#0f766e]/10 text-[#0f766e] dark:text-[#2dd4bf] border-[#0f766e]/30' : 'bg-[#c25e38]/10 text-[#9a3412] dark:text-[#e69d35] border-[#c25e38]/30'}`}>
             {j.feedback.text}
           </div>
         )}

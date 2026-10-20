@@ -33,15 +33,15 @@ export const ActiveToadaLexiconStrip: React.FC<Props> = ({
   if (entries.length === 0) return null;
 
   return (
-    <div className="p-3 bg-[#f5edd6] dark:bg-[#2b2722] border-2 border-[#1a1a1a] shadow-[3px_3px_0px_#1a1a1a] text-xs font-mono space-y-2">
-      <div className="flex items-center justify-between gap-2 border-b border-[#1a1a1a]/20 pb-1.5">
-        <span className="font-bold text-[11px] uppercase tracking-wider text-[#8b2a1a] dark:text-[#f4a261] flex items-center gap-1.5">
+    <div className="cordel-card p-3 text-xs font-mono space-y-2">
+      <div className="flex items-center justify-between gap-2 border-b border-[var(--cordel-border-sub)] pb-1.5">
+        <span className="font-bold text-[11px] uppercase tracking-wider text-[#9a3412] dark:text-[#f4a261] flex items-center gap-1.5">
           ⭐ Vocabulaire & Diction du Chant ({entries.length})
         </span>
         <button
           type="button"
           onClick={onOpenLexiconModal}
-          className="px-2 py-0.5 text-[10px] font-bold bg-[#1a1a1a] text-[#f4ecd8] flex items-center gap-1 cursor-pointer hover:opacity-90"
+          className="cordel-btn px-2 py-0.5 text-[10px] rounded flex items-center gap-1 cursor-pointer"
         >
           <BookOpen className="w-3 h-3" />
           <span>Fiche & Quiz</span>
@@ -55,15 +55,15 @@ export const ActiveToadaLexiconStrip: React.FC<Props> = ({
             <div
               key={`${item.mot}_${idx}`}
               onClick={() => item.soundCardId && onSelectCard(isSelected ? null : item.soundCardId)}
-              className={`p-1.5 border border-[#1a1a1a] flex items-center gap-2 transition-transform cursor-pointer select-none ${
+              className={`cordel-card-sm p-1.5 rounded flex items-center gap-2 transition-transform cursor-pointer select-none border ${
                 isSelected
-                  ? 'bg-[#2a9d8f] text-white shadow-[2px_2px_0px_#000] -translate-y-0.5'
-                  : 'bg-[#fcfaf2] dark:bg-[#1f1d1a] shadow-[1px_1px_0px_#1a1a1a]'
+                  ? 'border-[var(--cordel-coro)] bg-[var(--cordel-coro)]/15 -translate-y-0.5 shadow-sm'
+                  : 'hover:border-[var(--cordel-accent)]'
               }`}
             >
               <div className="leading-tight">
-                <span className="font-bold font-serif text-[11px] block">{item.mot}</span>
-                <span className="text-[9px] opacity-75 block truncate max-w-[120px]">
+                <span className="font-bold font-serif text-[11px] block text-[var(--cordel-text)]">{item.mot}</span>
+                <span className="text-[9px] text-[var(--cordel-secondary-text)] block truncate max-w-[120px]">
                   {item.phonetique || item.traductionFr || item.explication}
                 </span>
               </div>
@@ -71,7 +71,7 @@ export const ActiveToadaLexiconStrip: React.FC<Props> = ({
                 type="button"
                 onClick={(e) => handleSpeak(item.mot, e)}
                 title="Écouter le mot"
-                className="p-1 bg-[#1a1a1a] text-white rounded-none hover:bg-stone-800 shrink-0"
+                className="cordel-btn p-1 rounded shrink-0"
               >
                 <Volume2 className="w-2.5 h-2.5" />
               </button>

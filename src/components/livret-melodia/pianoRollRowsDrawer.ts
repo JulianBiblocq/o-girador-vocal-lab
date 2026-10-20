@@ -37,6 +37,8 @@ export function drawPianoRollRows(opts: DrawRowsOptions): void {
   const rootPc = activeChord ? ((activeChord.rootMidi % 12) + 12) % 12 : null;
   const fifthPc = rootPc !== null ? (rootPc + 7) % 12 : null;
 
+  const isLight = typeof document !== 'undefined' && document.documentElement.getAttribute('data-theme') === 'light';
+
   for (let midi = maxMidi; midi >= minMidi; midi--) {
     const y = (maxMidi - midi) * rowHeight;
     const pc = ((midi % 12) + 12) % 12;
@@ -45,17 +47,19 @@ export function drawPianoRollRows(opts: DrawRowsOptions): void {
     const isRootOrFifth = isChordTone && (pc === rootPc || pc === fifthPc);
 
     if (isRootOrFifth) {
-      // Surbrillance douce Cordel ambrée / or pour fondamentale et quinte
-      ctx.fillStyle = isBlack ? 'rgba(200, 138, 43, 0.16)' : 'rgba(200, 138, 43, 0.22)';
+      ctx.fillStyle = isLight
+        ? (isBlack ? 'rgba(217, 119, 6, 0.18)' : 'rgba(217, 119, 6, 0.24)')
+        : (isBlack ? 'rgba(200, 138, 43, 0.16)' : 'rgba(200, 138, 43, 0.22)');
     } else if (isChordTone) {
-      // Surbrillance plus légère pour tierce / septième
-      ctx.fillStyle = isBlack ? 'rgba(200, 138, 43, 0.08)' : 'rgba(200, 138, 43, 0.12)';
+      ctx.fillStyle = isLight
+        ? (isBlack ? 'rgba(217, 119, 6, 0.10)' : 'rgba(217, 119, 6, 0.14)')
+        : (isBlack ? 'rgba(200, 138, 43, 0.08)' : 'rgba(200, 138, 43, 0.12)');
     } else if (isBlack) {
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.42)';
+      ctx.fillStyle = isLight ? 'rgba(42, 33, 27, 0.07)' : 'rgba(0, 0, 0, 0.42)';
     } else if (pc === 0) {
-      ctx.fillStyle = 'rgba(212, 175, 55, 0.06)';
+      ctx.fillStyle = isLight ? 'rgba(180, 83, 9, 0.08)' : 'rgba(212, 175, 55, 0.06)';
     } else {
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.035)';
+      ctx.fillStyle = isLight ? 'rgba(255, 255, 255, 0.35)' : 'rgba(255, 255, 255, 0.035)';
     }
 
     ctx.fillRect(0, y, width, rowHeight);
@@ -65,7 +69,7 @@ export function drawPianoRollRows(opts: DrawRowsOptions): void {
       ? 'rgba(200, 138, 43, 0.35)'
       : pc === 0
       ? 'rgba(212, 175, 55, 0.25)'
-      : 'rgba(255, 255, 255, 0.05)';
+      : (isLight ? 'rgba(26, 26, 26, 0.08)' : 'rgba(255, 255, 255, 0.05)');
     ctx.beginPath();
     ctx.moveTo(0, y + rowHeight);
     ctx.lineTo(width, y + rowHeight);

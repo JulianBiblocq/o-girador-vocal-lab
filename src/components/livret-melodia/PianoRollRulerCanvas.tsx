@@ -26,6 +26,13 @@ export const PianoRollRulerCanvas: React.FC<PianoRollRulerCanvasProps> = (props)
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const isDraggingRef = useRef<boolean>(false);
   const { t } = useLanguage();
+  const [themeTick, setThemeTick] = React.useState(0);
+
+  useEffect(() => {
+    const obs = new MutationObserver(() => setThemeTick((v) => v + 1));
+    obs.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+    return () => obs.disconnect();
+  }, []);
 
   const draw = useCallback(() => {
     const canvas = canvasRef.current;
@@ -46,7 +53,7 @@ export const PianoRollRulerCanvas: React.FC<PianoRollRulerCanvasProps> = (props)
       m1Label: t('rulerMeasure1'),
       measurePrefix: t('measureAbbr'),
     });
-  }, [width, beatsPerMeasure, totalDurationSec, anacrusisDurationSec, seekStartSec, isPlaying, hasAnacrusis, t1OffsetSec, bpm, getPlayheadSec, t]);
+  }, [width, beatsPerMeasure, totalDurationSec, anacrusisDurationSec, seekStartSec, isPlaying, hasAnacrusis, t1OffsetSec, bpm, getPlayheadSec, t, themeTick]);
 
   useEffect(() => {
     draw();

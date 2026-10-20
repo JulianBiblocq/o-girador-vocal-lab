@@ -5,11 +5,16 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useOrganizadorAuth } from '../../hooks/useOrganizadorAuth';
 import { useLanguage } from '../../i18n/LanguageContext';
-import { User as UserIcon, LogOut, LogIn, Loader2 } from 'lucide-react';
+import { User as UserIcon, LogOut, LogIn, Loader2, Smartphone } from 'lucide-react';
 
-export const UserAvatarMenu: React.FC = () => {
+interface UserAvatarMenuProps {
+  isInstalled?: boolean;
+  onInstall?: () => void;
+}
+
+export const UserAvatarMenu: React.FC<UserAvatarMenuProps> = ({ isInstalled = false, onInstall }) => {
   const { currentUser, groupId, isLoading, loginWithGoogle, logout } = useOrganizadorAuth();
-  const { t } = useLanguage();
+  const { t, locale } = useLanguage();
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -23,7 +28,7 @@ export const UserAvatarMenu: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="w-9 h-9 rounded-full cordel-card-sm flex items-center justify-center bg-black/40 text-stone-400">
+      <div className="w-9 h-9 rounded-full cordel-card-sm flex items-center justify-center bg-[var(--cordel-subcard-bg)] text-[var(--cordel-secondary-text)]">
         <Loader2 className="w-3.5 h-3.5 animate-spin" />
       </div>
     );
@@ -52,6 +57,16 @@ export const UserAvatarMenu: React.FC = () => {
 
       {isOpen && (
         <div className="absolute top-11 right-0 z-[100] w-56 cordel-card p-2.5 bg-[var(--cordel-surface)] text-[var(--cordel-text)] border border-[var(--cordel-border-panel)] shadow-lg flex flex-col gap-2 text-xs font-mono rounded">
+          {!isInstalled && onInstall && (
+            <button
+              type="button"
+              onClick={() => { setIsOpen(false); onInstall(); }}
+              className="w-full p-1.5 flex items-center gap-2 text-[var(--cordel-accent-text)] hover:bg-[var(--cordel-subcard-bg)] rounded transition-colors cursor-pointer border border-[var(--cordel-border-sub)]"
+            >
+              <Smartphone className="w-3.5 h-3.5" />
+              <span className="font-bold">{t('pwaInstallBtn') || (locale === 'br' ? 'Instalar' : 'Installer')}</span>
+            </button>
+          )}
           {currentUser ? (
             <>
               <div className="flex flex-col gap-0.5 pb-2 border-b border-[var(--cordel-border-sub)]">

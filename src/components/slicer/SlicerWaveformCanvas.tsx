@@ -19,6 +19,13 @@ export const SlicerWaveformCanvas: React.FC<SlicerWaveformCanvasProps> = (props)
   const { pcm, sampleRate, durationSec, trimInSec, trimOutSec, beatPegs, targetPegs, playheadSec, beatsPerMeasure, onTrimChange, onPegsChange, onSeek } = props;
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const dragRef = useRef<{ mode: SlicerHitResult; startSec: number } | null>(null);
+  const [themeTick, setThemeTick] = React.useState(0);
+
+  useEffect(() => {
+    const obs = new MutationObserver(() => setThemeTick((v) => v + 1));
+    obs.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+    return () => obs.disconnect();
+  }, []);
 
   const getCanvasCoords = (e: React.PointerEvent<HTMLCanvasElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -37,7 +44,7 @@ export const SlicerWaveformCanvas: React.FC<SlicerWaveformCanvasProps> = (props)
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
     drawSlicerWaveform(ctx, { width: w, height: h, dpr, pcm, sampleRate, durationSec, trimInSec, trimOutSec, beatPegs, targetPegs, playheadSec, beatsPerMeasure });
-  }, [pcm, sampleRate, durationSec, trimInSec, trimOutSec, beatPegs, targetPegs, playheadSec, beatsPerMeasure]);
+  }, [pcm, sampleRate, durationSec, trimInSec, trimOutSec, beatPegs, targetPegs, playheadSec, beatsPerMeasure, themeTick]);
 
   useEffect(() => { render(); }, [render]);
 
@@ -81,7 +88,7 @@ export const SlicerWaveformCanvas: React.FC<SlicerWaveformCanvasProps> = (props)
   };
 
   return (
-    <div className="w-full h-36 bg-black/50 border border-theme-border/60 relative select-none">
+    <div className="w-full h-36 bg-[var(--cordel-surface)] border border-[var(--cordel-border-panel)] rounded relative select-none">
       <canvas
         ref={canvasRef}
         onPointerDown={handlePointerDown} onPointerMove={handlePointerMove} onPointerUp={handlePointerUp}

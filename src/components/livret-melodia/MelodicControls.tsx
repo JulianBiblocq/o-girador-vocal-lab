@@ -28,12 +28,12 @@ export const MelodicControls: React.FC<MelodicControlsProps> = (props) => {
   const { t } = useLanguage();
 
   return (
-    <div className="cordel-card p-2 w-full flex flex-wrap items-center justify-between gap-3 bg-black/60 rounded-none select-none">
+    <div className="cordel-card p-2 w-full flex flex-wrap items-center justify-between gap-3 select-none rounded">
       {/* 1. Gauche : Retour à la Prise */}
       <button
         type="button"
         onClick={onBackToPrise}
-        className="cordel-btn px-3 py-1.5 text-xs font-mono flex items-center gap-1.5 rounded-none cursor-pointer"
+        className="cordel-btn px-3 py-1.5 text-xs font-mono flex items-center gap-1.5 rounded cursor-pointer"
       >
         <ArrowLeft className="w-3.5 h-3.5 text-theme-accent" />
         <span>{t('backToRecording')}</span>
@@ -41,11 +41,11 @@ export const MelodicControls: React.FC<MelodicControlsProps> = (props) => {
 
       {/* 2. Centre : Groupe d'Écoute (Voix / Synthé / Duo) + Clic */}
       <div className="flex items-center gap-2">
-        <div className="flex items-center border border-theme-border/60">
+        <div className="flex items-center border border-[var(--cordel-border-sub)] rounded overflow-hidden">
           <button
             type="button"
             onClick={() => onSetPlayMode('voice')}
-            className={`px-2.5 py-1 text-xs font-mono flex items-center gap-1.5 border-r border-theme-border/40 transition-all rounded-none cursor-pointer ${
+            className={`px-2.5 py-1 text-xs font-mono flex items-center gap-1.5 border-r border-[var(--cordel-border-sub)] transition-all cursor-pointer ${
               playMode === 'voice'
                 ? 'bg-theme-wood text-[#f4ecd8] font-bold shadow-sm'
                 : 'text-theme-ink/75 hover:bg-white/10'
@@ -57,7 +57,7 @@ export const MelodicControls: React.FC<MelodicControlsProps> = (props) => {
           <button
             type="button"
             onClick={() => onSetPlayMode('synth')}
-            className={`px-2.5 py-1 text-xs font-mono flex items-center gap-1.5 border-r border-theme-border/40 transition-all rounded-none cursor-pointer ${
+            className={`px-2.5 py-1 text-xs font-mono flex items-center gap-1.5 border-r border-[var(--cordel-border-sub)] transition-all cursor-pointer ${
               playMode === 'synth'
                 ? 'bg-theme-wood text-[#f4ecd8] font-bold shadow-sm'
                 : 'text-theme-ink/75 hover:bg-white/10'

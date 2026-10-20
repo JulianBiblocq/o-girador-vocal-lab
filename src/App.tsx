@@ -16,12 +16,14 @@ import { CordelDialogModal } from './components/ui/CordelDialogModal';
 import { AppUpdateBanner } from './components/common/AppUpdateBanner';
 import { useGlobalTransportShortcuts } from './hooks/useGlobalTransportShortcuts';
 import { useVocalLabMidi } from './hooks/useVocalLabMidi';
+import { usePwaInstall } from './hooks/usePwaInstall';
 import { Sun, Moon } from 'lucide-react';
 
 const AppContent: React.FC = () => {
   useGlobalTransportShortcuts();
   useVocalLabMidi();
   const { locale, setLocale, t } = useLanguage();
+  const { isInstalled, triggerInstall } = usePwaInstall(locale);
   const [theme, setTheme] = useState<'dark' | 'light'>(() => {
     try {
       const saved = localStorage.getItem('ogirador_vocal_lab_theme');
@@ -73,6 +75,17 @@ const AppContent: React.FC = () => {
         <div className="flex items-center gap-2.5 flex-wrap">
           <ProjectSelectorBar />
           <RoleModeSwitcher />
+          {!isInstalled && (
+            <button
+              type="button"
+              onClick={triggerInstall}
+              title={locale === 'br' ? 'Instalar aplicativo' : "Installer l'application"}
+              className="h-9 px-2.5 cordel-btn font-mono text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer rounded transition-transform active:scale-95"
+            >
+              <span>📲</span>
+              <span>{t('pwaInstallBtn') || (locale === 'br' ? 'Instalar' : 'Installer')}</span>
+            </button>
+          )}
           <div className="h-9 cordel-card-sm inline-flex items-center p-0.5 text-xs font-mono select-none">
             <button
               type="button" onClick={() => setLocale('fr')}
@@ -102,7 +115,7 @@ const AppContent: React.FC = () => {
             {theme === 'dark' ? <Sun className="w-4 h-4 text-theme-accent" /> : <Moon className="w-4 h-4 text-theme-accent" />}
           </button>
 
-          <UserAvatarMenu />
+          <UserAvatarMenu isInstalled={isInstalled} onInstall={triggerInstall} />
         </div>
       </header>
 

@@ -47,36 +47,36 @@ export const CordelDialogModal: React.FC = () => {
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="bg-[#f4ecd8] text-[#1a1a1a] border-2 border-[#1a1a1a] rounded-none shadow-[6px_6px_0px_#1a1a1a] max-w-md w-full p-5 flex flex-col gap-4 font-mono animate-in zoom-in-95 duration-100"
+        className="cordel-card text-theme-ink border border-[var(--cordel-border-panel)] rounded shadow-xl max-w-md w-full p-5 flex flex-col gap-4 font-mono animate-in zoom-in-95 duration-100"
       >
         {/* En-tête Cordel Gravé */}
-        <div className="flex items-center gap-2.5 pb-2.5 border-b-2 border-[#1a1a1a]">
+        <div className="flex items-center gap-2.5 pb-2.5 border-b border-[var(--cordel-border-sub)]">
           {type === 'confirm' ? (
             options.variant === 'danger' ? (
-              <AlertTriangle className="w-5 h-5 text-[#8b2a1a] shrink-0" />
+              <AlertTriangle className="w-5 h-5 text-red-600 dark:text-red-400 shrink-0" />
             ) : (
-              <HelpCircle className="w-5 h-5 text-[#8b2a1a] shrink-0" />
+              <HelpCircle className="w-5 h-5 text-amber-700 dark:text-amber-400 shrink-0" />
             )
           ) : (
-            <Info className="w-5 h-5 text-[#1a1a1a] shrink-0" />
+            <Info className="w-5 h-5 text-theme-ink shrink-0" />
           )}
-          <h2 className="text-sm font-black uppercase tracking-wider text-[#1a1a1a] m-0">
+          <h2 className="text-sm font-black uppercase tracking-wider text-theme-ink m-0">
             {title}
           </h2>
         </div>
 
         {/* Message du Dialogue */}
-        <div className="text-xs leading-relaxed text-[#1a1a1a]/90 font-medium">
+        <div className="text-xs leading-relaxed text-theme-ink/90 font-medium">
           {options.message}
         </div>
 
         {/* Boutons d'Action Cordel */}
-        <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-[#1a1a1a]/20">
+        <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-[var(--cordel-border-sub)]">
           {type === 'confirm' && (
             <button
               type="button"
               onClick={() => close(false)}
-              className="bg-[#f4ecd8] text-[#1a1a1a] hover:bg-[#e2d5b8] border-2 border-[#1a1a1a] shadow-[2px_2px_0px_#1a1a1a] px-4 py-1.5 text-xs font-bold uppercase rounded-none transition-all cursor-pointer"
+              className="cordel-btn px-4 py-1.5 text-xs font-bold uppercase rounded cursor-pointer"
             >
               [ ✕ {cancelLabel} ]
             </button>
@@ -87,7 +87,7 @@ export const CordelDialogModal: React.FC = () => {
             type="button"
             autoFocus
             onClick={() => close(true)}
-            className="bg-[#8b2a1a] text-[#f4ecd8] hover:bg-[#6b1f13] border-2 border-[#1a1a1a] shadow-[2px_2px_0px_#1a1a1a] px-5 py-1.5 text-xs font-bold uppercase rounded-none transition-all cursor-pointer"
+            className="cordel-btn-primary px-5 py-1.5 text-xs font-bold uppercase rounded cursor-pointer"
           >
             [ ✓ {confirmLabel} ]
           </button>
