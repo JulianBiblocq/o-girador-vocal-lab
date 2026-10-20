@@ -4,8 +4,8 @@
  * Supporte le repliage de l'Élan M-1 en mode hasAnacrusis === false (< 145 lignes).
  */
 import type { PitchCurvePoint, VocalStepData } from '../../types/vocalPack.types';
-
-const BLACK_KEYS = new Set([1, 3, 6, 8, 10]);
+import type { PatternHarmonyGrid } from '../../types/harmony.types';
+import { drawPianoRollRows } from './pianoRollRowsDrawer';
 
 export interface DrawGridOptions {
   width: number;
@@ -27,10 +27,12 @@ export interface DrawGridOptions {
   t1OffsetSec?: number;
   bpm?: number;
   selectedStepIdx?: number | null;
+  harmonyGrid?: PatternHarmonyGrid;
+  pitchShiftSemitones?: number;
 }
 
 export function drawPianoRollGrid(ctx: CanvasRenderingContext2D, opts: DrawGridOptions): void {
-  const { width, height, dpr, minMidi, maxMidi, rowHeight, beatsPerMeasure, beatResolutions, allSteps, pitchCurve, totalDurationSec, anacrusisDurationSec, seekStartSec, playheadSec, isPlaying, hasAnacrusis = true, bpm, selectedStepIdx } = opts;
+  const { width, height, dpr, minMidi, maxMidi, rowHeight, beatsPerMeasure, beatResolutions, allSteps, pitchCurve, totalDurationSec, anacrusisDurationSec, seekStartSec, playheadSec, isPlaying, hasAnacrusis = true, bpm, selectedStepIdx, harmonyGrid, pitchShiftSemitones } = opts;
   ctx.save();
   ctx.scale(dpr, dpr);
   ctx.clearRect(0, 0, width, height);
@@ -40,15 +42,11 @@ export function drawPianoRollGrid(ctx: CanvasRenderingContext2D, opts: DrawGridO
   const gridDur = totalBeats * beatDur;
   const t1Offset = opts.t1OffsetSec ?? (hasAnacrusis ? 0 : 0.15);
 
-  // 1. Rangées de demi-tons
-  for (let midi = maxMidi; midi >= minMidi; midi--) {
-    const y = (maxMidi - midi) * rowHeight;
-    const isBlack = BLACK_KEYS.has(((midi % 12) + 12) % 12);
-    ctx.fillStyle = isBlack ? 'rgba(0, 0, 0, 0.42)' : midi % 12 === 0 ? 'rgba(212, 175, 55, 0.06)' : 'rgba(255, 255, 255, 0.035)';
-    ctx.fillRect(0, y, width, rowHeight);
-    ctx.strokeStyle = midi % 12 === 0 ? 'rgba(212, 175, 55, 0.25)' : 'rgba(255, 255, 255, 0.05)';
-    ctx.beginPath(); ctx.moveTo(0, y + rowHeight); ctx.lineTo(width, y + rowHeight); ctx.stroke();
-  }
+  // 1. Rangées de demi-tons et surbrillance harmonique dynamique
+  drawPianoRollRows({
+    ctx, width, minMidi, maxMidi, rowHeight, harmonyGrid, playheadSec, seekStartSec,
+    isPlaying, beatsPerMeasure, beatDurationSec: beatDur, hasAnacrusis, pitchShiftSemitones,
+  });
 
   // 2. Grille temporelle & subdivisions
   for (let b = 0; b < totalBeats; b++) {

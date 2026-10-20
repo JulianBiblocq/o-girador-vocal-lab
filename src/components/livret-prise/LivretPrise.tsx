@@ -65,6 +65,7 @@ export const LivretPrise: React.FC = () => {
     engine, recorder, activePattern, activeVariant, cueMode, getPreviousConductorPattern, projectPatterns: project.patterns,
     timeSignature, measuresCount, hasAnacrusis, beatsPerMeasure, beatDuration, effectiveBpm, effectivePitch,
     listeningMode, selectedDeviceId, selectedOutputDeviceId, updateVariant, recordedSampleRate, setRecordedSampleRate, activeLivret,
+    harmonyConfig: project.harmonyConfig,
   });
 
   const { handlePackReady, handleRecalculatePitch } = useLivretMelodicInit({

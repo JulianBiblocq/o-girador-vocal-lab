@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import type { PitchCurvePoint, VocalPackExport, VocalStepData } from '../../types/vocalPack.types';
-import { useToadaProject } from '../../context/ToadaProjectContext'; import { useStepsHistory, type LivretMelodiaSnapshot } from '../../hooks/useStepsHistory';
+import { useToadaProject } from '../../context/ToadaProjectContext';
+import { useStepsHistory, type LivretMelodiaSnapshot } from '../../hooks/useStepsHistory';
 import { useMelodyneAudioProcessor } from '../../hooks/useMelodyneAudioProcessor';
-import { MelodicPreviewPlayer, type MelodicPlayMode } from '../../audio/MelodicPreviewPlayer';
+import { useLivretMelodiaPlayback } from './useLivretMelodiaPlayback';
 import { quantizePitchToSteps } from '../../audio/pitchToStepsQuantizer';
 import { alignPitchCurveOctaveToBricks, applyOctaveShiftToMelodia } from '../../audio/pitchOctaveGuider';
 import type { ScaleType } from '../../audio/scaleQuantizer';
@@ -11,7 +12,8 @@ import { downloadToadaPackJson } from '../../utils/toadaPackExporter';
 import { useVocalTransportStore } from '../../stores/useVocalTransportStore';
 import { PianoRollEditor } from './PianoRollEditor'; import { MelodyneControlsBar } from './MelodyneControlsBar';
 import { MelodicControls } from './MelodicControls'; import { LetraEditorPanel } from './LetraEditorPanel';
-import { moveBrick, eraseBrick, type PianoRollTool } from './pianoRollInteractions';
+import { ChordGridBar } from '../common/ChordGridBar'; import { HarmonyProfileSelector } from '../common/HarmonyProfileSelector';
+import { DEFAULT_HARMONY_CONFIG } from '../../types/harmony.types'; import { moveBrick, eraseBrick, type PianoRollTool } from './pianoRollInteractions';
 import { getPatternT1OffsetSec } from '../../utils/anacrusisTimingHelper'; import { resetLivret1MelodicData, buildUpdatedVocalPackExport } from '../../audio/livretResetHelper';
 import { useLanguage } from '../../i18n/LanguageContext';
 
@@ -24,17 +26,19 @@ interface LivretMelodiaProps {
 
 export const LivretMelodia: React.FC<LivretMelodiaProps> = ({
   initialPack, cleanPCM, sampleRate, totalDurationSec, anacrusisDurationSec, beatsPerMeasure,
-  measuresCount, pitchCurve, initialSteps, outputDeviceId, pitchShiftSemitones = 0, onBackToPrise, onPackUpdated
+  measuresCount, pitchCurve, initialSteps, outputDeviceId, pitchShiftSemitones = 0, onBackToPrise, onPackUpdated,
 }) => {
-  const { t } = useLanguage(), { activePattern, updatePattern, project } = useToadaProject();
-  const [playMode, setPlayMode] = useState<MelodicPlayMode>('duo'), [clickEnabled, setClickEnabled] = useState(true), [isPlaying, setIsPlaying] = useState(false);
-  const [seekStartSec, setSeekStartSec] = useState(0), [activeTool, setActiveTool] = useState<PianoRollTool>('pointer'), [selectedStepIdx, setSelectedStepIdx] = useState<number | null>(null);
-  const [tonic, setTonic] = useState(() => initialPack.metadata.referencePitch?.replace(/\d+$/, '') || 'C'), [scaleType, setScaleType] = useState<ScaleType>('chromatic'), [smoothingLevel, setSmoothingLevel] = useState(0.5);
+  const { t } = useLanguage(), { activePattern, updatePattern, project, updateHarmonyConfig } = useToadaProject();
+  const [activeTool, setActiveTool] = useState<PianoRollTool>('pointer'), [selectedStepIdx, setSelectedStepIdx] = useState<number | null>(null);
+  const [tonic, setTonic] = useState(() => initialPack.metadata.referencePitch?.replace(/\d+$/, '') || 'C');
+  const [scaleType, setScaleType] = useState<ScaleType>('chromatic'), [smoothingLevel, setSmoothingLevel] = useState(0.5);
 
   const rawPCM = useMemo(() => activePattern.rawAudioSamples ?? cleanPCM, [activePattern.rawAudioSamples, cleanPCM]);
   const rawPitchCurve = useMemo(() => activePattern.rawPitchCurve ?? pitchCurve, [activePattern.rawPitchCurve, pitchCurve]);
   const hasAnac = activePattern.hasAnacrusis !== false, anacLen = hasAnac ? beatsPerMeasure * (initialPack.metadata.beatResolutions?.[0] || 4) : 0;
   const t1OffsetSec = getPatternT1OffsetSec(hasAnac, beatsPerMeasure * (60 / initialPack.metadata.bpm));
+  const activePCM = activePattern.correctedAudioSamples ?? rawPCM;
+  const harmonyConfig = project.harmonyConfig ?? DEFAULT_HARMONY_CONFIG;
 
   const { regions, selectedRegionId, selectedRegion, displayedCurve, isProcessing, setSelectedRegionId, addRegion, addWholePhraseRegion, updateSelectedRegion, updateBounds, deleteSelected, clearAllRegions, restoreRegions } = useMelodyneAudioProcessor({
     initialRegions: activePattern.melodyneRegions || [], rawAudio: rawPCM, sampleRate, totalDurationSec, rawPitchCurve, allSteps: initialSteps,
@@ -49,27 +53,14 @@ export const LivretMelodia: React.FC<LivretMelodiaProps> = ({
     },
   });
 
+  const { player, playMode, setPlayMode, clickEnabled, setClickEnabled, isPlaying, setIsPlaying, seekStartSec, handleTogglePlay, handleSeek } = useLivretMelodiaPlayback({
+    cleanPCM: activePCM, sampleRate, totalDurationSec, allSteps, bpm: initialPack.metadata.bpm, beatsPerMeasure, measuresCount,
+    pitchShiftSemitones, hasAnacrusis: hasAnac, t1OffsetSec, outputDeviceId, harmonyGrid: activePattern.harmonyGrid, harmonyConfig,
+  });
+
   const commitCurrentSnapshot = useCallback((partial?: Partial<LivretMelodiaSnapshot>) => {
     commitSnapshot({ steps: partial?.steps ?? allSteps, rawPitchCurve: partial?.rawPitchCurve ?? rawPitchCurve, melodyneRegions: partial?.melodyneRegions ?? regions, assignedLyricsText: partial?.assignedLyricsText ?? (activePattern.assignedLyricsText || '') });
   }, [commitSnapshot, allSteps, rawPitchCurve, regions, activePattern.assignedLyricsText]);
-
-  const player = useMemo(() => new MelodicPreviewPlayer(), []);
-  useEffect(() => () => player.stop(), [player]);
-  const activePCM = activePattern.correctedAudioSamples ?? rawPCM;
-
-  const handleTogglePlay = useCallback(async () => {
-    if (isPlaying) { player.stop(); setIsPlaying(false); return; }
-    setIsPlaying(true);
-    await player.play({ cleanPCM: activePCM, sampleRate, totalDurationSec, allSteps, bpm: initialPack.metadata.bpm, beatsPerMeasure, playMode, clickEnabled, pitchShiftSemitones, seekStartSec, hasAnacrusis: hasAnac, t1OffsetSec, outputDeviceId, onEnded: () => setIsPlaying(false) });
-  }, [player, isPlaying, activePCM, sampleRate, totalDurationSec, allSteps, initialPack, beatsPerMeasure, playMode, clickEnabled, pitchShiftSemitones, seekStartSec, hasAnac, t1OffsetSec, outputDeviceId]);
-
-  const handleSeek = useCallback((sec: number) => {
-    setSeekStartSec(sec);
-    if (isPlaying) {
-      player.stop();
-      player.play({ cleanPCM: activePCM, sampleRate, totalDurationSec, allSteps, bpm: initialPack.metadata.bpm, beatsPerMeasure, playMode, clickEnabled, pitchShiftSemitones, seekStartSec: sec, hasAnacrusis: hasAnac, t1OffsetSec, outputDeviceId, onEnded: () => setIsPlaying(false) });
-    }
-  }, [isPlaying, player, activePCM, sampleRate, totalDurationSec, allSteps, initialPack, beatsPerMeasure, playMode, clickEnabled, pitchShiftSemitones, hasAnac, t1OffsetSec, outputDeviceId]);
 
   const handleUpdateSteps = useCallback((newSteps: VocalStepData[], commit = true) => {
     setAllSteps(newSteps, commit);
@@ -115,12 +106,16 @@ export const LivretMelodia: React.FC<LivretMelodiaProps> = ({
       seekRelative: (d: number) => handleSeek(Math.max(0, Math.min(totalDurationSec, seekStartSec + d))),
       onMidiNote: (m: number) => { if (selectedStepIdx !== null) handleUpdateSteps(moveBrick(allSteps, selectedStepIdx, m)); },
     });
-  }, [handleTogglePlay, player, undo, redo, handleDeleteSelected, handleSeek, totalDurationSec, seekStartSec, selectedStepIdx, allSteps, handleUpdateSteps]);
+  }, [handleTogglePlay, player, undo, redo, handleDeleteSelected, handleSeek, totalDurationSec, seekStartSec, selectedStepIdx, allSteps, handleUpdateSteps, setIsPlaying]);
 
   useEffect(() => { useVocalTransportStore.getState().setIsPlaying(isPlaying); }, [isPlaying]);
 
   return (
     <div className="flex flex-col gap-3 w-full">
+      <div className="flex items-center justify-between gap-2 border border-stone-800 bg-stone-900/60 p-1.5 cordel-card">
+        <ChordGridBar harmonyGrid={activePattern.harmonyGrid} measuresCount={measuresCount} beatsPerMeasure={beatsPerMeasure} hasAnacrusis={hasAnac} onUpdateGrid={(g) => updatePattern(activePattern.id, { harmonyGrid: g })} />
+        <HarmonyProfileSelector config={harmonyConfig} onChange={updateHarmonyConfig} />
+      </div>
       <PianoRollEditor
         allSteps={allSteps} pitchCurve={displayedCurve} totalDurationSec={totalDurationSec} anacrusisDurationSec={anacrusisDurationSec}
         beatsPerMeasure={beatsPerMeasure} beatResolutions={initialPack.metadata.beatResolutions} seekStartSec={seekStartSec} isPlaying={isPlaying}
@@ -130,6 +125,7 @@ export const LivretMelodia: React.FC<LivretMelodiaProps> = ({
         onSetTonic={(t) => { setTonic(t); recompute(smoothingLevel, t, scaleType); }} onSetScaleType={(st) => { setScaleType(st); recompute(smoothingLevel, tonic, st); }}
         onSetSmoothingLevel={(lvl) => { setSmoothingLevel(lvl); recompute(lvl, tonic, scaleType); }} onUpdateSteps={handleUpdateSteps} onPlayNotePreview={(m) => player.playNotePreview(m)} onReExtractNotes={handleResetFromLivret1}
         onSelectRegion={setSelectedRegionId} onAddRegion={(s0, s1) => { commitCurrentSnapshot(); addRegion(s0, s1); }} onUpdateRegionBounds={updateBounds} onDeleteSelectedRegion={() => { commitCurrentSnapshot(); deleteSelected(); }}
+        harmonyGrid={activePattern.harmonyGrid} pitchShiftSemitones={pitchShiftSemitones}
       />
       <MelodyneControlsBar
         selectedRegion={selectedRegion} regionsCount={regions.length} isProcessing={isProcessing} isToolActive={activeTool === 'melodyne_cut'} onActivateTool={() => setActiveTool('melodyne_cut')}

@@ -5,6 +5,7 @@
 import type { ToadaProject, VocalPatternItem, ToadaArrangementSlot } from '../types/toadaProject.types';
 import type { ParsedToadaSheetResult } from '../types/toadaDocument.types';
 import { createDefaultVocalPattern } from '../types/toadaProject.types';
+import { createHarmonyGridFromChords } from './chordGridHelper';
 
 export interface ToadaSheetGenOptions {
   bpm?: number;
@@ -47,11 +48,13 @@ export function generateToadaFromSheet(project: ToadaProject, parsed: ParsedToad
       const patPux = createDefaultVocalPattern('puxador', buildPatternNameFromFirstWord(puxSeg.text, newPatterns.map(p => p.name)), 1, targetBpm);
       patPux.assignedLyricsText = puxSeg.text;
       patPux.hasAnacrusis = puxSeg.hasAnacrusis ?? true;
+      if (puxSeg.chords?.length) patPux.harmonyGrid = createHarmonyGridFromChords(puxSeg.chords, 1);
       newPatterns.push(patPux);
 
       const patCoro = createDefaultVocalPattern('coro', buildPatternNameFromFirstWord(coroSeg.text, newPatterns.map(p => p.name)), 1, targetBpm);
       patCoro.assignedLyricsText = coroSeg.text;
       patCoro.hasAnacrusis = false;
+      if (coroSeg.chords?.length) patCoro.harmonyGrid = createHarmonyGridFromChords(coroSeg.chords, 1);
       newPatterns.push(patCoro);
 
       newSlots.push({ slotId: `slot-${newSlots.length + 1}`, puxadorPatternId: patPux.id, coroPatternId: patCoro.id });
@@ -74,6 +77,7 @@ export function generateToadaFromSheet(project: ToadaProject, parsed: ParsedToad
       const pat = createDefaultVocalPattern(seg.role, patName, measuresCount, targetBpm);
       pat.assignedLyricsText = seg.text;
       pat.hasAnacrusis = seg.hasAnacrusis ?? options?.defaultHasAnacrusis ?? true;
+      if (seg.chords?.length) pat.harmonyGrid = createHarmonyGridFromChords(seg.chords, measuresCount);
       newPatterns.push(pat);
       patId = pat.id;
       map.set(key, patId);

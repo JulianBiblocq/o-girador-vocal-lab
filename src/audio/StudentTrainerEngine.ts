@@ -8,26 +8,22 @@ import { getSharedAudioContext } from './sharedAudioContext';
 import { VocalRecorderEngine } from './VocalRecorderEngine';
 import { scheduleWoodClick, scheduleReferencePitch } from './metronomeAudioNodes';
 import type { VocalPatternItem } from '../types/toadaProject.types';
+import type { HarmonyConfig } from '../types/harmony.types';
 import type { TrainerGuideMode, StudentRole } from '../components/livret-treino/TrainerConfigBar';
+import { HarmonyPlayerEngine } from './harmony/HarmonyPlayerEngine';
 
 export interface StudentTrainingConfig {
-  pattern: VocalPatternItem;
-  bpm: number;
-  beatsPerMeasure: number;
-  measuresCount: number;
-  studentRole: StudentRole;
-  guideMode: TrainerGuideMode;
-  deviceId?: string;
-  outputDeviceId?: string;
+  pattern: VocalPatternItem; bpm: number; beatsPerMeasure: number; measuresCount: number;
+  studentRole: StudentRole; guideMode: TrainerGuideMode; deviceId?: string; outputDeviceId?: string;
+  harmonyConfig?: HarmonyConfig; pitchShiftSemitones?: number;
 }
 
 export class StudentTrainerEngine {
-  private ctx: AudioContext | null = null;
-  private recorder = new VocalRecorderEngine();
-  private isRunning = false;
-  private animId: number | null = null;
+  private ctx: AudioContext | null = null; private recorder = new VocalRecorderEngine();
+  private isRunning = false; private animId: number | null = null;
   private activeNodes: (AudioNode | AudioScheduledSourceNode)[] = [];
   private comparativeSource: AudioBufferSourceNode | null = null;
+  private harmonyEngine = new HarmonyPlayerEngine();
 
   public async startTraining(
     config: StudentTrainingConfig,
@@ -73,6 +69,16 @@ export class StudentTrainerEngine {
       this.activeNodes.push(src);
     }
 
+    if (config.harmonyConfig?.enabled && config.pattern.harmonyGrid) {
+      this.harmonyEngine.schedule(this.ctx, this.ctx.destination, {
+        grid: config.pattern.harmonyGrid, bpm: config.bpm, beatsPerMeasure: config.beatsPerMeasure,
+        measuresCount: config.measuresCount, startTime: startTime + countdownSec,
+        totalDurationSec: singingSec, hasAnacrusis: hasAnac, pitchShiftSemitones: config.pitchShiftSemitones,
+        profile: config.harmonyConfig.profile, volume: config.harmonyConfig.volume,
+        muteBass: config.harmonyConfig.muteBass,
+      });
+    }
+
     // 3. Capture micro eleve
     this.recorder.start(startTime + countdownSec, singingSec);
 
@@ -104,13 +110,12 @@ export class StudentTrainerEngine {
     if (this.animId) cancelAnimationFrame(this.animId);
     this.animId = null;
     this.recorder.cleanup();
+    this.harmonyEngine.stop();
     for (const n of this.activeNodes) {
       try {
-        if ('stop' in n && typeof (n as AudioScheduledSourceNode).stop === 'function') {
-          (n as AudioScheduledSourceNode).stop();
-        }
+        if ('stop' in n && typeof (n as AudioScheduledSourceNode).stop === 'function') (n as AudioScheduledSourceNode).stop();
         n.disconnect();
-      } catch { /* Ignorer */ }
+      } catch {}
     }
     this.activeNodes = [];
     if (this.comparativeSource) {

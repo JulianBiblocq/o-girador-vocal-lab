@@ -14,6 +14,8 @@ import { RecordActionButton } from './RecordActionButton';
 import { CuePatternSelector } from './CuePatternSelector';
 import { AudioImportActionsBar } from './AudioImportActionsBar';
 import { useLanguage } from '../../i18n/LanguageContext';
+import { useToadaProject } from '../../context/ToadaProjectContext';
+import { DEFAULT_HARMONY_CONFIG } from '../../types/harmony.types';
 
 interface PriseRecordingSectionProps {
   engine: MetronomeEngine;
@@ -46,6 +48,7 @@ export const PriseRecordingSection: React.FC<PriseRecordingSectionProps> = ({
   onOpenSlicerModal, onDirectImportAudio,
 }) => {
   const { t } = useLanguage();
+  const { activePattern, project, updatePattern, updateHarmonyConfig } = useToadaProject();
 
   return (
     <div className="flex flex-col gap-3 w-full">
@@ -65,6 +68,11 @@ export const PriseRecordingSection: React.FC<PriseRecordingSectionProps> = ({
           initialTrimStartSec={activeVariant.trimStartSec}
           initialTrimEndSec={activeVariant.trimEndSec}
           hasAnacrusis={hasAnacrusis}
+          harmonyGrid={activePattern.harmonyGrid}
+          harmonyConfig={project.harmonyConfig ?? DEFAULT_HARMONY_CONFIG}
+          pitchShiftSemitones={activeVariant.pitchShiftSemitones}
+          onUpdateGrid={(g) => updatePattern(activePattern.id, { harmonyGrid: g })}
+          onUpdateHarmonyConfig={updateHarmonyConfig}
           onReset={onResetRecording} onTrimChange={onTrimChange} onPackReady={onPackReady}
         />
       ) : (

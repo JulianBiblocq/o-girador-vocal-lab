@@ -36,13 +36,15 @@ export interface UsePriseRecorderParams {
   recordedSampleRate: number;
   setRecordedSampleRate: (sr: number) => void;
   activeLivret: string;
+  harmonyConfig?: import('../../types/harmony.types').HarmonyConfig;
 }
 
 export function usePriseRecorder(params: UsePriseRecorderParams) {
   const {
     engine, recorder, activePattern, activeVariant, cueMode, getPreviousConductorPattern, projectPatterns,
     timeSignature, measuresCount, hasAnacrusis, beatsPerMeasure, beatDuration, effectiveBpm, effectivePitch,
-    listeningMode, selectedDeviceId, selectedOutputDeviceId, updateVariant, recordedSampleRate, setRecordedSampleRate, activeLivret
+    listeningMode, selectedDeviceId, selectedOutputDeviceId, updateVariant, recordedSampleRate, setRecordedSampleRate, activeLivret,
+    harmonyConfig,
   } = params;
 
   const [isCycleActive, setIsCycleActive] = useState(false);
@@ -75,12 +77,17 @@ export function usePriseRecorder(params: UsePriseRecorderParams) {
     }
     recorder.start(captureStart, totalRecordedSec);
     setIsCycleActive(true);
-    await engine.startCycle({ bpm: effectiveBpm, timeSignature, measuresCount, referencePitch: effectivePitch, listeningMode, outputDeviceId: selectedOutputDeviceId, preRollMeasures }, () => {
+    await engine.startCycle({
+      bpm: effectiveBpm, timeSignature, measuresCount, referencePitch: effectivePitch,
+      listeningMode, outputDeviceId: selectedOutputDeviceId, preRollMeasures,
+      harmonyGrid: activePattern.harmonyGrid, harmonyConfig, hasAnacrusis,
+      pitchShiftSemitones: activeVariant.pitchShiftSemitones,
+    }, () => {
       cueHandleRef.current?.stop(); takeGuideRef.current?.stop();
       updateVariant(activePattern.id, activeVariant.variantKey, { recordingResult: { pcm: recorder.stop(), sampleRate }, trimStartSec: 0, trimEndSec: totalRecordedSec });
       setIsCycleActive(false);
     }, cycleStart);
-  }, [engine, recorder, isCycleActive, selectedDeviceId, selectedOutputDeviceId, effectiveBpm, timeSignature, measuresCount, effectivePitch, listeningMode, beatsPerMeasure, beatDuration, cueMode, getPreviousConductorPattern, projectPatterns, activePattern, activeVariant, updateVariant, recordedSampleRate, hasAnacrusis]);
+  }, [engine, recorder, isCycleActive, selectedDeviceId, selectedOutputDeviceId, effectiveBpm, timeSignature, measuresCount, effectivePitch, listeningMode, beatsPerMeasure, beatDuration, cueMode, getPreviousConductorPattern, projectPatterns, activePattern, activeVariant, updateVariant, recordedSampleRate, hasAnacrusis, harmonyConfig]);
 
   useEffect(() => {
     setIsRecording(isCycleActive);

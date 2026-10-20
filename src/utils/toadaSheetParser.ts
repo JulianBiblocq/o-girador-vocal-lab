@@ -55,7 +55,8 @@ export function parseRichTextLyricsAndPhonetics(rawOriginal: string, rawPhonetic
         measuresCount: dir.measuresCount,
         hasAnacrusis: dir.hasAnacrusis ?? (sIdx === 0 ? hasLineAnacrusis : false),
         isLinkedMeasure: dir.isLinkedMeasure ?? (sIdx === 0 ? isLineLinked : false),
-        isMixedPair: isMixedLine && (sIdx === 0 || sIdx === 1)
+        isMixedPair: isMixedLine && (sIdx === 0 || sIdx === 1),
+        chords: dir.chords,
       });
     });
   });

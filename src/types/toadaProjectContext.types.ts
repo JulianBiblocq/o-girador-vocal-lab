@@ -39,4 +39,5 @@ export interface ToadaProjectContextValue {
   updateScopedReferencePitch: (pitch: string) => void;
   updateScopedTimeSignature: (sig: TimeSignatureString) => void;
   updateScopedTessitura: (tessitura: import('./tessitura.types').TessituraRange) => void;
+  updateHarmonyConfig: (config: import('./harmony.types').HarmonyConfig) => void;
 }

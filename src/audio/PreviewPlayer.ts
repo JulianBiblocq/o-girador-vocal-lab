@@ -1,11 +1,9 @@
-/**
- * PreviewPlayer.ts
- * Lecteur de pre-ecoute synchrone double source (Poli / Brut) avec commutation A/B en direct (< 130 lignes).
- */
+import type { PatternHarmonyGrid, HarmonyConfig } from '../types/harmony.types';
 import { createPaddedPreviewBuffer } from '../utils/wavEncoder';
 import { getSharedAudioContext, setSharedSinkId } from './sharedAudioContext';
 import { schedulePreviewClick } from './previewClickHelper';
 import { getPatternT1OffsetSec } from '../utils/anacrusisTimingHelper';
+import { HarmonyPlayerEngine } from './harmony/HarmonyPlayerEngine';
 
 export interface PreviewOptions {
   trimStartSec: number;
@@ -21,21 +19,19 @@ export interface PreviewOptions {
   enableTonePolish?: boolean;
   normalizeRMS?: boolean;
   outputDeviceId?: string;
+  harmonyGrid?: PatternHarmonyGrid;
+  harmonyConfig?: HarmonyConfig;
+  measuresCount?: number;
+  pitchShiftSemitones?: number;
   onEnded?: () => void;
 }
 
 export class PreviewPlayer {
   private ctx: AudioContext | null = null;
-  private sourcePolished: AudioBufferSourceNode | null = null;
-  private sourceDry: AudioBufferSourceNode | null = null;
-  private polishGain: GainNode | null = null;
-  private dryGain: GainNode | null = null;
-  private clickGainNode: GainNode | null = null;
-  private activeNodes: AudioNode[] = [];
-  private isPlaying = false;
-  private playbackContextStartTime = 0;
-  private playDuration = 0;
-  private stopTimerId: number | null = null;
+  private sourcePolished: AudioBufferSourceNode | null = null; private sourceDry: AudioBufferSourceNode | null = null;
+  private polishGain: GainNode | null = null; private dryGain: GainNode | null = null; private clickGainNode: GainNode | null = null;
+  private activeNodes: AudioNode[] = []; private harmonyEngine = new HarmonyPlayerEngine();
+  private isPlaying = false; private playbackContextStartTime = 0; private playDuration = 0; private stopTimerId: number | null = null;
 
   public async play(rawPCM: Float32Array, sampleRate: number, options: PreviewOptions): Promise<void> {
     this.stop();
@@ -43,8 +39,7 @@ export class PreviewPlayer {
     if (options.outputDeviceId) await setSharedSinkId(options.outputDeviceId);
 
     const { trimStartSec, trimEndSec, latencyOffsetMs, bpm, beatsPerMeasure, totalDurationSec, clickEnabled, highPassFilterEnabled, enableTonePolish, normalizeRMS, onEnded } = options;
-    const hp = highPassFilterEnabled !== false;
-    const norm = normalizeRMS !== false;
+    const hp = highPassFilterEnabled !== false, norm = normalizeRMS !== false;
 
     const pcmPolished = createPaddedPreviewBuffer(rawPCM, sampleRate, totalDurationSec, trimStartSec, trimEndSec, latencyOffsetMs, hp, norm, true);
     const pcmDry = createPaddedPreviewBuffer(rawPCM, sampleRate, totalDurationSec, trimStartSec, trimEndSec, latencyOffsetMs, hp, norm, false);
@@ -66,10 +61,8 @@ export class PreviewPlayer {
     this.polishGain.gain.setValueAtTime(isPolished ? 1 : 0, this.ctx.currentTime);
     this.dryGain.gain.setValueAtTime(isPolished ? 0 : 1, this.ctx.currentTime);
 
-    this.sourcePolished.connect(this.polishGain);
-    this.polishGain.connect(this.ctx.destination);
-    this.sourceDry.connect(this.dryGain);
-    this.dryGain.connect(this.ctx.destination);
+    this.sourcePolished.connect(this.polishGain); this.polishGain.connect(this.ctx.destination);
+    this.sourceDry.connect(this.dryGain); this.dryGain.connect(this.ctx.destination);
     this.activeNodes.push(this.sourcePolished, this.sourceDry, this.polishGain, this.dryGain);
 
     this.clickGainNode = this.ctx.createGain();
@@ -82,6 +75,16 @@ export class PreviewPlayer {
     this.isPlaying = true;
     this.sourcePolished.start(now);
     this.sourceDry.start(now);
+
+    if (options.harmonyConfig?.enabled && options.harmonyGrid) {
+      this.harmonyEngine.schedule(this.ctx, this.ctx.destination, {
+        grid: options.harmonyGrid, bpm, beatsPerMeasure,
+        measuresCount: options.measuresCount || 2, startTime: now, totalDurationSec,
+        hasAnacrusis: options.hasAnacrusis, pitchShiftSemitones: options.pitchShiftSemitones,
+        profile: options.harmonyConfig.profile, volume: options.harmonyConfig.volume,
+        muteBass: options.harmonyConfig.muteBass,
+      });
+    }
 
     const beatDuration = 60 / bpm;
     const t1 = options.t1OffsetSec ?? getPatternT1OffsetSec(options.hasAnacrusis, beatsPerMeasure * beatDuration);
@@ -117,18 +120,13 @@ export class PreviewPlayer {
     if (this.stopTimerId !== null) { window.clearTimeout(this.stopTimerId); this.stopTimerId = null; }
     for (const node of this.activeNodes) {
       try {
-        if ('stop' in node && typeof (node as AudioScheduledSourceNode).stop === 'function') {
-          (node as AudioScheduledSourceNode).stop();
-        }
+        if ('stop' in node && typeof (node as AudioScheduledSourceNode).stop === 'function') (node as AudioScheduledSourceNode).stop();
         node.disconnect();
-      } catch { /* Ignorer */ }
+      } catch {}
     }
     this.activeNodes = [];
-    this.sourcePolished = null;
-    this.sourceDry = null;
-    this.polishGain = null;
-    this.dryGain = null;
-    this.clickGainNode = null;
+    this.sourcePolished = null; this.sourceDry = null; this.polishGain = null; this.dryGain = null; this.clickGainNode = null;
+    this.harmonyEngine.stop();
     this.isPlaying = false;
   }
 

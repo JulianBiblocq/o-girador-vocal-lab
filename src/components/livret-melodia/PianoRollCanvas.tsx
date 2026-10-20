@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useCallback } from 'react';
 import type { PitchCurvePoint, VocalStepData, MelodyneRegion } from '../../types/vocalPack.types';
+import type { PatternHarmonyGrid } from '../../types/harmony.types';
 import { drawPianoRollGrid } from './pianoRollDrawer';
 import { drawMelodyneRegions } from './melodyneRegionDrawer';
 import { findRegionHandleAt } from './melodyneRegionInteractions';
@@ -9,16 +10,14 @@ import { getToolCursorStyle } from '../../utils/toolCursors';
 export interface PianoRollCanvasProps {
   width: number; height: number; minMidi: number; maxMidi: number; rowHeight: number;
   beatsPerMeasure: number; beatResolutions: number[]; allSteps: VocalStepData[]; pitchCurve: PitchCurvePoint[];
-  totalDurationSec: number; anacrusisDurationSec: number; seekStartSec: number; isPlaying: boolean;
-  activeTool: PianoRollTool; regions?: MelodyneRegion[]; selectedRegionId?: string | null;
-  hasAnacrusis?: boolean; t1OffsetSec?: number; bpm?: number; selectedStepIdx?: number | null;
-  getPlayheadSec?: () => number; onOpenContextMenu: (x: number, y: number) => void;
+  totalDurationSec: number; anacrusisDurationSec: number; seekStartSec: number; isPlaying: boolean; activeTool: PianoRollTool;
+  regions?: MelodyneRegion[]; selectedRegionId?: string | null; hasAnacrusis?: boolean; t1OffsetSec?: number; bpm?: number;
+  selectedStepIdx?: number | null; getPlayheadSec?: () => number; onOpenContextMenu: (x: number, y: number) => void;
   onUpdateSteps: (newSteps: VocalStepData[], commit?: boolean) => void; onPlayNotePreview: (midi: number) => void;
   onOpenTextInput: (stepIndex: number, rect: { x: number; y: number; w: number; h: number }) => void;
   onSelectRegion?: (id: string | null) => void; onAddRegion?: (startSec: number, endSec: number) => void;
-  onUpdateRegionBounds?: (id: string, startSec: number, endSec: number) => void;
-  onSelectStep?: (idx: number | null) => void;
-  readOnly?: boolean;
+  onUpdateRegionBounds?: (id: string, startSec: number, endSec: number) => void; onSelectStep?: (idx: number | null) => void;
+  harmonyGrid?: PatternHarmonyGrid; pitchShiftSemitones?: number; readOnly?: boolean;
 }
 
 export const PianoRollCanvas: React.FC<PianoRollCanvasProps> = (p) => {

@@ -42,6 +42,7 @@ export interface ParsedLyricsSegment {
   hasAnacrusis?: boolean;
   isLinkedMeasure?: boolean;
   isMixedPair?: boolean;
+  chords?: string[];
 }
 
 export interface ParsedToadaSheetResult {

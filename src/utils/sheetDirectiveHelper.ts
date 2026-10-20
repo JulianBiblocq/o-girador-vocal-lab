@@ -4,12 +4,15 @@
  * et nettoyage du texte chanté pour préserver les paroles (< 80 lignes).
  */
 
+import { extractChordsFromTextLine } from './chordParser';
+
 export interface LineDirectives {
   cleanText: string;
   measuresCount?: 1 | 2 | 3 | 4;
   hasAnacrusis?: boolean;
   isLinkedMeasure?: boolean;
   sectionName?: string;
+  chords?: string[];
 }
 
 export const SECTION_HEADER_REGEX = /^\s*\[(?!(?:[A-G][b#]?(?:m|maj|min|dim|aug|sus|[0-9]|b5|#5|\/[A-G][b#]?)*)\])([^\]]+)\]\s*$/i;
@@ -50,6 +53,10 @@ export function extractInlineLineDirectives(rawText: string): LineDirectives {
     hasAnacrusis = true;
   }
 
+  // 5. Extraction des accords [Dm7], [G7]...
+  const extractedChords = extractChordsFromTextLine(text).map((c) => c.chord);
+  const chords = extractedChords.length > 0 ? extractedChords : undefined;
+
   // Nettoyage des parenthèses de directives et des accords [Dm7]
   const cleanText = text
     .replace(/\(\s*[1-4]\s*m\s*\)/gi, '')
@@ -58,5 +65,5 @@ export function extractInlineLineDirectives(rawText: string): LineDirectives {
     .replace(/\s{2,}/g, ' ')
     .trim();
 
-  return { cleanText, measuresCount, hasAnacrusis, isLinkedMeasure };
+  return { cleanText, measuresCount, hasAnacrusis, isLinkedMeasure, chords };
 }

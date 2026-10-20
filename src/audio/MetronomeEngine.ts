@@ -4,10 +4,12 @@
  * Cycle a 3 etages : Decompte (M-2) -> Anacrouse (M-1) -> Chant (M1..MN).
  */
 import type { TimeSignatureString } from '../types/vocalPack.types';
+import type { PatternHarmonyGrid, HarmonyConfig } from '../types/harmony.types';
 import { getSharedAudioContext, setSharedSinkId } from './sharedAudioContext';
 import { getBeatsPerMeasure } from '../utils/musicalMath';
 import { scheduleWoodClick, scheduleReferencePitch } from './metronomeAudioNodes';
 import { computeCycleStatus, type CycleStatus } from './cycleStatusHelper';
+import { HarmonyPlayerEngine } from './harmony/HarmonyPlayerEngine';
 
 export { getBeatsPerMeasure };
 export type { CycleStatus };
@@ -21,19 +23,18 @@ export interface MetronomeConfig {
   listeningMode: ListeningMode;
   outputDeviceId?: string;
   preRollMeasures?: number;
+  harmonyGrid?: PatternHarmonyGrid;
+  harmonyConfig?: HarmonyConfig;
+  hasAnacrusis?: boolean;
+  pitchShiftSemitones?: number;
 }
 
 export class MetronomeEngine {
-  private ctx: AudioContext | null = null;
-  private isRunning = false;
-  private startTime = 0;
-  private totalDurationSec = 0;
-  private beatDurationSec = 0;
-  private beatsPerMeasure = 4;
-  private measuresCount = 2;
-  private preRollMeasures = 2;
-  private totalBeats = 16;
-  private completionTimerId: number | null = null;
+  private ctx: AudioContext | null = null; private isRunning = false;
+  private harmonyEngine = new HarmonyPlayerEngine();
+  private startTime = 0; private totalDurationSec = 0; private beatDurationSec = 0;
+  private beatsPerMeasure = 4; private measuresCount = 2; private preRollMeasures = 2;
+  private totalBeats = 16; private completionTimerId: number | null = null;
   private onCompleteCallback: (() => void) | null = null;
   private activeNodes: (AudioNode | AudioScheduledSourceNode)[] = [];
 
@@ -88,13 +89,12 @@ export class MetronomeEngine {
     }
     for (const node of this.activeNodes) {
       try {
-        if ('stop' in node && typeof (node as AudioScheduledSourceNode).stop === 'function') {
-          (node as AudioScheduledSourceNode).stop();
-        }
+        if ('stop' in node && typeof (node as AudioScheduledSourceNode).stop === 'function') (node as AudioScheduledSourceNode).stop();
         node.disconnect();
-      } catch { /* Ignorer */ }
+      } catch {}
     }
     this.activeNodes = [];
+    this.harmonyEngine.stop();
     this.isRunning = false;
   }
 
@@ -125,6 +125,17 @@ export class MetronomeEngine {
     // La note repère ne joue STRICTEMENT que pendant le décompte M-2
     const pitchDurationSec = this.beatsPerMeasure * this.beatDurationSec;
     scheduleReferencePitch(ctx, start, config.referencePitch, pitchDurationSec, this.activeNodes);
+
+    if (config.harmonyConfig?.enabled && config.harmonyGrid) {
+      this.harmonyEngine.schedule(ctx, ctx.destination, {
+        grid: config.harmonyGrid, bpm: config.bpm, beatsPerMeasure: this.beatsPerMeasure,
+        measuresCount: this.measuresCount, startTime: start + this.preRollMeasures * this.beatsPerMeasure * this.beatDurationSec,
+        totalDurationSec: this.measuresCount * this.beatsPerMeasure * this.beatDurationSec,
+        hasAnacrusis: config.hasAnacrusis, pitchShiftSemitones: config.pitchShiftSemitones,
+        profile: config.harmonyConfig.profile, volume: config.harmonyConfig.volume,
+        muteBass: config.harmonyConfig.muteBass,
+      });
+    }
   }
 
   private handleCycleCompletion(): void {

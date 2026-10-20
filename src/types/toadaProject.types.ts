@@ -5,8 +5,10 @@
 import type { TimeSignatureString, VocalStepData, PitchCurvePoint, VocalPackExport, MelodyneRegion } from './vocalPack.types';
 import type { ToadaDocument } from './toadaDocument.types';
 import type { TessituraRange } from './tessitura.types';
+import type { PatternHarmonyGrid, HarmonyConfig } from './harmony.types';
 
 export * from './tessitura.types';
+export * from './harmony.types';
 export {
   computeVariantCoverage,
   makeVariantKey,
@@ -57,6 +59,7 @@ export interface VocalPatternItem {
   pack?: VocalPackExport | null; midiLocked?: boolean; isMidiInitialized?: boolean; hasAnacrusis?: boolean;
   melodyneRegions?: MelodyneRegion[]; assignedLyricsText?: string; assignedPhoneticText?: string;
   variantPitchesConfig?: VariantPitchesConfig; variantSpeedsConfig?: VariantSpeedsConfig;
+  harmonyGrid?: PatternHarmonyGrid;
 }
 
 export interface VariantPitchesConfig {
@@ -83,4 +86,6 @@ export interface ToadaProject {
   activePatternId: string;
   toadaMeta?: Partial<ToadaDocument>;
   sheetLines?: Array<{ role: VocalRole; text: string; phoneticText?: string; [key: string]: any }>;
+  harmonyConfig?: HarmonyConfig;
+  globalHarmonyGrid?: PatternHarmonyGrid;
 }

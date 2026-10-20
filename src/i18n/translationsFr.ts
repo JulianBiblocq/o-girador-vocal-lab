@@ -5,7 +5,7 @@
 import type { VocalLabTranslations } from './i18n.types';
 import { slicerTranslationsFr } from './slicerTranslationsFr';
 import { toadaSheetTranslationsFr } from './toadaSheetTranslationsFr'; import { treinoSubTranslationsFr } from './treinoSubTranslationsFr'; import { variantTranslationsFr } from './variantTranslationsFr';
-import { tessituraTranslationsFr } from './tessituraTranslationsFr';
+import { tessituraTranslationsFr } from './tessituraTranslationsFr'; import { harmonyTranslationsFr } from './harmonyTranslationsFr';
 
 export const translationsFr: VocalLabTranslations = {
   // En-tete
@@ -142,5 +142,5 @@ export const translationsFr: VocalLabTranslations = {
   fichesOrganizador: 'Fiches Organizador', sendToSequencer: 'Envoyer vers Sequenciador', sendToSequencerTooltip: 'Téléverser les enregistrements et publier la Toada pour Sequenciador',
   openInSequencer: 'Ouvrir dans Sequenciador', toadaPublishedSuccess: 'Toada publiée dans le Cloud avec succès !', toadaPublishing: 'Publication de la Toada...', toadaImportTxt: 'Importer un fichier .txt',
   organizadorSearchPlaceholder: 'Rechercher une fiche ou toada...', noOrganizadorToadas: 'Aucune fiche trouvée', authLogin: 'Connexion', authLoginTooltip: 'Se connecter avec Google / SSO Organizador', authLogout: 'Déconnexion', authLoginRequiredNotice: 'Connexion requise pour accéder aux fiches de votre troupe.',
-  ...slicerTranslationsFr, ...toadaSheetTranslationsFr, ...treinoSubTranslationsFr, ...variantTranslationsFr, ...tessituraTranslationsFr,
+  ...slicerTranslationsFr, ...toadaSheetTranslationsFr, ...treinoSubTranslationsFr, ...variantTranslationsFr, ...tessituraTranslationsFr, ...harmonyTranslationsFr,
 };

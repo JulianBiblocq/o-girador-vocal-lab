@@ -1,6 +1,6 @@
 import React, { useRef, useState, useEffect, useMemo, useCallback } from 'react';
 import type { PitchCurvePoint, VocalStepData, MelodyneRegion } from '../../types/vocalPack.types';
-import type { ScaleType } from '../../audio/scaleQuantizer';
+import type { ScaleType } from '../../audio/scaleQuantizer'; import type { PatternHarmonyGrid } from '../../types/harmony.types';
 import { calculateTessitura, midiToNoteName } from '../../utils/noteUtils';
 import { getPatternT1OffsetSec } from '../../utils/anacrusisTimingHelper';
 import { useLanguage } from '../../i18n/LanguageContext';
@@ -22,7 +22,7 @@ export interface PianoRollEditorProps {
   onUndo?: () => void; onRedo?: () => void; onSetTonic: (t: string) => void; onSetScaleType: (st: ScaleType) => void;
   onSetSmoothingLevel: (lvl: number) => void; onUpdateSteps: (newSteps: VocalStepData[], commit?: boolean) => void; onPlayNotePreview: (midi: number) => void;
   onReExtractNotes?: () => void; onSelectRegion?: (id: string | null) => void; onAddRegion?: (start: number, end: number) => void;
-  onUpdateRegionBounds?: (id: string, start: number, end: number) => void; onDeleteSelectedRegion?: () => void; selectedStepIdx?: number | null; onSelectStep?: (idx: number | null) => void; readOnly?: boolean;
+  onUpdateRegionBounds?: (id: string, start: number, end: number) => void; onDeleteSelectedRegion?: () => void; selectedStepIdx?: number | null; onSelectStep?: (idx: number | null) => void; harmonyGrid?: PatternHarmonyGrid; pitchShiftSemitones?: number; readOnly?: boolean;
 }
 
 const ROW_HEIGHT = 20;

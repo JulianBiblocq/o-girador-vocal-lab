@@ -5,7 +5,7 @@
 import type { VocalLabTranslations } from './i18n.types';
 import { slicerTranslationsBr } from './slicerTranslationsBr';
 import { toadaSheetTranslationsBr } from './toadaSheetTranslationsBr'; import { treinoSubTranslationsBr } from './treinoSubTranslationsBr'; import { variantTranslationsBr } from './variantTranslationsBr';
-import { tessituraTranslationsBr } from './tessituraTranslationsBr';
+import { tessituraTranslationsBr } from './tessituraTranslationsBr'; import { harmonyTranslationsBr } from './harmonyTranslationsBr';
 
 export const translationsBr: VocalLabTranslations = {
   // Cabecalho
@@ -141,5 +141,5 @@ export const translationsBr: VocalLabTranslations = {
   fichesOrganizador: 'Fichas Organizador', sendToSequencer: 'Enviar ao Sequenciador', sendToSequencerTooltip: 'Enviar gravações e publicar Toada para o Sequenciador',
   openInSequencer: 'Abrir no Sequenciador', toadaPublishedSuccess: 'Toada publicada na Nuvem com sucesso!', toadaPublishing: 'Publicando Toada na nuvem...', toadaImportTxt: 'Importar arquivo .txt',
   organizadorSearchPlaceholder: 'Buscar ficha ou toada...', noOrganizadorToadas: 'Nenhuma ficha encontrada', authLogin: 'Conexão', authLoginTooltip: 'Conectar com Google / SSO Organizador', authLogout: 'Desconectar', authLoginRequiredNotice: 'Conexão necessária para acessar as fichas do grupo.',
-  ...slicerTranslationsBr, ...toadaSheetTranslationsBr, ...treinoSubTranslationsBr, ...variantTranslationsBr, ...tessituraTranslationsBr,
+  ...slicerTranslationsBr, ...toadaSheetTranslationsBr, ...treinoSubTranslationsBr, ...variantTranslationsBr, ...tessituraTranslationsBr, ...harmonyTranslationsBr,
 };

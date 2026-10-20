@@ -5,12 +5,12 @@
  */
 
 import type { slicerTranslationsFr } from './slicerTranslationsFr'; import type { toadaSheetTranslationsFr } from './toadaSheetTranslationsFr';
-import type { treinoSubTranslationsFr } from './treinoSubTranslationsFr'; import type { tessituraTranslationsFr } from './tessituraTranslationsFr';
+import type { treinoSubTranslationsFr } from './treinoSubTranslationsFr'; import type { tessituraTranslationsFr } from './tessituraTranslationsFr'; import type { harmonyTranslationsFr } from './harmonyTranslationsFr';
 
 export type Locale = 'fr' | 'br';
 export type TranslationParams = Record<string, string | number>;
 export type SlicerTranslations = typeof slicerTranslationsFr; export type ToadaSheetTranslations = typeof toadaSheetTranslationsFr;
-export type TreinoSubTranslations = typeof treinoSubTranslationsFr; export type TessituraTranslations = typeof tessituraTranslationsFr;
+export type TreinoSubTranslations = typeof treinoSubTranslationsFr; export type TessituraTranslations = typeof tessituraTranslationsFr; export type HarmonyTranslations = typeof harmonyTranslationsFr;
 
 export interface VocalLabTranslationsCore {
   // En-tete
@@ -141,5 +141,5 @@ export interface VocalLabTranslationsCore {
   toadaPublishedSuccess: string; toadaPublishing: string; toadaImportTxt: string; organizadorSearchPlaceholder: string; noOrganizadorToadas: string; authLogin: string; authLoginTooltip: string; authLogout: string; authLoginRequiredNotice: string;
 }
 
-export type VocalLabTranslations = VocalLabTranslationsCore & SlicerTranslations & ToadaSheetTranslations & TreinoSubTranslations & TessituraTranslations;
+export type VocalLabTranslations = VocalLabTranslationsCore & SlicerTranslations & ToadaSheetTranslations & TreinoSubTranslations & TessituraTranslations & HarmonyTranslations;
 export type TranslationKey = keyof VocalLabTranslations;

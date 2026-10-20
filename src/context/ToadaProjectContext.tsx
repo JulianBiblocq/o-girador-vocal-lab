@@ -104,6 +104,7 @@ export const ToadaProjectProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const updateScopedReferencePitch = useCallback((pitch: string) => setProject((prev) => batchUpdateProjectPitch(prev, applyScope, selectedPatternIds, pitch)), [applyScope, selectedPatternIds]);
   const updateScopedTimeSignature = useCallback((sig: TimeSignatureString) => setProject((prev) => batchUpdateProjectTimeSignature(prev, applyScope, selectedPatternIds, sig)), [applyScope, selectedPatternIds]);
   const updateScopedTessitura = useCallback((tessitura: import('../types/tessitura.types').TessituraRange) => setProject((prev) => batchUpdateProjectTessitura(prev, applyScope, selectedPatternIds, tessitura)), [applyScope, selectedPatternIds]);
+  const updateHarmonyConfig = useCallback((cfg: import('../types/harmony.types').HarmonyConfig) => setProject((prev) => ({ ...prev, harmonyConfig: cfg })), []);
 
   const getPreviousConductorPattern = useCallback((): VocalPatternItem | null => {
     const slotIdx = project.slots.findIndex((s) => s.puxadorPatternId === project.activePatternId || s.coroPatternId === project.activePatternId);
@@ -121,8 +122,8 @@ export const ToadaProjectProvider: React.FC<{ children: React.ReactNode }> = ({ 
     loadProject, addSlot, removeSlot, updateSlot, setCueMode, getPreviousConductorPattern,
     swapAllRoles, duplicateVariation,
     applyScope, setApplyScope, selectedPatternIds, toggleSelectPattern, selectAllPatterns, clearSelectedPatterns,
-    updateScopedBpm, updateScopedMeasuresCount, updateScopedHasAnacrusis, updateScopedReferencePitch, updateScopedTimeSignature, updateScopedTessitura,
-  }), [project, activePattern, activeVariant, cueMode, setActivePatternId, setActiveVariantKey, updateVariant, ensureVariantExists, addPattern, updatePattern, removePattern, mirrorPatternToRole, handleUnlink, loadProject, addSlot, removeSlot, updateSlot, setCueMode, getPreviousConductorPattern, swapAllRoles, duplicateVariation, applyScope, setApplyScope, selectedPatternIds, toggleSelectPattern, selectAllPatterns, clearSelectedPatterns, updateScopedBpm, updateScopedMeasuresCount, updateScopedHasAnacrusis, updateScopedReferencePitch, updateScopedTimeSignature, updateScopedTessitura]);
+    updateScopedBpm, updateScopedMeasuresCount, updateScopedHasAnacrusis, updateScopedReferencePitch, updateScopedTimeSignature, updateScopedTessitura, updateHarmonyConfig,
+  }), [project, activePattern, activeVariant, cueMode, setActivePatternId, setActiveVariantKey, updateVariant, ensureVariantExists, addPattern, updatePattern, removePattern, mirrorPatternToRole, handleUnlink, loadProject, addSlot, removeSlot, updateSlot, setCueMode, getPreviousConductorPattern, swapAllRoles, duplicateVariation, applyScope, setApplyScope, selectedPatternIds, toggleSelectPattern, selectAllPatterns, clearSelectedPatterns, updateScopedBpm, updateScopedMeasuresCount, updateScopedHasAnacrusis, updateScopedReferencePitch, updateScopedTimeSignature, updateScopedTessitura, updateHarmonyConfig]);
 
   return <ToadaContext.Provider value={value}>{children}</ToadaContext.Provider>;
 };

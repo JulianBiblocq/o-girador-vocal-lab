@@ -4,10 +4,12 @@
  * avec support du Seek, playhead synchrone 60 FPS et transposition de déclinaison.
  */
 import type { VocalStepData } from '../types/vocalPack.types';
+import type { PatternHarmonyGrid, HarmonyConfig } from '../types/harmony.types';
 import { getSharedAudioContext, setSharedSinkId } from './sharedAudioContext';
-import { getSavedClickVolume } from '../utils/clickVolumeStorage';
 import { playSingleSynthNote, scheduleMelodySteps, type SynthScheduledNode } from './synthVoiceHelper';
 import { getPatternT1OffsetSec } from '../utils/anacrusisTimingHelper';
+import { schedulePreviewClick } from './previewClickHelper';
+import { HarmonyPlayerEngine } from './harmony/HarmonyPlayerEngine';
 
 export type MelodicPlayMode = 'voice' | 'synth' | 'duo';
 
@@ -25,6 +27,9 @@ export interface MelodicPlayOptions {
   pitchShiftSemitones?: number;
   seekStartSec?: number;
   outputDeviceId?: string;
+  harmonyGrid?: PatternHarmonyGrid;
+  harmonyConfig?: HarmonyConfig;
+  measuresCount?: number;
   onEnded?: () => void;
 }
 
@@ -36,6 +41,7 @@ export class MelodicPreviewPlayer {
   private sourceNode: AudioBufferSourceNode | null = null;
   private synthNodes: SynthScheduledNode[] = [];
   private activeClickNodes: AudioNode[] = [];
+  private harmonyEngine = new HarmonyPlayerEngine();
   private isPlaying = false;
   private playbackContextStartTime = 0;
   private totalDuration = 0;
@@ -81,13 +87,22 @@ export class MelodicPreviewPlayer {
       : allSteps;
     this.synthNodes = scheduleMelodySteps(this.ctx, this.synthGainNode, effectiveSteps, stepDuration, now, this.seekStartSec, startOffsetSec);
 
+    if (options.harmonyConfig?.enabled && options.harmonyGrid) {
+      this.harmonyEngine.schedule(this.ctx, this.ctx.destination, {
+        grid: options.harmonyGrid, bpm, beatsPerMeasure, measuresCount: options.measuresCount || 2,
+        startTime: now, totalDurationSec, hasAnacrusis: options.hasAnacrusis, pitchShiftSemitones,
+        profile: options.harmonyConfig.profile, volume: options.harmonyConfig.volume,
+        muteBass: options.harmonyConfig.muteBass, seekStartSec: this.seekStartSec,
+      });
+    }
+
     for (let t = t1 - beatDuration; t >= 0; t -= beatDuration) {
-      if (t >= this.seekStartSec) this.scheduleClick(this.ctx, now + (t - this.seekStartSec), t < 0.01);
+      if (t >= this.seekStartSec && this.clickGainNode) schedulePreviewClick(this.ctx, now + (t - this.seekStartSec), t < 0.01, this.clickGainNode, this.activeClickNodes);
     }
     for (let k = 0; ; k++) {
       const beatGridTime = t1 + k * beatDuration;
       if (beatGridTime >= totalDurationSec - 0.01) break;
-      if (beatGridTime >= this.seekStartSec) this.scheduleClick(this.ctx, now + (beatGridTime - this.seekStartSec), k % beatsPerMeasure === 0);
+      if (beatGridTime >= this.seekStartSec && this.clickGainNode) schedulePreviewClick(this.ctx, now + (beatGridTime - this.seekStartSec), k % beatsPerMeasure === 0, this.clickGainNode, this.activeClickNodes);
     }
 
     this.stopTimerId = window.setTimeout(() => { this.stop(); onEnded?.(); }, (this.playRemainingDuration + 0.05) * 1000);
@@ -115,6 +130,7 @@ export class MelodicPreviewPlayer {
     this.synthNodes = [];
     for (const node of this.activeClickNodes) { try { (node as any).stop?.(); node.disconnect(); } catch {} }
     this.activeClickNodes = [];
+    this.harmonyEngine.stop();
     this.isPlaying = false;
   }
 
@@ -125,22 +141,4 @@ export class MelodicPreviewPlayer {
   }
 
   public getIsPlaying(): boolean { return this.isPlaying; }
-
-  private scheduleClick(ctx: AudioContext, time: number, isMajor: boolean): void {
-    const vol = getSavedClickVolume();
-    if (vol <= 0.01) return;
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.type = 'triangle';
-    osc.frequency.setValueAtTime(isMajor ? 1600 : 1000, time);
-    osc.frequency.exponentialRampToValueAtTime(isMajor ? 280 : 190, time + 0.02);
-    gain.gain.setValueAtTime(0.0001, time);
-    gain.gain.linearRampToValueAtTime(Math.min(1.2, (isMajor ? 0.6 : 0.35) * vol), time + 0.002);
-    gain.gain.exponentialRampToValueAtTime(0.0001, time + 0.02);
-    osc.connect(gain);
-    if (this.clickGainNode) gain.connect(this.clickGainNode);
-    this.activeClickNodes.push(osc, gain);
-    osc.start(time);
-    osc.stop(time + 0.02);
-  }
 }

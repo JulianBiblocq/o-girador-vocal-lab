@@ -98,6 +98,7 @@ export async function publishToadaToSequencer(
       bpm: project.bpm,
       timeSignature: project.timeSignature,
       measuresCount: (project as any).measuresCount || 2,
+      harmonyConfig: project.harmonyConfig,
       updatedAt: Date.now(),
     },
     metadata: {
@@ -105,11 +106,14 @@ export async function publishToadaToSequencer(
       toada: project.title,
       bpm: project.bpm,
       timeSignature: project.timeSignature,
+      harmonyConfig: project.harmonyConfig,
       publishedAt: Date.now(),
     },
     patterns: processedPatterns,
     arrangementSlots: project.slots || [],
     slots: project.slots || [],
+    harmonyConfig: project.harmonyConfig,
+    globalHarmonyGrid: project.globalHarmonyGrid,
     createdAt: (project as any).createdAt || Date.now(),
     updatedAt: Date.now(),
   };

@@ -39,21 +39,19 @@ export interface ExportedPatternData {
   melodyneRegions?: MelodyneRegion[];
   assignedLyricsText?: string;
   assignedPhoneticText?: string;
+  harmonyGrid?: import('../types/harmony.types').PatternHarmonyGrid;
   variants: Record<string, ExportedVariantData>;
 }
 
 export interface ToadaPackExport {
   schemaVersion: '2.0';
   project: {
-    id: string;
-    title: string;
-    bpm: number;
-    timeSignature: string;
-    createdAt: string;
-    toadaMeta?: Partial<ToadaDocument>;
+    id: string; title: string; bpm: number; timeSignature: string; createdAt: string; toadaMeta?: Partial<ToadaDocument>;
   };
   arrangementSlots: ToadaArrangementSlot[];
   patterns: ExportedPatternData[];
+  harmonyConfig?: import('../types/harmony.types').HarmonyConfig;
+  globalHarmonyGrid?: import('../types/harmony.types').PatternHarmonyGrid;
   currentPatternPack?: VocalPackExport | null;
 }
 
@@ -109,6 +107,7 @@ export function buildToadaPack(project: ToadaProject, currentPack?: VocalPackExp
       melodyneRegions: p.melodyneRegions || [],
       assignedLyricsText: p.assignedLyricsText,
       assignedPhoneticText: p.assignedPhoneticText,
+      harmonyGrid: p.harmonyGrid,
       variants: exportedVariants,
     };
   });
@@ -116,15 +115,13 @@ export function buildToadaPack(project: ToadaProject, currentPack?: VocalPackExp
   return {
     schemaVersion: '2.0',
     project: {
-      id: project.id,
-      title: project.title,
-      bpm: project.bpm,
-      timeSignature: project.timeSignature,
-      createdAt: new Date().toISOString(),
-      toadaMeta: project.toadaMeta,
+      id: project.id, title: project.title, bpm: project.bpm, timeSignature: project.timeSignature,
+      createdAt: new Date().toISOString(), toadaMeta: project.toadaMeta,
     },
     arrangementSlots: project.slots,
     patterns,
+    harmonyConfig: project.harmonyConfig,
+    globalHarmonyGrid: project.globalHarmonyGrid,
     currentPatternPack: currentPack ?? null,
   };
 }

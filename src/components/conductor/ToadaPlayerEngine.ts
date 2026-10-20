@@ -7,11 +7,13 @@ import { getSharedAudioContext, setSharedSinkId } from '../../audio/sharedAudioC
 import { getBeatsPerMeasure } from '../../utils/musicalMath';
 import { getPatternT1OffsetSec } from '../../utils/anacrusisTimingHelper';
 import { selectBestAudioVariant } from '../../utils/variantMatcher';
+import { HarmonyPlayerEngine } from '../../audio/harmony/HarmonyPlayerEngine';
 
 export class ToadaPlayerEngine {
   private isRunning = false;
   private activeSources: AudioBufferSourceNode[] = [];
   private timers: number[] = [];
+  private harmonyEngine = new HarmonyPlayerEngine();
 
   public getIsPlaying(): boolean {
     return this.isRunning;
@@ -55,6 +57,17 @@ export class ToadaPlayerEngine {
       if (puxPat) this.schedulePattern(ctx, puxPat, audioCtxStart, blockT1Sec, measureDurationSec);
       if (coroPat) this.schedulePattern(ctx, coroPat, audioCtxStart, blockT1Sec, measureDurationSec);
 
+      const patHarmony = puxPat?.harmonyGrid || coroPat?.harmonyGrid || project.globalHarmonyGrid;
+      if (project.harmonyConfig?.enabled && patHarmony) {
+        this.harmonyEngine.schedule(ctx, ctx.destination, {
+          grid: patHarmony, bpm: project.bpm, beatsPerMeasure,
+          measuresCount: measuresInSlot, startTime: blockTime,
+          totalDurationSec: measuresInSlot * measureDurationSec, hasAnacrusis: false,
+          profile: project.harmonyConfig.profile, volume: project.harmonyConfig.volume,
+          muteBass: project.harmonyConfig.muteBass,
+        });
+      }
+
       currentMeasure += measuresInSlot;
     });
 
@@ -70,6 +83,7 @@ export class ToadaPlayerEngine {
     this.isRunning = false;
     this.timers.forEach((t) => window.clearTimeout(t));
     this.timers = [];
+    this.harmonyEngine.stop();
     this.activeSources.forEach((src) => {
       try {
         src.stop();

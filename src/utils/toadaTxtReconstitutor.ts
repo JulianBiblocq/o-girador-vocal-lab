@@ -5,6 +5,7 @@
  */
 import type { ToadaProject, VocalPatternItem } from '../types/toadaProject.types';
 import type { VocalStepData } from '../types/vocalPack.types';
+import { formatMeasureChordsString } from './chordGridHelper';
 
 export function stitchSyllablesFromSteps(steps: VocalStepData[] = []): string {
   const active = steps.filter((s) => s.active && s.syllable && s.syllable !== '───');
@@ -71,20 +72,27 @@ export function reconstituteToadaTxt(project: ToadaProject): { rawTxtCode: strin
       const puxInfo = extractPatternLyrics(patPux);
       const coroInfo = extractPatternLyrics(patCoro);
       const anaPrefix = puxInfo.hasAnacrusis ? '+ ' : '';
-      measuresBlocks.push(`${anaPrefix}*${puxInfo.text}* ${coroInfo.text}`);
+      const puxChords = formatMeasureChordsString(patPux.harmonyGrid?.measures?.[0]);
+      const coroChords = formatMeasureChordsString(patCoro.harmonyGrid?.measures?.[0]);
+      const chordsPrefix = puxChords ? `${puxChords} ` : (coroChords ? `${coroChords} ` : '');
+      measuresBlocks.push(`${anaPrefix}${chordsPrefix}*${puxInfo.text}* ${coroInfo.text}`);
     } else {
       const activePat = patPux || patCoro;
       if (!activePat) continue;
       const { text, hasAnacrusis } = extractPatternLyrics(activePat);
       const prefix = hasAnacrusis ? '+ ' : '';
       const formattedText = activePat.role === 'puxador' ? `*${text}*` : text;
+      const chordsStr = formatMeasureChordsString(activePat.harmonyGrid?.measures?.[0]);
+      const chordsPrefix = chordsStr ? `${chordsStr} ` : '';
 
-      measuresBlocks.push(`${prefix}${formattedText}`);
+      measuresBlocks.push(`${prefix}${chordsPrefix}${formattedText}`);
 
       // Si le pattern s'étend sur plusieurs mesures, émettre les mesures liées (/)
       const mCount = activePat.measuresCount || 1;
       for (let m = 2; m <= mCount; m++) {
-        measuresBlocks.push(`/ (suite ${activePat.name})`);
+        const mChords = formatMeasureChordsString(activePat.harmonyGrid?.measures?.[m - 1]);
+        const mChordsPrefix = mChords ? `${mChords} ` : '';
+        measuresBlocks.push(`${mChordsPrefix}/ (suite ${activePat.name})`);
       }
     }
   }
