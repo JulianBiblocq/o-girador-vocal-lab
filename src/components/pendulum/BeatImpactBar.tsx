@@ -31,7 +31,7 @@ export const BeatImpactBar: React.FC<BeatImpactBarProps> = ({
       </div>
 
       {/* 2. Barre verte bidirectionnelle (suit le sens du balancier) */}
-      <div className="w-full h-1.5 bg-black/60 border border-theme-border/30 overflow-hidden relative">
+      <div className="w-full h-1.5 bg-black/40 border border-[var(--cordel-border-sub)] rounded-sm overflow-hidden relative">
         <div
           ref={progressBarRef}
           style={{ transform: 'scaleX(0)', transformOrigin: 'left center', willChange: 'transform' }}
@@ -46,7 +46,7 @@ export const BeatImpactBar: React.FC<BeatImpactBarProps> = ({
             key={idx}
             ref={(el) => { padRefs.current[idx] = el; }}
             style={{ willChange: 'background-color, transform, color' }}
-            className="flex-1 py-0.5 text-center font-mono text-[11px] font-bold border border-theme-border/40 text-theme-ink/80 transition-none"
+            className="flex-1 py-0.5 text-center font-mono text-[11px] font-bold bg-[var(--cordel-subcard-bg)] border border-[var(--cordel-border-sub)] text-[var(--cordel-secondary-text)] rounded transition-none"
           >
             {idx === 0 ? 'T1 ★' : `T${idx + 1}`}
           </span>

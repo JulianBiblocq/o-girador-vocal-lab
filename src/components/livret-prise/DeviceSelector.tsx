@@ -105,10 +105,10 @@ export const DeviceSelector: React.FC<DeviceSelectorProps> = ({
           onChange={(e) => onDeviceChange(e.target.value)}
           onFocus={() => { if (!hasPermission) requestPermissionAndEnumerate(); }}
           disabled={disabled || inputDevices.length === 0}
-          className="w-full bg-black/30 border-2 border-theme-border text-theme-ink text-xs p-1.5 rounded-none font-mono focus:outline-none focus:border-theme-accent cursor-pointer"
+          className="w-full bg-[var(--cordel-subcard-bg)] border border-[var(--cordel-border-sub)] text-theme-ink text-xs p-1.5 rounded font-mono focus:outline-none focus:border-theme-accent cursor-pointer"
         >
           {inputDevices.map((dev, idx) => (
-            <option key={dev.deviceId || idx} value={dev.deviceId} className="bg-theme-bg text-theme-ink">
+            <option key={dev.deviceId || idx} value={dev.deviceId} className="bg-[var(--cordel-surface)] text-theme-ink">
               {dev.label || t('defaultMicLabel', { n: idx + 1 })}
             </option>
           ))}
@@ -118,19 +118,19 @@ export const DeviceSelector: React.FC<DeviceSelectorProps> = ({
 
       {/* 2. Sortie Audio / Casque */}
       {outputDevices.length > 0 && (
-        <div className="flex flex-col gap-1 pt-1 border-t border-theme-border/20">
+        <div className="flex flex-col gap-1 pt-1 border-t border-[var(--cordel-border-sub)]">
           <label className="text-[11px] font-mono text-theme-ink/80 flex items-center gap-1">
-            <Headphones className="w-3 h-3 text-theme-accent" />
+            <Headphones className="w-3.5 h-3.5 text-theme-accent" />
             <span>{t('deviceOutputLabel')}</span>
           </label>
           <select
             value={selectedOutputDeviceId}
             onChange={(e) => onOutputDeviceChange(e.target.value)}
             disabled={disabled}
-            className="w-full bg-black/30 border-2 border-theme-border text-theme-ink text-xs p-1.5 rounded-none font-mono focus:outline-none focus:border-theme-accent cursor-pointer"
+            className="w-full bg-[var(--cordel-subcard-bg)] border border-[var(--cordel-border-sub)] text-theme-ink text-xs p-1.5 rounded font-mono focus:outline-none focus:border-theme-accent cursor-pointer"
           >
             {outputDevices.map((dev, idx) => (
-              <option key={dev.deviceId || idx} value={dev.deviceId} className="bg-theme-bg text-theme-ink">
+              <option key={dev.deviceId || idx} value={dev.deviceId} className="bg-[var(--cordel-surface)] text-theme-ink">
                 {dev.label || t('defaultOutputLabel', { n: idx + 1 })}
               </option>
             ))}

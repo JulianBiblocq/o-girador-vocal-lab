@@ -6,6 +6,8 @@ import type { ToadaProject, VocalPatternItem, ToadaArrangementSlot } from '../ty
 import type { ParsedToadaSheetResult } from '../types/toadaDocument.types';
 import { createDefaultVocalPattern } from '../types/toadaProject.types';
 import { createHarmonyGridFromChords } from './chordGridHelper';
+import { detectToadaLexicon } from './toadaLexiconDetector';
+import { generateQuizFromLexicon } from './toadaQuizGenerator';
 
 export interface ToadaSheetGenOptions {
   bpm?: number;
@@ -73,8 +75,9 @@ export function generateToadaFromSheet(project: ToadaProject, parsed: ParsedToad
     const key = `${seg.role}:${seg.text.trim().toLowerCase()}`;
     let patId = map.get(key);
     if (!patId) {
+      const patBpm = seg.sectionBpm ?? targetBpm;
       const patName = buildPatternNameFromFirstWord(seg.text, newPatterns.filter(p => p.role === seg.role).map(p => p.name));
-      const pat = createDefaultVocalPattern(seg.role, patName, measuresCount, targetBpm);
+      const pat = createDefaultVocalPattern(seg.role, patName, measuresCount, patBpm);
       pat.assignedLyricsText = seg.text;
       pat.hasAnacrusis = seg.hasAnacrusis ?? options?.defaultHasAnacrusis ?? true;
       if (seg.chords?.length) pat.harmonyGrid = createHarmonyGridFromChords(seg.chords, measuresCount);
@@ -92,14 +95,24 @@ export function generateToadaFromSheet(project: ToadaProject, parsed: ParsedToad
     i = lookAhead;
   }
 
-  return {
+  const generated: ToadaProject = {
     ...project,
     title: parsed.docMeta?.titre || project.title,
     bpm: targetBpm,
+    timeSignature: (parsed.docMeta?.signature as any) || project.timeSignature,
     patterns: newPatterns.length > 0 ? newPatterns : project.patterns,
     slots: newSlots.length > 0 ? newSlots : project.slots,
     activePatternId: newPatterns[0]?.id || project.activePatternId,
     toadaMeta: parsed.docMeta ? { ...project.toadaMeta, ...parsed.docMeta } : project.toadaMeta,
     sheetLines: parsed.segments.map((s) => ({ role: s.role, text: s.text, phoneticText: s.phoneticText }))
   };
+
+  const detectedLex = detectToadaLexicon(generated);
+  const quizItems = generateQuizFromLexicon(detectedLex);
+  if (generated.toadaMeta) {
+    generated.toadaMeta.notesLexique = detectedLex;
+    generated.toadaMeta.questionsQcm = quizItems;
+  }
+
+  return generated;
 }

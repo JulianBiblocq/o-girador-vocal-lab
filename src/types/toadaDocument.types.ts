@@ -4,6 +4,9 @@
  * Supporte métadonnées, paroles riches et phonétiques, lexique, QCM et rawTxtCode.
  */
 import type { VocalRole } from './toadaProject.types';
+import type { ToadaLexiconEntry, ToadaQuizItem } from './toadaLexicon.types';
+
+export * from './toadaLexicon.types';
 
 export interface ToadaDocument {
   id: string;
@@ -27,8 +30,8 @@ export interface ToadaDocument {
   cantadorToadaId?: string;
   traduction?: string;
   anecdote?: string;
-  notesLexique?: Array<{ mot: string; explication: string }>;
-  questionsQcm?: Array<{ question: string; options: string[]; correctIndex: number; extraitTexte?: string }>;
+  notesLexique?: ToadaLexiconEntry[];
+  questionsQcm?: ToadaQuizItem[];
   tonaliteDefaut?: string;
   bpmDefaut?: number;
   repertoireId?: string;
@@ -43,6 +46,8 @@ export interface ParsedLyricsSegment {
   isLinkedMeasure?: boolean;
   isMixedPair?: boolean;
   chords?: string[];
+  sectionBpm?: number;
+  sectionName?: string;
 }
 
 export interface ParsedToadaSheetResult {

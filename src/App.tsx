@@ -76,8 +76,8 @@ const AppContent: React.FC = () => {
           <div className="h-9 cordel-card-sm inline-flex items-center p-0.5 text-xs font-mono select-none">
             <button
               type="button" onClick={() => setLocale('fr')}
-              className={`h-full px-2.5 font-bold transition-all flex items-center justify-center cursor-pointer ${
-                locale === 'fr' ? 'bg-theme-wood text-white font-black shadow-sm' : 'opacity-60 hover:opacity-100 text-theme-ink'
+              className={`h-full px-2.5 font-bold transition-all flex items-center justify-center cursor-pointer rounded ${
+                locale === 'fr' ? 'bg-theme-wood text-[var(--cordel-on-primary)] font-black shadow-sm' : 'opacity-60 hover:opacity-100 text-theme-ink'
               }`}
               title="Francais"
             >
@@ -85,8 +85,8 @@ const AppContent: React.FC = () => {
             </button>
             <button
               type="button" onClick={() => setLocale('br')}
-              className={`h-full px-2.5 font-bold transition-all flex items-center justify-center cursor-pointer ${
-                locale === 'br' ? 'bg-theme-wood text-white font-black shadow-sm' : 'opacity-60 hover:opacity-100 text-theme-ink'
+              className={`h-full px-2.5 font-bold transition-all flex items-center justify-center cursor-pointer rounded ${
+                locale === 'br' ? 'bg-theme-wood text-[var(--cordel-on-primary)] font-black shadow-sm' : 'opacity-60 hover:opacity-100 text-theme-ink'
               }`}
               title="Portugues Brasileiro"
             >

@@ -39,7 +39,7 @@ export const UserAvatarMenu: React.FC = () => {
         type="button"
         onClick={() => setIsOpen((prev) => !prev)}
         title={currentUser ? displayName : (t('authLogin') || 'Connexion')}
-        className="w-9 h-9 rounded-full overflow-hidden border-2 border-[var(--cordel-border)] shadow-[2px_2px_0px_#000] cursor-pointer flex items-center justify-center bg-[var(--cordel-bg)] hover:opacity-90 transition-opacity"
+        className="w-9 h-9 rounded-full overflow-hidden border border-[var(--cordel-border-sub)] shadow-sm cursor-pointer flex items-center justify-center bg-[var(--cordel-subcard-bg)] hover:opacity-90 transition-opacity"
       >
         {currentUser?.photoURL ? (
           <img src={currentUser.photoURL} alt="" className="w-full h-full object-cover" />
@@ -51,10 +51,10 @@ export const UserAvatarMenu: React.FC = () => {
       </button>
 
       {isOpen && (
-        <div className="absolute top-11 right-0 z-[100] w-56 cordel-card p-2.5 bg-[var(--cordel-bg)] text-[var(--cordel-text)] border-2 border-[var(--cordel-border)] shadow-[4px_4px_0px_#000] flex flex-col gap-2 text-xs font-mono">
+        <div className="absolute top-11 right-0 z-[100] w-56 cordel-card p-2.5 bg-[var(--cordel-surface)] text-[var(--cordel-text)] border border-[var(--cordel-border-panel)] shadow-lg flex flex-col gap-2 text-xs font-mono rounded">
           {currentUser ? (
             <>
-              <div className="flex flex-col gap-0.5 pb-2 border-b border-[var(--cordel-border)]/20">
+              <div className="flex flex-col gap-0.5 pb-2 border-b border-[var(--cordel-border-sub)]">
                 <span className="font-bold truncate text-[11px]">{displayName}</span>
                 <span className="text-[10px] opacity-70 truncate">{currentUser.email}</span>
                 {groupLabel && (
@@ -66,7 +66,7 @@ export const UserAvatarMenu: React.FC = () => {
               <button
                 type="button"
                 onClick={() => { setIsOpen(false); logout(); }}
-                className="w-full p-1.5 flex items-center gap-2 text-red-400 hover:text-red-300 hover:bg-[var(--cordel-surface)] transition-colors cursor-pointer"
+                className="w-full p-1.5 flex items-center gap-2 text-red-400 hover:text-red-300 hover:bg-[var(--cordel-subcard-bg)] rounded transition-colors cursor-pointer"
               >
                 <LogOut className="w-3.5 h-3.5" />
                 <span className="font-bold">{t('authLogout') || 'Se déconnecter'}</span>
@@ -76,7 +76,7 @@ export const UserAvatarMenu: React.FC = () => {
             <button
               type="button"
               onClick={() => { setIsOpen(false); loginWithGoogle(); }}
-              className="w-full p-2 flex items-center justify-center gap-2 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 font-bold transition-colors cursor-pointer"
+              className="w-full p-2 flex items-center justify-center gap-2 cordel-btn-primary font-bold cursor-pointer rounded"
             >
               <LogIn className="w-3.5 h-3.5" />
               <span>{t('authLogin') || 'Se connecter'}</span>

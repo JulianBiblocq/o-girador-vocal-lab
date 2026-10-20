@@ -40,4 +40,5 @@ export interface ToadaProjectContextValue {
   updateScopedTimeSignature: (sig: TimeSignatureString) => void;
   updateScopedTessitura: (tessitura: import('./tessitura.types').TessituraRange) => void;
   updateHarmonyConfig: (config: import('./harmony.types').HarmonyConfig) => void;
+  updateToadaMeta: (meta: Partial<import('./toadaDocument.types').ToadaDocument>) => void;
 }

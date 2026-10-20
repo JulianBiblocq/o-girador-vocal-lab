@@ -43,15 +43,15 @@ export const ToadaConductorStrip: React.FC<{ outputDeviceId?: string }> = ({ out
         <div className="flex items-center gap-2">
           <button
             type="button" onClick={addSlot}
-            className="px-2 py-0.5 text-[11px] font-bold font-mono cordel-btn rounded-none flex items-center gap-1 cursor-pointer"
+            className="px-2 py-0.5 text-[11px] font-bold font-mono cordel-card-sm rounded flex items-center gap-1 cursor-pointer"
           >
             <Plus className="w-3 h-3 text-theme-accent" />
             <span>{t('addConductorBlock')}</span>
           </button>
           <button
             type="button" onClick={handleTogglePlay}
-            className={`px-2.5 py-0.5 text-[11px] font-bold font-mono rounded-none flex items-center gap-1.5 cursor-pointer ${
-              isPlaying ? 'bg-red-800 text-[#f4ecd8] animate-pulse' : 'cordel-btn-primary'
+            className={`px-2.5 py-0.5 text-[11px] font-bold font-mono rounded flex items-center gap-1.5 cursor-pointer ${
+              isPlaying ? 'bg-red-800 text-[var(--cordel-text)] animate-pulse' : 'cordel-btn-primary'
             }`}
           >
             {isPlaying ? <Square className="w-3 h-3 fill-current" /> : <Play className="w-3 h-3 fill-current" />}
@@ -73,10 +73,10 @@ export const ToadaConductorStrip: React.FC<{ outputDeviceId?: string }> = ({ out
           return (
             <div
               key={slot.slotId}
-              className={`flex flex-col gap-1 p-1 min-w-[125px] max-w-[145px] shrink-0 border transition-all ${
+              className={`flex flex-col gap-1 p-1 min-w-[125px] max-w-[145px] shrink-0 border transition-all rounded ${
                 isCurrent
-                  ? 'border-theme-accent bg-theme-accent/15 ring-2 ring-theme-accent shadow-lg'
-                  : 'border-[var(--cordel-border)]/50 bg-[var(--cordel-surface)]'
+                  ? 'border-theme-accent bg-theme-accent/15 ring-2 ring-theme-accent shadow-md'
+                  : 'border-[var(--cordel-border-sub)] bg-[var(--cordel-subcard-bg)]'
               }`}
             >
               <div className="flex items-center justify-between text-[10px] font-mono px-0.5 text-[var(--cordel-text)] font-bold">
@@ -95,15 +95,15 @@ export const ToadaConductorStrip: React.FC<{ outputDeviceId?: string }> = ({ out
               <select
                 value={slot.puxadorPatternId ?? ''}
                 onChange={(e) => updateSlot(slot.slotId, e.target.value || null, slot.coroPatternId)}
-                className={`h-6 text-[10px] font-mono font-bold px-1 outline-none border cursor-pointer ${
+                className={`h-6 text-[10px] font-mono font-bold px-1 outline-none border cursor-pointer rounded ${
                   slot.puxadorPatternId
-                    ? 'bg-role-puxador text-[#f4ecd8] border-role-puxador'
-                    : 'bg-[var(--cordel-bg)] text-[var(--cordel-text)] border border-[var(--cordel-border)] font-semibold'
+                    ? 'bg-role-puxador text-[var(--cordel-text)] border-role-puxador'
+                    : 'bg-[var(--cordel-surface)] text-[var(--cordel-text)] border border-[var(--cordel-border-sub)] font-semibold'
                 }`}
               >
-                <option value="" className="bg-[var(--cordel-bg)] text-[var(--cordel-text)]">{t('emptySlot')}</option>
+                <option value="" className="bg-[var(--cordel-surface)] text-[var(--cordel-text)]">{t('emptySlot')}</option>
                 {puxadorPatterns.map((p) => (
-                  <option key={p.id} value={p.id} className="bg-[var(--cordel-bg)] text-[var(--cordel-text)]">{p.name}</option>
+                  <option key={p.id} value={p.id} className="bg-[var(--cordel-surface)] text-[var(--cordel-text)]">{p.name}</option>
                 ))}
               </select>
 
@@ -111,15 +111,15 @@ export const ToadaConductorStrip: React.FC<{ outputDeviceId?: string }> = ({ out
               <select
                 value={slot.coroPatternId ?? ''}
                 onChange={(e) => updateSlot(slot.slotId, slot.puxadorPatternId, e.target.value || null)}
-                className={`h-6 text-[10px] font-mono font-bold px-1 outline-none border cursor-pointer ${
+                className={`h-6 text-[10px] font-mono font-bold px-1 outline-none border cursor-pointer rounded ${
                   slot.coroPatternId
-                    ? 'bg-role-coro text-[#f4ecd8] border-role-coro'
-                    : 'bg-[var(--cordel-bg)] text-[var(--cordel-text)] border border-[var(--cordel-border)] font-semibold'
+                    ? 'bg-role-coro text-[var(--cordel-text)] border-role-coro'
+                    : 'bg-[var(--cordel-surface)] text-[var(--cordel-text)] border border-[var(--cordel-border-sub)] font-semibold'
                 }`}
               >
-                <option value="" className="bg-[var(--cordel-bg)] text-[var(--cordel-text)]">{t('emptySlot')}</option>
+                <option value="" className="bg-[var(--cordel-surface)] text-[var(--cordel-text)]">{t('emptySlot')}</option>
                 {coroPatterns.map((p) => (
-                  <option key={p.id} value={p.id} className="bg-[var(--cordel-bg)] text-[var(--cordel-text)]">{p.name}</option>
+                  <option key={p.id} value={p.id} className="bg-[var(--cordel-surface)] text-[var(--cordel-text)]">{p.name}</option>
                 ))}
               </select>
             </div>

@@ -19,11 +19,11 @@ export const LivretTabsBar: React.FC<LivretTabsBarProps> = ({ activeLivret, onSe
   const { t } = useLanguage();
 
   return (
-    <div className="flex items-center justify-center gap-2.5 border-b border-theme-border/40 pb-2 select-none">
+    <div className="flex items-center justify-center gap-2.5 border-b border-[var(--cordel-border-sub)] pb-2 select-none">
       <button
         type="button"
         onClick={() => onSelectLivret('prise')}
-        className={`px-3 py-1.5 text-xs font-mono font-bold flex items-center gap-1.5 transition-all rounded-none cursor-pointer ${
+        className={`px-3 py-1.5 text-xs font-mono font-bold flex items-center gap-1.5 transition-all rounded cursor-pointer ${
           activeLivret === 'prise' ? 'cordel-btn-primary' : 'cordel-btn opacity-60 hover:opacity-100'
         }`}
       >
@@ -35,7 +35,7 @@ export const LivretTabsBar: React.FC<LivretTabsBarProps> = ({ activeLivret, onSe
         <button
           type="button"
           onClick={() => onSelectLivret('melodia')}
-          className={`px-3 py-1.5 text-xs font-mono font-bold flex items-center gap-1.5 transition-all rounded-none cursor-pointer ${
+          className={`px-3 py-1.5 text-xs font-mono font-bold flex items-center gap-1.5 transition-all rounded cursor-pointer ${
             activeLivret === 'melodia' ? 'cordel-btn-primary' : 'cordel-btn opacity-60 hover:opacity-100'
           }`}
         >
@@ -47,7 +47,7 @@ export const LivretTabsBar: React.FC<LivretTabsBarProps> = ({ activeLivret, onSe
       <button
         type="button"
         onClick={() => onSelectLivret('treino')}
-        className={`px-3 py-1.5 text-xs font-mono font-bold flex items-center gap-1.5 transition-all rounded-none cursor-pointer ${
+        className={`px-3 py-1.5 text-xs font-mono font-bold flex items-center gap-1.5 transition-all rounded cursor-pointer ${
           activeLivret === 'treino' ? 'cordel-btn-primary' : 'cordel-btn opacity-60 hover:opacity-100'
         }`}
       >

@@ -37,7 +37,7 @@ export const VariantConfigBar: React.FC<VariantConfigBarProps> = ({
   const isFork = refSemitones !== 0;
 
   return (
-    <div className="flex flex-col gap-1.5 p-1.5 bg-[var(--cordel-bg)]/60 border border-[var(--cordel-border)]">
+    <div className="flex flex-col gap-1.5 p-1.5 bg-[var(--cordel-subcard-bg)] border border-[var(--cordel-border-sub)] rounded">
       <div className="flex flex-wrap items-center justify-between gap-1.5">
         <div className="flex flex-wrap items-center gap-1.5">
           <VariantPitchTierStepper
@@ -68,13 +68,13 @@ export const VariantConfigBar: React.FC<VariantConfigBarProps> = ({
         <div className="flex items-center gap-1">
           <button
             type="button" disabled={disabled} onClick={onToggleSpeed3}
-            className="cordel-btn px-1.5 py-0.5 text-[10px] rounded-none cursor-pointer"
+            className="cordel-btn px-1.5 py-0.5 text-[10px] rounded cursor-pointer"
           >
             {enableSpeed3 ? t('variant_remove_speed_3') : t('variant_add_speed_3')}
           </button>
           <button
             type="button" disabled={disabled} onClick={onToggleHighPitch}
-            className="cordel-btn px-1.5 py-0.5 text-[10px] rounded-none cursor-pointer"
+            className="cordel-btn px-1.5 py-0.5 text-[10px] rounded cursor-pointer"
           >
             {enableHighPitch ? t('variant_remove_pitch_3') : t('variant_add_pitch_3')}
           </button>

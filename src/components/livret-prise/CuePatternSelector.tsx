@@ -26,7 +26,7 @@ export const CuePatternSelector: React.FC<{ disabled?: boolean }> = ({ disabled 
   const isCueReady = effectiveCuePattern && effectiveCuePattern.recordingResult !== null;
 
   return (
-    <div className="cordel-card p-2 w-full flex flex-wrap items-center justify-between gap-2 bg-[var(--cordel-surface)] text-xs font-mono select-none">
+    <div className="p-2 w-full flex flex-wrap items-center justify-between gap-2 bg-[var(--cordel-subcard-bg)] border border-[var(--cordel-border-sub)] rounded text-xs font-mono select-none">
       <div className="flex items-center gap-2">
         <Headphones className="w-3.5 h-3.5 text-theme-accent shrink-0" />
         <span className="font-bold text-[var(--cordel-text)] text-[11px]">{t('cueSelectorLabel')}</span>
@@ -37,23 +37,23 @@ export const CuePatternSelector: React.FC<{ disabled?: boolean }> = ({ disabled 
           value={cueMode}
           disabled={disabled}
           onChange={(e) => setCueMode(e.target.value)}
-          className="bg-[var(--cordel-bg)] text-[var(--cordel-text)] border-2 border-[var(--cordel-border)] font-bold text-[11px] font-mono px-2 py-1 outline-none rounded-none cursor-pointer"
+          className="bg-[var(--cordel-surface)] text-[var(--cordel-text)] border border-[var(--cordel-border-sub)] font-bold text-[11px] font-mono px-2 py-1 outline-none rounded cursor-pointer"
         >
-          <option value="none" className="bg-[var(--cordel-bg)] text-[var(--cordel-text)]">
+          <option value="none" className="bg-[var(--cordel-surface)] text-[var(--cordel-text)]">
             {t('cueNone')}
           </option>
-          <option value="auto_previous" className="bg-[var(--cordel-bg)] text-[var(--cordel-text)]">
+          <option value="auto_previous" className="bg-[var(--cordel-surface)] text-[var(--cordel-text)]">
             {t('cueAutoPrevious')} {previousPattern ? `(${previousPattern.name})` : ''}
           </option>
           {otherRecordedPatterns.map((p) => (
-            <option key={p.id} value={p.id} className="bg-[var(--cordel-bg)] text-[var(--cordel-text)]">
+            <option key={p.id} value={p.id} className="bg-[var(--cordel-surface)] text-[var(--cordel-text)]">
               {t('cueCustomPrefix')} {p.name} ({p.role.toUpperCase()} • {p.measuresCount} M)
             </option>
           ))}
         </select>
 
         {isCueReady && (
-          <span className="flex items-center gap-1 text-[10px] font-bold text-cyan-400 bg-cyan-950/40 border border-cyan-500/40 px-1.5 py-0.5">
+          <span className="flex items-center gap-1 text-[10px] font-bold text-cyan-400 bg-cyan-950/40 border border-cyan-500/40 px-1.5 py-0.5 rounded">
             <CheckCircle2 className="w-3 h-3 text-cyan-400" />
             <span>{t('cueReadyBadge', { measures: effectiveCuePattern.measuresCount })}</span>
           </span>

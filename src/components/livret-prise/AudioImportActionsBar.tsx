@@ -29,12 +29,12 @@ export const AudioImportActionsBar: React.FC<AudioImportActionsBarProps> = ({
   };
 
   return (
-    <div className="w-full flex flex-wrap items-center gap-2 text-xs font-mono select-none">
+    <div className="w-full flex flex-wrap items-center gap-2 text-[11px] font-mono select-none">
       <button
         type="button"
         disabled={disabled}
         onClick={() => fileInputRef.current?.click()}
-        className="flex-1 py-2 px-3 cordel-card-sm flex items-center justify-center gap-1.5 font-bold cursor-pointer hover:bg-stone-900/40 text-theme-ink transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        className="flex-1 py-1.5 px-2.5 cordel-card-sm flex items-center justify-center gap-1.5 font-bold cursor-pointer hover:bg-white/5 text-[var(--cordel-text)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         title="Charger un fichier audio court (.wav, .mp3) directement dans ce pattern"
       >
         <Upload className="w-3.5 h-3.5 text-theme-accent" />
@@ -45,10 +45,10 @@ export const AudioImportActionsBar: React.FC<AudioImportActionsBarProps> = ({
         type="button"
         disabled={disabled}
         onClick={onOpenSlicerModal}
-        className="flex-1 py-2 px-3 cordel-card-sm flex items-center justify-center gap-1.5 font-bold cursor-pointer bg-theme-wood text-[#f4ecd8] hover:bg-theme-wood/90 shadow-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        className="flex-1 py-1.5 px-2.5 cordel-card-sm flex items-center justify-center gap-1.5 font-bold cursor-pointer hover:bg-white/5 text-[var(--cordel-text)] hover:text-amber-300 shadow-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         title="Ouvrir le Banc de Découpe pour extraire plusieurs phrases depuis un enregistrement complet"
       >
-        <Scissors className="w-3.5 h-3.5 text-[#f4ecd8]" />
+        <Scissors className="w-3.5 h-3.5 text-theme-accent" />
         <span>{t('openSlicerModalBtn')}</span>
       </button>
 

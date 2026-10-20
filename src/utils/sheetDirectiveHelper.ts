@@ -12,6 +12,7 @@ export interface LineDirectives {
   hasAnacrusis?: boolean;
   isLinkedMeasure?: boolean;
   sectionName?: string;
+  sectionBpm?: number;
   chords?: string[];
 }
 
@@ -28,7 +29,10 @@ export function extractInlineLineDirectives(rawText: string): LineDirectives {
   // 1. Détection de balise de section [Section]
   const secMatch = text.match(SECTION_HEADER_REGEX);
   if (secMatch) {
-    return { cleanText: '', sectionName: secMatch[1].trim() };
+    const rawSec = secMatch[1].trim();
+    const bpmMatch = rawSec.match(/(?:@|-|\()\s*(\d{2,3})\s*(?:bpm)?/i);
+    const sectionBpm = bpmMatch ? parseInt(bpmMatch[1], 10) : undefined;
+    return { cleanText: '', sectionName: rawSec, sectionBpm };
   }
 
   // 2. Détection préfixe Anacrouse (+) ou Mesure liée (/)

@@ -56,29 +56,34 @@ export const PriseRecordingSection: React.FC<PriseRecordingSectionProps> = ({
         baseBpm={bpm} referencePitch={referencePitch} disabled={isCycleActive}
         onPlayPitchPreview={(p) => engine.playReferencePitchPreview(p, 1.5, selectedOutputDeviceId)}
       />
-      <PendulumVisualizer
-        engine={engine} isActive={isCycleActive}
-        measuresCount={measuresCount} beatsPerMeasure={beatsPerMeasure}
-      />
       {recordedPCM ? (
-        <WaveformTrimEditor
-          rawPCM={recordedPCM} sampleRate={recordedSampleRate} bpm={effectiveBpm} timeSignature={timeSignature}
-          measuresCount={measuresCount} beatsPerMeasure={beatsPerMeasure} beatResolutions={beatResolutions}
-          referencePitch={effectivePitch} outputDeviceId={selectedOutputDeviceId}
-          initialTrimStartSec={activeVariant.trimStartSec}
-          initialTrimEndSec={activeVariant.trimEndSec}
-          hasAnacrusis={hasAnacrusis}
-          harmonyGrid={activePattern.harmonyGrid}
-          harmonyConfig={project.harmonyConfig ?? DEFAULT_HARMONY_CONFIG}
-          pitchShiftSemitones={activeVariant.pitchShiftSemitones}
-          onUpdateGrid={(g) => updatePattern(activePattern.id, { harmonyGrid: g })}
-          onUpdateHarmonyConfig={updateHarmonyConfig}
-          onReset={onResetRecording} onTrimChange={onTrimChange} onPackReady={onPackReady}
-        />
+        <>
+          <PendulumVisualizer
+            engine={engine} isActive={isCycleActive}
+            measuresCount={measuresCount} beatsPerMeasure={beatsPerMeasure}
+          />
+          <WaveformTrimEditor
+            rawPCM={recordedPCM} sampleRate={recordedSampleRate} bpm={effectiveBpm} timeSignature={timeSignature}
+            measuresCount={measuresCount} beatsPerMeasure={beatsPerMeasure} beatResolutions={beatResolutions}
+            referencePitch={effectivePitch} outputDeviceId={selectedOutputDeviceId}
+            initialTrimStartSec={activeVariant.trimStartSec}
+            initialTrimEndSec={activeVariant.trimEndSec}
+            hasAnacrusis={hasAnacrusis}
+            harmonyGrid={activePattern.harmonyGrid}
+            harmonyConfig={project.harmonyConfig ?? DEFAULT_HARMONY_CONFIG}
+            pitchShiftSemitones={activeVariant.pitchShiftSemitones}
+            onUpdateGrid={(g) => updatePattern(activePattern.id, { harmonyGrid: g })}
+            onUpdateHarmonyConfig={updateHarmonyConfig}
+            onReset={onResetRecording} onTrimChange={onTrimChange} onPackReady={onPackReady}
+          />
+        </>
       ) : (
-        <div className="flex flex-col gap-2.5">
+        <PendulumVisualizer
+          engine={engine} isActive={isCycleActive}
+          measuresCount={measuresCount} beatsPerMeasure={beatsPerMeasure}
+        >
           {(activeVariant.speedRatio !== 1.0 || activeVariant.pitchShiftSemitones !== 0) && (
-            <div className="cordel-card p-2 bg-amber-950/30 border border-amber-500/40 text-[11px] font-mono text-amber-200 flex flex-wrap items-center justify-between gap-1 rounded-none">
+            <div className="p-2 bg-amber-950/25 border border-amber-500/30 text-[11px] font-mono text-amber-200 flex flex-wrap items-center justify-between gap-1 rounded">
               <span>{t('variant_tempo_banner', { nominal: bpm, effective: effectiveBpm, ratio: Math.round(activeVariant.speedRatio * 100) })}</span>
               {activeVariant.pitchShiftSemitones !== 0 && (
                 <span className="text-amber-300 font-bold">{t('variant_pitch_banner', { nominal: referencePitch, effective: effectivePitch, semitones: activeVariant.pitchShiftSemitones })}</span>
@@ -86,11 +91,17 @@ export const PriseRecordingSection: React.FC<PriseRecordingSectionProps> = ({
             </div>
           )}
           <RecordActionButton isCycleActive={isCycleActive} measuresCount={measuresCount} onToggleRecord={onToggleRecord} />
-          {onOpenSlicerModal && onDirectImportAudio && (
-            <AudioImportActionsBar disabled={isCycleActive} onOpenSlicerModal={onOpenSlicerModal} onDirectImportAudio={onDirectImportAudio} />
-          )}
-          <CuePatternSelector disabled={isCycleActive} />
-        </div>
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 pt-0.5">
+            <div className="flex-1">
+              <CuePatternSelector disabled={isCycleActive} />
+            </div>
+            {onOpenSlicerModal && onDirectImportAudio && (
+              <div className="flex-1">
+                <AudioImportActionsBar disabled={isCycleActive} onOpenSlicerModal={onOpenSlicerModal} onDirectImportAudio={onDirectImportAudio} />
+              </div>
+            )}
+          </div>
+        </PendulumVisualizer>
       )}
     </div>
   );

@@ -63,7 +63,7 @@ export const CalibrationBanner: React.FC<CalibrationBannerProps> = ({
   const isBusy = calibState === 'running_ping' || calibState === 'running_claps';
 
   return (
-    <div className="cordel-card p-2.5 bg-black/40 text-xs font-mono flex flex-col gap-2">
+    <div className="cordel-card p-2.5 text-xs font-mono flex flex-col gap-2 rounded">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           {calibratedLatency !== null ? (
@@ -82,7 +82,7 @@ export const CalibrationBanner: React.FC<CalibrationBannerProps> = ({
         {calibState === 'idle' && (
           <button
             type="button" disabled={disabled} onClick={() => setCalibState('choosing')}
-            className="cordel-btn px-2.5 py-1 rounded-none flex items-center gap-1.5 text-[11px] font-bold cursor-pointer"
+            className="cordel-btn px-2.5 py-1 rounded flex items-center gap-1.5 text-[11px] font-bold cursor-pointer"
           >
             <Sparkles className="w-3 h-3 text-theme-accent" />
             <span>{calibratedLatency !== null ? t('calibBtnRecalibrate') : t('calibBtnFirstTime')}</span>
@@ -93,21 +93,21 @@ export const CalibrationBanner: React.FC<CalibrationBannerProps> = ({
           <div className="flex flex-wrap items-center gap-1.5">
             <button
               type="button" title={t('calibAutoPingTooltip')} onClick={handleStartPing}
-              className="cordel-btn px-2.5 py-1 rounded-none flex items-center gap-1.5 text-[11px] font-bold cursor-pointer border-cyan-500/50 hover:bg-cyan-950/40"
+              className="cordel-btn px-2.5 py-1 rounded flex items-center gap-1.5 text-[11px] font-bold cursor-pointer border-cyan-500/50 hover:bg-cyan-950/40"
             >
               <Zap className="w-3 h-3 text-cyan-400" />
               <span>{t('calibMethodAutoPing')}</span>
             </button>
             <button
               type="button" title={t('calibHumanSyncTooltip')} onClick={handleStartClaps}
-              className="cordel-btn px-2.5 py-1 rounded-none flex items-center gap-1.5 text-[11px] font-bold cursor-pointer border-amber-500/50 hover:bg-amber-950/40"
+              className="cordel-btn px-2.5 py-1 rounded flex items-center gap-1.5 text-[11px] font-bold cursor-pointer border-amber-500/50 hover:bg-amber-950/40"
             >
               <Hand className="w-3 h-3 text-amber-400" />
               <span>{t('calibMethodHumanSync')}</span>
             </button>
             <button
               type="button" title={t('calibCancelTooltip')} onClick={() => setCalibState('idle')}
-              className="cordel-btn p-1 rounded-none text-theme-ink hover:text-red-400 cursor-pointer"
+              className="cordel-btn p-1 rounded text-theme-ink hover:text-red-400 cursor-pointer"
             >
               <X className="w-3.5 h-3.5" />
             </button>

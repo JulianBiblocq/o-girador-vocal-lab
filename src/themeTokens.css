@@ -1,8 +1,19 @@
 :root {
-  /* Dark mode is default */
-  --cordel-bg: #1a1a1a;
-  --cordel-text: #f4ecd8;
-  --cordel-border: #f4ecd8;
+  /* Mode Sombre (par défaut) : Palette Bois Brûlé & Terre Chaude */
+  --cordel-bg: #16120e;
+  --cordel-surface: #211a15;
+  --cordel-subcard-bg: #2a211b;
+  --cordel-text: #efe6d2;
+  --cordel-secondary-text: #b5a48b;
+  --cordel-muted: rgba(181, 164, 139, 0.7);
+  --cordel-faint: rgba(239, 230, 210, 0.08);
+
+  /* Hiérarchie des contours en Mode Nuit */
+  --cordel-border-panel: rgba(239, 230, 210, 0.14);
+  --cordel-border-sub: rgba(239, 230, 210, 0.08);
+  --cordel-border: var(--cordel-border-panel);
+
+  /* Identité Cordel & Pupitres */
   --cordel-wood: #8b2a1a;
   --cordel-wood-light: #a83820;
   --cordel-puxador: #8b2a1a;
@@ -10,24 +21,33 @@
   --cordel-coro: #0f766e;
   --cordel-coro-hover: #14b8a6;
   --cordel-primary: var(--cordel-wood);
-  --cordel-terracotta: var(--cordel-wood);
-  --cordel-on-primary: #f4ecd8;
-  --cordel-accent: #d4af37;
-  --cordel-accent-text: #fbbf24;
-  --cordel-surface: #262626;
-  --cordel-secondary-text: rgba(244, 236, 216, 0.7);
-  --cordel-muted: rgba(244, 236, 216, 0.6);
-  --cordel-faint: rgba(244, 236, 216, 0.15);
-  --cordel-shadow-color: #57534e;
-  --cordel-shadow: 4px 4px 0px #57534e;
-  --cordel-shadow-sm: 2px 2px 0px #57534e;
-  --cordel-btn-primary-text: #f4ecd8;
+  --cordel-terracotta: #c25e38;
+  --cordel-terracotta-dark: #9a3412;
+  --cordel-on-primary: #efe6d2;
+  --cordel-accent: #c88a2b;
+  --cordel-accent-text: #e69d35;
+
+  /* Ombres chaudes adoucies */
+  --cordel-shadow: 0 4px 14px rgba(0, 0, 0, 0.4), 0 1px 3px rgba(0, 0, 0, 0.3);
+  --cordel-shadow-sm: 0 2px 6px rgba(0, 0, 0, 0.35);
+  --cordel-shadow-color: rgba(0, 0, 0, 0.5);
+  --cordel-btn-primary-text: #efe6d2;
 }
 
 [data-theme='light'] {
   --cordel-bg: #f4ecd8;
+  --cordel-surface: #efe6d0;
+  --cordel-subcard-bg: rgba(26, 26, 26, 0.04);
   --cordel-text: #1a1a1a;
-  --cordel-border: #1a1a1a;
+  --cordel-secondary-text: #57534e;
+  --cordel-muted: rgba(26, 26, 26, 0.6);
+  --cordel-faint: rgba(26, 26, 26, 0.12);
+
+  /* Hiérarchie des contours en Mode Jour (adoucie) */
+  --cordel-border-panel: rgba(26, 26, 26, 0.28);
+  --cordel-border-sub: rgba(26, 26, 26, 0.12);
+  --cordel-border: var(--cordel-border-panel);
+
   --cordel-wood: #8b2a1a;
   --cordel-wood-light: #a83820;
   --cordel-puxador: #8b2a1a;
@@ -35,25 +55,25 @@
   --cordel-coro: #0f766e;
   --cordel-coro-hover: #14b8a6;
   --cordel-primary: var(--cordel-wood);
-  --cordel-terracotta: var(--cordel-wood);
+  --cordel-terracotta: #c25e38;
+  --cordel-terracotta-dark: #9a3412;
   --cordel-on-primary: #f4ecd8;
   --cordel-accent: #9a3412;
   --cordel-accent-text: #9a3412;
-  --cordel-surface: #efe6d0;
-  --cordel-secondary-text: #57534e;
-  --cordel-muted: rgba(26, 26, 26, 0.6);
-  --cordel-faint: rgba(26, 26, 26, 0.12);
+
+  --cordel-shadow: 2px 2px 0px rgba(26, 26, 26, 0.12);
+  --cordel-shadow-sm: 1px 1px 0px rgba(26, 26, 26, 0.1);
   --cordel-shadow-color: #8c857b;
-  --cordel-shadow: 4px 4px 0px #8c857b;
-  --cordel-shadow-sm: 2px 2px 0px #8c857b;
   --cordel-btn-primary-text: #f4ecd8;
 }
 
 /* Utilitaires Cordel sémantiques */
 .bg-theme-bg { background-color: var(--cordel-bg); }
 .bg-theme-surface { background-color: var(--cordel-surface); }
+.bg-theme-subcard { background-color: var(--cordel-subcard-bg); }
 .text-theme-ink { color: var(--cordel-text); }
-.border-theme-border { border-color: var(--cordel-border); }
+.border-theme-border { border-color: var(--cordel-border-panel); }
+.border-theme-border-sub { border-color: var(--cordel-border-sub); }
 .bg-theme-wood { background-color: var(--cordel-wood) !important; color: #f4ecd8 !important; }
 .text-theme-accent { color: var(--cordel-accent-text); }
 .bg-theme-accent { background-color: var(--cordel-accent); }
@@ -71,30 +91,30 @@
 .text-role-puxador { color: var(--cordel-puxador) !important; }
 .text-role-coro { color: var(--cordel-coro) !important; }
 
-/* Effet gravure sur bois (Cordel woodcut) : coins carrés stricts */
+/* Effet tampon bois patiné : coins 4px et contours hiérarchisés */
 .cordel-card {
-  background-color: var(--cordel-bg);
+  background-color: var(--cordel-surface);
   color: var(--cordel-text);
-  border: 3px solid var(--cordel-border);
+  border: 1px solid var(--cordel-border-panel);
   box-shadow: var(--cordel-shadow);
-  border-radius: 0 !important;
+  border-radius: 4px;
 }
 
 .cordel-card-sm {
-  background-color: var(--cordel-bg);
+  background-color: var(--cordel-subcard-bg);
   color: var(--cordel-text);
-  border: 2px solid var(--cordel-border);
+  border: 1px solid var(--cordel-border-sub);
   box-shadow: var(--cordel-shadow-sm);
-  border-radius: 0 !important;
+  border-radius: 4px;
 }
 
 .cordel-btn {
-  background-color: var(--cordel-bg);
+  background-color: var(--cordel-surface);
   color: var(--cordel-text);
-  border: 2px solid var(--cordel-border);
+  border: 1px solid var(--cordel-border-sub);
   box-shadow: var(--cordel-shadow-sm);
   font-weight: 700;
-  border-radius: 0 !important;
+  border-radius: 4px;
   transition: all 0.15s ease-in-out;
 }
 
@@ -106,10 +126,10 @@
 .cordel-btn-primary {
   background-color: var(--cordel-wood) !important;
   color: var(--cordel-on-primary) !important;
-  border: 2px solid var(--cordel-border);
+  border: 1px solid var(--cordel-terracotta);
   box-shadow: var(--cordel-shadow);
   font-weight: 800;
-  border-radius: 0 !important;
+  border-radius: 4px;
   transition: all 0.15s ease-in-out;
 }
 

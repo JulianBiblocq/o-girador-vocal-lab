@@ -8,9 +8,11 @@ import type { VocalRole } from '../types/toadaProject.types';
 import type { ToadaDocument, ParsedLyricsSegment, ParsedToadaSheetResult } from '../types/toadaDocument.types';
 import { splitHtmlOrTextIntoRawLines, parseRichLineIntoSegments } from './htmlLyricsHelper';
 import { extractInlineLineDirectives } from './sheetDirectiveHelper';
+import { extractSheetHeaders } from './sheetHeaderParser';
 
 export function parseRichTextLyricsAndPhonetics(rawOriginal: string, rawPhonetic?: string, boldRole: VocalRole = 'puxador'): ParsedLyricsSegment[] {
-  const lines = rawOriginal.split(/\r?\n/);
+  const { cleanLyricsText } = extractSheetHeaders(rawOriginal);
+  const lines = cleanLyricsText.split(/\r?\n/);
   const mergedLines: string[] = [];
   for (const line of lines) {
     if (/^\s+/.test(line) && mergedLines.length > 0) {
@@ -24,6 +26,8 @@ export function parseRichTextLyricsAndPhonetics(rawOriginal: string, rawPhonetic
   const origLines = splitHtmlOrTextIntoRawLines(normalizedInput);
   const phonLines = rawPhonetic ? splitHtmlOrTextIntoRawLines(rawPhonetic) : [];
   const segments: ParsedLyricsSegment[] = [];
+  let currentSectionName: string | undefined;
+  let currentSectionBpm: number | undefined;
 
   origLines.forEach((rawL, idx) => {
     let line = rawL.trim();
@@ -46,7 +50,12 @@ export function parseRichTextLyricsAndPhonetics(rawOriginal: string, rawPhonetic
     rawSegs.forEach((seg, sIdx) => {
       const matchedPhon = phonSegs[sIdx] ?? phonSegs.find((p) => p.role === seg.role);
       const dir = extractInlineLineDirectives(seg.text);
-      if (!dir.cleanText && !dir.sectionName) return;
+
+      if (dir.sectionName) {
+        currentSectionName = dir.sectionName;
+        currentSectionBpm = dir.sectionBpm;
+      }
+      if (!dir.cleanText) return;
 
       segments.push({
         role: seg.role,
@@ -57,6 +66,8 @@ export function parseRichTextLyricsAndPhonetics(rawOriginal: string, rawPhonetic
         isLinkedMeasure: dir.isLinkedMeasure ?? (sIdx === 0 ? isLineLinked : false),
         isMixedPair: isMixedLine && (sIdx === 0 || sIdx === 1),
         chords: dir.chords,
+        sectionName: currentSectionName,
+        sectionBpm: currentSectionBpm,
       });
     });
   });
@@ -64,14 +75,25 @@ export function parseRichTextLyricsAndPhonetics(rawOriginal: string, rawPhonetic
 }
 
 export function parseToadaDocument(doc: ToadaDocument, boldRole: VocalRole = 'puxador'): ParsedToadaSheetResult {
+  const sourceLyrics = doc.rawTxtCode || (typeof doc.parolesOriginales === 'string' ? doc.parolesOriginales : '');
+  const { meta: hMeta } = extractSheetHeaders(sourceLyrics);
+
   const docMeta: Partial<ToadaDocument> = {
-    id: doc.id, titre: doc.titre, nacao: doc.nacao, rythme: doc.rythme, annee: doc.annee,
-    traduction: doc.traduction, anecdote: doc.anecdote, notesLexique: doc.notesLexique,
-    questionsQcm: doc.questionsQcm, bpmDefaut: doc.bpmDefaut, tonaliteDefaut: doc.tonaliteDefaut,
-    rawTxtCode: doc.rawTxtCode, signature: doc.signature || doc.timeSignature
+    id: doc.id,
+    titre: doc.titre || hMeta.titre,
+    nacao: doc.nacao || hMeta.nacao,
+    rythme: doc.rythme || hMeta.rythme,
+    annee: doc.annee,
+    traduction: doc.traduction,
+    anecdote: doc.anecdote,
+    notesLexique: doc.notesLexique,
+    questionsQcm: doc.questionsQcm,
+    bpmDefaut: doc.bpmDefaut || hMeta.bpmDefaut,
+    tonaliteDefaut: doc.tonaliteDefaut || hMeta.tonaliteDefaut,
+    rawTxtCode: doc.rawTxtCode,
+    signature: doc.signature || doc.timeSignature || hMeta.signature,
   };
 
-  const sourceLyrics = doc.rawTxtCode || (typeof doc.parolesOriginales === 'string' ? doc.parolesOriginales : '');
   const phonStr = typeof doc.parolesPhonetiques === 'string' ? doc.parolesPhonetiques : undefined;
   const segments = parseRichTextLyricsAndPhonetics(sourceLyrics, phonStr, boldRole);
 

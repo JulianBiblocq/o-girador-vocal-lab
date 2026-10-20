@@ -6,6 +6,8 @@ import type { VocalLabTranslations } from './i18n.types';
 import { slicerTranslationsFr } from './slicerTranslationsFr';
 import { toadaSheetTranslationsFr } from './toadaSheetTranslationsFr'; import { treinoSubTranslationsFr } from './treinoSubTranslationsFr'; import { variantTranslationsFr } from './variantTranslationsFr';
 import { tessituraTranslationsFr } from './tessituraTranslationsFr'; import { harmonyTranslationsFr } from './harmonyTranslationsFr';
+import { cloudToadaTranslationsFr } from './cloudToadaTranslationsFr';
+import { lexiconTranslationsFr } from './lexiconTranslationsFr';
 
 export const translationsFr: VocalLabTranslations = {
   // En-tete
@@ -134,13 +136,7 @@ export const translationsFr: VocalLabTranslations = {
   melodynePurgeTooltip: 'Supprime toutes les zones Melodyne pour écouter le son 100% brut du Livret 1 tout en conservant les notes MIDI',
   melodynePurgeToast: 'Son brut du Livret 1 rétabli (zones Melodyne purgées)',
 
-  // Jalon 4.K & L - Gestion Multi-Toadas & Passerelle Cloud
-  anacrusisOption: 'Anacrouse', hasAnacrusisYes: 'Oui', hasAnacrusisNo: 'Non', noAnacrusisBadge: 'Départ Temps 1 (Sans anacrouse)',
-  newToada: 'Nouvelle Toada', newToadaTitle: 'Nouvelle Toada', newToadaConfirm: 'Créer une nouvelle Toada ? La Toada actuelle reste conservée dans "Mes Toadas".',
-  myToadas: 'Mes Toadas', noSavedToadas: 'Aucune Toada enregistrée', deleteToadaConfirm: 'Supprimer définitivement la Toada', deleteToadaTitle: 'Supprimer la Toada',
-  midiBadge: 'MIDI', midiConnectedTitle: 'Contrôleur MIDI connecté : {device}', midiNotConnectedTitle: 'Aucun contrôleur MIDI détecté', roleStudio: 'Studio', roleEleve: 'Élève', rulerClickSeekHint: 'Règle cliquable = Départ lecture',
-  fichesOrganizador: 'Fiches Organizador', sendToSequencer: 'Envoyer vers Sequenciador', sendToSequencerTooltip: 'Téléverser les enregistrements et publier la Toada pour Sequenciador',
-  openInSequencer: 'Ouvrir dans Sequenciador', toadaPublishedSuccess: 'Toada publiée dans le Cloud avec succès !', toadaPublishing: 'Publication de la Toada...', toadaImportTxt: 'Importer un fichier .txt',
-  organizadorSearchPlaceholder: 'Rechercher une fiche ou toada...', noOrganizadorToadas: 'Aucune fiche trouvée', authLogin: 'Connexion', authLoginTooltip: 'Se connecter avec Google / SSO Organizador', authLogout: 'Déconnexion', authLoginRequiredNotice: 'Connexion requise pour accéder aux fiches de votre troupe.',
+  ...cloudToadaTranslationsFr,
+  ...lexiconTranslationsFr,
   ...slicerTranslationsFr, ...toadaSheetTranslationsFr, ...treinoSubTranslationsFr, ...variantTranslationsFr, ...tessituraTranslationsFr, ...harmonyTranslationsFr,
 };

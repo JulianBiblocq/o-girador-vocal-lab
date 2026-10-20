@@ -9,6 +9,7 @@ import app, { auth, db } from '../firebase/config';
 import type { ToadaDocument } from '../types/toadaDocument.types';
 import type { ToadaProject } from '../types/toadaProject.types';
 import { isVaralSong, normalizeToadaDoc, mergeAndDeduplicateToadas } from '../utils/varalSongFilter';
+import { mergeWithLocalSamambaiaToadas, resolveLocalSamambaiaToada } from '../utils/samambaiaToadaResolver';
 
 export type { ToadaDocument };
 export const storage = getStorage(app);
@@ -72,13 +73,17 @@ export async function fetchOrganizadorToadas(groupId?: string | null): Promise<T
       repSnap.forEach((d) => repertoireDocs.push({ id: d.id, data: d.data() }));
     } catch {}
   }
-  return mergeAndDeduplicateToadas(primaryDocs, repertoireDocs);
+  return mergeWithLocalSamambaiaToadas(mergeAndDeduplicateToadas(primaryDocs, repertoireDocs));
 }
 
 export async function fetchOrganizadorToadaById(songId: string, groupId?: string | null): Promise<ToadaDocument | null> {
+  const local = resolveLocalSamambaiaToada(songId);
   try {
     const docSnap = await getDoc(doc(db, 'documents', songId));
-    if (docSnap.exists() && isVaralSong(docSnap.data())) return normalizeToadaDoc(docSnap.id, docSnap.data());
+    if (docSnap.exists() && isVaralSong(docSnap.data())) {
+      const norm = normalizeToadaDoc(docSnap.id, docSnap.data());
+      return local ? { ...norm, ...local, id: norm.id } : norm;
+    }
   } catch {}
 
   const groupCandidates = Array.from(new Set([groupId, groupId?.toLowerCase(), 'Samambaia', 'samambaia'].filter(Boolean) as string[]));
@@ -95,11 +100,14 @@ export async function fetchOrganizadorToadaById(songId: string, groupId?: string
             return linked;
           }
         }
-        if (isVaralSong(pData)) return normalizeToadaDoc(pSnap.id, pData, pSnap.id);
+        if (isVaralSong(pData)) {
+          const norm = normalizeToadaDoc(pSnap.id, pData, pSnap.id);
+          return local ? { ...norm, ...local, id: norm.id } : norm;
+        }
       }
     } catch {}
   }
-  return null;
+  return local || null;
 }
 
 export async function fetchToadaPackById(toadaId: string): Promise<ToadaProject | null> {

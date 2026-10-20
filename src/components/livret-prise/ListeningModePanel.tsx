@@ -53,13 +53,13 @@ export const ListeningModePanel: React.FC<ListeningModePanelProps> = ({
         <div className="grid grid-cols-2 gap-2">
           <button
             type="button" disabled={disabled} onClick={() => onListeningModeChange('headphones')}
-            className={`p-2 flex flex-col items-center justify-center gap-1 text-xs font-bold cursor-pointer ${listeningMode === 'headphones' ? 'cordel-btn-primary text-[#f4ecd8]' : 'cordel-btn opacity-70'}`}
+            className={`p-2 flex flex-col items-center justify-center gap-1 text-xs font-bold cursor-pointer rounded ${listeningMode === 'headphones' ? 'cordel-btn-primary text-[var(--cordel-on-primary)]' : 'cordel-btn opacity-70'}`}
           >
             <div className="flex items-center gap-1.5"><Headphones className="w-4 h-4 text-current" /><span>{t('modeHeadphones')}</span></div>
           </button>
           <button
             type="button" disabled={disabled} onClick={() => onListeningModeChange('speakers')}
-            className={`p-2 flex flex-col items-center justify-center gap-1 text-xs font-bold cursor-pointer ${listeningMode === 'speakers' ? 'cordel-btn-primary text-[#f4ecd8]' : 'cordel-btn opacity-70'}`}
+            className={`p-2 flex flex-col items-center justify-center gap-1 text-xs font-bold cursor-pointer rounded ${listeningMode === 'speakers' ? 'cordel-btn-primary text-[var(--cordel-on-primary)]' : 'cordel-btn opacity-70'}`}
           >
             <div className="flex items-center gap-1.5"><VolumeX className="w-4 h-4 text-current" /><span>{t('modeVisual')}</span></div>
           </button>
@@ -67,7 +67,7 @@ export const ListeningModePanel: React.FC<ListeningModePanelProps> = ({
       </div>
 
       {listeningMode === 'headphones' && (
-        <div className="flex flex-col gap-1 p-2 bg-black/40 border border-theme-border/30">
+        <div className="flex flex-col gap-1 p-2 bg-[var(--cordel-subcard-bg)] border border-[var(--cordel-border-sub)] rounded">
           <div className="flex items-center justify-between text-xs font-mono">
             <span className="flex items-center gap-1.5 font-bold uppercase text-[11px] text-theme-ink">
               <Sliders className="w-3 h-3 text-theme-accent" /><span>{t('clickVolumeLabel')}</span>
@@ -84,7 +84,7 @@ export const ListeningModePanel: React.FC<ListeningModePanelProps> = ({
       )}
 
       {/* Double Sélecteur : Note + Octave avec rappel du Scope */}
-      <div className="flex flex-col gap-1.5 pt-1 border-t border-theme-border/20">
+      <div className="flex flex-col gap-1.5 pt-1 border-t border-[var(--cordel-border-sub)]">
         <div className="text-xs font-bold uppercase text-theme-ink flex items-center justify-between">
           <span className="flex items-center gap-1.5">
             <Volume2 className="w-3.5 h-3.5 text-theme-accent" />
@@ -95,16 +95,16 @@ export const ListeningModePanel: React.FC<ListeningModePanelProps> = ({
         <div className="flex items-center gap-2">
           <select
             value={currentNote} onChange={(e) => onReferencePitchChange(`${e.target.value}${currentOctave}`)} disabled={disabled}
-            className="flex-1 bg-black/30 border-2 border-theme-border text-theme-ink text-xs p-1.5 font-mono font-bold focus:outline-none focus:border-theme-accent"
+            className="flex-1 bg-[var(--cordel-subcard-bg)] border border-[var(--cordel-border-sub)] text-theme-ink text-xs p-1.5 font-mono font-bold focus:outline-none focus:border-theme-accent rounded"
           >
-            {NOTE_KEYS.map((n) => <option key={n.c} value={n.c} className="bg-theme-bg text-theme-ink">{t(n.k)}</option>)}
+            {NOTE_KEYS.map((n) => <option key={n.c} value={n.c} className="bg-[var(--cordel-surface)] text-theme-ink">{t(n.k)}</option>)}
           </select>
           <select
             value={currentOctave} onChange={(e) => onReferencePitchChange(`${currentNote}${e.target.value}`)} disabled={disabled}
-            className="w-20 bg-black/30 border-2 border-theme-border text-theme-ink text-xs p-1.5 font-mono font-bold focus:outline-none focus:border-theme-accent"
+            className="w-20 bg-[var(--cordel-subcard-bg)] border border-[var(--cordel-border-sub)] text-theme-ink text-xs p-1.5 font-mono font-bold focus:outline-none focus:border-theme-accent rounded"
           >
             {['2', '3', '4', '5', '6'].map((oct) => (
-              <option key={oct} value={oct} className="bg-theme-bg text-theme-ink">
+              <option key={oct} value={oct} className="bg-[var(--cordel-surface)] text-theme-ink">
                 {t('octaveShort', { oct })}
               </option>
             ))}

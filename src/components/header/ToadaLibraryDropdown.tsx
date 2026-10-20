@@ -77,7 +77,7 @@ export const ToadaLibraryDropdown: React.FC<Props> = ({ onOpenOrganizador, group
       <button
         type="button"
         onClick={() => { setIsOpen((prev) => { if (!prev) refreshList(); return !prev; }); }}
-        className="h-9 px-2.5 cordel-card-sm text-xs font-mono font-bold flex items-center gap-1.5 bg-black/40 hover:bg-black/60 text-theme-ink transition-colors cursor-pointer max-w-[200px]"
+        className="h-9 px-2.5 cordel-card-sm text-xs font-mono font-bold flex items-center gap-1.5 hover:opacity-90 text-theme-ink transition-colors cursor-pointer max-w-[200px]"
         title={project.title}
       >
         <FolderKanban className="w-3.5 h-3.5 text-[var(--cordel-accent-text)] shrink-0" />
@@ -86,19 +86,19 @@ export const ToadaLibraryDropdown: React.FC<Props> = ({ onOpenOrganizador, group
       </button>
 
       {isOpen && (
-        <div className="absolute top-10 left-0 sm:left-auto sm:right-0 z-[100] w-64 cordel-card p-1.5 bg-[var(--cordel-bg)] text-[var(--cordel-text)] border-2 border-[var(--cordel-border)] shadow-[4px_4px_0px_#000] flex flex-col gap-1 text-xs font-mono max-h-80 overflow-y-auto cordel-scrollbar">
+        <div className="absolute top-10 left-0 sm:left-auto sm:right-0 z-[100] w-64 cordel-card p-1.5 bg-[var(--cordel-surface)] text-[var(--cordel-text)] border border-[var(--cordel-border-panel)] shadow-lg flex flex-col gap-1 text-xs font-mono max-h-80 overflow-y-auto cordel-scrollbar rounded">
           {viewRoleMode !== 'eleve' && (
-            <div className="flex flex-col gap-1 pb-1.5 border-b border-[var(--cordel-border)]/20">
+            <div className="flex flex-col gap-1 pb-1.5 border-b border-[var(--cordel-border-sub)]">
               <button
                 type="button" onClick={handleNewToada}
-                className="w-full p-1.5 text-left flex items-center gap-2 hover:bg-[var(--cordel-surface)] transition-colors cursor-pointer"
+                className="w-full p-1.5 text-left flex items-center gap-2 hover:bg-[var(--cordel-subcard-bg)] rounded transition-colors cursor-pointer"
               >
                 <Plus className="w-3.5 h-3.5 text-theme-accent" />
                 <span className="font-bold">{t('newToada')}</span>
               </button>
               <button
                 type="button" onClick={() => { setIsOpen(false); onOpenOrganizador(); }}
-                className="w-full p-1.5 text-left flex items-center gap-2 hover:bg-[var(--cordel-surface)] transition-colors cursor-pointer"
+                className="w-full p-1.5 text-left flex items-center gap-2 hover:bg-[var(--cordel-subcard-bg)] rounded transition-colors cursor-pointer"
               >
                 <Scroll className="w-3.5 h-3.5 text-[var(--cordel-accent-text)]" />
                 <span className="font-bold">Toadas {groupLabel}</span>
@@ -116,10 +116,10 @@ export const ToadaLibraryDropdown: React.FC<Props> = ({ onOpenOrganizador, group
               <div
                 key={item.id}
                 onClick={() => handleSelectToada(item.id)}
-                className={`p-1.5 flex items-center justify-between gap-1.5 cursor-pointer transition-colors ${
+                className={`p-1.5 flex items-center justify-between gap-1.5 cursor-pointer transition-colors rounded ${
                   item.id === project.id
-                    ? 'bg-[var(--cordel-surface)] font-bold border-2 border-[var(--cordel-accent-text)] text-[var(--cordel-text)]'
-                    : 'bg-[var(--cordel-bg)] hover:bg-[var(--cordel-surface)] border border-[var(--cordel-border)]/20 text-[var(--cordel-text)]'
+                    ? 'bg-[var(--cordel-subcard-bg)] font-bold border border-[var(--cordel-accent)] text-[var(--cordel-text)]'
+                    : 'bg-[var(--cordel-surface)] hover:bg-[var(--cordel-subcard-bg)] border border-[var(--cordel-border-sub)] text-[var(--cordel-text)]'
                 }`}
               >
                 <div className="flex flex-col min-w-0 flex-1">

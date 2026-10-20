@@ -39,11 +39,11 @@ body {
    PAPIER PEINT EN FOND DE PAGE (CORDEL MARACATU — ISOLATION GPU STRICTE)
    ========================================================================== */
 :root {
-  --wallpaper-opacity: 0.16;
+  --wallpaper-opacity: 0.03;
 }
 
 [data-theme='light'] {
-  --wallpaper-opacity: 0.12;
+  --wallpaper-opacity: 0.07;
 }
 
 .wallpaper-surface-bg {

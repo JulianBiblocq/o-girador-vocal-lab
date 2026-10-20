@@ -20,11 +20,11 @@ export const MetricScopeSelector: React.FC<MetricScopeSelectorProps> = ({
   const { t } = useLanguage();
 
   return (
-    <div className="flex items-center justify-between gap-1 p-1 bg-black/40 border border-theme-border/30 text-[10.5px] font-mono">
+    <div className="flex items-center justify-between gap-1 p-1 bg-[var(--cordel-subcard-bg)] border border-[var(--cordel-border-sub)] rounded text-[10.5px] font-mono">
       <button
         type="button" disabled={disabled} onClick={() => onApplyScopeChange('all')}
-        className={`flex-1 py-1 px-1.5 flex items-center justify-center gap-1 font-bold transition-all cursor-pointer rounded-none ${
-          applyScope === 'all' ? 'cordel-btn-primary !text-[#f4ecd8]' : 'hover:bg-white/5 text-[var(--cordel-text)]/70'
+        className={`flex-1 py-1 px-1.5 flex items-center justify-center gap-1 font-bold transition-all cursor-pointer rounded ${
+          applyScope === 'all' ? 'cordel-btn-primary !text-[var(--cordel-on-primary)]' : 'hover:bg-white/5 text-[var(--cordel-text)]/70'
         }`}
         title={t('scopeAll')}
       >
@@ -34,8 +34,8 @@ export const MetricScopeSelector: React.FC<MetricScopeSelectorProps> = ({
 
       <button
         type="button" disabled={disabled} onClick={() => onApplyScopeChange('active')}
-        className={`flex-1 py-1 px-1.5 flex items-center justify-center gap-1 font-bold transition-all cursor-pointer rounded-none ${
-          applyScope === 'active' ? 'cordel-btn-primary !text-[#f4ecd8]' : 'hover:bg-white/5 text-[var(--cordel-text)]/70'
+        className={`flex-1 py-1 px-1.5 flex items-center justify-center gap-1 font-bold transition-all cursor-pointer rounded ${
+          applyScope === 'active' ? 'cordel-btn-primary !text-[var(--cordel-on-primary)]' : 'hover:bg-white/5 text-[var(--cordel-text)]/70'
         }`}
         title={t('scopeActive')}
       >
@@ -45,8 +45,8 @@ export const MetricScopeSelector: React.FC<MetricScopeSelectorProps> = ({
 
       <button
         type="button" disabled={disabled} onClick={() => onApplyScopeChange('selected')}
-        className={`flex-1 py-1 px-1.5 flex items-center justify-center gap-1 font-bold transition-all cursor-pointer rounded-none ${
-          applyScope === 'selected' ? 'cordel-btn-primary !text-[#f4ecd8]' : 'hover:bg-white/5 text-[var(--cordel-text)]/70'
+        className={`flex-1 py-1 px-1.5 flex items-center justify-center gap-1 font-bold transition-all cursor-pointer rounded ${
+          applyScope === 'selected' ? 'cordel-btn-primary !text-[var(--cordel-on-primary)]' : 'hover:bg-white/5 text-[var(--cordel-text)]/70'
         }`}
         title={t('scopeSelected', { n: selectedCount })}
       >

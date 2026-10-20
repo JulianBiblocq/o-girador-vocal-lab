@@ -52,23 +52,23 @@ export const PatternLibraryBar: React.FC = () => {
   return (
     <div className="cordel-card p-2 w-full h-full flex flex-col justify-between select-none">
       {/* Barre d'outils bibliothèque avec sélection et inversion */}
-      <div className="flex items-center justify-between pb-1.5 mb-1.5 border-b border-[var(--cordel-border)]">
-        <span className="text-[10px] font-mono font-bold tracking-wider uppercase text-[var(--cordel-text)]/80">
+      <div className="flex items-center justify-between pb-1.5 mb-1.5 border-b border-[var(--cordel-border-sub)]">
+        <span className="text-[10px] font-mono font-bold tracking-wider uppercase text-[var(--cordel-secondary-text)]">
           {t('patternLibraryTitle')}
         </span>
         <div className="flex items-center gap-1.5">
           <button
             type="button" onClick={() => selectAllPatterns(!allSelected)}
             title={allSelected ? t('deselectAll') : t('selectAll')}
-            className={`px-1.5 py-0.5 text-[9px] font-bold font-mono border cursor-pointer rounded-none ${
-              selectedPatternIds.length > 0 ? 'bg-amber-500/20 text-amber-300 border-amber-500/50' : 'cordel-btn-secondary text-[var(--cordel-text)]/70'
+            className={`px-1.5 py-0.5 text-[9px] font-bold font-mono border cursor-pointer rounded ${
+              selectedPatternIds.length > 0 ? 'bg-amber-500/20 text-amber-300 border-amber-500/50' : 'cordel-card-sm text-[var(--cordel-text)]/70'
             }`}
           >
             {allSelected ? t('deselectAll') : selectedPatternIds.length > 0 ? `${t('selectAll')} (${selectedPatternIds.length})` : t('selectAll')}
           </button>
           <button
             type="button" onClick={swapAllRoles} title={t('swapRolesTooltip')}
-            className="cordel-btn-secondary px-2 py-0.5 text-[9.5px] font-bold font-mono flex items-center gap-1 cursor-pointer"
+            className="cordel-card-sm px-2 py-0.5 text-[9.5px] font-bold font-mono flex items-center gap-1 cursor-pointer rounded"
           >
             <ArrowLeftRight className="w-3 h-3 text-amber-500" />
             <span>{t('swapPuxadorCoroBtn')}</span>
@@ -79,13 +79,13 @@ export const PatternLibraryBar: React.FC = () => {
       <div className="grid grid-cols-2 gap-3 h-full">
         {/* Colonne Gauche : Puxador */}
         <div className="flex flex-col gap-1.5 min-w-0">
-          <div className="flex items-center justify-between pb-1 border-b border-[var(--cordel-border)]">
-            <span className="px-1.5 py-0.5 text-[9px] font-black tracking-wider uppercase bg-role-puxador text-[#f4ecd8]">
+          <div className="flex items-center justify-between pb-1 border-b border-[var(--cordel-border-sub)]">
+            <span className="px-1.5 py-0.5 text-[9px] font-black tracking-wider uppercase bg-role-puxador text-[var(--cordel-text)] rounded">
               {t('rolePuxador')}
             </span>
             <button
               type="button" onClick={() => addPattern('puxador')} title={`+ ${t('rolePuxador')}`}
-              className="px-2 py-0.5 text-xs font-bold font-mono bg-[#9a3412] hover:bg-[#7c2d12] text-[#f4ecd8] rounded-none flex items-center justify-center cursor-pointer"
+              className="px-2 py-0.5 text-xs font-bold font-mono bg-[#9a3412] hover:bg-[#7c2d12] text-[var(--cordel-text)] rounded flex items-center justify-center cursor-pointer"
             >
               +
             </button>
@@ -97,13 +97,13 @@ export const PatternLibraryBar: React.FC = () => {
 
         {/* Colonne Droite : Coro */}
         <div className="flex flex-col gap-1.5 min-w-0">
-          <div className="flex items-center justify-between pb-1 border-b border-[var(--cordel-border)]">
-            <span className="px-1.5 py-0.5 text-[9px] font-black tracking-wider uppercase bg-role-coro text-[#f4ecd8]">
+          <div className="flex items-center justify-between pb-1 border-b border-[var(--cordel-border-sub)]">
+            <span className="px-1.5 py-0.5 text-[9px] font-black tracking-wider uppercase bg-role-coro text-[var(--cordel-text)] rounded">
               {t('roleCoro')}
             </span>
             <button
               type="button" onClick={() => addPattern('coro')} title={`+ ${t('roleCoro')}`}
-              className="px-2 py-0.5 text-xs font-bold font-mono bg-[#0f766e] hover:bg-[#115e59] text-[#f4ecd8] rounded-none flex items-center justify-center cursor-pointer"
+              className="px-2 py-0.5 text-xs font-bold font-mono bg-[#0f766e] hover:bg-[#115e59] text-[var(--cordel-text)] rounded flex items-center justify-center cursor-pointer"
             >
               +
             </button>

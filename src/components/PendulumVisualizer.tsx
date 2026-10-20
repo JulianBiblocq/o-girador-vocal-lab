@@ -9,25 +9,21 @@ interface PendulumVisualizerProps {
   isActive: boolean;
   measuresCount: number;
   beatsPerMeasure?: number;
+  children?: React.ReactNode;
 }
 
 export const PendulumVisualizer: React.FC<PendulumVisualizerProps> = ({
-  engine, isActive, measuresCount, beatsPerMeasure = 4,
+  engine, isActive, measuresCount, beatsPerMeasure = 4, children,
 }) => {
   const { t } = useLanguage();
   const tRef = useRef(t);
   useEffect(() => { tRef.current = t; }, [t]);
 
-  const cardRef = useRef<HTMLDivElement>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const shuttleRef = useRef<HTMLDivElement>(null);
-  const phaseLabelRef = useRef<HTMLSpanElement>(null);
-  const leftBumperRef = useRef<HTMLSpanElement>(null);
-  const rightBumperRef = useRef<HTMLSpanElement>(null);
-  const progressBarRef = useRef<HTMLDivElement>(null);
-  const recBadgeRef = useRef<HTMLSpanElement>(null);
-  const padRefs = useRef<(HTMLSpanElement | null)[]>([]);
-  const railWidthRef = useRef<number>(500);
+  const cardRef = useRef<HTMLDivElement>(null), containerRef = useRef<HTMLDivElement>(null);
+  const shuttleRef = useRef<HTMLDivElement>(null), phaseLabelRef = useRef<HTMLSpanElement>(null);
+  const leftBumperRef = useRef<HTMLSpanElement>(null), rightBumperRef = useRef<HTMLSpanElement>(null);
+  const progressBarRef = useRef<HTMLDivElement>(null), recBadgeRef = useRef<HTMLSpanElement>(null);
+  const padRefs = useRef<(HTMLSpanElement | null)[]>([]), railWidthRef = useRef<number>(500);
 
   useEffect(() => {
     const el = containerRef.current;
@@ -39,10 +35,7 @@ export const PendulumVisualizer: React.FC<PendulumVisualizerProps> = ({
 
   const resetIdle = (label: HTMLSpanElement | null, badge: HTMLSpanElement | null) => {
     if (label) label.textContent = tRef.current('pendulumIdleTitle');
-    if (badge) {
-      badge.textContent = tRef.current('pendulumStatusIdle');
-      badge.style.color = 'var(--cordel-secondary-text, #57534e)';
-    }
+    if (badge) { badge.textContent = tRef.current('pendulumStatusIdle'); badge.style.color = 'var(--cordel-secondary-text)'; }
   };
 
   useEffect(() => {
@@ -123,21 +116,27 @@ export const PendulumVisualizer: React.FC<PendulumVisualizerProps> = ({
   }, [engine, isActive, measuresCount]);
 
   return (
-    <div ref={cardRef} className="w-full cordel-card p-3 flex flex-col gap-2.5 select-none transition-colors duration-150">
+    <div ref={cardRef} className="w-full cordel-card p-3 sm:p-3.5 flex flex-col gap-2.5 select-none transition-colors duration-150">
       <div className="flex items-center justify-between text-xs font-mono tracking-wider">
-        <span ref={leftBumperRef} className="px-2 py-0.5 bg-[var(--cordel-bg)] text-[var(--cordel-text)] border border-[var(--cordel-border)] font-bold opacity-90 transition-all duration-75" />
+        <span ref={leftBumperRef} className="px-2 py-0.5 bg-[var(--cordel-subcard-bg)] text-[var(--cordel-text)] border border-[var(--cordel-border-sub)] font-bold opacity-90 transition-all duration-75 rounded" />
         <span ref={phaseLabelRef} className="font-bold text-center text-sm tracking-wide text-theme-ink uppercase min-h-[20px]" />
-        <span ref={rightBumperRef} className="px-2 py-0.5 bg-[var(--cordel-bg)] text-[var(--cordel-text)] border border-[var(--cordel-border)] font-bold opacity-90 transition-all duration-75" />
+        <span ref={rightBumperRef} className="px-2 py-0.5 bg-[var(--cordel-subcard-bg)] text-[var(--cordel-text)] border border-[var(--cordel-border-sub)] font-bold opacity-90 transition-all duration-75 rounded" />
       </div>
 
-      <div ref={containerRef} className="w-full h-11 bg-black/40 border-2 border-theme-border relative flex items-center px-1 overflow-hidden rounded-sm">
+      <div ref={containerRef} className="w-full h-11 bg-black/40 border border-[var(--cordel-border-sub)] relative flex items-center px-1 overflow-hidden rounded">
         <div className="absolute left-1/2 top-0 bottom-0 w-0.5 bg-theme-border/20 -translate-x-1/2 pointer-events-none" />
-        <div ref={shuttleRef} style={{ willChange: 'transform' }} className="w-9 h-8 cordel-card-sm flex items-center justify-center font-bold text-xs bg-theme-wood text-[#f4ecd8] shadow-md cursor-default pointer-events-none">
+        <div ref={shuttleRef} style={{ willChange: 'transform' }} className="w-9 h-8 cordel-card-sm flex items-center justify-center font-bold text-xs bg-theme-wood text-[#efe6d2] shadow-md cursor-default pointer-events-none rounded">
           ▲
         </div>
       </div>
 
       <BeatImpactBar beatsPerMeasure={beatsPerMeasure} progressBarRef={progressBarRef} padRefs={padRefs} recBadgeRef={recBadgeRef} />
+
+      {children && (
+        <div className="pt-2 border-t border-[var(--cordel-border-sub)] flex flex-col gap-2.5">
+          {children}
+        </div>
+      )}
     </div>
   );
 };

@@ -31,7 +31,7 @@ export const RecordActionButton: React.FC<RecordActionButtonProps> = ({
           </>
         ) : (
           <>
-            <Mic className="w-5 h-5 text-[#f4ecd8] fill-current animate-pulse" />
+            <Mic className="w-5 h-5 text-[var(--cordel-on-primary)] fill-current animate-pulse" />
             <span>{t('btnStartRecording', { measures: measuresCount })}</span>
           </>
         )}

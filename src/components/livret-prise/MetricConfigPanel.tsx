@@ -61,13 +61,13 @@ export const MetricConfigPanel: React.FC<MetricConfigPanelProps> = ({
       </div>
 
       {/* 2. Tempo & Mesures de chant */}
-      <div className="grid grid-cols-2 gap-3 pt-1 border-t border-theme-border/20">
+      <div className="grid grid-cols-2 gap-3 pt-1 border-t border-[var(--cordel-border-sub)]">
         <div className="flex flex-col gap-1">
           <div className="flex items-center justify-between text-xs font-bold uppercase text-theme-ink">
             <span className="flex items-center gap-1.5"><Clock className="w-3.5 h-3.5 text-theme-accent" />BPM</span>
             <NumericDraftInput
               min={30} max={240} value={bpm} disabled={disabled} onChange={onBpmChange}
-              className="w-14 bg-black/30 border border-theme-border text-center font-mono font-bold text-xs p-1 focus:outline-none focus:border-theme-accent"
+              className="w-14 bg-[var(--cordel-subcard-bg)] border border-[var(--cordel-border-sub)] text-center font-mono font-bold text-xs p-1 focus:outline-none focus:border-theme-accent rounded"
             />
           </div>
           <input
@@ -96,7 +96,7 @@ export const MetricConfigPanel: React.FC<MetricConfigPanelProps> = ({
       </div>
 
       {/* 3. Subdivisions par temps */}
-      <div className="flex flex-col gap-1 pt-1 border-t border-theme-border/20">
+      <div className="flex flex-col gap-1 pt-1 border-t border-[var(--cordel-border-sub)]">
         <div className="flex items-center justify-between text-xs font-bold uppercase text-theme-ink">
           <span className="flex items-center gap-1.5"><Grid className="w-3.5 h-3.5 text-theme-accent" />{t('subdivisions')}</span>
           <span className="text-[10px] font-normal opacity-70">Bin / Tri</span>
@@ -115,7 +115,7 @@ export const MetricConfigPanel: React.FC<MetricConfigPanelProps> = ({
       </div>
 
       {/* 4. Option Anacrouse (M-1) */}
-      <div className="flex items-center justify-between text-xs font-bold uppercase text-theme-ink pt-1 border-t border-theme-border/20">
+      <div className="flex items-center justify-between text-xs font-bold uppercase text-theme-ink pt-1 border-t border-[var(--cordel-border-sub)]">
         <span className="flex items-center gap-1.5"><Clock className="w-3.5 h-3.5 text-theme-accent" />{t('anacrusisOption')} (M-1)</span>
         <div className="inline-flex cordel-card-sm p-0.5 text-xs font-mono">
           <button

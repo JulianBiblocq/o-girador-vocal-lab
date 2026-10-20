@@ -46,13 +46,13 @@ export const PatternLyricsBanner: React.FC = () => {
   };
 
   return (
-    <div className="cordel-card p-2 sm:p-2.5 bg-black/50 border border-[var(--cordel-border)] flex flex-col gap-1.5 rounded-none">
+    <div className="cordel-card p-2 sm:p-2.5 flex flex-col gap-1.5 rounded">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-1.5 min-w-0">
-          <span className={`px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider rounded-none ${isPuxador ? 'bg-role-puxador text-[#f4ecd8]' : 'bg-role-coro text-[#f4ecd8]'}`}>
+          <span className={`px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider rounded ${isPuxador ? 'bg-role-puxador text-[var(--cordel-text)]' : 'bg-role-coro text-[var(--cordel-text)]'}`}>
             {isPuxador ? t('rolePuxador') : t('roleCoro')}
           </span>
-          <span className="text-[11px] font-mono font-bold text-stone-300 truncate">
+          <span className="text-[11px] font-mono font-bold text-[var(--cordel-secondary-text)] truncate">
             {activePattern.name}
           </span>
         </div>
@@ -63,11 +63,11 @@ export const PatternLyricsBanner: React.FC = () => {
           <select
             value={activePattern.assignedLyricsText || ''}
             onChange={(e) => handleSelectPhrase(e.target.value)}
-            className="px-2 py-1 bg-black/60 border border-[var(--cordel-border)] text-xs font-mono text-stone-300 focus:outline-none rounded-none max-w-full sm:max-w-[200px]"
+            className="px-2 py-1 bg-[var(--cordel-subcard-bg)] border border-[var(--cordel-border-sub)] text-xs font-mono text-[var(--cordel-text)] focus:outline-none focus:border-amber-400 rounded max-w-full sm:max-w-[200px]"
           >
             <option value="">{t('patternPhraseCustom')}</option>
             {availablePhrases.map((phrase, i) => (
-              <option key={i} value={phrase}>{phrase}</option>
+              <option key={i} value={phrase} className="bg-[var(--cordel-surface)] text-[var(--cordel-text)]">{phrase}</option>
             ))}
           </select>
         )}
@@ -76,14 +76,14 @@ export const PatternLyricsBanner: React.FC = () => {
           value={activePattern.assignedLyricsText || ''}
           onChange={(e) => updatePattern(activePattern.id, { assignedLyricsText: e.target.value })}
           placeholder="Ex: Opanijé, meu pai, Opanijé..."
-          className="flex-1 px-2.5 py-1 bg-black/60 border border-[var(--cordel-border)] text-xs font-mono text-stone-200 focus:outline-none focus:border-amber-400 rounded-none"
+          className="flex-1 px-2.5 py-1 bg-[var(--cordel-subcard-bg)] border border-[var(--cordel-border-sub)] text-xs font-mono text-[var(--cordel-text)] placeholder:text-[var(--cordel-secondary-text)]/50 focus:outline-none focus:border-amber-400 rounded"
         />
         {activePattern.mainSteps?.length > 0 && activePattern.assignedLyricsText && (
           <button
             type="button"
             onClick={handleRealignSyllables}
             title={t('realignSyllablesBtn')}
-            className="px-2 py-1 cordel-card-sm text-[10px] font-mono font-bold flex items-center gap-1 bg-stone-800 hover:bg-stone-700 text-amber-300 cursor-pointer"
+            className="px-2.5 py-1 cordel-card-sm text-[10px] font-mono font-bold flex items-center gap-1 hover:bg-white/10 text-amber-300 cursor-pointer rounded"
           >
             <Sparkles className="w-3 h-3" />
             <span className="hidden sm:inline">{t('realignSyllablesBtn')}</span>

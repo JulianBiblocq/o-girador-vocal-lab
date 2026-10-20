@@ -24,7 +24,7 @@ export const VariantPitchTierStepper: React.FC<VariantPitchTierStepperProps> = (
   const handleInc = () => { if (!disabled && value < max) onChange(value + 1); };
 
   return (
-    <div className="flex items-center gap-1 bg-[var(--cordel-surface)] border border-[var(--cordel-border)] px-1.5 py-0.5 text-[10px]">
+    <div className="flex items-center gap-1 bg-[var(--cordel-subcard-bg)] border border-[var(--cordel-border-sub)] rounded px-1.5 py-0.5 text-[10px]">
       <span className="font-bold text-[var(--cordel-accent-text)]">{label}</span>
       <button
         type="button" disabled={disabled || value <= min} onClick={handleDec}

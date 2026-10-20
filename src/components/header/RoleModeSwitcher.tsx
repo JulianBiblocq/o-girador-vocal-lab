@@ -20,9 +20,9 @@ export const RoleModeSwitcher: React.FC = () => {
       <button
         type="button"
         onClick={() => setViewRoleMode('studio')}
-        className={`h-full px-2.5 font-bold transition-all flex items-center gap-1 cursor-pointer ${
+        className={`h-full px-2.5 font-bold transition-all flex items-center gap-1 cursor-pointer rounded ${
           viewRoleMode === 'studio'
-            ? 'bg-theme-wood text-[#f4ecd8] font-black shadow-sm'
+            ? 'bg-theme-wood text-[var(--cordel-on-primary)] font-black shadow-sm'
             : 'opacity-60 hover:opacity-100 text-theme-ink'
         }`}
         title={t('roleStudio')}
@@ -33,9 +33,9 @@ export const RoleModeSwitcher: React.FC = () => {
       <button
         type="button"
         onClick={() => setViewRoleMode('eleve')}
-        className={`h-full px-2.5 font-bold transition-all flex items-center gap-1 cursor-pointer ${
+        className={`h-full px-2.5 font-bold transition-all flex items-center gap-1 cursor-pointer rounded ${
           viewRoleMode === 'eleve'
-            ? 'bg-theme-wood text-[#f4ecd8] font-black shadow-sm'
+            ? 'bg-theme-wood text-[var(--cordel-on-primary)] font-black shadow-sm'
             : 'opacity-60 hover:opacity-100 text-theme-ink'
         }`}
         title={t('roleEleve')}

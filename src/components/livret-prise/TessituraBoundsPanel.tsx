@@ -61,7 +61,7 @@ export const TessituraBoundsPanel: React.FC<TessituraBoundsPanelProps> = ({
 
   return (
     <div className="cordel-card p-2.5 sm:p-3 flex flex-col gap-2 font-mono text-xs select-none">
-      <div className="flex items-center justify-between border-b border-theme-border/30 pb-1.5">
+      <div className="flex items-center justify-between border-b border-[var(--cordel-border-sub)] pb-1.5">
         <div className="flex items-center gap-1.5 font-bold tracking-tight text-[var(--cordel-text)]">
           <Sliders className="w-3.5 h-3.5 text-[#9a3412]" />
           <span>{t('tessituraTitle')}</span>
@@ -90,8 +90,8 @@ export const TessituraBoundsPanel: React.FC<TessituraBoundsPanelProps> = ({
               type="button"
               disabled={disabled}
               onClick={() => handleSelectPreset(id)}
-              className={`py-1 px-1.5 text-[11px] font-bold truncate transition-all cursor-pointer ${
-                isActive ? 'cordel-btn-primary !text-[#f4ecd8]' : 'cordel-card-sm hover:bg-white/5 opacity-75'
+              className={`py-1 px-1.5 text-[11px] font-bold truncate transition-all cursor-pointer rounded ${
+                isActive ? 'cordel-btn-primary !text-[var(--cordel-on-primary)]' : 'cordel-card-sm hover:bg-white/5 opacity-75'
               }`}
             >
               {t(labelKey)}
@@ -108,10 +108,10 @@ export const TessituraBoundsPanel: React.FC<TessituraBoundsPanelProps> = ({
             value={tessitura.minPitchMidi}
             onChange={handleMinChange}
             disabled={disabled}
-            className="cordel-card-sm px-1.5 py-0.5 bg-black/40 font-bold text-theme-ink cursor-pointer"
+            className="cordel-card-sm px-1.5 py-0.5 font-bold text-theme-ink cursor-pointer"
           >
             {noteOptions.map((opt) => (
-              <option key={opt.midi} value={opt.midi}>{opt.label}</option>
+              <option key={opt.midi} value={opt.midi} className="bg-[var(--cordel-surface)] text-theme-ink">{opt.label}</option>
             ))}
           </select>
           <span className="text-[10px] opacity-60">({minHz} Hz)</span>
@@ -123,10 +123,10 @@ export const TessituraBoundsPanel: React.FC<TessituraBoundsPanelProps> = ({
             value={tessitura.maxPitchMidi}
             onChange={handleMaxChange}
             disabled={disabled}
-            className="cordel-card-sm px-1.5 py-0.5 bg-black/40 font-bold text-theme-ink cursor-pointer"
+            className="cordel-card-sm px-1.5 py-0.5 font-bold text-theme-ink cursor-pointer"
           >
             {noteOptions.map((opt) => (
-              <option key={opt.midi} value={opt.midi}>{opt.label}</option>
+              <option key={opt.midi} value={opt.midi} className="bg-[var(--cordel-surface)] text-theme-ink">{opt.label}</option>
             ))}
           </select>
           <span className="text-[10px] opacity-60">({maxHz} Hz)</span>

@@ -23,7 +23,7 @@ export const VariantSpeedTierStepper: React.FC<VariantSpeedTierStepperProps> = (
   const handleInc = () => { if (!disabled && valuePct + stepPct <= maxPct) onChange(valuePct + stepPct); };
 
   return (
-    <div className="flex items-center gap-1 bg-[var(--cordel-surface)] border border-[var(--cordel-border)] px-1.5 py-0.5 text-[10px]">
+    <div className="flex items-center gap-1 bg-[var(--cordel-subcard-bg)] border border-[var(--cordel-border-sub)] rounded px-1.5 py-0.5 text-[10px]">
       <span className="font-bold text-[var(--cordel-accent-text)]">{label}</span>
       <button
         type="button" disabled={disabled || valuePct <= minPct} onClick={handleDec}
