@@ -80,12 +80,12 @@ export const PatternLibraryBar: React.FC = () => {
         {/* Colonne Gauche : Puxador */}
         <div className="flex flex-col gap-1.5 min-w-0">
           <div className="flex items-center justify-between pb-1 border-b border-[var(--cordel-border-sub)]">
-            <span className="px-1.5 py-0.5 text-[9px] font-black tracking-wider uppercase bg-role-puxador text-[var(--cordel-text)] rounded">
+            <span className="px-1.5 py-0.5 text-[9px] font-black tracking-wider uppercase bg-role-puxador text-white rounded">
               {t('rolePuxador')}
             </span>
             <button
               type="button" onClick={() => addPattern('puxador')} title={`+ ${t('rolePuxador')}`}
-              className="px-2 py-0.5 text-xs font-bold font-mono bg-[#9a3412] hover:bg-[#7c2d12] text-[var(--cordel-text)] rounded flex items-center justify-center cursor-pointer"
+              className="px-2 py-0.5 text-xs font-bold font-mono bg-[#9a3412] hover:bg-[#7c2d12] text-white rounded flex items-center justify-center cursor-pointer"
             >
               +
             </button>
@@ -98,12 +98,12 @@ export const PatternLibraryBar: React.FC = () => {
         {/* Colonne Droite : Coro */}
         <div className="flex flex-col gap-1.5 min-w-0">
           <div className="flex items-center justify-between pb-1 border-b border-[var(--cordel-border-sub)]">
-            <span className="px-1.5 py-0.5 text-[9px] font-black tracking-wider uppercase bg-role-coro text-[var(--cordel-text)] rounded">
+            <span className="px-1.5 py-0.5 text-[9px] font-black tracking-wider uppercase bg-role-coro text-white rounded">
               {t('roleCoro')}
             </span>
             <button
               type="button" onClick={() => addPattern('coro')} title={`+ ${t('roleCoro')}`}
-              className="px-2 py-0.5 text-xs font-bold font-mono bg-[#0f766e] hover:bg-[#115e59] text-[var(--cordel-text)] rounded flex items-center justify-center cursor-pointer"
+              className="px-2 py-0.5 text-xs font-bold font-mono bg-[#0f766e] hover:bg-[#115e59] text-white rounded flex items-center justify-center cursor-pointer"
             >
               +
             </button>

@@ -44,7 +44,7 @@ export const PatternCompassBar: React.FC<{ className?: string }> = ({ className 
       <div className="flex-1 flex items-center justify-center gap-2 min-w-0">
         <span
           className={`px-1.5 py-0.5 text-[9px] font-black tracking-wider uppercase rounded shrink-0 ${
-            isPuxador ? 'bg-role-puxador text-[var(--cordel-text)]' : 'bg-role-coro text-[var(--cordel-text)]'
+            isPuxador ? 'bg-role-puxador text-white' : 'bg-role-coro text-white'
           }`}
         >
           {isPuxador ? t('rolePuxador') : t('roleCoro')}

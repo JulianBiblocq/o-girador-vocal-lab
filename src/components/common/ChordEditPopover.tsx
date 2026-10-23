@@ -30,7 +30,7 @@ export const ChordEditPopover: React.FC<ChordEditPopoverProps> = ({ currentChord
   };
 
   return (
-    <div className="absolute top-full mt-1 z-50 p-2.5 cordel-card shadow-lg w-52 flex flex-col gap-2 rounded animate-in fade-in zoom-in-95">
+    <div className="absolute top-full mt-1 z-50 p-2.5 pb-3.5 cordel-card shadow-xl w-52 flex flex-col gap-2 rounded max-h-[calc(100vh-160px)] overflow-y-auto cordel-scrollbar animate-in fade-in zoom-in-95">
       <div className="flex items-center justify-between pb-1 border-b border-[var(--cordel-border-sub)] text-[10.5px]">
         <span className="font-bold text-amber-700 dark:text-amber-400 uppercase tracking-wider">{t('harmonyChordGridTitle')}</span>
         <button type="button" onClick={onClose} className="p-0.5 text-[var(--cordel-secondary-text)] hover:text-theme-ink cursor-pointer"><X className="w-3 h-3" /></button>

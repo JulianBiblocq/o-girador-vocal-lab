@@ -51,7 +51,7 @@ export const ToadaConductorStrip: React.FC<{ outputDeviceId?: string }> = ({ out
           <button
             type="button" onClick={handleTogglePlay}
             className={`px-2.5 py-0.5 text-[11px] font-bold font-mono rounded flex items-center gap-1.5 cursor-pointer ${
-              isPlaying ? 'bg-red-800 text-[var(--cordel-text)] animate-pulse' : 'cordel-btn-primary'
+              isPlaying ? 'bg-red-800 text-white font-bold animate-pulse' : 'cordel-btn-primary'
             }`}
           >
             {isPlaying ? <Square className="w-3 h-3 fill-current" /> : <Play className="w-3 h-3 fill-current" />}
@@ -97,7 +97,7 @@ export const ToadaConductorStrip: React.FC<{ outputDeviceId?: string }> = ({ out
                 onChange={(e) => updateSlot(slot.slotId, e.target.value || null, slot.coroPatternId)}
                 className={`h-6 text-[10px] font-mono font-bold px-1 outline-none border cursor-pointer rounded ${
                   slot.puxadorPatternId
-                    ? 'bg-role-puxador text-[var(--cordel-text)] border-role-puxador'
+                    ? 'bg-role-puxador !text-white font-bold border-role-puxador'
                     : 'bg-[var(--cordel-surface)] text-[var(--cordel-text)] border border-[var(--cordel-border-sub)] font-semibold'
                 }`}
               >
@@ -113,7 +113,7 @@ export const ToadaConductorStrip: React.FC<{ outputDeviceId?: string }> = ({ out
                 onChange={(e) => updateSlot(slot.slotId, slot.puxadorPatternId, e.target.value || null)}
                 className={`h-6 text-[10px] font-mono font-bold px-1 outline-none border cursor-pointer rounded ${
                   slot.coroPatternId
-                    ? 'bg-role-coro text-[var(--cordel-text)] border-role-coro'
+                    ? 'bg-role-coro !text-white font-bold border-role-coro'
                     : 'bg-[var(--cordel-surface)] text-[var(--cordel-text)] border border-[var(--cordel-border-sub)] font-semibold'
                 }`}
               >
