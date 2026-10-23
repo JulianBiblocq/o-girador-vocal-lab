@@ -48,7 +48,11 @@ export function toadaToCleanHtml(rawTxtCode: string): string {
 
   for (const p of paras) {
     const lines = p.split(/\r?\n/).map(l => {
-      let clean = l.replace(/^\s*[+/]\s*/, '').replace(/\[[^\]]+\]/g, '').trim();
+      let clean = l
+        .replace(/^\s*[+/]\s*/, '')
+        .replace(/\[[^\]]+\]/g, '')
+        .replace(/(^|\s|\*)\+\s+/g, '$1')
+        .trim();
       clean = clean.replace(/\*([^*]+)\*/g, '<strong>$1</strong>');
       return clean;
     }).filter(Boolean);
@@ -71,11 +75,12 @@ export function reconstituteToadaTxt(project: ToadaProject): { rawTxtCode: strin
       // Mesure mixte tuilée
       const puxInfo = extractPatternLyrics(patPux);
       const coroInfo = extractPatternLyrics(patCoro);
-      const anaPrefix = puxInfo.hasAnacrusis ? '+ ' : '';
+      const puxAna = puxInfo.hasAnacrusis ? '+ ' : '';
+      const coroAna = coroInfo.hasAnacrusis ? '+ ' : '';
       const puxChords = formatMeasureChordsString(patPux.harmonyGrid?.measures?.[0]);
       const coroChords = formatMeasureChordsString(patCoro.harmonyGrid?.measures?.[0]);
       const chordsPrefix = puxChords ? `${puxChords} ` : (coroChords ? `${coroChords} ` : '');
-      measuresBlocks.push(`${anaPrefix}${chordsPrefix}*${puxInfo.text}* ${coroInfo.text}`);
+      measuresBlocks.push(`${puxAna}${chordsPrefix}*${puxInfo.text}* ${coroAna}${coroInfo.text}`.trim());
     } else {
       const activePat = patPux || patCoro;
       if (!activePat) continue;

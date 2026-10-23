@@ -6,7 +6,7 @@
 import { useSyncExternalStore } from 'react';
 import { getInitialRoleMode } from '../utils/vocalPermissions';
 
-export type LivretType = 'prise' | 'melodia' | 'treino';
+export type LivretType = 'structure' | 'prise' | 'calage' | 'melodia' | 'treino' | 'reglages';
 export type ViewRoleMode = 'studio' | 'eleve';
 export type TreinoSubTab = 'ambitus' | 'warmup' | 'posture_diction' | 'chanter_toada';
 
@@ -57,7 +57,7 @@ const notify = () => listeners.forEach((fn) => fn());
 const initialMode = getInitialRoleMode();
 
 let state: VocalTransportState = {
-  activeLivret: initialMode === 'eleve' ? 'treino' : 'prise',
+  activeLivret: initialMode === 'eleve' ? 'treino' : 'structure',
   viewRoleMode: initialMode,
   treinoSubTab: 'ambitus',
   isRecording: false,

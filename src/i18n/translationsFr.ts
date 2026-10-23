@@ -8,12 +8,12 @@ import { toadaSheetTranslationsFr } from './toadaSheetTranslationsFr'; import { 
 import { tessituraTranslationsFr } from './tessituraTranslationsFr'; import { harmonyTranslationsFr } from './harmonyTranslationsFr';
 import { cloudToadaTranslationsFr } from './cloudToadaTranslationsFr';
 import { lexiconTranslationsFr } from './lexiconTranslationsFr';
+import { livretNavTranslationsFr } from './livretNavTranslationsFr';
 
 export const translationsFr: VocalLabTranslations = {
   // En-tete
   appTitle: 'O Girador — Cantador', appSubtitle: 'Atelier Vocal - Prosodie & Chant Maracatu',
   themeToggle: 'Changer de theme (Clair / Sombre)',
-  tabLivret1: 'Livret 1 : Prise', tabLivret2: 'Livret 2 : Melodia & Letra', tabLivret3: 'Livret 3 : Entrainement',
 
   // Jalon 4.A : Bibliotheque & Conducteur de Toada
   patternLibraryTitle: 'BIBLIOTHEQUE DES PATTERNS (TOADA)',
@@ -139,5 +139,6 @@ export const translationsFr: VocalLabTranslations = {
 
   ...cloudToadaTranslationsFr,
   ...lexiconTranslationsFr,
+  ...livretNavTranslationsFr,
   ...slicerTranslationsFr, ...toadaSheetTranslationsFr, ...treinoSubTranslationsFr, ...variantTranslationsFr, ...tessituraTranslationsFr, ...harmonyTranslationsFr,
 };

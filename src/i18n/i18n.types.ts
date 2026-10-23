@@ -135,8 +135,9 @@ export interface VocalLabTranslationsCore {
 
 import type { CloudToadaTranslations } from './cloudToadaTranslations.types';
 import type { LexiconTranslations } from './lexiconTranslations.types';
+import type { LivretNavTranslations } from './livretNavTranslations.types';
 
 export type VocalLabTranslations = VocalLabTranslationsCore & SlicerTranslations & ToadaSheetTranslations &
-  TreinoSubTranslations & TessituraTranslations & HarmonyTranslations & CloudToadaTranslations & LexiconTranslations;
+  TreinoSubTranslations & TessituraTranslations & HarmonyTranslations & CloudToadaTranslations & LexiconTranslations & LivretNavTranslations;
 
 export type TranslationKey = keyof VocalLabTranslations;

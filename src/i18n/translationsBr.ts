@@ -8,12 +8,12 @@ import { toadaSheetTranslationsBr } from './toadaSheetTranslationsBr'; import { 
 import { tessituraTranslationsBr } from './tessituraTranslationsBr'; import { harmonyTranslationsBr } from './harmonyTranslationsBr';
 import { cloudToadaTranslationsBr } from './cloudToadaTranslationsBr';
 import { lexiconTranslationsBr } from './lexiconTranslationsBr';
+import { livretNavTranslationsBr } from './livretNavTranslationsBr';
 
 export const translationsBr: VocalLabTranslations = {
   // Cabecalho
   appTitle: 'O Girador — Cantador', appSubtitle: 'Oficina Vocal - Prosódia e Canto de Maracatu',
   themeToggle: 'Alternar tema (Claro / Escuro)',
-  tabLivret1: 'Livreto 1 : Gravacao', tabLivret2: 'Livreto 2 : Melodia e Letra', tabLivret3: 'Livreto 3 : Treino Vocal',
 
   // Jalon 4.A : Biblioteca & Regencia de Toada
   patternLibraryTitle: 'BIBLIOTECA DE PADROES (TOADA)',
@@ -138,5 +138,6 @@ export const translationsBr: VocalLabTranslations = {
 
   ...cloudToadaTranslationsBr,
   ...lexiconTranslationsBr,
+  ...livretNavTranslationsBr,
   ...slicerTranslationsBr, ...toadaSheetTranslationsBr, ...treinoSubTranslationsBr, ...variantTranslationsBr, ...tessituraTranslationsBr, ...harmonyTranslationsBr,
 };

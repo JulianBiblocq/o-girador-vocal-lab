@@ -49,13 +49,13 @@ export function generateToadaFromSheet(project: ToadaProject, parsed: ParsedToad
 
       const patPux = createDefaultVocalPattern('puxador', buildPatternNameFromFirstWord(puxSeg.text, newPatterns.map(p => p.name)), 1, targetBpm);
       patPux.assignedLyricsText = puxSeg.text;
-      patPux.hasAnacrusis = puxSeg.hasAnacrusis ?? true;
+      patPux.hasAnacrusis = puxSeg.hasAnacrusis ?? false;
       if (puxSeg.chords?.length) patPux.harmonyGrid = createHarmonyGridFromChords(puxSeg.chords, 1);
       newPatterns.push(patPux);
 
       const patCoro = createDefaultVocalPattern('coro', buildPatternNameFromFirstWord(coroSeg.text, newPatterns.map(p => p.name)), 1, targetBpm);
       patCoro.assignedLyricsText = coroSeg.text;
-      patCoro.hasAnacrusis = false;
+      patCoro.hasAnacrusis = coroSeg.hasAnacrusis ?? false;
       if (coroSeg.chords?.length) patCoro.harmonyGrid = createHarmonyGridFromChords(coroSeg.chords, 1);
       newPatterns.push(patCoro);
 
