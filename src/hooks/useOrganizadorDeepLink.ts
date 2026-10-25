@@ -12,18 +12,18 @@ import { generateToadaFromSheet } from '../utils/toadaConductorGenerator';
 
 export function useOrganizadorDeepLink(groupId: string | null) {
   const { project, loadProject } = useToadaProject();
-  const { setViewRoleMode, setActiveLivret, setTreinoSubTab } = useVocalTransportStore();
   const hasExecutedRef = useRef(false);
 
   useEffect(() => {
     if (typeof window === 'undefined' || hasExecutedRef.current) return;
+    hasExecutedRef.current = true;
+
     const params = new URLSearchParams(window.location.search);
     const mode = params.get('mode');
     const toadaId = params.get('toadaId') || params.get('loadToadaId');
     const songId = params.get('songId');
 
     if (!mode && !toadaId && !songId) return;
-    hasExecutedRef.current = true;
 
     // Nettoyage de l'URL pour éviter les re-chargements involontaires au refresh
     const cleanUrl = new URL(window.location.href);
@@ -35,9 +35,10 @@ export function useOrganizadorDeepLink(groupId: string | null) {
 
     // 1. Bascule de rôle & sous-onglet Livret 3
     if (mode === 'eleve') {
-      setViewRoleMode('eleve');
-      setActiveLivret('treino');
-      setTreinoSubTab(toadaId || songId ? 'chanter_toada' : 'ambitus');
+      const transport = useVocalTransportStore.getState();
+      transport.setViewRoleMode('eleve');
+      transport.setActiveLivret('treino');
+      transport.setTreinoSubTab(toadaId || songId ? 'chanter_toada' : 'ambitus');
     }
 
     // 2. Chargement de la Toada ou de la Fiche de Paroles
@@ -79,5 +80,5 @@ export function useOrganizadorDeepLink(groupId: string | null) {
     };
 
     executeLoad();
-  }, [groupId, project, loadProject, setViewRoleMode, setActiveLivret, setTreinoSubTab]);
+  }, [groupId, project, loadProject]);
 }

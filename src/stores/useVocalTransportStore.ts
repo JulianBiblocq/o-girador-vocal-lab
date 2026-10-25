@@ -66,38 +66,52 @@ let state: VocalTransportState = {
   activeMidiDeviceName: null,
   handlers: {},
 
-  setTreinoSubTab: (tab: TreinoSubTab) => { state = { ...state, treinoSubTab: tab }; notify(); },
+  setTreinoSubTab: (tab: TreinoSubTab) => {
+    if (state.treinoSubTab === tab) return;
+    state = { ...state, treinoSubTab: tab };
+    notify();
+  },
 
   setActiveLivret: (livret: LivretType) => {
+    if (state.activeLivret === livret) return;
     if (state.viewRoleMode === 'eleve' && livret !== 'treino') return;
     state = { ...state, activeLivret: livret };
     notify();
   },
   setViewRoleMode: (mode: ViewRoleMode) => {
+    const nextLivret = mode === 'eleve' ? 'treino' : state.activeLivret;
+    if (state.viewRoleMode === mode && state.activeLivret === nextLivret) return;
     state = {
       ...state,
       viewRoleMode: mode,
-      activeLivret: mode === 'eleve' ? 'treino' : state.activeLivret,
+      activeLivret: nextLivret,
     };
     notify();
   },
-  setIsRecording: (rec: boolean) => { state = { ...state, isRecording: rec }; notify(); },
-  setIsPlaying: (playing: boolean) => { state = { ...state, isPlaying: playing }; notify(); },
+  setIsRecording: (rec: boolean) => {
+    if (state.isRecording === rec) return;
+    state = { ...state, isRecording: rec };
+    notify();
+  },
+  setIsPlaying: (playing: boolean) => {
+    if (state.isPlaying === playing) return;
+    state = { ...state, isPlaying: playing };
+    notify();
+  },
   setMidiConnection: (connected: boolean, deviceName: string | null = null) => {
+    if (state.isMidiConnected === connected && state.activeMidiDeviceName === deviceName) return;
     state = { ...state, isMidiConnected: connected, activeMidiDeviceName: deviceName };
     notify();
   },
 
   registerHandlers: (newHandlers: Partial<LivretTransportHandlers>) => {
-    state = { ...state, handlers: { ...state.handlers, ...newHandlers } };
-    notify();
+    state.handlers = { ...state.handlers, ...newHandlers };
     return () => {
       const next = { ...state.handlers };
       for (const k of Object.keys(newHandlers) as (keyof LivretTransportHandlers)[]) {
         if (next[k] === newHandlers[k]) delete next[k];
       }
-      state = { ...state, handlers: next };
-      notify();
+      state.handlers = next;
     };
   },
 

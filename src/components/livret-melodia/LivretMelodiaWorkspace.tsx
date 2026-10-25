@@ -105,8 +105,7 @@ export const LivretMelodiaWorkspace: React.FC<LivretMelodiaWorkspaceProps> = ({
   }, [selectedRegionId, selectedStepIdx, commitCurrentSnapshot, regions, deleteSelected, allSteps, handleUpdateSteps]);
 
   useEffect(() => {
-    const s = useVocalTransportStore.getState(); s.setActiveLivret('melodia');
-    s.registerHandlers({
+    return useVocalTransportStore.getState().registerHandlers({
       togglePlay: handleTogglePlay, stop: () => { player.stop(); setIsPlaying(false); }, undo, redo, deleteSelected: handleDeleteSelected,
       seekRelative: (d: number) => handleSeek(Math.max(0, Math.min(totalDurationSec, seekStartSec + d))),
       onMidiNote: (m: number) => { if (selectedStepIdx !== null) handleUpdateSteps(moveBrick(allSteps, selectedStepIdx, m)); },
