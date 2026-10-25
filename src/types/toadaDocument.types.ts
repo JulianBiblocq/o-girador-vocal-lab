@@ -5,6 +5,7 @@
  */
 import type { VocalRole } from './toadaProject.types';
 import type { ToadaLexiconEntry, ToadaQuizItem } from './toadaLexicon.types';
+import type { PatternHarmonyGrid } from './harmony.types';
 
 export * from './toadaLexicon.types';
 
@@ -35,6 +36,8 @@ export interface ToadaDocument {
   tonaliteDefaut?: string;
   bpmDefaut?: number;
   repertoireId?: string;
+  harmonyGrid?: PatternHarmonyGrid;
+  globalHarmonyGrid?: PatternHarmonyGrid;
 }
 
 export interface TimeAnchor {

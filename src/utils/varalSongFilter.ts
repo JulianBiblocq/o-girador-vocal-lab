@@ -37,23 +37,9 @@ export function normalizeSongTitle(title?: string | null): string {
     .trim();
 }
 
-export function normalizeToadaDoc(id: string, data: any, repertoireId?: string): ToadaDocument {
-  const paroles = data.parolesOriginales || data.paroles || data.lyrics || (data.type === 'song' ? data.texte : '') || data.activeToada?.paroles || '';
-  return {
-    id,
-    titre: data.titre || data.title || data.nom || 'Sans titre',
-    type: 'song',
-    nacao: data.nacao || data.nação || '',
-    rythme: data.rythme || data.ritmo || '',
-    parolesOriginales: paroles,
-    parolesPhonetiques: data.parolesPhonetiques || data.phonetique || data.activeToada?.parolesPhonetiques || '',
-    tonaliteDefaut: data.tonaliteDefaut,
-    bpmDefaut: data.bpmDefaut || data.bpm,
-    lienSequenceurId: data.sequenceurId || data.lienSequenceurId,
-    audioUrl: data.activeAudioUrl || data.audioUrl,
-    repertoireId: repertoireId || data.repertoireId,
-  };
-}
+import { normalizeToadaDoc, normalizeLexiconList, normalizeQuizList, normalizeHarmonyGrid } from './toadaDocNormalizer';
+
+export { normalizeToadaDoc };
 
 export function mergeAndDeduplicateToadas(
   primaryDocs: ToadaDocument[],
@@ -90,6 +76,16 @@ export function mergeAndDeduplicateToadas(
       }
       if (!existing.lienSequenceurId && (rep.data.sequenceurId || rep.data.lienSequenceurId)) {
         existing.lienSequenceurId = rep.data.sequenceurId || rep.data.lienSequenceurId;
+      }
+      if (!existing.notesLexique?.length && (rep.data.notesLexique || rep.data.lexique)) {
+        existing.notesLexique = normalizeLexiconList(rep.data.notesLexique || rep.data.lexique);
+      }
+      if (!existing.questionsQcm?.length && (rep.data.questionsQcm || rep.data.quiz)) {
+        existing.questionsQcm = normalizeQuizList(rep.data.questionsQcm || rep.data.quiz);
+      }
+      if (!existing.harmonyGrid && (rep.data.harmonyGrid || rep.data.globalHarmonyGrid || rep.data.chords)) {
+        existing.harmonyGrid = normalizeHarmonyGrid(rep.data.harmonyGrid || rep.data.globalHarmonyGrid || rep.data.chords);
+        existing.globalHarmonyGrid = existing.harmonyGrid;
       }
     } else if (isVaralSong(rep.data)) {
       const newDoc = normalizeToadaDoc(rep.id, rep.data, rep.id);

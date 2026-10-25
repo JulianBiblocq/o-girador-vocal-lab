@@ -71,6 +71,7 @@ export function parseToadaPack(jsonText: string): ToadaProject {
         melodyneRegions: p.melodyneRegions || [],
         assignedLyricsText: p.assignedLyricsText,
         assignedPhoneticText: p.assignedPhoneticText,
+        harmonyGrid: p.harmonyGrid,
         pack: null, midiLocked: true, isMidiInitialized: (p.mainSteps && p.mainSteps.length > 0),
       };
     });
@@ -80,7 +81,9 @@ export function parseToadaPack(jsonText: string): ToadaProject {
       title: data.project?.title || 'Toada Restauree',
       bpm: data.project?.bpm || 55, timeSignature: data.project?.timeSignature || '4/4',
       patterns, slots: data.arrangementSlots || [], activePatternId: patterns[0]?.id || '',
-      toadaMeta: data.project?.toadaMeta,
+      toadaMeta: data.project?.toadaMeta || data.toadaMeta,
+      globalHarmonyGrid: data.globalHarmonyGrid || data.project?.globalHarmonyGrid,
+      harmonyConfig: data.harmonyConfig || data.project?.harmonyConfig,
     };
   }
 

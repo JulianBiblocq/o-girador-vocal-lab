@@ -92,6 +92,8 @@ export function parseToadaDocument(doc: ToadaDocument, boldRole: VocalRole = 'pu
     anecdote: doc.anecdote,
     notesLexique: doc.notesLexique,
     questionsQcm: doc.questionsQcm,
+    harmonyGrid: doc.harmonyGrid,
+    globalHarmonyGrid: doc.globalHarmonyGrid || doc.harmonyGrid,
     bpmDefaut: doc.bpmDefaut || hMeta.bpmDefaut,
     tonaliteDefaut: doc.tonaliteDefaut || hMeta.tonaliteDefaut,
     rawTxtCode: doc.rawTxtCode,

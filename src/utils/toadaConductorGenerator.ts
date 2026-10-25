@@ -1,6 +1,6 @@
 /**
  * toadaConductorGenerator.ts
- * Frise Conducteur automatique avec agrégation des mesures liées (/) et superposition mixte (< 115 lignes).
+ * Frise Conducteur automatique avec agrégation des mesures liées (/) et superposition mixte (< 140 lignes).
  */
 import type { ToadaProject, VocalPatternItem, ToadaArrangementSlot, VocalRole } from '../types/toadaProject.types';
 import type { ParsedToadaSheetResult } from '../types/toadaDocument.types';
@@ -18,24 +18,19 @@ export interface ToadaSheetGenOptions {
 
 export function extractCleanFirstWord(text: string): string {
   if (!text) return 'Phrase';
-  const match = text.replace(/<[^>]*>/g, '').trim().match(/^[\s"'«“„–—\-_([{\\/*]*([\p{L}\p{M}\d]+)/u);
-  return match?.[1] ? match[1].charAt(0).toUpperCase() + match[1].slice(1) : (text.trim().split(/\s+/)[0] || 'Phrase');
+  const m = text.replace(/<[^>]*>/g, '').trim().match(/^[\s"'«“„–—\-_([{\\/*]*([\p{L}\p{M}\d]+)/u);
+  return m?.[1] ? m[1].charAt(0).toUpperCase() + m[1].slice(1) : (text.trim().split(/\s+/)[0] || 'Phrase');
 }
 
 export function buildPatternNameFromFirstWord(text: string, existingNames: string[]): string {
   const base = extractCleanFirstWord(text);
   let idx = 2, name = base;
-  while (existingNames.includes(name)) { name = `${base} (${idx++})`; }
+  while (existingNames.includes(name)) name = `${base} (${idx++})`;
   return name;
 }
 
 function initPatternFromSegment(
-  role: VocalRole,
-  seg: any,
-  bpm: number,
-  existingNames: string[],
-  measuresCount: 1 | 2 | 3 | 4 = 1,
-  defaultAna = false
+  role: VocalRole, seg: any, bpm: number, existingNames: string[], measuresCount: 1 | 2 | 3 | 4 = 1, defaultAna = false
 ): VocalPatternItem {
   const pat = createDefaultVocalPattern(role, buildPatternNameFromFirstWord(seg.text, existingNames), measuresCount, seg.sectionBpm ?? bpm);
   pat.assignedLyricsText = seg.text;
@@ -101,7 +96,6 @@ export function generateToadaFromSheet(project: ToadaProject, parsed: ParsedToad
       puxadorPatternId: seg.role === 'puxador' ? patId : null,
       coroPatternId: seg.role === 'coro' ? patId : null
     });
-
     i = lookAhead;
   }
 
@@ -116,6 +110,7 @@ export function generateToadaFromSheet(project: ToadaProject, parsed: ParsedToad
     }
   }
 
+  const globalHarmony = parsed.docMeta?.globalHarmonyGrid || parsed.docMeta?.harmonyGrid || project.globalHarmonyGrid;
   const generated: ToadaProject = {
     ...project,
     title: parsed.docMeta?.titre || project.title,
@@ -125,13 +120,27 @@ export function generateToadaFromSheet(project: ToadaProject, parsed: ParsedToad
     slots: newSlots.length > 0 ? newSlots : project.slots,
     activePatternId: newPatterns[0]?.id || project.activePatternId,
     toadaMeta: parsed.docMeta ? { ...project.toadaMeta, ...parsed.docMeta } : project.toadaMeta,
-    sheetLines: parsed.segments.map((s) => ({ role: s.role, text: s.text, phoneticText: s.phoneticText }))
+    sheetLines: parsed.segments.map((s) => ({ role: s.role, text: s.text, phoneticText: s.phoneticText })),
+    globalHarmonyGrid: globalHarmony,
   };
 
-  const detectedLex = detectToadaLexicon(generated);
+  // Conservation prioritaire des lexiques et quiz existants (venant d'Organizador)
+  const existingLex = parsed.docMeta?.notesLexique?.length ? parsed.docMeta.notesLexique : (project.toadaMeta?.notesLexique || []);
+  const detectedLex = existingLex.length > 0 ? existingLex : detectToadaLexicon(generated);
+
+  const existingQuiz = parsed.docMeta?.questionsQcm?.length ? parsed.docMeta.questionsQcm : (project.toadaMeta?.questionsQcm || []);
+  const quizItems = existingQuiz.length > 0 ? existingQuiz : generateQuizFromLexicon(detectedLex);
+
   if (generated.toadaMeta) {
     generated.toadaMeta.notesLexique = detectedLex;
-    generated.toadaMeta.questionsQcm = generateQuizFromLexicon(detectedLex);
+    generated.toadaMeta.questionsQcm = quizItems;
+    if (globalHarmony && !generated.toadaMeta.harmonyGrid) generated.toadaMeta.harmonyGrid = globalHarmony;
+  }
+
+  if (globalHarmony) {
+    generated.patterns.forEach((pat) => {
+      if (!pat.harmonyGrid || pat.harmonyGrid.measures.length === 0) pat.harmonyGrid = globalHarmony;
+    });
   }
 
   return generated;

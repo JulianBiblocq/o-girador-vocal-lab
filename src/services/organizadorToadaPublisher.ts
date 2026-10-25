@@ -51,6 +51,8 @@ export async function publishToadaToOrganizador(
     anecdote: project.toadaMeta?.anecdote || '',
     notesLexique,
     questionsQcm,
+    harmonyGrid: project.globalHarmonyGrid || project.patterns[0]?.harmonyGrid || null,
+    globalHarmonyGrid: project.globalHarmonyGrid || null,
     quizCount: questionsQcm.length,
     lexiqueCount: notesLexique.length,
     annee: new Date().getFullYear(),
