@@ -17,6 +17,7 @@ export interface ToadaProjectContextValue {
   updatePattern: (id: string, partial: Partial<VocalPatternItem>) => void;
   removePattern: (id: string) => void;
   mirrorPatternToRole: (sourcePatternId: string, targetRole: VocalRole) => string;
+  injectPatternIntoTarget: (sourceId: string, targetId: string) => void;
   unlinkPattern: (patternId: string) => void;
   loadProject: (newProject: ToadaProject) => void;
   addSlot: () => void;

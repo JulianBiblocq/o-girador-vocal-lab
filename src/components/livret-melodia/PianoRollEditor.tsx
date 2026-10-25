@@ -9,19 +9,16 @@ import { PianoRollKeyboard } from './PianoRollKeyboard';
 import { PianoRollCanvas } from './PianoRollCanvas';
 import { PianoRollStickyHeader } from './PianoRollStickyHeader';
 import { FloatingSyllableInput } from './FloatingSyllableInput';
+import { PianoRollSyllablesRow } from './PianoRollSyllablesRow';
 import { PianoRollToolPopover } from './PianoRollToolPopover';
 import { CordelPiano } from '../common/CordelIcons';
 import type { PianoRollTool } from './pianoRollInteractions';
 
 export interface PianoRollEditorProps {
-  allSteps: VocalStepData[]; pitchCurve: PitchCurvePoint[]; totalDurationSec: number;
-  anacrusisDurationSec: number; beatsPerMeasure: number; beatResolutions: number[]; seekStartSec: number; isPlaying: boolean;
-  tonic: string; scaleType: ScaleType; smoothingLevel: number; canUndo?: boolean; canRedo?: boolean; historyCount?: number;
-  regions?: MelodyneRegion[]; selectedRegionId?: string | null; activeTool?: PianoRollTool; onSelectTool?: (tool: PianoRollTool) => void;
-  hasAnacrusis?: boolean; bpm?: number; t1OffsetSec?: number; getPlayheadSec?: () => number; onSeek: (sec: number) => void;
-  onUndo?: () => void; onRedo?: () => void; onSetTonic: (t: string) => void; onSetScaleType: (st: ScaleType) => void;
-  onSetSmoothingLevel: (lvl: number) => void; onUpdateSteps: (newSteps: VocalStepData[], commit?: boolean) => void; onPlayNotePreview: (midi: number) => void;
-  onReExtractNotes?: () => void; onSelectRegion?: (id: string | null) => void; onAddRegion?: (start: number, end: number) => void;
+  allSteps: VocalStepData[]; pitchCurve: PitchCurvePoint[]; totalDurationSec: number; anacrusisDurationSec: number; beatsPerMeasure: number; beatResolutions: number[]; seekStartSec: number; isPlaying: boolean;
+  tonic: string; scaleType: ScaleType; smoothingLevel: number; canUndo?: boolean; canRedo?: boolean; historyCount?: number; regions?: MelodyneRegion[]; selectedRegionId?: string | null; activeTool?: PianoRollTool; onSelectTool?: (tool: PianoRollTool) => void;
+  hasAnacrusis?: boolean; bpm?: number; t1OffsetSec?: number; getPlayheadSec?: () => number; onSeek: (sec: number) => void; onUndo?: () => void; onRedo?: () => void; onSetTonic: (t: string) => void; onSetScaleType: (st: ScaleType) => void;
+  onSetSmoothingLevel: (lvl: number) => void; onUpdateSteps: (newSteps: VocalStepData[], commit?: boolean) => void; onPlayNotePreview: (midi: number) => void; onReExtractNotes?: () => void; onSelectRegion?: (id: string | null) => void; onAddRegion?: (start: number, end: number) => void;
   onUpdateRegionBounds?: (id: string, start: number, end: number) => void; onDeleteSelectedRegion?: () => void; selectedStepIdx?: number | null; onSelectStep?: (idx: number | null) => void; harmonyGrid?: PatternHarmonyGrid; pitchShiftSemitones?: number; readOnly?: boolean;
 }
 
@@ -59,9 +56,7 @@ export const PianoRollEditor: React.FC<PianoRollEditorProps> = (p) => {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const isInput = ['INPUT', 'TEXTAREA'].includes((document.activeElement?.tagName || '').toUpperCase());
-      if ((e.key === 'Delete' || e.key === 'Backspace') && p.selectedRegionId && !isInput) {
-        e.preventDefault(); p.onDeleteSelectedRegion?.();
-      }
+      if ((e.key === 'Delete' || e.key === 'Backspace') && p.selectedRegionId && !isInput) { e.preventDefault(); p.onDeleteSelectedRegion?.(); }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
@@ -112,8 +107,8 @@ export const PianoRollEditor: React.FC<PianoRollEditorProps> = (p) => {
           <span className="text-[10px] text-theme-ink/70 hidden sm:inline">{t('pianoRollHint')}</span>
         )}
       </div>
-      <div ref={scrollRef} className="w-full cordel-card overflow-x-auto overflow-y-auto cordel-scrollbar max-h-[380px] rounded">
-        <div style={{ width: `${64 + gridWidth}px`, height: `${66 + canvasHeight}px` }}>
+      <div ref={scrollRef} className="w-full cordel-card overflow-x-auto overflow-y-auto cordel-scrollbar max-h-[420px] rounded">
+        <div style={{ width: `${64 + gridWidth}px`, minHeight: `${66 + canvasHeight}px` }}>
           <PianoRollStickyHeader
             gridWidth={gridWidth} beatsPerMeasure={p.beatsPerMeasure} totalDurationSec={p.totalDurationSec}
             anacrusisDurationSec={p.anacrusisDurationSec} seekStartSec={p.seekStartSec} isPlaying={p.isPlaying}
@@ -138,6 +133,7 @@ export const PianoRollEditor: React.FC<PianoRollEditorProps> = (p) => {
               )}
             </div>
           </div>
+          <PianoRollSyllablesRow allSteps={p.allSteps} gridWidth={gridWidth} readOnly={p.readOnly} onUpdateSteps={p.onUpdateSteps} />
         </div>
       </div>
       {palettePos && <PianoRollToolPopover x={palettePos.x} y={palettePos.y} activeTool={activeTool} onSelectTool={setActiveTool} onClose={() => setPalettePos(null)} />}

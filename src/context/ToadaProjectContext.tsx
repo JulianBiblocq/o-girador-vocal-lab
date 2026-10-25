@@ -5,7 +5,7 @@ import {
 } from '../types/toadaProject.types';
 import type { TimeSignatureString } from '../types/vocalPack.types';
 import type { ToadaProjectContextValue } from '../types/toadaProjectContext.types';
-import { createMirroredPattern, propagateSourceUpdatesToLinkedPatterns, unlinkPattern } from '../utils/patternMirrorHelper';
+import { createMirroredPattern, injectSourceIntoTargetPattern, propagateSourceUpdatesToLinkedPatterns, unlinkPattern } from '../utils/patternMirrorHelper';
 import { swapProjectRoles, duplicatePatternAsVariation } from '../utils/projectRoleOps';
 import {
   batchUpdateProjectBpm, batchUpdateProjectMeasures, batchUpdateProjectAnacrusis,
@@ -67,6 +67,16 @@ export const ToadaProjectProvider: React.FC<{ children: React.ReactNode }> = ({ 
     return newId;
   }, []);
 
+  const injectPatternIntoTarget = useCallback((sourceId: string, targetId: string) => {
+    setProject((prev) => {
+      const s = prev.patterns.find((p) => p.id === sourceId);
+      const t = prev.patterns.find((p) => p.id === targetId);
+      if (!s || !t) return prev;
+      return { ...prev, patterns: prev.patterns.map((p) => (p.id === targetId ? injectSourceIntoTargetPattern(s, t) : p)), activePatternId: targetId };
+    });
+    window.dispatchEvent(new CustomEvent('app-toast', { detail: { message: 'Chant injecté dans le Chœur avec succès !', type: 'success' } }));
+  }, []);
+
   const handleUnlink = useCallback((patternId: string) => setProject((prev) => ({ ...prev, patterns: prev.patterns.map((p) => (p.id === patternId ? unlinkPattern(p) : p)) })), []);
 
   const removePattern = useCallback((id: string) => {
@@ -97,7 +107,6 @@ export const ToadaProjectProvider: React.FC<{ children: React.ReactNode }> = ({ 
     return createdId;
   }, []);
 
-  // Scoped metric & pitch updates (Micro-sécurité 1)
   const updateScopedBpm = useCallback((bpm: number) => setProject((prev) => batchUpdateProjectBpm(prev, applyScope, selectedPatternIds, bpm)), [applyScope, selectedPatternIds]);
   const updateScopedMeasuresCount = useCallback((count: 1 | 2 | 3 | 4) => setProject((prev) => batchUpdateProjectMeasures(prev, applyScope, selectedPatternIds, count)), [applyScope, selectedPatternIds]);
   const updateScopedHasAnacrusis = useCallback((has: boolean) => setProject((prev) => batchUpdateProjectAnacrusis(prev, applyScope, selectedPatternIds, has)), [applyScope, selectedPatternIds]);
@@ -119,12 +128,12 @@ export const ToadaProjectProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const value = useMemo(() => ({
     project, activePattern, activeVariant, cueMode, setActivePatternId,
     setActiveVariantKey, updateVariant, ensureVariantExists,
-    addPattern, updatePattern, removePattern, mirrorPatternToRole, unlinkPattern: handleUnlink,
+    addPattern, updatePattern, removePattern, mirrorPatternToRole, injectPatternIntoTarget, unlinkPattern: handleUnlink,
     loadProject, addSlot, removeSlot, updateSlot, setCueMode, getPreviousConductorPattern,
     swapAllRoles, duplicateVariation,
     applyScope, setApplyScope, selectedPatternIds, toggleSelectPattern, selectAllPatterns, clearSelectedPatterns,
     updateScopedBpm, updateScopedMeasuresCount, updateScopedHasAnacrusis, updateScopedReferencePitch, updateScopedTimeSignature, updateScopedTessitura, updateHarmonyConfig, updateToadaMeta,
-  }), [project, activePattern, activeVariant, cueMode, setActivePatternId, setActiveVariantKey, updateVariant, ensureVariantExists, addPattern, updatePattern, removePattern, mirrorPatternToRole, handleUnlink, loadProject, addSlot, removeSlot, updateSlot, setCueMode, getPreviousConductorPattern, swapAllRoles, duplicateVariation, applyScope, setApplyScope, selectedPatternIds, toggleSelectPattern, selectAllPatterns, clearSelectedPatterns, updateScopedBpm, updateScopedMeasuresCount, updateScopedHasAnacrusis, updateScopedReferencePitch, updateScopedTimeSignature, updateScopedTessitura, updateHarmonyConfig, updateToadaMeta]);
+  }), [project, activePattern, activeVariant, cueMode, setActivePatternId, setActiveVariantKey, updateVariant, ensureVariantExists, addPattern, updatePattern, removePattern, mirrorPatternToRole, injectPatternIntoTarget, handleUnlink, loadProject, addSlot, removeSlot, updateSlot, setCueMode, getPreviousConductorPattern, swapAllRoles, duplicateVariation, applyScope, setApplyScope, selectedPatternIds, toggleSelectPattern, selectAllPatterns, clearSelectedPatterns, updateScopedBpm, updateScopedMeasuresCount, updateScopedHasAnacrusis, updateScopedReferencePitch, updateScopedTimeSignature, updateScopedTessitura, updateHarmonyConfig, updateToadaMeta]);
 
   return <ToadaContext.Provider value={value}>{children}</ToadaContext.Provider>;
 };

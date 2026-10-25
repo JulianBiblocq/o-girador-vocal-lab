@@ -10,6 +10,7 @@ import { useLanguage } from '../../i18n/LanguageContext';
 import { useVocalTransportStore } from '../../stores/useVocalTransportStore';
 import { confirmAsync } from '../../stores/useCordelDialogStore';
 import { PatternCompassBar } from '../common/PatternCompassBar';
+import { LatencyReminderBanner } from '../common/LatencyReminderBanner';
 import { StudioSettingsStatusBar } from './StudioSettingsStatusBar';
 import { PatternLyricsBanner } from './PatternLyricsBanner';
 import { ChordGridBar } from '../common/ChordGridBar';
@@ -67,6 +68,7 @@ export const LivretPrise: React.FC = () => {
 
   return (
     <div className="flex flex-col gap-3.5 w-full">
+      <LatencyReminderBanner />
       {/* 1. Mini-bandeau Boussole & Statut Matériel */}
       <PatternCompassBar />
       <StudioSettingsStatusBar />

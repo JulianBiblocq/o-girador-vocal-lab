@@ -11,6 +11,7 @@ import { ToadaConductorStrip } from '../conductor/ToadaConductorStrip';
 import { ChordGridBar } from '../common/ChordGridBar';
 import { PatternLyricsBanner } from '../livret-prise/PatternLyricsBanner';
 import { StructureMusicConfigPanel } from './StructureMusicConfigPanel';
+import { LatencyReminderBanner } from '../common/LatencyReminderBanner';
 import { getDefaultBeatResolutions } from '../../utils/alignmentMath';
 import { getBeatsPerMeasure } from '../../utils/musicalMath';
 
@@ -38,6 +39,8 @@ export const LivretStructure: React.FC = () => {
 
   return (
     <div className="flex flex-col gap-4 w-full">
+      <LatencyReminderBanner />
+
       {/* 1. Bibliothèque de Patterns et Conducteur 2 rails */}
       <div className="w-full grid grid-cols-1 xl:grid-cols-12 gap-4 items-stretch">
         <div className="xl:col-span-5 h-full">

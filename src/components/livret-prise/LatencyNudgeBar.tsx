@@ -5,7 +5,9 @@ import {
   MIN_LATENCY_OFFSET_MS,
   MAX_LATENCY_OFFSET_MS,
   saveLatencyOffsetMs,
+  markLatencyCalibrated,
 } from '../../utils/latencyStorage';
+import { useAudioHardware } from '../../context/AudioHardwareContext';
 
 interface LatencyNudgeBarProps {
   latencyOffsetMs: number;
@@ -19,10 +21,12 @@ export const LatencyNudgeBar: React.FC<LatencyNudgeBarProps> = ({
   disabled = false,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const { selectedDeviceId } = useAudioHardware();
 
   const updateOffset = (newVal: number) => {
     const clamped = Math.max(MIN_LATENCY_OFFSET_MS, Math.min(MAX_LATENCY_OFFSET_MS, newVal));
     saveLatencyOffsetMs(clamped);
+    markLatencyCalibrated(selectedDeviceId);
     onChange(clamped);
   };
 

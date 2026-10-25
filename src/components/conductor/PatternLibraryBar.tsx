@@ -7,13 +7,14 @@ import React from 'react';
 import { useToadaProject } from '../../context/ToadaProjectContext';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { PatternCardItem } from './PatternCardItem';
+import { PatternInjectionBar } from './PatternInjectionBar';
 import { confirmAsync } from '../../stores/useCordelDialogStore';
 import { ArrowLeftRight } from 'lucide-react';
 
 export const PatternLibraryBar: React.FC = () => {
   const {
     project, activePattern, setActivePatternId, addPattern, updatePattern,
-    removePattern, mirrorPatternToRole, unlinkPattern, swapAllRoles, duplicateVariation,
+    removePattern, mirrorPatternToRole, injectPatternIntoTarget, unlinkPattern, swapAllRoles, duplicateVariation,
     selectedPatternIds, toggleSelectPattern, selectAllPatterns,
   } = useToadaProject();
   const { t } = useLanguage();
@@ -21,6 +22,9 @@ export const PatternLibraryBar: React.FC = () => {
   const puxPatterns = project.patterns.filter((p) => p.role === 'puxador');
   const coroPatterns = project.patterns.filter((p) => p.role === 'coro');
   const allSelected = project.patterns.length > 0 && selectedPatternIds.length === project.patterns.length;
+  const activePuxador = activePattern.role === 'puxador'
+    ? activePattern
+    : (puxPatterns.find((p) => p.recordingResult !== null && p.recordingResult.pcm.length > 0) ?? puxPatterns[0] ?? null);
 
   const handleDeletePattern = async (id: string, name: string) => {
     const ok = await confirmAsync({
@@ -28,6 +32,16 @@ export const PatternLibraryBar: React.FC = () => {
       confirmLabel: t('dialogConfirm'), cancelLabel: t('dialogCancel'), variant: 'danger',
     });
     if (ok) removePattern(id);
+  };
+
+  const handleCardMirror = (pat: typeof project.patterns[0], targetRole: typeof project.patterns[0]['role']) => {
+    if (pat.role === 'puxador' && targetRole === 'coro' && coroPatterns.length > 0) {
+      const firstWord = (pat.name || '').trim().split(/\s+/)[0]?.toLowerCase();
+      const existingCoro = coroPatterns.find((c) => (c.name || '').trim().split(/\s+/)[0]?.toLowerCase() === firstWord) ?? coroPatterns[0];
+      injectPatternIntoTarget(pat.id, existingCoro.id);
+      return;
+    }
+    mirrorPatternToRole(pat.id, targetRole);
   };
 
   const renderCard = (pat: typeof project.patterns[0]) => {
@@ -42,7 +56,7 @@ export const PatternLibraryBar: React.FC = () => {
         onToggleSelect={() => toggleSelectPattern(pat.id)}
         onRename={(name) => updatePattern(pat.id, { name })}
         onDelete={() => handleDeletePattern(pat.id, pat.name)}
-        onMirrorToRole={(targetRole) => mirrorPatternToRole(pat.id, targetRole)}
+        onMirrorToRole={(targetRole) => handleCardMirror(pat, targetRole)}
         onDuplicateVariation={() => duplicateVariation(pat.id)}
         onUnlink={() => unlinkPattern(pat.id)} canDelete={project.patterns.length > 1}
       />
@@ -75,6 +89,17 @@ export const PatternLibraryBar: React.FC = () => {
           </button>
         </div>
       </div>
+
+      {activePuxador && (
+        <div className="mb-1.5">
+          <PatternInjectionBar
+            sourcePattern={activePuxador}
+            coroPatterns={coroPatterns}
+            onInject={injectPatternIntoTarget}
+            onCreateMirror={(srcId) => mirrorPatternToRole(srcId, 'coro')}
+          />
+        </div>
+      )}
 
       <div className="grid grid-cols-2 gap-3 h-full">
         {/* Colonne Gauche : Puxador */}
