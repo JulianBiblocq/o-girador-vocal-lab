@@ -10,7 +10,7 @@ import { useVocalTransportStore } from '../../stores/useVocalTransportStore';
 import { useLanguage } from '../../i18n/LanguageContext';
 
 export const StudioSettingsStatusBar: React.FC = () => {
-  const { listeningMode } = useAudioHardware();
+  const { listeningMode, selectedDeviceLabel } = useAudioHardware();
   const { activePattern } = useToadaProject();
   const { setActiveLivret } = useVocalTransportStore();
   const { t } = useLanguage();
@@ -22,9 +22,9 @@ export const StudioSettingsStatusBar: React.FC = () => {
   return (
     <div className="cordel-card-sm px-3 py-1.5 flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono select-none rounded">
       <div className="flex items-center gap-3 text-[var(--cordel-secondary-text)] flex-wrap">
-        <span className="flex items-center gap-1">
-          <Mic className="w-3.5 h-3.5 text-theme-accent" />
-          <span>{t('statusMicDefault')}</span>
+        <span className="flex items-center gap-1 max-w-[200px] sm:max-w-[300px]" title={selectedDeviceLabel || t('statusMicDefault')}>
+          <Mic className="w-3.5 h-3.5 text-theme-accent shrink-0" />
+          <span className="truncate font-bold text-theme-ink">{selectedDeviceLabel || t('statusMicDefault')}</span>
         </span>
         <span>•</span>
         <span className="flex items-center gap-1">

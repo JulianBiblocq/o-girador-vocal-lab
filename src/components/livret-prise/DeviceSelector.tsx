@@ -8,7 +8,7 @@ import { useLanguage } from '../../i18n/LanguageContext';
 
 interface DeviceSelectorProps {
   selectedDeviceId: string;
-  onDeviceChange: (deviceId: string) => void;
+  onDeviceChange: (deviceId: string, label?: string) => void;
   selectedOutputDeviceId: string;
   onOutputDeviceChange: (deviceId: string) => void;
   disabled?: boolean;
@@ -39,7 +39,7 @@ export const DeviceSelector: React.FC<DeviceSelectorProps> = ({
       setHasPermission(inputs.some((d) => d.label && d.label.trim().length > 0));
 
       if (inputs.length > 0 && (!selectedDeviceId || !inputs.some((d) => d.deviceId === selectedDeviceId))) {
-        onDeviceChange(inputs[0].deviceId);
+        onDeviceChange(inputs[0].deviceId, inputs[0].label);
       }
       if (outputs.length > 0 && (!selectedOutputDeviceId || !outputs.some((d) => d.deviceId === selectedOutputDeviceId))) {
         onOutputDeviceChange(outputs[0].deviceId);
@@ -102,7 +102,10 @@ export const DeviceSelector: React.FC<DeviceSelectorProps> = ({
         </label>
         <select
           value={selectedDeviceId}
-          onChange={(e) => onDeviceChange(e.target.value)}
+          onChange={(e) => {
+            const dev = inputDevices.find((d) => d.deviceId === e.target.value);
+            onDeviceChange(e.target.value, dev?.label);
+          }}
           onFocus={() => { if (!hasPermission) requestPermissionAndEnumerate(); }}
           disabled={disabled || inputDevices.length === 0}
           className="w-full bg-[var(--cordel-subcard-bg)] border border-[var(--cordel-border-sub)] text-theme-ink text-xs p-1.5 rounded font-mono focus:outline-none focus:border-theme-accent cursor-pointer"

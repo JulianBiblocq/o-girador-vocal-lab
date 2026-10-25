@@ -1,17 +1,21 @@
 /**
  * AudioHardwareContext.tsx
- * Contexte centralisé de gestion du matériel audio (micro, casque, engine métronome) (< 95 lignes).
+ * Contexte centralise du materiel audio avec detection auto de carte son (< 120 lignes).
  */
-import React, { createContext, useContext, useMemo, useState, useEffect } from 'react';
+import React, { createContext, useContext, useMemo, useState, useEffect, useCallback } from 'react';
 import { MetronomeEngine, type ListeningMode } from '../audio/MetronomeEngine';
 import { VocalRecorderEngine } from '../audio/VocalRecorderEngine';
 import { closeSharedAudioContext } from '../audio/sharedAudioContext';
+
+const STORAGE_KEY_INPUT = 'ogirador_selected_audio_input_id';
+const STORAGE_KEY_OUTPUT = 'ogirador_selected_audio_output_id';
 
 interface AudioHardwareContextValue {
   engine: MetronomeEngine;
   recorder: VocalRecorderEngine;
   selectedDeviceId: string;
-  setSelectedDeviceId: (id: string) => void;
+  selectedDeviceLabel: string;
+  setSelectedDeviceId: (id: string, label?: string) => void;
   selectedOutputDeviceId: string;
   setSelectedOutputDeviceId: (id: string) => void;
   listeningMode: ListeningMode;
@@ -26,37 +30,70 @@ export const AudioHardwareProvider: React.FC<{ children: React.ReactNode }> = ({
   const engine = useMemo(() => new MetronomeEngine(), []);
   const recorder = useMemo(() => new VocalRecorderEngine(), []);
 
-  const [selectedDeviceId, setSelectedDeviceId] = useState<string>('');
-  const [selectedOutputDeviceId, setSelectedOutputDeviceId] = useState<string>('');
+  const [selectedDeviceId, setSelectedDeviceIdState] = useState<string>(() => {
+    try { return localStorage.getItem(STORAGE_KEY_INPUT) || ''; } catch { return ''; }
+  });
+  const [selectedDeviceLabel, setSelectedDeviceLabel] = useState<string>('');
+  const [selectedOutputDeviceId, setSelectedOutputDeviceIdState] = useState<string>(() => {
+    try { return localStorage.getItem(STORAGE_KEY_OUTPUT) || ''; } catch { return ''; }
+  });
   const [listeningMode, setListeningMode] = useState<ListeningMode>('headphones');
   const [recordedSampleRate, setRecordedSampleRate] = useState<number>(44100);
 
+  const refreshDevices = useCallback(async () => {
+    if (!navigator.mediaDevices?.enumerateDevices) return;
+    try {
+      const devs = await navigator.mediaDevices.enumerateDevices();
+      const inputs = devs.filter((d) => d.kind === 'audioinput');
+      const outputs = devs.filter((d) => d.kind === 'audiooutput');
+      if (inputs.length > 0) {
+        const saved = localStorage.getItem(STORAGE_KEY_INPUT);
+        const matching = inputs.find((d) => d.deviceId === saved && d.deviceId.length > 0);
+        const usbSoundCard = inputs.find((d) => /USB|Audio|Interface|Focusrite|Scarlett|Behringer|Yamaha|Steinberg|Rode|PreSonus/i.test(d.label));
+        const chosen = matching || usbSoundCard || inputs[0];
+        setSelectedDeviceIdState(chosen.deviceId);
+        setSelectedDeviceLabel(chosen.label || 'Microphone');
+        try { localStorage.setItem(STORAGE_KEY_INPUT, chosen.deviceId); } catch {}
+      }
+      if (outputs.length > 0) {
+        const savedOut = localStorage.getItem(STORAGE_KEY_OUTPUT);
+        const chosenOut = outputs.find((d) => d.deviceId === savedOut && d.deviceId.length > 0) || outputs[0];
+        setSelectedOutputDeviceIdState(chosenOut.deviceId);
+        engine.setOutputDevice(chosenOut.deviceId);
+      }
+    } catch {}
+  }, [engine]);
+
   useEffect(() => {
-    return () => {
-      engine.stop();
-      recorder.cleanup();
-      closeSharedAudioContext();
-    };
+    refreshDevices();
+    if (!navigator.mediaDevices?.addEventListener) return;
+    navigator.mediaDevices.addEventListener('devicechange', refreshDevices);
+    return () => navigator.mediaDevices.removeEventListener('devicechange', refreshDevices);
+  }, [refreshDevices]);
+
+  useEffect(() => () => {
+    engine.stop();
+    recorder.cleanup();
+    closeSharedAudioContext();
   }, [engine, recorder]);
 
-  const value = useMemo(
-    () => ({
-      engine,
-      recorder,
-      selectedDeviceId,
-      setSelectedDeviceId,
-      selectedOutputDeviceId,
-      setSelectedOutputDeviceId: (id: string) => {
-        setSelectedOutputDeviceId(id);
-        engine.setOutputDevice(id);
-      },
-      listeningMode,
-      setListeningMode,
-      recordedSampleRate,
-      setRecordedSampleRate,
-    }),
-    [engine, recorder, selectedDeviceId, selectedOutputDeviceId, listeningMode, recordedSampleRate]
-  );
+  const setSelectedDeviceId = useCallback((id: string, label?: string) => {
+    setSelectedDeviceIdState(id);
+    if (label) setSelectedDeviceLabel(label);
+    try { localStorage.setItem(STORAGE_KEY_INPUT, id); } catch {}
+  }, []);
+
+  const setSelectedOutputDeviceId = useCallback((id: string) => {
+    setSelectedOutputDeviceIdState(id);
+    engine.setOutputDevice(id);
+    try { localStorage.setItem(STORAGE_KEY_OUTPUT, id); } catch {}
+  }, [engine]);
+
+  const value = useMemo(() => ({
+    engine, recorder, selectedDeviceId, selectedDeviceLabel, setSelectedDeviceId,
+    selectedOutputDeviceId, setSelectedOutputDeviceId, listeningMode, setListeningMode,
+    recordedSampleRate, setRecordedSampleRate,
+  }), [engine, recorder, selectedDeviceId, selectedDeviceLabel, setSelectedDeviceId, selectedOutputDeviceId, setSelectedOutputDeviceId, listeningMode, recordedSampleRate]);
 
   return <AudioHardwareCtx.Provider value={value}>{children}</AudioHardwareCtx.Provider>;
 };

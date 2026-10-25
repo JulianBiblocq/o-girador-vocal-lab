@@ -8,7 +8,7 @@ import { Mic, Activity } from 'lucide-react';
 
 interface AudioDeviceSettingsSectionProps {
   selectedDeviceId: string;
-  onDeviceChange: (id: string) => void;
+  onDeviceChange: (id: string, label?: string) => void;
   selectedOutputDeviceId: string;
   onOutputDeviceChange: (id: string) => void;
 }

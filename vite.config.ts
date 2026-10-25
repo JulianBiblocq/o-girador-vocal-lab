@@ -9,7 +9,7 @@ function versionBusterPlugin(): Plugin {
     name: 'version-buster-plugin',
     buildStart() {
       const versionData = {
-        version: '1.0.2',
+        version: '1.0.3',
         buildTime: new Date().toISOString(),
       }
       const publicPath = path.resolve(process.cwd(), 'public/version.json')
@@ -20,7 +20,7 @@ function versionBusterPlugin(): Plugin {
         type: 'asset',
         fileName: 'version.json',
         source: JSON.stringify({
-          version: '1.0.2',
+          version: '1.0.3',
           buildTime: new Date().toISOString(),
         }, null, 2) + '\n',
       })

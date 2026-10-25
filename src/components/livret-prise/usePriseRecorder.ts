@@ -33,6 +33,7 @@ export interface UsePriseRecorderParams {
   selectedDeviceId: string;
   selectedOutputDeviceId: string;
   updateVariant: (patternId: string, variantKey: string, partial: Partial<VocalAudioVariant>) => void;
+  updatePattern?: (patternId: string, partial: Partial<VocalPatternItem>) => void;
   recordedSampleRate: number;
   setRecordedSampleRate: (sr: number) => void;
   activeLivret: string;
@@ -43,7 +44,7 @@ export function usePriseRecorder(params: UsePriseRecorderParams) {
   const {
     engine, recorder, activePattern, activeVariant, cueMode, getPreviousConductorPattern, projectPatterns,
     timeSignature, measuresCount, hasAnacrusis, beatsPerMeasure, beatDuration, effectiveBpm, effectivePitch,
-    listeningMode, selectedDeviceId, selectedOutputDeviceId, updateVariant, recordedSampleRate, setRecordedSampleRate, activeLivret,
+    listeningMode, selectedDeviceId, selectedOutputDeviceId, updateVariant, updatePattern, recordedSampleRate, setRecordedSampleRate, activeLivret,
     harmonyConfig,
   } = params;
 
@@ -58,6 +59,7 @@ export function usePriseRecorder(params: UsePriseRecorderParams) {
     if (isCycleActive) {
       engine.stop(); cueHandleRef.current?.stop(); takeGuideRef.current?.stop();
       updateVariant(activePattern.id, activeVariant.variantKey, { recordingResult: { pcm: recorder.stop(), sampleRate: recordedSampleRate }, trimStartSec: 0, trimEndSec: totalRecordedSec });
+      updatePattern?.(activePattern.id, { pack: null, rawAudioSamples: null, isMidiInitialized: false, midiLocked: false });
       setIsCycleActive(false); return;
     }
     const ctx = await engine.initContext(), sampleRate = await recorder.prepare(ctx, selectedDeviceId);
@@ -85,9 +87,10 @@ export function usePriseRecorder(params: UsePriseRecorderParams) {
     }, () => {
       cueHandleRef.current?.stop(); takeGuideRef.current?.stop();
       updateVariant(activePattern.id, activeVariant.variantKey, { recordingResult: { pcm: recorder.stop(), sampleRate }, trimStartSec: 0, trimEndSec: totalRecordedSec });
+      updatePattern?.(activePattern.id, { pack: null, rawAudioSamples: null, isMidiInitialized: false, midiLocked: false });
       setIsCycleActive(false);
     }, cycleStart);
-  }, [engine, recorder, isCycleActive, selectedDeviceId, selectedOutputDeviceId, effectiveBpm, timeSignature, measuresCount, effectivePitch, listeningMode, beatsPerMeasure, beatDuration, cueMode, getPreviousConductorPattern, projectPatterns, activePattern, activeVariant, updateVariant, recordedSampleRate, hasAnacrusis, harmonyConfig]);
+  }, [engine, recorder, isCycleActive, selectedDeviceId, selectedOutputDeviceId, effectiveBpm, timeSignature, measuresCount, effectivePitch, listeningMode, beatsPerMeasure, beatDuration, cueMode, getPreviousConductorPattern, projectPatterns, activePattern, activeVariant, updateVariant, updatePattern, recordedSampleRate, hasAnacrusis, harmonyConfig]);
 
   useEffect(() => {
     setIsRecording(isCycleActive);

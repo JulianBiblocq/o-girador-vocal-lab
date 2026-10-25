@@ -78,10 +78,11 @@ export function extractContinuousPitchCurve(pcm: Float32Array, options: PitchExt
         if (Math.abs(denom) > 1e-6) refinedTau += (s0 - s2) / denom;
 
         const freq = sampleRate / refinedTau;
-        if (freq >= minFreq && freq <= maxFreq) {
+        if (Number.isFinite(freq) && freq >= minFreq && freq <= maxFreq) {
           const midiFloat = frequencyToMidiFloat(freq);
-          const conf = Math.max(0.02, 1 - diff[tau]);
-          frameCandidates.push({ midiFloat, aperiodicity: diff[tau], confidence: conf, folded: false });
+          if (Number.isFinite(midiFloat)) {
+            const conf = Math.max(0.02, 1 - diff[tau]);
+            frameCandidates.push({ midiFloat, aperiodicity: diff[tau], confidence: conf, folded: false });
 
           // Repliement d'harmonique dans la plage Plancher/Plafond
           if (tessitura) {
@@ -98,6 +99,7 @@ export function extractContinuousPitchCurve(pcm: Float32Array, options: PitchExt
         }
       }
     }
+  }
 
     frameCandidates.sort((a, b) => b.confidence - a.confidence);
     const topCandidates = frameCandidates.slice(0, 4);

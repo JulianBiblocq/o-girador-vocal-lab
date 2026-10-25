@@ -14,7 +14,7 @@ import { decodeAudioFile } from '../../utils/directAudioImporter';
 import { getPatternTotalDurationSec } from '../../utils/anacrusisTimingHelper';
 import { getBeatsPerMeasure, transposePitchNote } from '../../utils/musicalMath';
 import { getDefaultBeatResolutions } from '../../utils/alignmentMath';
-import type { VocalPackExport } from '../../types/vocalPack.types';
+import { extractPatternMelodicData } from '../../audio/melodicExtractionHelper';
 import { Upload, Scissors } from 'lucide-react';
 import { useLanguage } from '../../i18n/LanguageContext';
 
@@ -54,10 +54,33 @@ export const LivretCalage: React.FC = () => {
     if (fileInputRef.current) fileInputRef.current.value = '';
   }, [activePattern.id, activeVariant.variantKey, effectiveBpm, beatsPerMeasure, hasAnacrusis, measuresCount, updateVariant, setRecordedSampleRate]);
 
-  const handlePackReady = useCallback((pack: VocalPackExport) => {
-    updatePattern(activePattern.id, { pack, isMidiInitialized: true });
+  const handlePackReady = useCallback(() => {
+    if (!rawPCM) return;
+    const res = extractPatternMelodicData({
+      rawPCM,
+      sampleRate,
+      bpm: effectiveBpm,
+      timeSignature,
+      measuresCount,
+      beatsPerMeasure,
+      beatResolutions,
+      hasAnacrusis,
+      trimStartSec: activeVariant.trimStartSec,
+      trimEndSec: activeVariant.trimEndSec,
+      referencePitch: effectivePitch,
+      pitchShiftSemitones: activeVariant.pitchShiftSemitones,
+      tessitura: activePattern.tessitura,
+      assignedLyricsText: activePattern.assignedLyricsText,
+      lowCutEnabled: activeVariant.lowCutEnabled,
+      enableTonePolish: activeVariant.enableTonePolish !== false,
+    });
+    updatePattern(activePattern.id, {
+      pack: res.pack, rawAudioSamples: res.cleanPCM, rawPitchCurve: res.pitchCurve,
+      pitchCurve: res.pitchCurve, anacrusisSteps: res.anacrusisSteps, mainSteps: res.mainSteps,
+      isMidiInitialized: true, midiLocked: true,
+    });
     setActiveLivret('melodia');
-  }, [activePattern.id, updatePattern, setActiveLivret]);
+  }, [rawPCM, sampleRate, effectiveBpm, timeSignature, measuresCount, beatsPerMeasure, beatResolutions, hasAnacrusis, activeVariant, effectivePitch, activePattern, updatePattern, setActiveLivret]);
 
   return (
     <div className="flex flex-col gap-3.5 w-full">

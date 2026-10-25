@@ -1,4 +1,4 @@
-﻿/**
+/**
  * VocalRecorderEngine.ts
  * Moteur de capture audio PCM synchrone cale sur l horloge Web Audio a T0.
  * Utilise un AudioWorkletNode dedie (blocs de 128 samples, zero buzz, zero blocage UI).
@@ -41,6 +41,14 @@ export class VocalRecorderEngine {
         echoCancellation: false,
         noiseSuppression: false,
         autoGainControl: false,
+        channelCount: 1,
+        sampleRate: 48000,
+        // @ts-expect-error Chromium audio processing bypass
+        googEchoCancellation: false,
+        googAutoGainControl: false,
+        googNoiseSuppression: false,
+        googHighpassFilter: false,
+        googAudioMirroring: false,
       },
     };
 
@@ -118,5 +126,9 @@ export class VocalRecorderEngine {
 
   public cleanup(): void {
     this.stop();
+  }
+
+  public getActiveTrackLabel(): string {
+    return this.stream?.getAudioTracks()[0]?.label || '';
   }
 }
