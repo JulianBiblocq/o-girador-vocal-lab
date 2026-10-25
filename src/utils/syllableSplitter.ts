@@ -16,7 +16,18 @@ export function syllabifySingleWord(word: string): string[] {
     const parts = clean.split('-').filter(Boolean);
     return parts.map((p, i) => (i === parts.length - 1 ? `${p} ` : p));
   }
-  if (clean.includes("'")) return [`${clean} `];
+  if (clean.includes("'")) {
+    const apostropheIndex = clean.indexOf("'");
+    const stem = clean.slice(0, apostropheIndex);
+    const clitic = clean.slice(apostropheIndex + 1);
+    const stemSyllables = syllabifySingleWord(stem);
+    if (stemSyllables.length <= 1) {
+      return [`${clean} `];
+    }
+    const lastSyllable = stemSyllables[stemSyllables.length - 1].trimEnd();
+    stemSyllables[stemSyllables.length - 1] = `${lastSyllable}'${clitic} `;
+    return stemSyllables;
+  }
 
   const syllables: string[] = [];
   let current = '';

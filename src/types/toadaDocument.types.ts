@@ -37,6 +37,15 @@ export interface ToadaDocument {
   repertoireId?: string;
 }
 
+export interface TimeAnchor {
+  beat: number; // 1..12
+  measureOffset: number;
+  isRest: boolean;
+  charOffset?: number;
+  textSlice?: string;
+  syllables?: string[];
+}
+
 export interface ParsedLyricsSegment {
   role: VocalRole;
   text: string;
@@ -48,6 +57,8 @@ export interface ParsedLyricsSegment {
   chords?: string[];
   sectionBpm?: number;
   sectionName?: string;
+  timeAnchors?: TimeAnchor[];
+  exitBeat?: number;
 }
 
 export interface ParsedToadaSheetResult {

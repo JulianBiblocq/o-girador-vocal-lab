@@ -3,7 +3,7 @@
  * Modèle de données de la Toada : Multi-patterns, Déclinaisons Audio, Tessiture & Frise Conducteur (< 90 lignes).
  */
 import type { TimeSignatureString, VocalStepData, PitchCurvePoint, VocalPackExport, MelodyneRegion } from './vocalPack.types';
-import type { ToadaDocument } from './toadaDocument.types';
+import type { ToadaDocument, TimeAnchor } from './toadaDocument.types';
 import type { TessituraRange } from './tessitura.types';
 import type { PatternHarmonyGrid, HarmonyConfig } from './harmony.types';
 
@@ -60,6 +60,7 @@ export interface VocalPatternItem {
   melodyneRegions?: MelodyneRegion[]; assignedLyricsText?: string; assignedPhoneticText?: string;
   variantPitchesConfig?: VariantPitchesConfig; variantSpeedsConfig?: VariantSpeedsConfig;
   harmonyGrid?: PatternHarmonyGrid;
+  timeAnchors?: TimeAnchor[]; exitBeat?: number;
 }
 
 export interface VariantPitchesConfig {
@@ -74,6 +75,7 @@ export interface ToadaArrangementSlot {
   slotId: string;
   puxadorPatternId: string | null;
   coroPatternId: string | null;
+  advanceMeasures?: number;
 }
 
 export interface ToadaProject {

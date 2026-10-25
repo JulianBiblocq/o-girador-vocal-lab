@@ -60,7 +60,11 @@ export async function publishToadaToOrganizador(
   const existingDocId = project.toadaMeta?.id;
   if (existingDocId) {
     try {
-      await updateDoc(doc(db, 'documents', existingDocId), payload);
+      const updatePayload = { ...payload };
+      if (project.toadaMeta?.parolesOriginales) {
+        delete updatePayload.parolesOriginales;
+      }
+      await updateDoc(doc(db, 'documents', existingDocId), updatePayload);
       return { success: true, documentId: existingDocId };
     } catch {}
   }

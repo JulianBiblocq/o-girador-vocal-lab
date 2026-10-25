@@ -5,6 +5,8 @@
  */
 
 import { extractChordsFromTextLine } from './chordParser';
+import type { TimeAnchor } from '../types/toadaDocument.types';
+import { extractTimeAnchors } from './timeAnchorParser';
 
 export interface LineDirectives {
   cleanText: string;
@@ -14,6 +16,8 @@ export interface LineDirectives {
   sectionName?: string;
   sectionBpm?: number;
   chords?: string[];
+  timeAnchors?: TimeAnchor[];
+  exitBeat?: number;
 }
 
 export const SECTION_HEADER_REGEX = /^\s*\[(?!(?:[A-G][b#]?(?:m|maj|min|dim|aug|sus|[0-9]|b5|#5|\/[A-G][b#]?)*)\])([^\]]+)\]\s*$/i;
@@ -26,9 +30,9 @@ export function extractInlineLineDirectives(rawText: string): LineDirectives {
   let isLinkedMeasure: boolean | undefined;
   let measuresCount: 1 | 2 | 3 | 4 | undefined;
 
-  // 1. Détection de balise de section [Section]
+  // 1. Détection de balise de section [Section] (ignorer [1]..[12])
   const secMatch = text.match(SECTION_HEADER_REGEX);
-  if (secMatch) {
+  if (secMatch && !/^(?:[1-9]|1[0-2])$/.test(secMatch[1].trim())) {
     const rawSec = secMatch[1].trim();
     const bpmMatch = rawSec.match(/(?:@|-|\()\s*(\d{2,3})\s*(?:bpm)?/i);
     const sectionBpm = bpmMatch ? parseInt(bpmMatch[1], 10) : undefined;
@@ -61,13 +65,24 @@ export function extractInlineLineDirectives(rawText: string): LineDirectives {
   const extractedChords = extractChordsFromTextLine(text).map((c) => c.chord);
   const chords = extractedChords.length > 0 ? extractedChords : undefined;
 
-  // Nettoyage des parenthèses de directives et des accords [Dm7]
-  const cleanText = text
+  // 6. Extraction des ancres de temps [1]..[12] et silences (_)
+  const anchorRes = extractTimeAnchors(text);
+  let timeAnchors: TimeAnchor[] | undefined;
+  let exitBeat: number | undefined;
+  if (anchorRes.timeAnchors.length > 0) {
+    timeAnchors = anchorRes.timeAnchors;
+    if (measuresCount === undefined) measuresCount = anchorRes.measuresCount;
+    if (hasAnacrusis === undefined) hasAnacrusis = anchorRes.hasAnacrusis;
+    exitBeat = anchorRes.exitBeat;
+  }
+
+  // Nettoyage des parenthèses de directives, des accords [Dm7], des ancres et des silences
+  const cleanText = anchorRes.cleanText
     .replace(/\(\s*[1-4]\s*m\s*\)/gi, '')
     .replace(/\(\s*(?:sans\s*ana(?:crouse)?|no-?ana(?:crusis)?|avec\s*ana(?:crouse)?|ana(?:crouse|crusis)?)\s*\)/gi, '')
     .replace(/\[(?:[A-G][b#]?(?:m|maj|min|dim|aug|sus|[0-9]|b5|#5|\/[A-G][b#]?)*)\]/g, '')
     .replace(/\s{2,}/g, ' ')
     .trim();
 
-  return { cleanText, measuresCount, hasAnacrusis, isLinkedMeasure, chords };
+  return { cleanText, measuresCount, hasAnacrusis, isLinkedMeasure, chords, timeAnchors, exitBeat };
 }

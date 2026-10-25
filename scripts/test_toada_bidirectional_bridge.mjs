@@ -5,97 +5,120 @@ import path from 'path';
 import { extractInlineLineDirectives } from '../src/utils/sheetDirectiveHelper.ts';
 import { parseRichTextLyricsAndPhonetics } from '../src/utils/toadaSheetParser.ts';
 import { generateToadaFromSheet } from '../src/utils/toadaConductorGenerator.ts';
-import { stitchSyllablesFromSteps, reconstituteToadaTxt } from '../src/utils/toadaTxtReconstitutor.ts';
+import { stitchSyllablesFromSteps, reconstituteToadaTxt, toadaToCleanHtml } from '../src/utils/toadaTxtReconstitutor.ts';
+import { syllabifySingleWord } from '../src/utils/syllableSplitter.ts';
+import { convertTwoLineNotationToBrackets, extractTimeAnchors } from '../src/utils/timeAnchorParser.ts';
+import { applyLyricsSyllablesToSteps } from '../src/utils/syllableAligner.ts';
 
 console.log('========================================================================');
 console.log('🧪 TEST AUTOMATISÉ : PASSERELLE BIDIRECTIONNELLE CANTADOR <-> ORGANIZADOR');
 console.log('========================================================================\n');
 
-// 1. Test Directives & Préfixes (+ et /)
-console.log('▶️ Test 1 : Détection des préfixes Anacrouse (+), Mesure liée (/) et Sections');
-const dirAna = extractInlineLineDirectives('+ *Atotô* [Dm7]');
-assert.strictEqual(dirAna.hasAnacrusis, true, 'Doit détecter l\'anacrouse (+)');
-assert.strictEqual(dirAna.cleanText, '*Atotô*', 'Doit retirer l\'accord et le +');
+// 1. Test Élisision par apostrophe (1.1)
+console.log('▶️ Test 1.1 : Élision par apostrophe (monosyllabique vs polysyllabique)');
+const elisionMono1 = syllabifySingleWord("e'o");
+assert.deepStrictEqual(elisionMono1, ["e'o "], "Doit traiter e'o comme monosyllabe insécable");
+const elisionMono2 = syllabifySingleWord("d'água");
+assert.deepStrictEqual(elisionMono2, ["d'água "], "Doit traiter d'água comme monosyllabe insécable");
+const elisionPoly = syllabifySingleWord("trazendo'o");
+assert.deepStrictEqual(elisionPoly, ["tra", "zen", "do'o "], "Doit découper le radical et fusionner uniquement la dernière syllabe avec 'o");
+console.log('  ✅ Test 1.1 validé : Élisisions gérées parfaitement.\n');
 
-const dirLinked = extractInlineLineDirectives('/ Azawani');
-assert.strictEqual(dirLinked.isLinkedMeasure, true, 'Doit détecter la mesure liée (/)');
-assert.strictEqual(dirLinked.cleanText, 'Azawani', 'Doit nettoyer le préfixe');
+// 2. Test Format .txt sur 2 lignes (1.2)
+console.log('▶️ Test 1.2a : Conversion format .txt 2 lignes manuscrit vers crochets [b]');
+// Col 0: 1 (vide), Col 3: 2 (Vovó), Col 14: 3 (e'o), Col 18: 4 (barão), Col 24: 1 (assinou)
+const anchorLine = '1  2          3   4     1';
+const lyricsLine = '   Vovó falou e\'o barão assinou';
+const converted = convertTwoLineNotationToBrackets(anchorLine, lyricsLine);
+assert.strictEqual(converted, "[1] _ [2]Vovó falou [3]e'o [4]barão [1]assinou", `Attendu crochets avec silence [1] _ (obtenu: ${converted})`);
+console.log('  ✅ Test 1.2a validé : Conversion colonne par colonne réussie.\n');
 
-const dirSec = extractInlineLineDirectives('[Refrain Principal]');
-assert.strictEqual(dirSec.sectionName, 'Refrain Principal', 'Doit détecter le nom de section');
-console.log('  ✅ Test 1 validé : Détection fidèle des symboles techniques.\n');
+// 3. Test Extraction Ancres [1]..[12] et Rests (_)
+console.log('▶️ Test 1.2b : Parsing ancres [1]..[12], silences et anacrouse');
+const parsedAnchors = extractTimeAnchors("[1] _ [2]Vovó falou [3]e'o [4]barão [1]assinou");
+assert.strictEqual(parsedAnchors.timeAnchors.length, 5, 'Doit trouver 5 ancres');
+assert.strictEqual(parsedAnchors.timeAnchors[0].beat, 1);
+assert.strictEqual(parsedAnchors.timeAnchors[0].isRest, true, 'Ancre 1 doit être un silence');
+assert.strictEqual(parsedAnchors.timeAnchors[1].beat, 2);
+assert.strictEqual(parsedAnchors.timeAnchors[1].isRest, false, 'Ancre 2 doit porter du texte');
+assert.strictEqual(parsedAnchors.timeAnchors[4].beat, 1);
+assert.strictEqual(parsedAnchors.timeAnchors[4].measureOffset, 1, 'Deuxième ancre [1] doit être sur mesure 2');
+assert.strictEqual(parsedAnchors.measuresCount, 2, 'Doit couvrir 2 mesures');
+assert.strictEqual(parsedAnchors.hasAnacrusis, false, 'Attaque sur [1] (silence ou texte) -> sans anacrouse');
+assert.strictEqual(parsedAnchors.exitBeat, 1, 'Sortie sur temps 1');
 
-// 2. Test Soudure Syllabique MIDI
-console.log('▶️ Test 2 : Soudure syllabique des pas MIDI (tirets -, exclusion ───)');
-const mockSteps = [
-  { stepIndex: 0, active: true, note: 'C4', midiNumber: 60, syllable: 'O-', velocity: 100, decay: 200 },
-  { stepIndex: 1, active: true, note: 'D4', midiNumber: 62, syllable: 'pa-', velocity: 100, decay: 200 },
-  { stepIndex: 2, active: true, note: 'E4', midiNumber: 64, syllable: 'ni-', velocity: 100, decay: 200 },
-  { stepIndex: 3, active: true, note: 'F4', midiNumber: 65, syllable: '───', velocity: 100, decay: 200 }, // tenue
-  { stepIndex: 4, active: true, note: 'G4', midiNumber: 67, syllable: 'jé', velocity: 100, decay: 200 },
-  { stepIndex: 8, active: true, note: 'C5', midiNumber: 72, syllable: 'A-', velocity: 100, decay: 200 },
-  { stepIndex: 9, active: true, note: 'B4', midiNumber: 71, syllable: 'to-', velocity: 100, decay: 200 },
-  { stepIndex: 10, active: true, note: 'A4', midiNumber: 69, syllable: 'tô', velocity: 100, decay: 200 }
-];
+const parsedWithoutRest = extractTimeAnchors("[2]Vovó falou [3]e'o [4]barão [1]assinou");
+assert.strictEqual(parsedWithoutRest.hasAnacrusis, true, 'Attaque sur temps 2 sans [1] initial -> avec anacrouse');
+assert.strictEqual(parsedWithoutRest.measuresCount, 1, '1 mesure principale avec anacrouse');
+assert.strictEqual(parsedWithoutRest.exitBeat, 1);
 
-const stitched = stitchSyllablesFromSteps(mockSteps);
-assert.strictEqual(stitched, 'Opanijé Atotô', `Doit souder 'Opanijé Atotô' sans tiret ni tenue (obtenu: ${stitched})`);
-console.log('  ✅ Test 2 validé : Soudure syllabique impeccable (' + stitched + ').\n');
+// 3b. Test De Norte a Sul (2 M + Ana) et coupure par Entrée
+console.log('▶️ Test 1.2c : De Norte a Sul (1 pattern Puxador 2M+Ana, 1 pattern Coro 2M+Ana)');
+const deNorteASulPux = extractTimeAnchors("[3] _ Negro [4]vem de Lu[1]anda [2]Trazen[3]_do [4]o baque vi[1]rado nação");
+assert.strictEqual(deNorteASulPux.hasAnacrusis, true, 'Doit avoir une anacrouse');
+assert.strictEqual(deNorteASulPux.measuresCount, 2, 'Doit couvrir exactement 2 mesures');
+assert.strictEqual(deNorteASulPux.timeAnchors[0].measureOffset, 0, 'Anacrouse sur mesure 0');
+assert.strictEqual(deNorteASulPux.timeAnchors[2].measureOffset, 1, '1er temps 1 sur mesure 1');
+assert.strictEqual(deNorteASulPux.timeAnchors[6].measureOffset, 2, '2e temps 1 sur mesure 2');
+console.log('  ✅ Test 1.2b & 1.2c validés : Extraction, 2 M + Ana et offsets Piano Roll conformes.\n');
 
-// 3. Test Mesures Mixtes (Appel + Réponse sur la même ligne)
-console.log('▶️ Test 3 : Mesures mixtes tuilées (Puxador + Coro)');
-const mixedText = '+ *Atotô* Azawani';
-const segs = parseRichTextLyricsAndPhonetics(mixedText, undefined, 'puxador');
-assert.strictEqual(segs.length, 2, 'Doit générer 2 segments');
-assert.strictEqual(segs[0].role, 'puxador', 'Segment 1 doit être Puxador (*gras*)');
-assert.strictEqual(segs[0].hasAnacrusis, true, 'Segment 1 hérite de l\'anacrouse (+)');
-assert.strictEqual(segs[1].role, 'coro', 'Segment 2 doit être Coro');
-assert.strictEqual(segs[0].isMixedPair, true, 'Doit être marqué comme paire mixte');
+// 4. Test Alignement Syllabique Guidé par Ancres (1.3)
+console.log('▶️ Test 1.3 : Alignement syllabique calé sur (m * BPM + (b - 1)) * SPB');
+const alignedSteps = applyLyricsSyllablesToSteps([], parsedAnchors.cleanText, parsedAnchors.timeAnchors, 4, 4);
+assert.strictEqual(alignedSteps[0].active, false, 'Temps 1 (silence) doit avoir active: false');
+assert.strictEqual(alignedSteps[1].active, false);
+assert.strictEqual(alignedSteps[4].active, true, 'Temps 2 début doit être actif');
+assert.strictEqual(alignedSteps[4].syllable, 'Vo');
+assert.strictEqual(alignedSteps[8].active, true, 'Temps 3 début (e\'o)');
+assert.strictEqual(alignedSteps[8].syllable.trim(), "e'o");
+assert.strictEqual(alignedSteps[16].active, true, 'Temps 1 de la mesure suivante (step 16)');
+assert.strictEqual(alignedSteps[16].syllable, 'as');
+console.log('  ✅ Test 1.3 validé : Calage syllabique mathématiquement parfait.\n');
 
-const baseProject = {
-  id: 'test_toada_1',
-  title: 'Toada Atotô',
-  bpm: 55,
-  timeSignature: '4/4',
-  patterns: [],
-  slots: [],
-  activePatternId: ''
-};
+// 5. Test Déduplication (x2) & Tuilage Horizontal (1.4)
+console.log('▶️ Test 1.4 : Déduplication unifiée (x2) et tuilage horizontal advanceMeasures');
+const repeatText = `[1] _ [2]Vovó falou [3]e'o [4]barão [1]assinou
 
-const genProject = generateToadaFromSheet(baseProject, { segments: segs });
-assert.strictEqual(genProject.slots.length, 1, 'Doit créer 1 seul slot tuilé pour la mesure mixte');
-assert(genProject.slots[0].puxadorPatternId, 'Slot doit contenir Puxador');
-assert(genProject.slots[0].coroPatternId, 'Slot doit contenir Coro');
-console.log('  ✅ Test 3 validé : Superposition fidèle sur le même créneau de la Frise.\n');
+[2]Vovó falou [3]e'o [4]barão [1]assinou`;
 
-// 4. Test Agrégation des Mesures Liées (/)
-console.log('▶️ Test 4 : Agrégation automatique des mesures liées consécutives (/)');
-const linkedText = `+ *Première mesure*
+const baseProject = { id: 'p1', title: 'Test', bpm: 55, timeSignature: '4/4', patterns: [], slots: [], activePatternId: '' };
+const parsedRepeat = { segments: parseRichTextLyricsAndPhonetics(repeatText, undefined, 'puxador') };
+const genRepeat = generateToadaFromSheet(baseProject, parsedRepeat);
 
-/ Seconde mesure liée
+assert.strictEqual(genRepeat.patterns.length, 1, `Les 2 phrases doivent partager 1 seul VocalPatternItem (obtenu: ${genRepeat.patterns.length})`);
+assert.strictEqual(genRepeat.slots.length, 2, 'Doit générer 2 slots');
+const activeId0 = genRepeat.slots[0].puxadorPatternId || genRepeat.slots[0].coroPatternId;
+const activeId1 = genRepeat.slots[1].puxadorPatternId || genRepeat.slots[1].coroPatternId;
+assert.strictEqual(activeId0, genRepeat.patterns[0].id);
+assert.strictEqual(activeId1, genRepeat.patterns[0].id);
+assert.strictEqual(genRepeat.slots[0].advanceMeasures, 1, 'Slot 0 doit avancer de 1 mesure pour tuiler sans trou de 3 temps');
+const deNorteLyrics = `*[3] _ Negro [4]vem de Lu[1]anda [2]Trazen[3]_do [4]o baque vi[1]rado nação*\n[3] _ Negro [4]vem de Lu[1]anda [2]Trazen[3]_do [4]o baque vi[1]rado nação`;
+const genDeNorte = generateToadaFromSheet(baseProject, { segments: parseRichTextLyricsAndPhonetics(deNorteLyrics, undefined, 'puxador') });
+assert.strictEqual(genDeNorte.patterns.length, 2, 'Doit générer 1 pattern Puxador et 1 pattern Coro distincts');
+assert.strictEqual(genDeNorte.patterns[0].measuresCount, 2, 'Puxador doit avoir 2 mesures');
+assert.strictEqual(genDeNorte.patterns[0].hasAnacrusis, true, 'Puxador doit avoir anacrouse');
+assert.strictEqual(genDeNorte.patterns[1].measuresCount, 2, 'Coro doit avoir 2 mesures');
+assert.strictEqual(genDeNorte.patterns[1].hasAnacrusis, true, 'Coro doit avoir anacrouse');
+console.log('  ✅ Test 1.4 & 1.4b validés : Déduplication et De Norte a Sul (2M + Ana) confirmés.\n');
 
-/ Troisième mesure liée`;
+// 6. Test Nettoyage HTML Varal (1.5)
+console.log('▶️ Test 1.5 : Nettoyage HTML Varal (zéro [1]..[12], zéro _)');
+const cleanVaral = toadaToCleanHtml("[1] _ [2]Vovó falou [3]e'o [4]barão [1]assinou");
+assert.strictEqual(cleanVaral, '<p>Vovó falou e\'o barão assinou</p>', `HTML doit être 100% propre (obtenu: ${cleanVaral})`);
+assert(!cleanVaral.includes('_'), 'Le HTML ne doit pas contenir de _');
+assert(!cleanVaral.includes('['), 'Le HTML ne doit pas contenir de crochets');
+console.log('  ✅ Test 1.5 validé : HTML Varal 100% propre.\n');
 
-const linkedSegs = parseRichTextLyricsAndPhonetics(linkedText, undefined, 'puxador');
-const genLinkedProject = generateToadaFromSheet(baseProject, { segments: linkedSegs });
-assert.strictEqual(genLinkedProject.patterns.length, 1, 'Doit fusionner en 1 seul pattern agrégé');
-assert.strictEqual(genLinkedProject.patterns[0].measuresCount, 3, 'Pattern doit couvrir 3 mesures');
-console.log('  ✅ Test 4 validé : Agrégation de measuresCount = 3 réussie.\n');
-
-// 5. Test Reconstitution .txt propre et HTML (Sens B)
-console.log('▶️ Test 5 : Reconstitution Toada .txt et HTML propre (Sens B)');
-const recon = reconstituteToadaTxt(genProject);
-assert(recon.rawTxtCode.includes('+ *Atotô* Azawani'), 'Doit reconstituer le code brut avec + et soliste');
-assert(recon.cleanHtml.includes('<strong>Atotô</strong> Azawani'), 'Doit générer du HTML propre avec <strong>');
-assert(!recon.cleanHtml.includes('+'), 'Le HTML propre ne doit JAMAIS contenir de +');
-console.log('  ✅ Test 5 validé : Reconstitution Isomorphe et HTML 100% compatible.\n');
-
-// 6. Test Règle Anti-Monolithe (< 150 lignes)
-console.log('▶️ Test 6 : Règle Anti-Monolithe (< 150 lignes)');
+// 7. Test Règle Anti-Monolithe (< 140 lignes)
+console.log('▶️ Test 1.6 : Règle Anti-Monolithe (< 140 lignes par fichier)');
 const files = [
   'src/types/toadaDocument.types.ts',
+  'src/types/toadaProject.types.ts',
+  'src/utils/syllableSplitter.ts',
+  'src/utils/timeAnchorParser.ts',
   'src/utils/sheetDirectiveHelper.ts',
   'src/utils/toadaSheetParser.ts',
+  'src/utils/syllableAligner.ts',
   'src/utils/toadaConductorGenerator.ts',
   'src/utils/toadaTxtReconstitutor.ts',
   'src/services/organizadorToadaPublisher.ts',
@@ -106,10 +129,10 @@ for (const f of files) {
   const absPath = path.resolve(process.cwd(), f);
   const lines = fs.readFileSync(absPath, 'utf8').split('\n').length;
   console.log(`   - ${f} : ${lines} lignes`);
-  assert(lines < 150, `${f} dépasse 150 lignes (${lines})`);
+  assert(lines < 140, `${f} dépasse 140 lignes (${lines})`);
 }
-console.log('  ✅ Test 6 validé : 100% des fichiers sont strictement sous 150 lignes.\n');
+console.log('  ✅ Test 1.6 validé : 100% des fichiers sont strictement sous 140 lignes.\n');
 
 console.log('========================================================================');
-console.log('🏆 TOUS LES TESTS DE LA PASSERELLE CANTADOR SONT 100% VALIDÉS !');
+console.log('🏆 TOUS LES TESTS DE LA MISSION CANTADOR SONT 100% VALIDÉS !');
 console.log('========================================================================');

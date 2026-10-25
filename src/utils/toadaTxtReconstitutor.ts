@@ -52,6 +52,8 @@ export function toadaToCleanHtml(rawTxtCode: string): string {
         .replace(/^\s*[+/]\s*/, '')
         .replace(/\[[^\]]+\]/g, '')
         .replace(/(^|\s|\*)\+\s+/g, '$1')
+        .replace(/(?:^|\s)_(?=\s|$)/g, '')
+        .replace(/\s{2,}/g, ' ')
         .trim();
       clean = clean.replace(/\*([^*]+)\*/g, '<strong>$1</strong>');
       return clean;

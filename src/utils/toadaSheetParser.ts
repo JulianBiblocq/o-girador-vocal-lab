@@ -9,10 +9,12 @@ import type { ToadaDocument, ParsedLyricsSegment, ParsedToadaSheetResult } from 
 import { splitHtmlOrTextIntoRawLines, parseRichLineIntoSegments } from './htmlLyricsHelper';
 import { extractInlineLineDirectives } from './sheetDirectiveHelper';
 import { extractSheetHeaders } from './sheetHeaderParser';
+import { preprocessTwoLineLyrics } from './timeAnchorParser';
 
 export function parseRichTextLyricsAndPhonetics(rawOriginal: string, rawPhonetic?: string, boldRole: VocalRole = 'puxador'): ParsedLyricsSegment[] {
   const { cleanLyricsText } = extractSheetHeaders(rawOriginal);
-  const lines = cleanLyricsText.split(/\r?\n/);
+  const preprocessedLyrics = preprocessTwoLineLyrics(cleanLyricsText);
+  const lines = preprocessedLyrics.split(/\r?\n/);
   const mergedLines: string[] = [];
   for (const line of lines) {
     if (/^\s+/.test(line) && mergedLines.length > 0) {
@@ -68,6 +70,8 @@ export function parseRichTextLyricsAndPhonetics(rawOriginal: string, rawPhonetic
         chords: dir.chords,
         sectionName: currentSectionName,
         sectionBpm: currentSectionBpm,
+        timeAnchors: dir.timeAnchors,
+        exitBeat: dir.exitBeat,
       });
     });
   });

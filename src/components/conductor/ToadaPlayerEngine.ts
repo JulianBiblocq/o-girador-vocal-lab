@@ -68,7 +68,7 @@ export class ToadaPlayerEngine {
         });
       }
 
-      currentMeasure += measuresInSlot;
+      currentMeasure += (slot.advanceMeasures ?? measuresInSlot);
     });
 
     const totalDurationMs = Math.max(10, (audioCtxStart + currentMeasure * measureDurationSec + 0.5 - ctx.currentTime) * 1000);

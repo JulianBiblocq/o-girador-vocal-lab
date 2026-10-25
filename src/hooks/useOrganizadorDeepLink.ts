@@ -1,6 +1,6 @@
 /**
  * useOrganizadorDeepLink.ts
- * Prise en charge des paramètres d'URL d'Organizador & Sequenciad'Or (< 110 lignes) :
+ * Prise en charge des paramètres d'URL d'Organizador & Sequenciador (< 110 lignes) :
  * ?mode=eleve, ?toadaId=..., ?songId=...
  */
 import { useEffect, useRef } from 'react';

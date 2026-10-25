@@ -2,12 +2,13 @@
  * toadaConductorGenerator.ts
  * Frise Conducteur automatique avec agrégation des mesures liées (/) et superposition mixte (< 115 lignes).
  */
-import type { ToadaProject, VocalPatternItem, ToadaArrangementSlot } from '../types/toadaProject.types';
+import type { ToadaProject, VocalPatternItem, ToadaArrangementSlot, VocalRole } from '../types/toadaProject.types';
 import type { ParsedToadaSheetResult } from '../types/toadaDocument.types';
 import { createDefaultVocalPattern } from '../types/toadaProject.types';
 import { createHarmonyGridFromChords } from './chordGridHelper';
 import { detectToadaLexicon } from './toadaLexiconDetector';
 import { generateQuizFromLexicon } from './toadaQuizGenerator';
+import { buildNormalizedPatternKey } from './timeAnchorParser';
 
 export interface ToadaSheetGenOptions {
   bpm?: number;
@@ -17,18 +18,32 @@ export interface ToadaSheetGenOptions {
 
 export function extractCleanFirstWord(text: string): string {
   if (!text) return 'Phrase';
-  const clean = text.replace(/<[^>]*>/g, '').trim();
-  const match = clean.match(/^[\s"'«“„–—\-_([{\\/*]*([\p{L}\p{M}\d]+)/u);
-  if (!match || !match[1]) return (clean.split(/\s+/)[0] || 'Phrase');
-  return match[1].charAt(0).toUpperCase() + match[1].slice(1);
+  const match = text.replace(/<[^>]*>/g, '').trim().match(/^[\s"'«“„–—\-_([{\\/*]*([\p{L}\p{M}\d]+)/u);
+  return match?.[1] ? match[1].charAt(0).toUpperCase() + match[1].slice(1) : (text.trim().split(/\s+/)[0] || 'Phrase');
 }
 
 export function buildPatternNameFromFirstWord(text: string, existingNames: string[]): string {
   const base = extractCleanFirstWord(text);
-  if (!existingNames.includes(base)) return base;
-  let idx = 2;
-  while (existingNames.includes(`${base} (${idx})`)) idx++;
-  return `${base} (${idx})`;
+  let idx = 2, name = base;
+  while (existingNames.includes(name)) { name = `${base} (${idx++})`; }
+  return name;
+}
+
+function initPatternFromSegment(
+  role: VocalRole,
+  seg: any,
+  bpm: number,
+  existingNames: string[],
+  measuresCount: 1 | 2 | 3 | 4 = 1,
+  defaultAna = false
+): VocalPatternItem {
+  const pat = createDefaultVocalPattern(role, buildPatternNameFromFirstWord(seg.text, existingNames), measuresCount, seg.sectionBpm ?? bpm);
+  pat.assignedLyricsText = seg.text;
+  pat.hasAnacrusis = seg.hasAnacrusis ?? defaultAna;
+  pat.timeAnchors = seg.timeAnchors;
+  pat.exitBeat = seg.exitBeat;
+  if (seg.chords?.length) pat.harmonyGrid = createHarmonyGridFromChords(seg.chords, measuresCount);
+  return pat;
 }
 
 export function generateToadaFromSheet(project: ToadaProject, parsed: ParsedToadaSheetResult, options?: ToadaSheetGenOptions): ToadaProject {
@@ -42,29 +57,30 @@ export function generateToadaFromSheet(project: ToadaProject, parsed: ParsedToad
     const seg = parsed.segments[i];
     const nextSeg = parsed.segments[i + 1];
 
-    // Détection de mesure mixte tuilée (Puxador + Coro sur la même ligne)
     if (seg.isMixedPair && nextSeg && nextSeg.isMixedPair && seg.role !== nextSeg.role) {
       const puxSeg = seg.role === 'puxador' ? seg : nextSeg;
       const coroSeg = seg.role === 'coro' ? seg : nextSeg;
+      const puxKey = buildNormalizedPatternKey('puxador', puxSeg.text, puxSeg.timeAnchors);
+      let patPuxId = map.get(puxKey);
+      if (!patPuxId) {
+        const patPux = initPatternFromSegment('puxador', puxSeg, targetBpm, newPatterns.map((p) => p.name), 1);
+        newPatterns.push(patPux);
+        map.set(puxKey, (patPuxId = patPux.id));
+      }
 
-      const patPux = createDefaultVocalPattern('puxador', buildPatternNameFromFirstWord(puxSeg.text, newPatterns.map(p => p.name)), 1, targetBpm);
-      patPux.assignedLyricsText = puxSeg.text;
-      patPux.hasAnacrusis = puxSeg.hasAnacrusis ?? false;
-      if (puxSeg.chords?.length) patPux.harmonyGrid = createHarmonyGridFromChords(puxSeg.chords, 1);
-      newPatterns.push(patPux);
+      const coroKey = buildNormalizedPatternKey('coro', coroSeg.text, coroSeg.timeAnchors);
+      let patCoroId = map.get(coroKey);
+      if (!patCoroId) {
+        const patCoro = initPatternFromSegment('coro', coroSeg, targetBpm, newPatterns.map((p) => p.name), 1);
+        newPatterns.push(patCoro);
+        map.set(coroKey, (patCoroId = patCoro.id));
+      }
 
-      const patCoro = createDefaultVocalPattern('coro', buildPatternNameFromFirstWord(coroSeg.text, newPatterns.map(p => p.name)), 1, targetBpm);
-      patCoro.assignedLyricsText = coroSeg.text;
-      patCoro.hasAnacrusis = coroSeg.hasAnacrusis ?? false;
-      if (coroSeg.chords?.length) patCoro.harmonyGrid = createHarmonyGridFromChords(coroSeg.chords, 1);
-      newPatterns.push(patCoro);
-
-      newSlots.push({ slotId: `slot-${newSlots.length + 1}`, puxadorPatternId: patPux.id, coroPatternId: patCoro.id });
+      newSlots.push({ slotId: `slot-${newSlots.length + 1}`, puxadorPatternId: patPuxId, coroPatternId: patCoroId });
       i += 2;
       continue;
     }
 
-    // Agrégation automatique des mesures liées consécutives (/)
     let measuresCount: 1 | 2 | 3 | 4 = (seg.measuresCount ?? 1) as 1 | 2 | 3 | 4;
     let lookAhead = i + 1;
     while (lookAhead < parsed.segments.length && parsed.segments[lookAhead].isLinkedMeasure && measuresCount < 4) {
@@ -72,18 +88,12 @@ export function generateToadaFromSheet(project: ToadaProject, parsed: ParsedToad
       lookAhead++;
     }
 
-    const key = `${seg.role}:${seg.text.trim().toLowerCase()}`;
+    const key = buildNormalizedPatternKey(seg.role, seg.text, seg.timeAnchors);
     let patId = map.get(key);
     if (!patId) {
-      const patBpm = seg.sectionBpm ?? targetBpm;
-      const patName = buildPatternNameFromFirstWord(seg.text, newPatterns.filter(p => p.role === seg.role).map(p => p.name));
-      const pat = createDefaultVocalPattern(seg.role, patName, measuresCount, patBpm);
-      pat.assignedLyricsText = seg.text;
-      pat.hasAnacrusis = seg.hasAnacrusis ?? options?.defaultHasAnacrusis ?? true;
-      if (seg.chords?.length) pat.harmonyGrid = createHarmonyGridFromChords(seg.chords, measuresCount);
+      const pat = initPatternFromSegment(seg.role, seg, targetBpm, newPatterns.filter((p) => p.role === seg.role).map((p) => p.name), measuresCount, options?.defaultHasAnacrusis ?? true);
       newPatterns.push(pat);
-      patId = pat.id;
-      map.set(key, patId);
+      map.set(key, (patId = pat.id));
     }
 
     newSlots.push({
@@ -93,6 +103,17 @@ export function generateToadaFromSheet(project: ToadaProject, parsed: ParsedToad
     });
 
     i = lookAhead;
+  }
+
+  // Tuilage horizontal (advanceMeasures) si fin sur T1 et attaque suivante sur temps > 1
+  const patMap = new Map(newPatterns.map((p) => [p.id, p]));
+  for (let s = 0; s < newSlots.length - 1; s++) {
+    const curPat = patMap.get(newSlots[s].puxadorPatternId || newSlots[s].coroPatternId || '');
+    const nextPat = patMap.get(newSlots[s + 1].puxadorPatternId || newSlots[s + 1].coroPatternId || '');
+    const nextAttackBeat = nextPat?.timeAnchors?.find((a) => !a.isRest)?.beat;
+    if (curPat?.exitBeat === 1 && curPat?.measuresCount === 2 && nextAttackBeat !== undefined && nextAttackBeat > 1) {
+      newSlots[s].advanceMeasures = 1;
+    }
   }
 
   const generated: ToadaProject = {
@@ -108,10 +129,9 @@ export function generateToadaFromSheet(project: ToadaProject, parsed: ParsedToad
   };
 
   const detectedLex = detectToadaLexicon(generated);
-  const quizItems = generateQuizFromLexicon(detectedLex);
   if (generated.toadaMeta) {
     generated.toadaMeta.notesLexique = detectedLex;
-    generated.toadaMeta.questionsQcm = quizItems;
+    generated.toadaMeta.questionsQcm = generateQuizFromLexicon(detectedLex);
   }
 
   return generated;
