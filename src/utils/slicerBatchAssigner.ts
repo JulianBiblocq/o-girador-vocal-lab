@@ -60,7 +60,8 @@ export function executeBatchAssign(options: BatchAssignOptions): { processedCoun
     const beatDuration = 60 / bpm;
     const measureDuration = beatsPerMeasure * beatDuration;
     const tailSec = hasTailBeat ? beatDuration : 0;
-    const audioSpanSec = Math.max(segment.endSec - segment.startSec, measuresCount * measureDuration + tailSec);
+    const minGridSpanSec = measuresCount * measureDuration + tailSec;
+    const audioSpanSec = Math.max(segment.endSec - segment.startSec, minGridSpanSec);
 
     // 1. Découpage avec marge de sécurité
     const rawStartSec = Math.max(0, segment.startSec - marginSec);

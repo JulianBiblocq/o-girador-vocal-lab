@@ -1,17 +1,13 @@
 /**
  * slicerAudioEngine.ts
- * Moteur de pre-ecoute en boucle et Clic Temoine synchrone pour le Banc de Decoupe (< 130 lignes).
+ * Moteur de lecture audio haute précision avec métronome temps réel lookahead (< 145 lignes).
  */
 import { getSharedAudioContext } from './sharedAudioContext';
 
 export interface SlicerPlayOptions {
-  pcm: Float32Array;
-  sampleRate: number;
-  loop: boolean;
-  witnessClick: boolean;
-  targetPegsRelativeSec: number[];
-  startOffsetSec?: number;
-  onEnded?: () => void;
+  pcm: Float32Array; sampleRate: number; loop: boolean; witnessClick: boolean;
+  targetPegsRelativeSec: number[]; startOffsetSec?: number;
+  metronomeClick?: boolean; bpm?: number; gridOffsetSec?: number; onEnded?: () => void;
 }
 
 export class SlicerAudioEngine {
@@ -23,6 +19,7 @@ export class SlicerAudioEngine {
   private startOffsetSec = 0;
   private durationSec = 0;
   private currentOpts: SlicerPlayOptions | null = null;
+  private lastScheduledBeat = -1;
 
   public async play(opts: SlicerPlayOptions): Promise<void> {
     this.stop();
@@ -35,6 +32,7 @@ export class SlicerAudioEngine {
     this.currentOpts = opts;
     this.durationSec = pcm.length / sampleRate;
     this.startOffsetSec = Math.max(0, Math.min(this.durationSec, startOffsetSec));
+    this.lastScheduledBeat = -1;
 
     const audioBuf = this.ctx.createBuffer(1, pcm.length, sampleRate);
     audioBuf.getChannelData(0).set(pcm);
@@ -50,7 +48,7 @@ export class SlicerAudioEngine {
     this.sourceNode = src;
     this.isPlaying = true;
 
-    if (opts.witnessClick && opts.targetPegsRelativeSec.length > 0) {
+    if ((opts.witnessClick && opts.targetPegsRelativeSec.length > 0) || opts.metronomeClick) {
       this.startClickScheduler();
     }
   }
@@ -72,11 +70,18 @@ export class SlicerAudioEngine {
 
   public getIsPlaying(): boolean { return this.isPlaying; }
 
+  public setMetronome(enabled: boolean, bpm?: number, gridOffsetSec?: number): void {
+    if (!this.currentOpts) return;
+    this.currentOpts.metronomeClick = enabled;
+    if (bpm) this.currentOpts.bpm = bpm;
+    if (gridOffsetSec !== undefined) this.currentOpts.gridOffsetSec = gridOffsetSec;
+    if (enabled && this.isPlaying && !this.clickTimer) this.startClickScheduler();
+  }
+
   public setWitnessClick(enabled: boolean): void {
     if (!this.currentOpts) return;
     this.currentOpts.witnessClick = enabled;
-    if (enabled && this.isPlaying) this.startClickScheduler();
-    else if (!enabled && this.clickTimer) { clearInterval(this.clickTimer); this.clickTimer = null; }
+    if (enabled && this.isPlaying && !this.clickTimer) this.startClickScheduler();
   }
 
   public setLoop(loop: boolean): void {
@@ -86,39 +91,37 @@ export class SlicerAudioEngine {
 
   private startClickScheduler(): void {
     if (this.clickTimer) clearInterval(this.clickTimer);
-    let lastScheduledCycle = -1;
-
     const scheduleClicks = () => {
-      if (!this.isPlaying || !this.ctx || !this.currentOpts?.witnessClick) return;
+      if (!this.isPlaying || !this.ctx || !this.currentOpts) return;
       const cur = this.getCurrentPlayheadSec();
-      const cycle = Math.floor((this.ctx.currentTime - this.startTime + this.startOffsetSec) / this.durationSec);
-      if (cycle !== lastScheduledCycle) {
-        lastScheduledCycle = cycle;
-        const now = this.ctx.currentTime;
-        this.currentOpts.targetPegsRelativeSec.forEach((pegSec, idx) => {
-          const clickTime = now + (pegSec - cur);
-          if (clickTime >= now && clickTime < now + 0.3) {
-            this.playMetronomeClick(clickTime, idx === 0 ? 1200 : 800);
+      const now = this.ctx.currentTime;
+
+      if (this.currentOpts.metronomeClick && this.currentOpts.bpm) {
+        const beatDur = 60 / this.currentOpts.bpm;
+        const off = this.currentOpts.gridOffsetSec ?? 0;
+        const startBeat = Math.floor((cur - off) / beatDur);
+        for (let b = Math.max(0, startBeat); b <= startBeat + 3; b++) {
+          const beatTimeInAudio = off + b * beatDur;
+          const timeUntil = beatTimeInAudio - cur;
+          if (timeUntil >= 0 && timeUntil < 0.25 && b > this.lastScheduledBeat) {
+            this.lastScheduledBeat = b;
+            this.playMetronomeClick(now + timeUntil, b % 4 === 0 ? 1400 : 850);
           }
-        });
+        }
       }
     };
     scheduleClicks();
-    this.clickTimer = window.setInterval(scheduleClicks, 60);
+    this.clickTimer = window.setInterval(scheduleClicks, 40);
   }
 
   private playMetronomeClick(time: number, freq: number): void {
     if (!this.ctx) return;
-    const osc = this.ctx.createOscillator();
-    const gain = this.ctx.createGain();
-    osc.type = 'triangle';
-    osc.frequency.setValueAtTime(freq, time);
-    gain.gain.setValueAtTime(0.35, time);
+    const osc = this.ctx.createOscillator(), gain = this.ctx.createGain();
+    osc.type = 'triangle'; osc.frequency.setValueAtTime(freq, time);
+    gain.gain.setValueAtTime(0.40, time);
     gain.gain.exponentialRampToValueAtTime(0.001, time + 0.035);
-    osc.connect(gain);
-    gain.connect(this.ctx.destination);
-    osc.start(time);
-    osc.stop(time + 0.04);
+    osc.connect(gain); gain.connect(this.ctx.destination);
+    osc.start(time); osc.stop(time + 0.04);
     osc.onended = () => { osc.disconnect(); gain.disconnect(); };
   }
 }

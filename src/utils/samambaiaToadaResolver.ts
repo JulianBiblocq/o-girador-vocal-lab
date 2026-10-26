@@ -1,32 +1,24 @@
 /**
  * samambaiaToadaResolver.ts
- * Fusion intelligente des Toadas distantes avec le catalogue local garanti des 12 Toadas (< 50 lignes).
+ * Priorité absolue aux documents Firestore d'Organizador avec catalogue local en simple fallback (< 40 lignes).
  */
 import type { ToadaDocument } from '../types/toadaDocument.types';
 import { SAMAMBAIA_12_TOADAS, getSamambaiaToadaById } from '../data/toadas/samambaiaToadasIndex';
 
 export function mergeWithLocalSamambaiaToadas(fetchedDocs: ToadaDocument[]): ToadaDocument[] {
   const map = new Map<string, ToadaDocument>();
-  fetchedDocs.forEach((d) => map.set(d.id, d));
+  const fetchedTitles = new Set<string>();
 
+  // 1. Les documents Firestore sont la source de vérité absolue (SSOT)
+  fetchedDocs.forEach((d) => {
+    map.set(d.id, d);
+    if (d.titre) fetchedTitles.add(d.titre.trim().toLowerCase());
+  });
+
+  // 2. On n'ajoute une toada locale QUE si elle n'existe absolument pas dans Firestore
   SAMAMBAIA_12_TOADAS.forEach((local) => {
-    const existing = map.get(local.id) || Array.from(map.values()).find((v) => v.titre.toLowerCase() === local.titre.toLowerCase());
-    if (existing) {
-      map.set(existing.id, {
-        ...local,
-        ...existing,
-        id: existing.id,
-        parolesOriginales: existing.parolesOriginales || local.parolesOriginales,
-        parolesPhonetiques: existing.parolesPhonetiques || local.parolesPhonetiques,
-        bpmDefaut: existing.bpmDefaut || local.bpmDefaut,
-        tonaliteDefaut: existing.tonaliteDefaut || local.tonaliteDefaut,
-        signature: existing.signature || local.signature,
-        notesLexique: (existing.notesLexique && existing.notesLexique.length > 0) ? existing.notesLexique : local.notesLexique,
-        questionsQcm: (existing.questionsQcm && existing.questionsQcm.length > 0) ? existing.questionsQcm : local.questionsQcm,
-        harmonyGrid: existing.harmonyGrid || local.harmonyGrid,
-        globalHarmonyGrid: existing.globalHarmonyGrid || existing.harmonyGrid || local.globalHarmonyGrid || local.harmonyGrid,
-      });
-    } else {
+    const titleKey = local.titre.trim().toLowerCase();
+    if (!map.has(local.id) && !fetchedTitles.has(titleKey)) {
       map.set(local.id, local);
     }
   });

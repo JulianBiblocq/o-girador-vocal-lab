@@ -69,8 +69,7 @@ export async function fetchOrganizadorToadaById(songId: string, groupId?: string
   try {
     const docSnap = await getDoc(doc(db, 'documents', songId));
     if (docSnap.exists() && isVaralSong(docSnap.data())) {
-      const norm = normalizeToadaDoc(docSnap.id, docSnap.data());
-      return local ? { ...local, ...norm, id: norm.id } : norm;
+      return normalizeToadaDoc(docSnap.id, docSnap.data());
     }
   } catch {}
 
@@ -86,8 +85,7 @@ export async function fetchOrganizadorToadaById(songId: string, groupId?: string
           if (linked) { linked.repertoireId = pSnap.id; return linked; }
         }
         if (isVaralSong(pData)) {
-          const norm = normalizeToadaDoc(pSnap.id, pData, pSnap.id);
-          return local ? { ...local, ...norm, id: norm.id } : norm;
+          return normalizeToadaDoc(pSnap.id, pData, pSnap.id);
         }
       }
     } catch {}

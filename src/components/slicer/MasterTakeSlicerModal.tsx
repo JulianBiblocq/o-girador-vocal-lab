@@ -1,6 +1,6 @@
 /**
  * MasterTakeSlicerModal.tsx
- * Modale Cordel du Banc de Decoupe Multi-Blocs & Calage Fin (< 135 lignes).
+ * Modale Cordel du Banc de Decoupe Multi-Blocs & Calage Fin (< 130 lignes).
  */
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useToadaProject } from '../../context/ToadaProjectContext';
@@ -11,6 +11,7 @@ import { analyzeBeatPegs, piecewiseTimeWarp } from '../../audio/piecewiseTimeWar
 import { extractPatternFromMaster } from '../../utils/masterTakeExtractor';
 import { executeBatchAssign } from '../../utils/slicerBatchAssigner';
 import { detectVocalPhrases } from '../../audio/silenceDetector';
+import { buildOrganizadorSlices } from '../../utils/slicerAlignmentHelper';
 import type { SliceSegment } from '../../types/slicerSegments.types';
 import type { VocalRole } from '../../types/toadaProject.types';
 import { SlicerModeTabs, type SlicerWorkMode } from './SlicerModeTabs';
@@ -26,7 +27,7 @@ interface SlicerModalProps {
 export const MasterTakeSlicerModal: React.FC<SlicerModalProps> = ({
   isOpen, onClose, initialAudio, defaultRole = 'puxador',
 }) => {
-  const { project, addPattern, updatePattern, updateVariant, setActivePatternId } = useToadaProject();
+  const { project, addPattern, updatePattern, updateVariant, setActivePatternId, loadProject } = useToadaProject();
   const { t } = useLanguage();
   const [mode, setMode] = useState<SlicerWorkMode>('multi');
   const [audio, setAudio] = useState<DecodedAudioResult | null>(null);
@@ -49,10 +50,8 @@ export const MasterTakeSlicerModal: React.FC<SlicerModalProps> = ({
   const loadAudioWithAutoSlices = useCallback((aud: DecodedAudioResult) => {
     setAudio(aud); setTrimIn(0); setTrimOut(Math.min(aud.durationSec, 8)); setBeatPegs([]);
     const detected = detectVocalPhrases(aud.pcm, aud.sampleRate);
-    const targetRole = defaultRole === 'coro' ? 'coro' : 'puxador';
-    const rolePatterns = project.patterns.filter((p) => p.role === targetRole);
-    setSegments(detected.map((s, idx) => ({ ...s, targetPatternId: rolePatterns[idx]?.id ?? (rolePatterns.length > 0 ? rolePatterns[idx % rolePatterns.length].id : 'new') })));
-  }, [defaultRole, project.patterns]);
+    setSegments(buildOrganizadorSlices(project.patterns, defaultRole, project.bpm || 55, detected, 0.8));
+  }, [defaultRole, project.patterns, project.bpm]);
 
   useEffect(() => {
     if (isOpen && initialAudio && (!audio || audio.pcm !== initialAudio.pcm)) loadAudioWithAutoSlices(initialAudio);
@@ -128,7 +127,7 @@ export const MasterTakeSlicerModal: React.FC<SlicerModalProps> = ({
           <div className="flex flex-col gap-2.5">
             <SlicerModeTabs mode={mode} onModeChange={setMode} />
             {mode === 'multi' ? (
-              <SlicerMultiSection audio={audio} segments={segments} onSegmentsChange={setSegments} patterns={project.patterns} defaultRole={defaultRole} isAssigning={isAssigning} onExecuteBatchAssign={handleBatchAssign} onChangeFile={() => fileInputRef.current?.click()} engine={engine} />
+              <SlicerMultiSection project={project} audio={audio} segments={segments} onSegmentsChange={setSegments} patterns={project.patterns} defaultRole={defaultRole} isAssigning={isAssigning} onExecuteBatchAssign={handleBatchAssign} onChangeFile={() => fileInputRef.current?.click()} engine={engine} onProjectUpdate={loadProject} />
             ) : (
               <SlicerSingleSection
                 audio={audio} patterns={project.patterns} trimIn={trimIn} trimOut={trimOut} beatPegs={beatPegs} targetPegs={targetPegs} playheadSec={playheadSec} isPlaying={isPlaying} loop={loop} witnessClick={witnessClick} phraseBpm={phraseBpm} warpPct={warpPct} measures={measures} hasAnacrusis={hasAnacrusis} role={role} patternName={patternName} targetPatternId={targetPatternId} isExtracting={isExtracting} lastExtracted={lastExtracted}
