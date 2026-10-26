@@ -1,6 +1,6 @@
 /**
  * slicerTranslationsFr.ts
- * Traductions francaises pour le Banc de Decoupe Audio et l'Import Externe (< 50 lignes).
+ * Traductions françaises pour le Banc de Découpe Audio et l'Import Externe (< 60 lignes).
  */
 export const slicerTranslationsFr = {
   importAudioPatternBtn: '📁 Importer Audio (Pattern)',
@@ -28,4 +28,29 @@ export const slicerTranslationsFr = {
   slicerTrimInLabel: '[ Trim Entrée',
   slicerTrimOutLabel: 'Trim Fin ]',
   slicerShortAudioImportSuccess: 'Audio importé avec succès dans le pattern !',
+  slicerLongAudioDetectedTitle: '✂️ Audio long détecté ({sec}s)',
+  slicerLongAudioDetectedSub: 'Cet enregistrement contient plusieurs phrases vocales. Répartissez-les dans vos blocs en 1 clic.',
+  slicerOpenAndAssignBtn: '✂️ Découper & Assigner aux blocs',
+  slicerAutoDetectPhrasesBtn: '✨ Détecter automatiquement les phrases (Silences)',
+  slicerAddSegmentBtn: '➕ Ajouter une tranche',
+  slicerClearSegmentsBtn: '🗑️ Effacer les tranches',
+  slicerSegmentsCount: '{count} tranche(s) • Total : {dur}s',
+  slicerChangeFileBtn: 'Choisir un autre fichier audio...',
+  slicerAssignTitle: 'Assignation aux blocs de la Toada',
+  slicerPreAssignPuxador: '🎯 Pré-assigner Puxador',
+  slicerPreAssignCoro: '🎯 Pré-assigner Coro',
+  slicerPreAssignAll: '🎯 Tous les blocs',
+  slicerNoSegmentsNotice: 'Aucune tranche. Cliquez sur « ✨ Détecter automatiquement les phrases » ou « ➕ Ajouter une tranche ».',
+  slicerAssignToLabel: 'Assigner au bloc',
+  slicerOptionIgnore: '🚫 Ignorer cette tranche',
+  slicerOptionNewPattern: '+ Créer un nouveau bloc',
+  slicerExistingPatternsGroup: 'Blocs existants de la Toada',
+  slicerAssigningProgress: 'Découpe & Analyse en cours...',
+  slicerExecuteBatchAssignBtn: '✅ Découper et Assigner aux blocs ({count})',
+  slicerAssignSuccessToast: '{count} bloc(s) mis à jour avec succès à partir de l\'audio découpé !',
+  slicerTargetBlockLabel: 'Bloc de destination',
+  slicerOptionCreateNew: '+ Créer un nouveau bloc',
+  slicerInjectIntoExistingBtn: '✂️ Injecter dans le bloc sélectionné',
+  slicerModeMultiTitle: '✂️ Découpe Multi-Blocs (Toada)',
+  slicerModeSingleTitle: '🧲 Calage Piquets & Time-Warp',
 };

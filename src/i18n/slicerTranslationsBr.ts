@@ -1,6 +1,6 @@
 /**
  * slicerTranslationsBr.ts
- * Traducoes em portugues brasileiro para o Banco de Corte de Audio e Importacao (< 50 lignes).
+ * Traduções em português brasileiro para o Banco de Corte de Áudio e Importação (< 60 lignes).
  */
 export const slicerTranslationsBr = {
   importAudioPatternBtn: '📁 Importar Áudio (Padrão)',
@@ -28,4 +28,29 @@ export const slicerTranslationsBr = {
   slicerTrimInLabel: '[ Início Corte',
   slicerTrimOutLabel: 'Fim Corte ]',
   slicerShortAudioImportSuccess: 'Áudio importado com sucesso no padrão!',
+  slicerLongAudioDetectedTitle: '✂️ Áudio longo detectado ({sec}s)',
+  slicerLongAudioDetectedSub: 'Esta gravação contém várias frases vocais. Distribua-as em seus blocos com 1 clique.',
+  slicerOpenAndAssignBtn: '✂️ Fatiar & Atribuir aos blocos',
+  slicerAutoDetectPhrasesBtn: '✨ Detectar frases automaticamente (Silêncios)',
+  slicerAddSegmentBtn: '➕ Adicionar fatia',
+  slicerClearSegmentsBtn: '🗑️ Limpar fatias',
+  slicerSegmentsCount: '{count} fatia(s) • Total : {dur}s',
+  slicerChangeFileBtn: 'Escolher outro arquivo de áudio...',
+  slicerAssignTitle: 'Atribuição aos blocos da Toada',
+  slicerPreAssignPuxador: '🎯 Pré-atribuir Puxador',
+  slicerPreAssignCoro: '🎯 Pré-atribuir Coro',
+  slicerPreAssignAll: '🎯 Todos os blocos',
+  slicerNoSegmentsNotice: 'Nenhuma fatia. Clique em « ✨ Detectar frases » ou « ➕ Adicionar fatia ».',
+  slicerAssignToLabel: 'Atribuir ao bloco',
+  slicerOptionIgnore: '🚫 Ignorar esta fatia',
+  slicerOptionNewPattern: '+ Criar novo bloco',
+  slicerExistingPatternsGroup: 'Blocos existentes da Toada',
+  slicerAssigningProgress: 'Fatiamento & Análise em andamento...',
+  slicerExecuteBatchAssignBtn: '✅ Fatiar e Atribuir aos blocos ({count})',
+  slicerAssignSuccessToast: '{count} bloco(s) atualizado(s) com sucesso a partir do áudio fatiado!',
+  slicerTargetBlockLabel: 'Bloco de destino',
+  slicerOptionCreateNew: '+ Criar novo bloco',
+  slicerInjectIntoExistingBtn: '✂️ Injetar no bloco selecionado',
+  slicerModeMultiTitle: '✂️ Corte Multi-Blocos (Toada)',
+  slicerModeSingleTitle: '🧲 Ajuste de Tempos & Time-Warp',
 };

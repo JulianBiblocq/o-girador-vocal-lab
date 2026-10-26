@@ -1,14 +1,15 @@
 /**
  * LivretCalage.tsx
- * Livret 3 : Calage & Découpe de l'onde vocale (WaveformTrimEditor + Slicer + Import) (< 125 lignes).
+ * Livret 3 : Calage & Découpe de l'onde vocale (WaveformTrimEditor + Slicer + Import) (< 145 lignes).
  */
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useMemo } from 'react';
 import { useToadaProject } from '../../context/ToadaProjectContext';
 import { useAudioHardware } from '../../context/AudioHardwareContext';
 import { useVocalTransportStore } from '../../stores/useVocalTransportStore';
 import { PatternCompassBar } from '../common/PatternCompassBar';
 import { WaveformTrimEditor } from '../livret-prise/WaveformTrimEditor';
 import { CalageEmptyNotice } from './CalageEmptyNotice';
+import { LongAudioSlicerBanner } from './LongAudioSlicerBanner';
 import { MasterTakeSlicerModal } from '../slicer/MasterTakeSlicerModal';
 import { decodeAudioFile } from '../../utils/directAudioImporter';
 import { getPatternTotalDurationSec } from '../../utils/anacrusisTimingHelper';
@@ -39,13 +40,21 @@ export const LivretCalage: React.FC = () => {
   const hasAnacrusis = activePattern.hasAnacrusis !== false;
   const beatResolutions = getDefaultBeatResolutions(timeSignature);
 
+  const beatDuration = 60 / effectiveBpm;
+  const measureDuration = beatsPerMeasure * beatDuration;
+  const totalDurationSec = getPatternTotalDurationSec(hasAnacrusis, measuresCount, measureDuration, 0.25, beatDuration);
+  const audioDurationSec = rawPCM ? rawPCM.length / sampleRate : 0;
+  const isLongAudio = rawPCM !== null && (audioDurationSec > 10 || audioDurationSec > totalDurationSec * 1.8);
+
+  const activeAudio = useMemo(() => {
+    if (!rawPCM) return null;
+    return { pcm: rawPCM, sampleRate, durationSec: audioDurationSec, fileName: `${activePattern.name}.wav` };
+  }, [rawPCM, sampleRate, audioDurationSec, activePattern.name]);
+
   const handleFileChange = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     const res = await decodeAudioFile(file);
-    const beatDuration = 60 / effectiveBpm;
-    const measureDuration = beatsPerMeasure * beatDuration;
-    const totalDurationSec = getPatternTotalDurationSec(hasAnacrusis, measuresCount, measureDuration, 0.25, beatDuration);
     updateVariant(activePattern.id, activeVariant.variantKey, {
       recordingResult: { pcm: res.pcm, sampleRate: res.sampleRate },
       trimStartSec: 0,
@@ -53,27 +62,20 @@ export const LivretCalage: React.FC = () => {
     });
     setRecordedSampleRate(res.sampleRate);
     if (fileInputRef.current) fileInputRef.current.value = '';
-  }, [activePattern.id, activeVariant.variantKey, effectiveBpm, beatsPerMeasure, hasAnacrusis, measuresCount, updateVariant, setRecordedSampleRate]);
+    if (res.durationSec > 10 || res.durationSec > totalDurationSec * 1.8) {
+      setIsSlicerOpen(true);
+    }
+  }, [activePattern.id, activeVariant.variantKey, totalDurationSec, updateVariant, setRecordedSampleRate]);
 
   const handlePackReady = useCallback(() => {
     if (!rawPCM) return;
     const res = extractPatternMelodicData({
-      rawPCM,
-      sampleRate,
-      bpm: effectiveBpm,
-      timeSignature,
-      measuresCount,
-      beatsPerMeasure,
-      beatResolutions,
-      hasAnacrusis,
-      trimStartSec: activeVariant.trimStartSec,
-      trimEndSec: activeVariant.trimEndSec,
-      referencePitch: effectivePitch,
-      pitchShiftSemitones: activeVariant.pitchShiftSemitones,
-      tessitura: activePattern.tessitura,
-      assignedLyricsText: activePattern.assignedLyricsText,
-      lowCutEnabled: activeVariant.lowCutEnabled,
-      enableTonePolish: activeVariant.enableTonePolish !== false,
+      rawPCM, sampleRate, bpm: effectiveBpm, timeSignature, measuresCount,
+      beatsPerMeasure, beatResolutions, hasAnacrusis,
+      trimStartSec: activeVariant.trimStartSec, trimEndSec: activeVariant.trimEndSec,
+      referencePitch: effectivePitch, pitchShiftSemitones: activeVariant.pitchShiftSemitones,
+      tessitura: activePattern.tessitura, assignedLyricsText: activePattern.assignedLyricsText,
+      lowCutEnabled: activeVariant.lowCutEnabled, enableTonePolish: activeVariant.enableTonePolish !== false,
     });
     updatePattern(activePattern.id, {
       pack: res.pack, rawAudioSamples: res.cleanPCM, rawPitchCurve: res.pitchCurve,
@@ -86,8 +88,8 @@ export const LivretCalage: React.FC = () => {
   return (
     <div className="flex flex-col gap-3.5 w-full">
       <PatternCompassBar />
+      {isLongAudio && <LongAudioSlicerBanner durationSec={audioDurationSec} onOpenSlicer={() => setIsSlicerOpen(true)} />}
 
-      {/* Barre d'outils compacts Import / Slicer */}
       <div className="flex flex-wrap items-center justify-between gap-2.5">
         <span className="text-xs font-mono font-bold text-[var(--cordel-secondary-text)] uppercase tracking-wider">
           {activePattern.name} ({activePattern.measuresCount}M)
@@ -108,19 +110,11 @@ export const LivretCalage: React.FC = () => {
 
       {rawPCM ? (
         <WaveformTrimEditor
-          rawPCM={rawPCM}
-          sampleRate={sampleRate}
-          bpm={effectiveBpm}
-          timeSignature={timeSignature}
-          measuresCount={measuresCount}
-          beatsPerMeasure={beatsPerMeasure}
-          beatResolutions={beatResolutions}
-          referencePitch={effectivePitch}
-          outputDeviceId={selectedOutputDeviceId}
-          initialTrimStartSec={activeVariant.trimStartSec}
-          initialTrimEndSec={activeVariant.trimEndSec}
-          hasAnacrusis={hasAnacrusis}
-          harmonyGrid={activePattern.harmonyGrid}
+          rawPCM={rawPCM} sampleRate={sampleRate} bpm={effectiveBpm} timeSignature={timeSignature}
+          measuresCount={measuresCount} beatsPerMeasure={beatsPerMeasure} beatResolutions={beatResolutions}
+          referencePitch={effectivePitch} outputDeviceId={selectedOutputDeviceId}
+          initialTrimStartSec={activeVariant.trimStartSec} initialTrimEndSec={activeVariant.trimEndSec}
+          hasAnacrusis={hasAnacrusis} harmonyGrid={activePattern.harmonyGrid}
           harmonyConfig={project.harmonyConfig ?? { enabled: true, profile: 'maracatu', volume: 0.7 }}
           pitchShiftSemitones={activeVariant.pitchShiftSemitones}
           onUpdateGrid={(g) => updatePattern(activePattern.id, { harmonyGrid: g })}
@@ -133,7 +127,7 @@ export const LivretCalage: React.FC = () => {
         <CalageEmptyNotice onDirectImport={() => fileInputRef.current?.click()} onOpenSlicer={() => setIsSlicerOpen(true)} />
       )}
 
-      <MasterTakeSlicerModal isOpen={isSlicerOpen} onClose={() => setIsSlicerOpen(false)} />
+      <MasterTakeSlicerModal isOpen={isSlicerOpen} onClose={() => setIsSlicerOpen(false)} initialAudio={activeAudio} defaultRole={activePattern.role} />
     </div>
   );
 };

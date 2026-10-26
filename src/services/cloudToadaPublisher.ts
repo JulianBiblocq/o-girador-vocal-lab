@@ -10,6 +10,19 @@ import type { ToadaProject } from '../types/toadaProject.types';
 
 import { getSequenciadorToadaUrl } from '../utils/ecosystemUrls';
 
+export function removeUndefinedFields<T>(obj: T): T {
+  if (obj === null || obj === undefined) return null as unknown as T;
+  if (Array.isArray(obj)) return obj.map((item) => removeUndefinedFields(item)) as unknown as T;
+  if (typeof obj === 'object') {
+    const clean: Record<string, any> = {};
+    for (const [key, value] of Object.entries(obj)) {
+      if (value !== undefined) clean[key] = removeUndefinedFields(value);
+    }
+    return clean as T;
+  }
+  return obj;
+}
+
 function pcmToWavBlob(pcm: Float32Array, sampleRate: number): Blob {
   const numChannels = 1, bitsPerSample = 16;
   const byteRate = sampleRate * numChannels * (bitsPerSample / 8);
@@ -98,7 +111,7 @@ export async function publishToadaToSequencer(
       bpm: project.bpm,
       timeSignature: project.timeSignature,
       measuresCount: (project as any).measuresCount || 2,
-      harmonyConfig: project.harmonyConfig,
+      harmonyConfig: project.harmonyConfig ?? null,
       updatedAt: Date.now(),
     },
     metadata: {
@@ -106,25 +119,26 @@ export async function publishToadaToSequencer(
       toada: project.title,
       bpm: project.bpm,
       timeSignature: project.timeSignature,
-      harmonyConfig: project.harmonyConfig,
-      toadaMeta: project.toadaMeta,
+      harmonyConfig: project.harmonyConfig ?? null,
+      toadaMeta: project.toadaMeta ?? null,
       notesLexique: project.toadaMeta?.notesLexique || [],
       questionsQcm: project.toadaMeta?.questionsQcm || [],
       publishedAt: Date.now(),
     },
-    toadaMeta: project.toadaMeta,
+    toadaMeta: project.toadaMeta ?? null,
     notesLexique: project.toadaMeta?.notesLexique || [],
     questionsQcm: project.toadaMeta?.questionsQcm || [],
     patterns: processedPatterns,
     arrangementSlots: project.slots || [],
     slots: project.slots || [],
-    harmonyConfig: project.harmonyConfig,
-    globalHarmonyGrid: project.globalHarmonyGrid,
+    harmonyConfig: project.harmonyConfig ?? null,
+    globalHarmonyGrid: project.globalHarmonyGrid ?? null,
     createdAt: (project as any).createdAt || Date.now(),
     updatedAt: Date.now(),
   };
 
-  await setDoc(doc(db, 'toada_packs', toadaId), packDoc);
+  const cleanDoc = removeUndefinedFields(packDoc);
+  await setDoc(doc(db, 'toada_packs', toadaId), cleanDoc);
   const sequenciadorUrl = getSequenciadorUrl(toadaId);
   return { success: true, toadaId, sequenciadorUrl };
 }
