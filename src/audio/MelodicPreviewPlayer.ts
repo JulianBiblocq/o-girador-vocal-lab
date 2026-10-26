@@ -12,7 +12,6 @@ import { schedulePreviewClick } from './previewClickHelper';
 import { HarmonyPlayerEngine } from './harmony/HarmonyPlayerEngine';
 
 export type MelodicPlayMode = 'voice' | 'synth' | 'duo';
-
 export interface MelodicPlayOptions {
   cleanPCM: Float32Array;
   sampleRate: number;
@@ -34,20 +33,12 @@ export interface MelodicPlayOptions {
 }
 
 export class MelodicPreviewPlayer {
-  private ctx: AudioContext | null = null;
-  private voiceGainNode: GainNode | null = null;
-  private synthGainNode: GainNode | null = null;
-  private clickGainNode: GainNode | null = null;
-  private sourceNode: AudioBufferSourceNode | null = null;
-  private synthNodes: SynthScheduledNode[] = [];
-  private activeClickNodes: AudioNode[] = [];
-  private harmonyEngine = new HarmonyPlayerEngine();
-  private isPlaying = false;
-  private playbackContextStartTime = 0;
-  private totalDuration = 0;
-  private seekStartSec = 0;
-  private playRemainingDuration = 0;
-  private stopTimerId: number | null = null;
+  private ctx: AudioContext | null = null; private voiceGainNode: GainNode | null = null;
+  private synthGainNode: GainNode | null = null; private clickGainNode: GainNode | null = null;
+  private sourceNode: AudioBufferSourceNode | null = null; private synthNodes: SynthScheduledNode[] = [];
+  private activeClickNodes: AudioNode[] = []; private harmonyEngine = new HarmonyPlayerEngine();
+  private isPlaying = false; private playbackContextStartTime = 0; private totalDuration = 0;
+  private seekStartSec = 0; private playRemainingDuration = 0; private stopTimerId: number | null = null;
 
   public async play(options: MelodicPlayOptions): Promise<void> {
     this.stop();
@@ -59,14 +50,10 @@ export class MelodicPreviewPlayer {
     this.seekStartSec = Math.max(0, Math.min(totalDurationSec - 0.05, options.seekStartSec || 0));
     this.playRemainingDuration = totalDurationSec - this.seekStartSec;
 
-    this.voiceGainNode = this.ctx.createGain();
-    this.synthGainNode = this.ctx.createGain();
-    this.clickGainNode = this.ctx.createGain();
+    this.voiceGainNode = this.ctx.createGain(); this.synthGainNode = this.ctx.createGain(); this.clickGainNode = this.ctx.createGain();
     this.applyGains(playMode, clickEnabled);
 
-    this.voiceGainNode.connect(this.ctx.destination);
-    this.synthGainNode.connect(this.ctx.destination);
-    this.clickGainNode.connect(this.ctx.destination);
+    this.voiceGainNode.connect(this.ctx.destination); this.synthGainNode.connect(this.ctx.destination); this.clickGainNode.connect(this.ctx.destination);
 
     const audioBuffer = this.ctx.createBuffer(1, cleanPCM.length, sampleRate);
     audioBuffer.getChannelData(0).set(cleanPCM);
@@ -109,10 +96,26 @@ export class MelodicPreviewPlayer {
   }
 
   public setPlayMode(mode: MelodicPlayMode, clickEnabled = true): void { this.applyGains(mode, clickEnabled); }
-
   public async playNotePreview(midi: number): Promise<void> {
     const ctx = await getSharedAudioContext();
     playSingleSynthNote(ctx, ctx.destination, midi, ctx.currentTime, 0.18);
+  }
+
+  public updateVoiceBuffer(newPCM: Float32Array, sampleRate: number): void {
+    if (!this.isPlaying || !this.ctx || !this.voiceGainNode || !this.sourceNode) return;
+    try {
+      const curPlayhead = this.getCurrentPlayheadSec();
+      const remainingSec = Math.max(0.01, this.totalDuration - curPlayhead);
+      const newBuf = this.ctx.createBuffer(1, newPCM.length, sampleRate);
+      newBuf.getChannelData(0).set(newPCM);
+      const newSource = this.ctx.createBufferSource();
+      newSource.buffer = newBuf;
+      newSource.connect(this.voiceGainNode);
+      const now = this.ctx.currentTime + 0.01;
+      newSource.start(now, curPlayhead, remainingSec);
+      this.sourceNode.stop(now); this.sourceNode.disconnect();
+      this.sourceNode = newSource;
+    } catch {}
   }
 
   private applyGains(mode: MelodicPlayMode, clickEnabled: boolean): void {

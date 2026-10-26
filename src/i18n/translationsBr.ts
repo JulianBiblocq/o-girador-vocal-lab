@@ -91,7 +91,7 @@ export const translationsBr: VocalLabTranslations = {
 
   // Livreto 2 - Transporte & Letra
   modeIsolatedVoice: 'Voz Isolada', modeSynthesizer: 'Sintetizador', modeDuo: 'Duo (Voz + Synth)',
-  metronomeClick: 'Clique metronomo', backToRecording: 'Voltar a Gravacao', downloadPack: 'Pack JSON',
+  metronomeClick: 'Clique metronomo', backToRecording: 'Voltar a Gravacao', downloadPack: 'Pack JSON', stopPlayback: '■ PARAR A LEITURA',
   letraTitle: 'LETRA DA TOADA (Texto e Alinhamento)', alignBtn: 'Alinhar', syllableCount: 'silabas detectadas',
   syntaxGuide: 'Sintaxe: hifen (-) ou (--) para melisma, apostrofo (\') ou (_) para elisao.',
   letraNoActiveNotes: 'Nenhuma nota ativa detectada.', letraSpaceBadge: 'Espaco', letraTiedBadge: '- Ligado',

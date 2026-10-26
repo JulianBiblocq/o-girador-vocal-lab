@@ -91,7 +91,7 @@ export const translationsFr: VocalLabTranslations = {
 
   // Livret 2 - Transport & Letra
   modeIsolatedVoice: 'Voix seule', modeSynthesizer: 'Synthe seul', modeDuo: 'Duo (Voix + Synthe)',
-  metronomeClick: 'Clic metronome', backToRecording: 'Retour a la Prise', downloadPack: 'Pack JSON',
+  metronomeClick: 'Clic metronome', backToRecording: 'Retour a la Prise', downloadPack: 'Pack JSON', stopPlayback: '■ ARRÊTER LA LECTURE',
   letraTitle: 'LETRA DA TOADA (Paroles & Alignement)', alignBtn: 'Aligner', syllableCount: 'syllabes detectees',
   syntaxGuide: 'Syntaxe : tiret (-) ou (--) pour melisme, apostrophe (\') ou (_) pour elision.',
   letraNoActiveNotes: 'Aucune note active detectee.', letraSpaceBadge: 'Espace', letraTiedBadge: '- Lie',

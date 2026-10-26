@@ -1,7 +1,7 @@
 /**
  * pianoRollDrawer.ts
  * Rendu Canvas 2D de la grille des notes (C2..C5, subdivisions, briques, pitch, playhead).
- * Supporte le repliage de l'Élan M-1 en mode hasAnacrusis === false (< 145 lignes).
+ * Unité géométrique commune stricte : 1 pas MIDI = 1 case de la grille (< 140 lignes).
  */
 import type { PitchCurvePoint, VocalStepData } from '../../types/vocalPack.types';
 import type { PatternHarmonyGrid } from '../../types/harmony.types';
@@ -38,10 +38,12 @@ export function drawPianoRollGrid(ctx: CanvasRenderingContext2D, opts: DrawGridO
   ctx.clearRect(0, 0, width, height);
 
   const beatDur = bpm ? 60 / bpm : (hasAnacrusis && beatsPerMeasure > 0 ? anacrusisDurationSec / beatsPerMeasure : 0.6);
-  const totalBeats = Math.max(1, Math.round(totalDurationSec / beatDur));
-  const gridDur = totalBeats * beatDur;
+  const subdivPerBeat = beatResolutions[0] || 4;
+  const stepDurSec = beatDur / subdivPerBeat;
+  const totalSteps = Math.max(1, allSteps.length > 0 ? allSteps.length : Math.round(totalDurationSec / stepDurSec));
+  const stepW = width / totalSteps;
+  const gridDur = totalSteps * stepDurSec;
   const t1Offset = opts.t1OffsetSec ?? (hasAnacrusis ? 0 : 0.15);
-
   const isLight = typeof document !== 'undefined' && document.documentElement.getAttribute('data-theme') === 'light';
 
   // 1. Rangées de demi-tons et surbrillance harmonique dynamique
@@ -50,31 +52,30 @@ export function drawPianoRollGrid(ctx: CanvasRenderingContext2D, opts: DrawGridO
     isPlaying, beatsPerMeasure, beatDurationSec: beatDur, hasAnacrusis, pitchShiftSemitones,
   });
 
-  // 2. Grille temporelle & subdivisions
-  for (let b = 0; b < totalBeats; b++) {
-    const xStart = (b / totalBeats) * width, xEnd = ((b + 1) / totalBeats) * width;
-    ctx.fillStyle = b % 2 === 0
-      ? (isLight ? 'rgba(0, 0, 0, 0.015)' : 'rgba(255, 255, 255, 0.015)')
-      : (isLight ? 'rgba(0, 0, 0, 0.05)' : 'rgba(0, 0, 0, 0.12)');
-    ctx.fillRect(xStart, 0, xEnd - xStart, height);
+  // 2. Grille temporelle discrète 1:1 avec les pas MIDI
+  for (let i = 0; i < totalSteps; i++) {
+    const x = i * stepW, b = Math.floor(i / subdivPerBeat), s = i % subdivPerBeat;
+    if (s === 0) {
+      const nextBeatX = Math.min(width, (i + subdivPerBeat) * stepW);
+      ctx.fillStyle = b % 2 === 0
+        ? (isLight ? 'rgba(0, 0, 0, 0.015)' : 'rgba(255, 255, 255, 0.015)')
+        : (isLight ? 'rgba(0, 0, 0, 0.05)' : 'rgba(0, 0, 0, 0.12)');
+      ctx.fillRect(x, 0, nextBeatX - x, height);
 
-    const res = beatResolutions[b % beatsPerMeasure] || 4;
-    ctx.strokeStyle = isLight ? 'rgba(26, 26, 26, 0.10)' : 'rgba(245, 240, 230, 0.12)';
-    ctx.setLineDash([2, 3]);
-    for (let s = 1; s < res; s++) {
-      const xs = ((b + s / res) / totalBeats) * width;
-      ctx.beginPath(); ctx.moveTo(xs, 0); ctx.lineTo(xs, height); ctx.stroke();
+      const isT1 = hasAnacrusis ? (b === beatsPerMeasure) : (b === 0);
+      const isExtraEnd = (b > 0 && b % beatsPerMeasure === 0 && (i + subdivPerBeat >= totalSteps));
+      ctx.lineWidth = isT1 ? 2.5 : isExtraEnd ? 2 : b % beatsPerMeasure === 0 ? 1.5 : 1;
+      ctx.strokeStyle = isT1 ? '#d4af37' : isExtraEnd ? '#f59e0b' : b % beatsPerMeasure === 0 ? (isLight ? 'rgba(26, 26, 26, 0.35)' : 'rgba(245, 240, 230, 0.45)') : (isLight ? 'rgba(26, 26, 26, 0.15)' : 'rgba(245, 240, 230, 0.22)');
+      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, height); ctx.stroke();
+    } else {
+      ctx.strokeStyle = isLight ? 'rgba(26, 26, 26, 0.10)' : 'rgba(245, 240, 230, 0.12)';
+      ctx.setLineDash([2, 3]);
+      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, height); ctx.stroke();
+      ctx.setLineDash([]);
     }
-    ctx.setLineDash([]);
-
-    const isT1 = hasAnacrusis ? (b === beatsPerMeasure) : (b === 0), isExtraEnd = (b === totalBeats - 1 && b > 0 && b % beatsPerMeasure === 0);
-    ctx.lineWidth = isT1 ? 2.5 : isExtraEnd ? 2 : b % beatsPerMeasure === 0 ? 1.5 : 1;
-    ctx.strokeStyle = isT1 ? '#d4af37' : isExtraEnd ? '#f59e0b' : b % beatsPerMeasure === 0 ? (isLight ? 'rgba(26, 26, 26, 0.35)' : 'rgba(245, 240, 230, 0.45)') : (isLight ? 'rgba(26, 26, 26, 0.15)' : 'rgba(245, 240, 230, 0.22)');
-    ctx.beginPath(); ctx.moveTo(xStart, 0); ctx.lineTo(xStart, height); ctx.stroke();
   }
 
-  // 3. Briques MIDI
-  const stepW = allSteps.length > 0 ? width / allSteps.length : 0;
+  // 3. Briques MIDI indexées sur l'unité géométrique commune stepW
   for (let i = 0; i < allSteps.length; i++) {
     const step = allSteps[i];
     if (step.active && step.note !== '───' && step.midiNumber >= minMidi && step.midiNumber <= maxMidi) {
@@ -91,8 +92,7 @@ export function drawPianoRollGrid(ctx: CanvasRenderingContext2D, opts: DrawGridO
       ctx.beginPath(); ctx.roundRect(x, y, w, h, 3); ctx.fill(); ctx.stroke();
 
       if (cutW > 2) {
-        ctx.save();
-        ctx.beginPath(); ctx.rect(x, y, cutW, h); ctx.clip();
+        ctx.save(); ctx.beginPath(); ctx.rect(x, y, cutW, h); ctx.clip();
         ctx.fillStyle = 'rgba(0, 0, 0, 0.35)'; ctx.fillRect(x, y, cutW, h);
         ctx.strokeStyle = 'rgba(255, 255, 255, 0.16)'; ctx.lineWidth = 1;
         for (let hx = x - h; hx < x + cutW + h; hx += 5) {
@@ -111,7 +111,7 @@ export function drawPianoRollGrid(ctx: CanvasRenderingContext2D, opts: DrawGridO
     }
   }
 
-  // 4. Courbe de pitch
+  // 4. Courbe de pitch alignée sur la même durée de référence gridDur
   if (pitchCurve.length > 1) {
     ctx.lineWidth = 2.5;
     for (let p = 0; p < pitchCurve.length - 1; p++) {

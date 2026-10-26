@@ -45,7 +45,15 @@ export const LivretMelodiaWorkspace: React.FC<LivretMelodiaWorkspaceProps> = ({
   const t1OffsetSec = getPatternT1OffsetSec(hasAnac, beatsPerMeasure * (60 / initialPack.metadata.bpm));
   const activePCM = activePattern.correctedAudioSamples ?? rawPCM;
   const harmonyConfig = project.harmonyConfig ?? DEFAULT_HARMONY_CONFIG;
-  const defaultSteps = initialSteps ?? [...(activePattern.anacrusisSteps || []), ...(activePattern.mainSteps || [])];
+  const rawDefaultSteps = initialSteps ?? [...(activePattern.anacrusisSteps || []), ...(activePattern.mainSteps || [])];
+  const resPerBeat = initialPack.metadata.beatResolutions?.[0] || 4;
+  const expectedStepsCount = ((hasAnac ? beatsPerMeasure : 0) + measuresCount * beatsPerMeasure + 1) * resPerBeat;
+  const defaultSteps = useMemo(() => {
+    if (rawDefaultSteps.length >= expectedStepsCount || rawDefaultSteps.length === 0) return rawDefaultSteps;
+    const missing = expectedStepsCount - rawDefaultSteps.length, stepDur = (60 / (initialPack.metadata.bpm || 60)) / resPerBeat;
+    const pad: VocalStepData[] = Array.from({ length: missing }, (_, k) => ({ stepIndex: rawDefaultSteps.length + k, active: false, note: '', midiNumber: 0, velocity: 0, decay: stepDur }));
+    return [...rawDefaultSteps, ...pad];
+  }, [rawDefaultSteps, expectedStepsCount, initialPack.metadata.bpm, resPerBeat]);
 
   const { regions, selectedRegionId, selectedRegion, displayedCurve, isProcessing, setSelectedRegionId, addRegion, addWholePhraseRegion, updateSelectedRegion, updateBounds, deleteSelected, clearAllRegions, restoreRegions } = useMelodyneAudioProcessor({
     initialRegions: activePattern.melodyneRegions || [], rawAudio: rawPCM, sampleRate, totalDurationSec, rawPitchCurve, allSteps: defaultSteps,

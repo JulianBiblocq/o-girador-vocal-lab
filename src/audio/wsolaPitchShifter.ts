@@ -1,26 +1,29 @@
 /**
  * wsolaPitchShifter.ts
  * Moteur de correction vocale Phase-Locked WSOLA (Waveform Similarity Overlap-Add)
- * Fenêtres Hann 45ms, 75% overlap, alignement de phase ±8ms et préservation des transitoires (< 140 lignes).
+ * Traitement continu par région Melodyne, fenêtres Hann 40ms, phase-locking et crossfade (< 120 lignes).
  */
-import type { BrickPitchOffset } from './melodynePitchCorrector';
+
+export interface WsolaRegionTarget {
+  startSec: number;
+  endSec: number;
+  shiftSemitonesAt: (timeSec: number) => number;
+}
 
 export function applyWsolaPitchCorrection(
   rawAudio: Float32Array,
   sampleRate: number,
-  bricks: BrickPitchOffset[]
+  regions: WsolaRegionTarget[]
 ): Float32Array {
-  const activeBricks = bricks.filter((b) => Math.abs(b.effectiveShift) >= 0.02);
-  if (activeBricks.length === 0 || !rawAudio || rawAudio.length === 0) {
+  if (!regions || regions.length === 0 || !rawAudio || rawAudio.length === 0) {
     return new Float32Array(rawAudio);
   }
 
   const out = new Float32Array(rawAudio);
-  const winSize = Math.max(64, 2 * Math.round((0.045 * sampleRate) / 2)); // ~45ms pair
-  const hop = Math.max(16, Math.round(winSize / 4)); // 75% overlap
-  const maxDelta = Math.max(8, Math.round(0.008 * sampleRate)); // ±8ms
-  const rampInLen = Math.max(16, Math.round(0.025 * sampleRate)); // 25ms
-  const rampOutLen = Math.max(16, Math.round(0.020 * sampleRate)); // 20ms
+  const winSize = Math.max(64, 2 * Math.round((0.040 * sampleRate) / 2)); // ~40ms pair
+  const hop = Math.max(16, Math.round(0.010 * sampleRate)); // 10ms (75% overlap)
+  const maxDelta = Math.max(8, Math.round(0.006 * sampleRate)); // ±6ms alignement phase
+  const rampLen = Math.max(16, Math.round(0.020 * sampleRate)); // 20ms crossfade
   const halfWin = winSize / 2;
 
   const hann = new Float32Array(winSize);
@@ -28,27 +31,38 @@ export function applyWsolaPitchCorrection(
     hann[i] = 0.5 * (1 - Math.cos((2 * Math.PI * i) / (winSize - 1)));
   }
 
-  for (const b of activeBricks) {
-    const sHold = Math.max(0, Math.floor(b.holdStartSec * sampleRate));
-    const sEnd = Math.min(rawAudio.length, Math.ceil(b.endSec * sampleRate));
-    const holdLen = sEnd - sHold;
+  for (const reg of regions) {
+    const sStart = Math.max(0, Math.floor(reg.startSec * sampleRate));
+    const sEnd = Math.min(rawAudio.length, Math.ceil(reg.endSec * sampleRate));
+    const holdLen = sEnd - sStart;
     if (holdLen < winSize + maxDelta) continue;
-
-    // Décalage constant par brique borné à ±2.5 demi-tons pour naturel garanti
-    const clampedShift = Math.max(-2.5, Math.min(2.5, b.effectiveShift));
-    const r = Math.pow(2, clampedShift / 12);
 
     const synth = new Float32Array(holdLen);
     const weight = new Float32Array(holdLen);
 
     for (let outPos = 0; outPos + winSize <= holdLen; outPos += hop) {
-      const idealInCenter = sHold + outPos + halfWin;
+      const curTimeSec = reg.startSec + (outPos + halfWin) / sampleRate;
+      const shift = Math.max(-3.0, Math.min(3.0, reg.shiftSemitonesAt(curTimeSec)));
+      if (Math.abs(shift) < 0.02) {
+        // Décalage négligeable : passage direct du signal avec pondération Hann
+        for (let j = 0; j < winSize; j++) {
+          const idx = sStart + outPos + j;
+          if (idx < rawAudio.length) {
+            synth[outPos + j] += rawAudio[idx] * hann[j];
+            weight[outPos + j] += hann[j];
+          }
+        }
+        continue;
+      }
+
+      const r = Math.pow(2, shift / 12);
+      const idealInCenter = sStart + outPos + halfWin;
 
       // Recherche de phase par corrélation croisée (Phase-Locked)
       let bestTau = 0;
       if (outPos > 0) {
         let maxCorr = -Infinity;
-        const corrLen = Math.min(hop, 256);
+        const corrLen = Math.min(hop, 128);
         for (let tau = -maxDelta; tau <= maxDelta; tau += 2) {
           let dot = 0;
           const candStart = idealInCenter + tau - halfWin;
@@ -81,12 +95,12 @@ export function applyWsolaPitchCorrection(
       if (weight[k] > 0.001) {
         const grainVal = synth[k] / weight[k];
         let crossfade = 1.0;
-        if (k < rampInLen) {
-          crossfade = 0.5 * (1 - Math.cos((Math.PI * k) / rampInLen));
-        } else if (k > holdLen - rampOutLen) {
-          crossfade = 0.5 * (1 - Math.cos((Math.PI * (holdLen - k)) / rampOutLen));
+        if (k < rampLen) {
+          crossfade = 0.5 * (1 - Math.cos((Math.PI * k) / rampLen));
+        } else if (k > holdLen - rampLen) {
+          crossfade = 0.5 * (1 - Math.cos((Math.PI * (holdLen - k)) / rampLen));
         }
-        out[sHold + k] = rawAudio[sHold + k] * (1 - crossfade) + grainVal * crossfade;
+        out[sStart + k] = rawAudio[sStart + k] * (1 - crossfade) + grainVal * crossfade;
       }
     }
   }

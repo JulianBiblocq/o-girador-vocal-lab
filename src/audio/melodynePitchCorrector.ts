@@ -1,10 +1,10 @@
 /**
  * melodynePitchCorrector.ts
  * Processeur DSP non-destructif par Régions Melodyne [ In ── Out ] :
- * Centrage vers la note cible, aplatissement du vibrato/fluctuations et WSOLA (< 140 lignes).
+ * Centrage vers la note cible, aplatissement du vibrato/fluctuations et WSOLA (< 135 lignes).
  */
 import type { PitchCurvePoint, VocalStepData, MelodyneRegion } from '../types/vocalPack.types';
-import { applyWsolaPitchCorrection } from './wsolaPitchShifter';
+import { applyWsolaPitchCorrection, type WsolaRegionTarget } from './wsolaPitchShifter';
 
 export interface BrickPitchOffset {
   startSec: number;
@@ -30,7 +30,6 @@ export function findTargetMidiForRegion(
   const step = allSteps[stepIdx];
   if (step?.active && step.midiNumber > 0) return step.midiNumber;
 
-  // Recherche du pas actif le plus proche
   let bestMidi = fallbackMidi, minDist = Infinity;
   for (let i = 0; i < allSteps.length; i++) {
     const s = allSteps[i];
@@ -57,6 +56,19 @@ export function computeRegionMedianPitch(
 
 export function foldOctaveDistance(delta: number): number {
   return delta - 12 * Math.round(delta / 12);
+}
+
+function getPitchAtTime(curve: PitchCurvePoint[], timeSec: number, fallbackMidi: number): number {
+  if (!curve || curve.length === 0) return fallbackMidi;
+  let left = 0, right = curve.length - 1;
+  while (left <= right) {
+    const mid = (left + right) >> 1;
+    if (curve[mid].timeSec < timeSec) left = mid + 1;
+    else right = mid - 1;
+  }
+  const idx = Math.max(0, Math.min(curve.length - 1, left));
+  const p = curve[idx];
+  return (p && p.midiFloat >= 36) ? p.midiFloat : fallbackMidi;
 }
 
 export function computeCorrectedPitchCurve(
@@ -95,8 +107,7 @@ export function correctAudioPitchWithMelodyne(
     return new Float32Array(rawAudio);
   }
 
-  const offsets: BrickPitchOffset[] = [];
-  const chunkDurationSec = 0.050; // Tranches temporelles de 50 ms pour modulation fine
+  const wsolaTargets: WsolaRegionTarget[] = [];
 
   for (const r of regions) {
     if (r.pitchCenterPct === 0 && r.flattenPct === 0) continue;
@@ -106,31 +117,17 @@ export function correctAudioPitchWithMelodyne(
     const f = r.flattenPct / 100;
     const deltaFolded = foldOctaveDistance(targetMidi - median);
 
-    let curT = r.startSec;
-    while (curT < r.endSec) {
-      const nextT = Math.min(r.endSec, curT + chunkDurationSec);
-      const subPts = rawPitchCurve.filter((p) => p.timeSec >= curT && p.timeSec <= nextT && p.midiFloat >= 36);
-      const subMidi = subPts.length > 0
-        ? subPts.reduce((acc, p) => acc + p.midiFloat, 0) / subPts.length
-        : median;
-
-      const d = subMidi - median;
-      const targetSub = median + c * deltaFolded + (1 - f) * d;
-      const shift = Math.max(-3.0, Math.min(3.0, targetSub - subMidi));
-
-      offsets.push({
-        startSec: curT,
-        endSec: nextT,
-        holdStartSec: curT,
-        targetMidi,
-        sungMedian: subMidi,
-        deltaSemitones: shift,
-        effectiveShift: shift,
-      });
-      curT = nextT;
-    }
+    wsolaTargets.push({
+      startSec: r.startSec,
+      endSec: r.endSec,
+      shiftSemitonesAt: (timeSec: number) => {
+        const localPitch = getPitchAtTime(rawPitchCurve, timeSec, median);
+        const d = localPitch - median;
+        return c * deltaFolded - f * d;
+      },
+    });
   }
 
-  if (offsets.length === 0) return new Float32Array(rawAudio);
-  return applyWsolaPitchCorrection(rawAudio, sampleRate, offsets);
+  if (wsolaTargets.length === 0) return new Float32Array(rawAudio);
+  return applyWsolaPitchCorrection(rawAudio, sampleRate, wsolaTargets);
 }

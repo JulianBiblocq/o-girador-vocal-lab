@@ -99,7 +99,7 @@ export interface VocalLabTranslationsCore {
 
   // Livret 2 - Transport & Letra
   modeIsolatedVoice: string; modeSynthesizer: string; modeDuo: string;
-  metronomeClick: string; backToRecording: string; downloadPack: string;
+  metronomeClick: string; backToRecording: string; downloadPack: string; stopPlayback: string;
   letraTitle: string; alignBtn: string; syllableCount: string; syntaxGuide: string;
   letraNoActiveNotes: string; letraSpaceBadge: string; letraTiedBadge: string;
   letraSpaceTooltip: string; letraTiedTooltip: string;

@@ -120,7 +120,7 @@ export const MelodicControls: React.FC<MelodicControlsProps> = (props) => {
           }`}
         >
           {isPlaying ? <Square className="w-4 h-4 fill-current" /> : <Play className="w-4 h-4 fill-current text-[#f4ecd8]" />}
-          <span>{isPlaying ? t('recordBtnStop') : 'Play'}</span>
+          <span>{isPlaying ? t('stopPlayback') : 'Play'}</span>
         </button>
       </div>
     </div>
