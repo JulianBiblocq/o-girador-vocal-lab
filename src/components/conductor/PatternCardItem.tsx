@@ -45,7 +45,7 @@ export const PatternCardItem: React.FC<PatternCardItemProps> = ({
   const vList = Object.values(pat.variants ?? {});
   const recCount = vList.filter((v) => v.recordingResult !== null).length;
   const noteName = getSolfegeNoteName(pat.referencePitch, t);
-  const infoLine = `${t('measureUnitShort', { n: pat.measuresCount })} • ${noteName} • ${pat.baseBpm ?? 55} BPM`;
+  const infoLine = `${t('measureUnitShort', { n: pat.measuresCount })} • ${noteName} • ${pat.bpm ?? pat.baseBpm ?? 88} BPM`;
   const isLinked = !!pat.linkedSourcePatternId;
   const targetRole: VocalRole = pat.role === 'puxador' ? 'coro' : 'puxador';
   const activeBg = pat.role === 'puxador' ? '!bg-[#9a3412]' : '!bg-[#0f766e]';

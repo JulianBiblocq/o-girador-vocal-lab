@@ -30,7 +30,7 @@ export const LivretCalage: React.FC = () => {
 
   const rawPCM = activeVariant.recordingResult?.pcm ?? null;
   const sampleRate = activeVariant.recordingResult?.sampleRate ?? recordedSampleRate;
-  const bpm = activePattern.baseBpm ?? project.bpm ?? 55;
+  const bpm = activePattern.bpm ?? activePattern.baseBpm ?? project.bpm ?? 88;
   const effectiveBpm = Math.max(30, Math.round(bpm * activeVariant.speedRatio));
   const referencePitch = activePattern.referencePitch ?? 'C4';
   const effectivePitch = transposePitchNote(referencePitch, activeVariant.pitchShiftSemitones);

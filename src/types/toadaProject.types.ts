@@ -45,6 +45,7 @@ export interface VocalPatternItem {
   measuresCount: 1 | 2 | 3 | 4;
   linkedSourcePatternId?: string | null;
   baseBpm?: number;
+  bpm?: number;
   referencePitch?: string;
   pitchCorrectionAmount?: number;
   rawAudioSamples?: Float32Array | null;

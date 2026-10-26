@@ -56,7 +56,7 @@ export function executeBatchAssign(options: BatchAssignOptions): { processedCoun
 
     onProgress?.(idx + 1, activeSegments.length, targetPattern.name);
 
-    const bpm = targetPattern.baseBpm ?? project.bpm ?? 55;
+    const bpm = targetPattern.bpm ?? targetPattern.baseBpm ?? project.bpm ?? 88;
     const beatDuration = 60 / bpm;
     const measureDuration = beatsPerMeasure * beatDuration;
     const tailSec = hasTailBeat ? beatDuration : 0;
@@ -92,7 +92,7 @@ export function executeBatchAssign(options: BatchAssignOptions): { processedCoun
     });
 
     updatePattern(targetId, {
-      measuresCount, hasAnacrusis, anacrusisBeats: segment.anacrusisBeats, pack: res.pack, rawAudioSamples: res.cleanPCM,
+      baseBpm: bpm, bpm: bpm, measuresCount, hasAnacrusis, anacrusisBeats: segment.anacrusisBeats, pack: res.pack, rawAudioSamples: res.cleanPCM,
       recordingResult: { pcm: slicedPCM, sampleRate }, trimStartSec, trimEndSec,
       rawPitchCurve: res.pitchCurve, pitchCurve: res.pitchCurve,
       anacrusisSteps: res.anacrusisSteps, mainSteps: res.mainSteps,

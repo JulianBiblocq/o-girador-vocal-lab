@@ -105,7 +105,7 @@ export async function fetchToadaPackById(toadaId: string): Promise<ToadaProject 
     const d = snap.data();
     const globalHarmonyGrid = normalizeHarmonyGrid(d.globalHarmonyGrid || d.harmonyGrid || d.metadata?.globalHarmonyGrid);
     const toadaMeta = d.toadaMeta || {
-      id: d.id || snap.id, titre: d.title || d.metadata?.title || 'Toada Cloud', bpmDefaut: d.bpm || d.metadata?.bpm || 55,
+      id: d.id || snap.id, titre: d.title || d.metadata?.title || 'Toada Cloud', bpmDefaut: d.bpm || d.metadata?.bpm || 88,
       notesLexique: normalizeLexiconList(d.notesLexique || d.metadata?.notesLexique),
       questionsQcm: normalizeQuizList(d.questionsQcm || d.metadata?.questionsQcm),
     };
@@ -120,7 +120,7 @@ export async function fetchToadaPackById(toadaId: string): Promise<ToadaProject 
     return {
       id: d.id || snap.id,
       title: d.title || d.metadata?.title || 'Toada Cloud',
-      bpm: d.bpm || d.metadata?.bpm || d.project?.bpm || 55,
+      bpm: d.bpm || d.metadata?.bpm || d.project?.bpm || 88,
       timeSignature: d.timeSignature || d.metadata?.timeSignature || d.project?.timeSignature || '4/4',
       patterns: d.patterns || [],
       slots: d.slots || d.arrangementSlots || [],

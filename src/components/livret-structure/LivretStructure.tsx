@@ -24,14 +24,14 @@ export const LivretStructure: React.FC = () => {
   const { engine, selectedOutputDeviceId } = useAudioHardware();
 
   const [timeSignature, setTimeSignature] = useState<TimeSignatureString>(project.timeSignature);
-  const [bpm, setBpm] = useState(activePattern.baseBpm ?? project.bpm ?? 55);
+  const [bpm, setBpm] = useState(activePattern.bpm ?? activePattern.baseBpm ?? project.bpm ?? 88);
   const [referencePitch, setReferencePitch] = useState(activePattern.referencePitch ?? 'C4');
   const [beatResolutions, setBeatResolutions] = useState<number[]>(() => getDefaultBeatResolutions(project.timeSignature));
 
   useEffect(() => {
-    setBpm(activePattern.baseBpm ?? project.bpm ?? 55);
+    setBpm(activePattern.bpm ?? activePattern.baseBpm ?? project.bpm ?? 88);
     setReferencePitch(activePattern.referencePitch ?? 'C4');
-  }, [activePattern.id, activePattern.baseBpm, activePattern.referencePitch, project.bpm]);
+  }, [activePattern.id, activePattern.bpm, activePattern.baseBpm, activePattern.referencePitch, project.bpm]);
 
   const measuresCount = activePattern.measuresCount;
   const hasAnacrusis = activePattern.hasAnacrusis !== false;

@@ -32,7 +32,10 @@ export function buildPatternNameFromFirstWord(text: string, existingNames: strin
 function initPatternFromSegment(
   role: VocalRole, seg: any, bpm: number, existingNames: string[], measuresCount: 1 | 2 | 3 | 4 = 1, defaultAna = false
 ): VocalPatternItem {
-  const pat = createDefaultVocalPattern(role, buildPatternNameFromFirstWord(seg.text, existingNames), measuresCount, seg.sectionBpm ?? bpm);
+  const effBpm = seg.sectionBpm ?? bpm;
+  const pat = createDefaultVocalPattern(role, buildPatternNameFromFirstWord(seg.text, existingNames), measuresCount, effBpm);
+  pat.baseBpm = effBpm;
+  pat.bpm = effBpm;
   pat.assignedLyricsText = seg.text;
   pat.hasAnacrusis = seg.hasAnacrusis ?? defaultAna;
   pat.anacrusisBeats = seg.anacrusisBeats ?? (pat.hasAnacrusis ? 2 : undefined);
@@ -46,7 +49,7 @@ export function generateToadaFromSheet(project: ToadaProject, parsed: ParsedToad
   const newPatterns: VocalPatternItem[] = [];
   const newSlots: ToadaArrangementSlot[] = [];
   const map = new Map<string, string>();
-  const targetBpm = options?.bpm ?? parsed.docMeta?.bpmDefaut ?? project.bpm ?? 55;
+  const targetBpm = options?.bpm ?? parsed.docMeta?.bpmDefaut ?? project.bpm ?? 88;
 
   let i = 0;
   while (i < parsed.segments.length) {
@@ -124,8 +127,10 @@ export function generateToadaFromSheet(project: ToadaProject, parsed: ParsedToad
     generated.toadaMeta.questionsQcm = quizItems;
     if (globalHarmony && !generated.toadaMeta.harmonyGrid) generated.toadaMeta.harmonyGrid = globalHarmony;
   }
-  if (globalHarmony) {
-    generated.patterns.forEach((p) => { if (!p.harmonyGrid?.measures?.length) p.harmonyGrid = globalHarmony; });
-  }
+  generated.patterns.forEach((p) => {
+    p.baseBpm = targetBpm;
+    p.bpm = targetBpm;
+    if (globalHarmony && !p.harmonyGrid?.measures?.length) p.harmonyGrid = globalHarmony;
+  });
   return generated;
 }

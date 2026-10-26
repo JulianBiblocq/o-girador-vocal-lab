@@ -61,7 +61,7 @@ export function parseToadaPack(jsonText: string): ToadaProject {
       return {
         id: p.id, name: p.name, role: p.role, measuresCount: p.measuresCount ?? 2,
         hasAnacrusis: p.hasAnacrusis ?? (p.anacrusisSteps && p.anacrusisSteps.length > 0 ? true : (p.anacrusisSteps !== undefined ? false : true)),
-        baseBpm: p.baseBpm ?? data.project?.bpm ?? 55, referencePitch: p.referencePitch ?? 'C4',
+        baseBpm: p.baseBpm ?? data.project?.bpm ?? 88, bpm: p.bpm ?? p.baseBpm ?? data.project?.bpm ?? 88, referencePitch: p.referencePitch ?? 'C4',
         pitchCorrectionAmount: p.pitchCorrectionAmount ?? 0, linkedSourcePatternId: p.linkedSourcePatternId ?? null,
         activeVariantKey: activeKey, variants, recordingResult: activeV?.recordingResult ?? null,
         rawAudioSamples: activeV?.recordingResult?.pcm ?? null, correctedAudioSamples: null,

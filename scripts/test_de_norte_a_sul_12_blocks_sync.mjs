@@ -12,7 +12,7 @@ console.log('🧪 Test de synchronisation fidèle De Norte a Sul (12 blocs + BPM
 const mockOrganizadorDeNorteASul = {
   id: 'JldyOUUlSWSN2Nth63wt',
   titre: 'De Norte a Sul',
-  bpmDefaut: 92,
+  bpmDefaut: 88,
   signature: '4/4',
   rawTxtCode: `*[3]_ Negro _ [4]vem _ de _ Lu[1]anda _ [2]Trazen[3]_ do _ [4]o _ baque _ vir[1]ado _ [2]nação*
 [3]_ Negro _ [4]vem _ de _ Lu[1]anda _ [2]Trazen[3]_ do _ o _ [4]baque _ vir[1]ado _ [2]nação _ [3]_ [4]_
@@ -31,7 +31,7 @@ const mockOrganizadorDeNorteASul = {
 
 // 2. Test réconciliation par ID OU Titre normalisé
 const normalizedDoc = normalizeToadaDoc('JldyOUUlSWSN2Nth63wt', mockOrganizadorDeNorteASul);
-assert.strictEqual(normalizedDoc.bpmDefaut, 92, 'Le BPM normalisé doit être 92');
+assert.strictEqual(normalizedDoc.bpmDefaut, 88, 'Le BPM normalisé doit être 88');
 
 const foundBySlug = findDocByIdOrNormalizedTitle([normalizedDoc], 'de-norte-a-sul');
 assert.ok(foundBySlug, 'Doit réconcilier "de-norte-a-sul" avec "De Norte a Sul"');
@@ -81,7 +81,12 @@ for (let c = 8; c <= 11; c++) {
 const baseProject = createDefaultToadaProject();
 const generatedProject = generateToadaFromSheet(baseProject, parsed, { bpm: normalizedDoc.bpmDefaut });
 
-assert.strictEqual(generatedProject.bpm, 92, 'Le tempo du projet généré doit être 92 BPM');
+assert.strictEqual(generatedProject.bpm, 88, 'Le tempo du projet généré doit être 88 BPM');
+assert.strictEqual(generatedProject.slots.length, 12, 'Doit générer exactement 12 slots Conducteur');
+generatedProject.patterns.forEach((p) => {
+  assert.strictEqual(p.bpm, 88, `Le pattern ${p.name} doit avoir bpm: 88`);
+  assert.strictEqual(p.baseBpm, 88, `Le pattern ${p.name} doit avoir baseBpm: 88`);
+});
 assert.strictEqual(generatedProject.slots.length, 12, 'Doit générer exactement 12 slots Conducteur');
 
 // 5. Test Génération des tranches Slicer (calquage)

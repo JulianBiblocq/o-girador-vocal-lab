@@ -42,7 +42,7 @@ export const LivretMelodia: React.FC<LivretMelodiaProps> = (props) => {
 
   useEffect(() => {
     if (!hasAudio || !rawPCM || isMelodiaReady) return;
-    const bpm = activePattern.baseBpm ?? project.bpm ?? 55;
+    const bpm = activePattern.bpm ?? activePattern.baseBpm ?? project.bpm ?? 88;
     const effectiveBpm = Math.max(30, Math.round(bpm * activeVariant.speedRatio));
     const referencePitch = activePattern.referencePitch ?? 'C4';
     const effectivePitch = transposePitchNote(referencePitch, activeVariant.pitchShiftSemitones);
@@ -92,7 +92,7 @@ export const LivretMelodia: React.FC<LivretMelodiaProps> = (props) => {
   }
 
   const beatsPerMeasure = getBeatsPerMeasure(project.timeSignature);
-  const beatDuration = 60 / (activePattern.baseBpm ?? project.bpm ?? 55);
+  const beatDuration = 60 / (activePattern.bpm ?? activePattern.baseBpm ?? project.bpm ?? 88);
   const measureDuration = beatsPerMeasure * beatDuration;
   const totalDurationSec = getPatternTotalDurationSec(activePattern.hasAnacrusis !== false, activePattern.measuresCount, measureDuration, 0.25, beatDuration);
 

@@ -38,7 +38,7 @@ export const LivretPrise: React.FC = () => {
   const { t } = useLanguage();
   const { activeLivret, setActiveLivret } = useVocalTransportStore();
 
-  const bpm = activePattern.baseBpm ?? project.bpm ?? 55;
+  const bpm = activePattern.bpm ?? activePattern.baseBpm ?? project.bpm ?? 88;
   const referencePitch = activePattern.referencePitch ?? 'C4';
   const timeSignature = project.timeSignature;
   const measuresCount = activePattern.measuresCount;

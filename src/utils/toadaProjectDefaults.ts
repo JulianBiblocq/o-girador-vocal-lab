@@ -46,7 +46,7 @@ export function createDefaultVocalPattern(
   role: VocalRole = 'puxador',
   name = 'Appel 1',
   measuresCount: 1 | 2 | 3 | 4 = 2,
-  baseBpm = 55,
+  baseBpm = 88,
   referencePitch = 'C4'
 ): VocalPatternItem {
   const v1 = createDefaultVariant(1.0, 0);
@@ -58,7 +58,7 @@ export function createDefaultVocalPattern(
   };
   return {
     id: `pat-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
-    name, role, measuresCount, baseBpm, referencePitch, variants, activeVariantKey: v1.variantKey,
+    name, role, measuresCount, baseBpm, bpm: baseBpm, referencePitch, variants, activeVariantKey: v1.variantKey,
     recordingResult: null, trimStartSec: 0, trimEndSec: 0, lowCutEnabled: true, enableTonePolish: true,
     anacrusisSteps: [], mainSteps: [], pitchCurve: [], pack: null, hasAnacrusis: true, melodyneRegions: [],
     variantPitchesConfig: { refSemitones: 0, lowSemitones: -4, highSemitones: 4, enableHigh: false },
@@ -67,10 +67,10 @@ export function createDefaultVocalPattern(
 }
 
 export function createDefaultToadaProject(): ToadaProject {
-  const p1 = createDefaultVocalPattern('puxador', 'Appel 1', 2);
-  const p2 = createDefaultVocalPattern('coro', 'Reponse Choeur', 2);
+  const p1 = createDefaultVocalPattern('puxador', 'Appel 1', 2, 88);
+  const p2 = createDefaultVocalPattern('coro', 'Reponse Choeur', 2, 88);
   return {
-    id: 'toada-default', title: 'Toada Sem Titulo', bpm: 100, timeSignature: '4/4',
+    id: 'toada-default', title: 'Toada Sem Titulo', bpm: 88, timeSignature: '4/4',
     patterns: [p1, p2],
     slots: [
       { slotId: 'slot-1', puxadorPatternId: p1.id, coroPatternId: null },

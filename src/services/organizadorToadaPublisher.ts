@@ -44,7 +44,7 @@ export async function publishToadaToOrganizador(
     parolesPhonetiques,
     signature: project.timeSignature || '4/4',
     timeSignature: project.timeSignature || '4/4',
-    bpmDefaut: project.bpm || 55,
+    bpmDefaut: project.bpm || 88,
     tonaliteDefaut: project.toadaMeta?.tonaliteDefaut || (project as any).referencePitch || 'D',
     cantadorToadaId: project.id,
     traduction: project.toadaMeta?.traduction || '',

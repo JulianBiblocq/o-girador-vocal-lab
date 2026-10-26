@@ -12,7 +12,7 @@ export function buildOrganizadorSlices(
   detected: SliceSegment[],
   gridOffsetSec = 0.8
 ): SliceSegment[] {
-  const beatDur = 60 / (bpm || 55);
+  const beatDur = 60 / (bpm || 88);
   const measureDur = beatDur * 4;
   const targetRole = defaultRole === 'coro' ? 'coro' : 'puxador';
   const rolePats = patterns.filter((p) => p.role === targetRole);

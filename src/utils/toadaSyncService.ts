@@ -32,7 +32,7 @@ export async function syncProjectWithOrganizador(
   if (!doc) return null;
 
   const parsed = parseToadaDocument(doc, 'puxador');
-  const targetBpm = Number(doc.bpmDefaut || (doc as any).bpm || (doc as any).tempo || parsed.docMeta?.bpmDefaut || project.bpm || 55);
+  const targetBpm = Number(doc.bpmDefaut || (doc as any).bpm || (doc as any).tempo || parsed.docMeta?.bpmDefaut || project.bpm || 88);
   const freshProject = generateToadaFromSheet(project, parsed, {
     bpm: targetBpm,
   });
@@ -45,6 +45,8 @@ export async function syncProjectWithOrganizador(
     if (matched && matched.recordingResult) {
       return {
         ...newPat,
+        baseBpm: targetBpm,
+        bpm: targetBpm,
         recordingResult: matched.recordingResult,
         rawAudioSamples: matched.rawAudioSamples,
         trimStartSec: matched.trimStartSec,
@@ -57,7 +59,7 @@ export async function syncProjectWithOrganizador(
         midiLocked: matched.midiLocked,
       };
     }
-    return newPat;
+    return { ...newPat, baseBpm: targetBpm, bpm: targetBpm };
   });
 
   freshProject.toadaMeta = { ...(project.toadaMeta || {}), ...doc };

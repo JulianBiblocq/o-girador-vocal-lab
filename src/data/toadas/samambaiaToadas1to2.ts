@@ -16,7 +16,7 @@ export const TOADA_DE_NORTE_A_SUL: ToadaDocument = {
   rythme: 'Baque Virado',
   annee: 2024,
   signature: '4/4',
-  bpmDefaut: 55,
+  bpmDefaut: 88,
   tonaliteDefaut: 'Dm',
   rawTxtCode: `*[3]_ Negro _ [4]vem _ de _ Lu[1]anda _ [2]Trazen[3]_ do _ [4]o _ baque _ vir[1]ado _ [2]nação*
 [3]_ Negro _ [4]vem _ de _ Lu[1]anda _ [2]Trazen[3]_ do _ o _ [4]baque _ vir[1]ado _ [2]nação _ [3]_ [4]_
@@ -31,7 +31,7 @@ export const TOADA_DE_NORTE_A_SUL: ToadaDocument = {
 [1]_ [2]É _ no _ [3]baque _ do _ [4]maracatu
 [1]_ [2]Sou _ batu[3]queiro _ de _ [4]Cangarussu`,
   parolesOriginales: `Signature: 4/4
-Tempo: 55
+Tempo: 88
 Tonalite: Dm
 [Section Entrée]
 [Dm] +*Negro nagô, negro nagô*
