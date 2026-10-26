@@ -1,7 +1,7 @@
 /**
  * samambaiaToadas1to2.ts
- * Fiches 1 et 2 des Toadas de Samambaia (< 100 lignes).
- * 1 Paragraphe = 1 Mesure (*gras* = Puxador, normal = Coro, [Section], [Accord]).
+ * Fiches 1 et 2 des Toadas de Samambaia (< 130 lignes).
+ * Mesures liées (/) en 2M et 3M, anacrouses (+), *gras* = Puxador, normal = Coro.
  */
 import type { ToadaDocument } from '../../types/toadaDocument.types';
 
@@ -22,36 +22,45 @@ export const TOADA_DE_NORTE_A_SUL: ToadaDocument = {
 Tempo: 55
 Tonalite: Dm
 [Section Entrée]
-[Dm] *Negro vem de Luanda*
-[Dm] *Trazendo o baque virado nação*
-[Dm] Negro vem de Luanda
-[Dm] Trazendo o baque virado nação
+[Dm] +*Negro nagô, negro nagô*
+/*Trazendo a coroa do rei Xangô*
+[Dm] +Negro nagô, negro nagô
+/Trazendo a coroa do rei Xangô
+[Dm] +*Negro nagô, negro nagô*
+/*Trazendo a coroa do rei Xangô*
+[Dm] +Negro nagô, negro nagô
+/Trazendo a coroa do rei Xangô
 [Section Couplet]
 [Gm] *Trouxe a caixa, trouxe o gonguê*
-[Dm] *A maraca e o tambor*
-[A7] *Mais é no baque do maracatu*
-[Dm] *Estrela Brilhante brilha de norte a sul*
-[A7] *É no baque do maracatu*
-[Dm] *Sou batuqueiro de Cangarussu*
-[Section Refrain]
-[A7] Mais é no baque do maracatu
-[Dm] Estrela Brilhante brilha de norte a sul
-[A7] É no baque do maracatu
-[Dm] Sou batuqueiro de Cangarussu`,
-  parolesPhonetiques: `Négrou vein di louanda
-trazendou baqui viradou naçan
-Négrou vein di louanda
-trazendou baqui viradou naçan
-troussi a kaïcha troussi ou gongouè
+[Dm] /*A maraca e o tambor*
+/*____*
+[A7] +*Mais é no baque do maracatu*
+[Dm] /*De norte a sul*
+[A7] +Mais é no baque do maracatu
+[Dm] /De norte a sul
+[A7] +*É no baque do maracatu*
+[Dm] /*Cangarussu*
+[A7] +É no baque do maracatu
+[Dm] /Cangarussu`,
+  parolesPhonetiques: `Négrou nagô, négrou nagô
+trazendou a coroa dou reï Changô
+Négrou nagô, négrou nagô
+trazendou a coroa dou reï Changô
+Négrou nagô, négrou nagô
+trazendou a coroa dou reï Changô
+Négrou nagô, négrou nagô
+trazendou a coroa dou reï Changô
+troussi a kaïcha, troussi ou gongouè
 a maraca i ou tambor
+____
 maïzé nou baqui dou maracatou
-istréla brilianti brilia di norti a sou
-é nou baqui dou maracatou
-so batoukeïrou di cangaroussou
+di norti a sou
 maïzé nou baqui dou maracatou
-istréla brilianti brilia di norti a sou
+di norti a sou
 é nou baqui dou maracatou
-so batoukeïrou di cangaroussou`,
+cangaroussou
+é nou baqui dou maracatou
+cangaroussou`,
 };
 
 export const TOADA_TEM_MACAIBA: ToadaDocument = {

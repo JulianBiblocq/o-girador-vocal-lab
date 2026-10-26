@@ -1,6 +1,6 @@
 /**
  * SlicerMultiSection.tsx
- * Section complète de découpe multi-tranches et assignation aux blocs Toada (< 135 lignes).
+ * Section complète de découpe multi-tranches sans doublon et assignation aux blocs Toada (< 140 lignes).
  */
 import React, { useState, useEffect } from 'react';
 import type { DecodedAudioResult } from '../../utils/directAudioImporter';
@@ -32,7 +32,7 @@ export const SlicerMultiSection: React.FC<SlicerMultiSectionProps> = ({
 
   const applyPreAssign = (rawSegments: SliceSegment[], mode: PreAssignMode): SliceSegment[] => {
     const list = mode === 'puxador' ? patterns.filter((p) => p.role === 'puxador') : mode === 'coro' ? patterns.filter((p) => p.role === 'coro') : patterns;
-    return rawSegments.map((s, idx) => ({ ...s, targetPatternId: list[idx]?.id ?? (list.length > 0 ? list[idx % list.length].id : 'new') }));
+    return rawSegments.map((s, idx) => ({ ...s, targetPatternId: idx < list.length ? list[idx].id : 'new' }));
   };
 
   const handleDetect = () => {
@@ -63,7 +63,10 @@ export const SlicerMultiSection: React.FC<SlicerMultiSectionProps> = ({
   }, [playingSegmentId, engine, segments]);
 
   const handleAddSegmentAt = (sec: number) => {
-    const newSeg: SliceSegment = { id: `seg-${Date.now()}`, startSec: Math.max(0, sec - 1.5), endSec: Math.min(audio.durationSec, sec + 1.5), targetPatternId: 'ignore' };
+    const newSeg: SliceSegment = {
+      id: `seg-${Date.now()}`, startSec: Math.max(0, sec - 1.5), endSec: Math.min(audio.durationSec, sec + 1.5),
+      targetPatternId: 'ignore', measuresCount: 2, hasAnacrusis: true, hasTailBeat: true,
+    };
     onSegmentsChange([...segments, newSeg].sort((a, b) => a.startSec - b.startSec));
   };
 
@@ -71,8 +74,12 @@ export const SlicerMultiSection: React.FC<SlicerMultiSectionProps> = ({
     const target = segments.find((s) => s.id === segId);
     if (!target) return;
     const mid = Math.round(((target.startSec + target.endSec) / 2) * 100) / 100;
+    const assignedIds = new Set(segments.map((s) => s.targetPatternId));
+    const roleList = patterns.filter((p) => p.role === defaultRole);
+    const nextAvail = roleList.find((p) => !assignedIds.has(p.id)) || patterns.find((p) => !assignedIds.has(p.id));
+
     const s1: SliceSegment = { ...target, id: `seg-${Date.now()}-a`, endSec: mid };
-    const s2: SliceSegment = { ...target, id: `seg-${Date.now()}-b`, startSec: mid };
+    const s2: SliceSegment = { ...target, id: `seg-${Date.now()}-b`, startSec: mid, targetPatternId: nextAvail?.id ?? 'new' };
     onSegmentsChange(segments.flatMap((s) => (s.id === segId ? [s1, s2] : [s])));
   };
 

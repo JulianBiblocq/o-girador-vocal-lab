@@ -2,7 +2,7 @@
  * silenceDetector.ts
  * Détection automatique des phrases vocales par analyse d'énergie RMS et silences (< 110 lignes).
  */
-import type { SliceSegment } from '../types/slicerSegments.types';
+import { estimateSegmentMetrics, type SliceSegment } from '../types/slicerSegments.types';
 
 export interface SilenceDetectorOptions {
   minPhraseDurationSec?: number;
@@ -109,11 +109,17 @@ export function detectVocalPhrases(
     if (segments.length > 0 && start <= segments[segments.length - 1].endSec + 0.1) {
       segments[segments.length - 1].endSec = Math.max(segments[segments.length - 1].endSec, end);
     } else {
+      const sStart = Math.round(start * 100) / 100;
+      const sEnd = Math.round(end * 100) / 100;
+      const met = estimateSegmentMetrics(sEnd - sStart);
       segments.push({
         id: `seg-${Date.now()}-${idx}`,
-        startSec: Math.round(start * 100) / 100,
-        endSec: Math.round(end * 100) / 100,
+        startSec: sStart,
+        endSec: sEnd,
         targetPatternId: 'ignore',
+        measuresCount: met.measuresCount,
+        hasAnacrusis: met.hasAnacrusis,
+        hasTailBeat: met.hasTailBeat,
       });
     }
   });
