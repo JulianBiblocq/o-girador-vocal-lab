@@ -5,6 +5,23 @@
 import type { VocalPatternItem, VocalRole } from '../types/toadaProject.types';
 import type { SliceSegment } from '../types/slicerSegments.types';
 
+export function calculateSliceMetricT1Sec(
+  startSec: number,
+  bpm: number,
+  gridOffsetSec = 0.8,
+  hasAnacrusis = false,
+  anacrusisBeats = 2
+): number {
+  const beatDur = 60 / (bpm || 88);
+  const measureDur = beatDur * 4;
+  if (hasAnacrusis && anacrusisBeats > 0) {
+    const estT1 = startSec + anacrusisBeats * beatDur;
+    return Math.max(0, Math.round((estT1 - gridOffsetSec) / measureDur) * measureDur + gridOffsetSec);
+  }
+  const mIndex = Math.floor((startSec - gridOffsetSec + 0.15) / measureDur);
+  return Math.max(0, gridOffsetSec + mIndex * measureDur);
+}
+
 export function buildOrganizadorSlices(
   patterns: VocalPatternItem[],
   defaultRole: VocalRole,
@@ -22,7 +39,7 @@ export function buildOrganizadorSlices(
   // 1. Calcul du T1 métrique de chaque bloc sur la grille de mesures
   const metaList: Array<{ pat: VocalPatternItem; t1: number; mCount: number; hasAna: boolean; anacDur: number; isIslandStart: boolean }> = [];
   let prevT1 = gridOffsetSec;
-  let prevMCount = 2;
+  let prevMCount = targetList[0]?.measuresCount ?? 1;
 
   targetList.forEach((pat, idx) => {
     const hasAna = pat.hasAnacrusis !== false;

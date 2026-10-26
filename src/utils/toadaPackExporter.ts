@@ -18,6 +18,8 @@ export interface ExportedVariantData {
   sampleRate: number;
   trimStartSec?: number;
   trimEndSec?: number;
+  t1OffsetSec?: number;
+  recordedBpm?: number;
   lowCutEnabled?: boolean;
   enableTonePolish?: boolean;
 }
@@ -79,6 +81,8 @@ export function buildToadaPack(project: ToadaProject, currentPack?: VocalPackExp
         sampleRate: sr,
         trimStartSec: v.trimStartSec,
         trimEndSec: v.trimEndSec,
+        t1OffsetSec: v.t1OffsetSec ?? p.t1OffsetSec,
+        recordedBpm: v.recordingResult?.recordedBpm || p.bpm || project.bpm,
         lowCutEnabled: v.lowCutEnabled,
         enableTonePolish: v.enableTonePolish ?? true,
       };

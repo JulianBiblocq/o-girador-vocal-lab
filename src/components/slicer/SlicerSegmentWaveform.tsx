@@ -5,6 +5,7 @@
 import React, { useRef, useEffect, useCallback } from 'react';
 import type { SliceSegment } from '../../types/slicerSegments.types';
 import { drawSegmentWaveform } from './slicerSegmentDrawer';
+import { calculateSliceMetricT1Sec } from '../../utils/slicerAlignmentHelper';
 
 interface SlicerSegmentWaveformProps {
   pcm: Float32Array; durationSec: number; segments: SliceSegment[]; selectedSegmentId: string | null;
@@ -48,7 +49,6 @@ export const SlicerSegmentWaveform: React.FC<SlicerSegmentWaveformProps> = ({
       dragRef.current = { mode: 'grid', startSec: sec };
       return;
     }
-
     const hitTolPx = 9;
     for (let i = 0; i < segments.length - 1; i++) {
       const s1 = segments[i], s2 = segments[i + 1];
@@ -88,13 +88,12 @@ export const SlicerSegmentWaveform: React.FC<SlicerSegmentWaveformProps> = ({
     if (mode === 'grid') {
       const newOff = Math.max(0, gridOffsetSec + delta);
       onGridOffsetChange?.(Math.round(newOff * 100) / 100);
-      dragRef.current.startSec = sec;
-      return;
+      dragRef.current.startSec = sec; return;
     }
     if (mode === 'joint') {
       const { segId: sId1, segId2: sId2 } = dragRef.current as any;
       const cut = Math.max(0.1, Math.min(durationSec - 0.1, sec));
-      onSegmentsChange(segments.map((s) => s.id === sId1 ? { ...s, endSec: cut } : s.id === sId2 ? { ...s, startSec: cut } : s));
+      onSegmentsChange(segments.map((s) => s.id === sId1 ? { ...s, endSec: cut } : s.id === sId2 ? { ...s, startSec: cut, metricT1Sec: calculateSliceMetricT1Sec(cut, bpm, gridOffsetSec, s.hasAnacrusis, s.anacrusisBeats) } : s));
       return;
     }
     if (mode === 'body' && segId) {
@@ -110,13 +109,13 @@ export const SlicerSegmentWaveform: React.FC<SlicerSegmentWaveformProps> = ({
       const shift = clampedStart - targetSeg.startSec;
 
       onSegmentsChange(segments.map((s, idx) => {
-        if (s.id === segId) { const len = origEnd - origStart; return { ...s, startSec: clampedStart, endSec: Math.min(durationSec, clampedStart + len) }; }
-        if (cascadeMove && idx > segIdx) return { ...s, startSec: Math.max(0, s.startSec + shift), endSec: Math.min(durationSec, s.endSec + shift) };
+        if (s.id === segId) { const len = origEnd - origStart; return { ...s, startSec: clampedStart, endSec: Math.min(durationSec, clampedStart + len), metricT1Sec: snapT1 }; }
+        if (cascadeMove && idx > segIdx) return { ...s, startSec: Math.max(0, s.startSec + shift), endSec: Math.min(durationSec, s.endSec + shift), metricT1Sec: (s.metricT1Sec ?? s.startSec) + shift };
         return s;
       }));
     } else if (segId) {
       onSegmentsChange(segments.map((s) => s.id !== segId ? s : mode === 'start'
-        ? { ...s, startSec: Math.max(0, Math.min(sec, s.endSec - 0.2)) }
+        ? { ...s, startSec: Math.max(0, Math.min(sec, s.endSec - 0.2)), metricT1Sec: calculateSliceMetricT1Sec(Math.max(0, Math.min(sec, s.endSec - 0.2)), bpm, gridOffsetSec, s.hasAnacrusis, s.anacrusisBeats) }
         : { ...s, endSec: Math.min(durationSec, Math.max(sec, s.startSec + 0.2)) }));
     }
   };
@@ -131,7 +130,8 @@ export const SlicerSegmentWaveform: React.FC<SlicerSegmentWaveformProps> = ({
     if (seg) {
       const cut = Math.round(sec * 100) / 100;
       const s1: SliceSegment = { ...seg, endSec: cut };
-      const s2: SliceSegment = { ...seg, id: `seg-${Date.now()}`, startSec: cut, metricT1Sec: cut, targetPatternId: 'new' };
+      const s2T1 = calculateSliceMetricT1Sec(cut, bpm, gridOffsetSec, false, 0);
+      const s2: SliceSegment = { ...seg, id: `seg-${Date.now()}`, startSec: cut, metricT1Sec: s2T1, targetPatternId: 'new' };
       onSegmentsChange(segments.flatMap((s) => s.id === seg.id ? [s1, s2] : [s]));
       onSelectSegment(s2.id);
     } else { onAddSegmentAtSec(sec); }
@@ -139,10 +139,7 @@ export const SlicerSegmentWaveform: React.FC<SlicerSegmentWaveformProps> = ({
 
   return (
     <div className="w-full h-36 bg-[var(--cordel-surface)] border border-[var(--cordel-border-panel)] rounded relative select-none">
-      <canvas
-        ref={canvasRef} onPointerDown={handlePointerDown} onPointerMove={handlePointerMove} onPointerUp={handlePointerUp}
-        onDoubleClick={handleDoubleClick} onContextMenu={(e) => e.preventDefault()} className="w-full h-full block cursor-crosshair"
-      />
+      <canvas ref={canvasRef} onPointerDown={handlePointerDown} onPointerMove={handlePointerMove} onPointerUp={handlePointerUp} onDoubleClick={handleDoubleClick} onContextMenu={(e) => e.preventDefault()} className="w-full h-full block cursor-crosshair" />
     </div>
   );
 };

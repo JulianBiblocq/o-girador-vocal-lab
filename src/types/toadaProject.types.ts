@@ -30,6 +30,7 @@ export interface AudioRecordingResult {
   pcm: Float32Array;
   sampleRate: number;
   t1OffsetSec?: number;
+  recordedBpm?: number;
 }
 
 export interface VocalAudioVariant {

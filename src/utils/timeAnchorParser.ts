@@ -114,7 +114,9 @@ export function extractTimeAnchors(rawText: string): ExtractedAnchorsResult {
 
   const cleanText = rawText.replace(/\[(?:M\d+[•\.:])?[^\]]+\]/g, '').replace(/_/g, ' ').replace(/\s{2,}/g, ' ').trim();
   const count1 = matches.filter((m) => m.beat === 1).length;
-  const rawMeasuresCount = Math.min(4, Math.max(1, count1 > 0 ? count1 : (hasAnacrusis ? (measureOffset || 1) : measureOffset + 1))) as 1 | 2 | 3 | 4;
+  const isTrailingBeat1Chute = matches.length > 1 && matches[matches.length - 1].beat === 1;
+  const effectiveCount1 = isTrailingBeat1Chute && count1 > 1 ? count1 - 1 : count1;
+  const rawMeasuresCount = Math.min(4, Math.max(1, effectiveCount1 > 0 ? effectiveCount1 : (hasAnacrusis ? (measureOffset || 1) : measureOffset + 1))) as 1 | 2 | 3 | 4;
   const lastAnchor = timeAnchors[timeAnchors.length - 1];
 
   return { cleanText, timeAnchors, measuresCount: rawMeasuresCount, hasAnacrusis, anacrusisBeats, anacrusisStartBeat, exitBeat: lastAnchor?.beat };

@@ -82,7 +82,8 @@ export async function exportFullSongWav(project: ToadaProject): Promise<void> {
   project.slots.forEach((s) => {
     const pPat = project.patterns.find((p) => p.id === s.puxadorPatternId);
     const cPat = project.patterns.find((p) => p.id === s.coroPatternId);
-    totalMeasures += Math.max(pPat?.measuresCount ?? 2, cPat?.measuresCount ?? 2, 2);
+    const mCount = Math.max(pPat?.measuresCount ?? 1, cPat?.measuresCount ?? 1, 1);
+    totalMeasures += (s.advanceMeasures ?? mCount);
   });
 
   const totalDurationSec = (totalMeasures + 1) * measureDurationSec + 1.0;
@@ -93,12 +94,12 @@ export async function exportFullSongWav(project: ToadaProject): Promise<void> {
   project.slots.forEach((slot) => {
     const puxPat = project.patterns.find((p) => p.id === slot.puxadorPatternId);
     const coroPat = project.patterns.find((p) => p.id === slot.coroPatternId);
-    const measuresInSlot = Math.max(puxPat?.measuresCount ?? 2, coroPat?.measuresCount ?? 2, 2);
+    const measuresInSlot = Math.max(puxPat?.measuresCount ?? 1, coroPat?.measuresCount ?? 1, 1);
     const slotT1Sec = currentMeasure * measureDurationSec;
 
     if (puxPat) schedulePatternAudio(offlineCtx, puxPat, slotT1Sec, measureDurationSec);
     if (coroPat) schedulePatternAudio(offlineCtx, coroPat, slotT1Sec, measureDurationSec);
-    currentMeasure += measuresInSlot;
+    currentMeasure += (slot.advanceMeasures ?? measuresInSlot);
   });
 
   const rendered = await offlineCtx.startRendering();

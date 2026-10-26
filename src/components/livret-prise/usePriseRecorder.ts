@@ -59,7 +59,7 @@ export function usePriseRecorder(params: UsePriseRecorderParams) {
     const totalRecordedSec = getPatternTotalDurationSec(hasAnacrusis, measuresCount, measureDuration, 0.25, extraEndBeatSec);
     if (isCycleActive) {
       engine.stop(); cueHandleRef.current?.stop(); takeGuideRef.current?.stop();
-      updateVariant(activePattern.id, activeVariant.variantKey, { recordingResult: { pcm: recorder.stop(), sampleRate: recordedSampleRate }, trimStartSec: 0, trimEndSec: totalRecordedSec });
+      updateVariant(activePattern.id, activeVariant.variantKey, { recordingResult: { pcm: recorder.stop(), sampleRate: recordedSampleRate, recordedBpm: effectiveBpm }, trimStartSec: 0, trimEndSec: totalRecordedSec });
       updatePattern?.(activePattern.id, { pack: null, rawAudioSamples: null, isMidiInitialized: false, midiLocked: false });
       setIsCycleActive(false); return;
     }
@@ -88,7 +88,7 @@ export function usePriseRecorder(params: UsePriseRecorderParams) {
       pitchShiftSemitones: activeVariant.pitchShiftSemitones,
     }, () => {
       cueHandleRef.current?.stop(); takeGuideRef.current?.stop();
-      updateVariant(activePattern.id, activeVariant.variantKey, { recordingResult: { pcm: recorder.stop(), sampleRate }, trimStartSec: 0, trimEndSec: totalRecordedSec });
+      updateVariant(activePattern.id, activeVariant.variantKey, { recordingResult: { pcm: recorder.stop(), sampleRate, recordedBpm: effectiveBpm }, trimStartSec: 0, trimEndSec: totalRecordedSec });
       updatePattern?.(activePattern.id, { pack: null, rawAudioSamples: null, isMidiInitialized: false, midiLocked: false });
       setIsCycleActive(false);
     }, cycleStart);

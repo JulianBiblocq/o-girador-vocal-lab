@@ -49,11 +49,12 @@ export function parseToadaPack(jsonText: string): ToadaProject {
       for (const [key, v] of Object.entries(p.variants || {})) {
         const ev = v as any;
         const decoded = ev.audioBase64 ? decodeBase64Wav(ev.audioBase64) : null;
+        const recResult = decoded ? { ...decoded, t1OffsetSec: ev.t1OffsetSec, recordedBpm: ev.recordedBpm } : null;
         variants[key] = {
           variantKey: ev.variantKey, speedRatio: ev.speedRatio ?? 1.0, pitchShiftSemitones: ev.pitchShiftSemitones ?? 0,
           coverage: ev.coverage ?? { minBpmRatio: 0.87, maxBpmRatio: 1.15, minSemitones: -4, maxSemitones: 4 },
-          recordingResult: decoded, trimStartSec: ev.trimStartSec ?? 0, trimEndSec: ev.trimEndSec ?? ev.durationSec ?? 0,
-          lowCutEnabled: ev.lowCutEnabled ?? true, enableTonePolish: ev.enableTonePolish ?? true,
+          recordingResult: recResult, trimStartSec: ev.trimStartSec ?? 0, trimEndSec: ev.trimEndSec ?? ev.durationSec ?? 0,
+          t1OffsetSec: ev.t1OffsetSec, lowCutEnabled: ev.lowCutEnabled ?? true, enableTonePolish: ev.enableTonePolish ?? true,
         };
       }
       const activeKey = p.activeVariantKey || Object.keys(variants)[0] || 'spd100_pit0';
@@ -65,7 +66,7 @@ export function parseToadaPack(jsonText: string): ToadaProject {
         pitchCorrectionAmount: p.pitchCorrectionAmount ?? 0, linkedSourcePatternId: p.linkedSourcePatternId ?? null,
         activeVariantKey: activeKey, variants, recordingResult: activeV?.recordingResult ?? null,
         rawAudioSamples: activeV?.recordingResult?.pcm ?? null, correctedAudioSamples: null,
-        trimStartSec: activeV?.trimStartSec ?? 0, trimEndSec: activeV?.trimEndSec ?? 0,
+        trimStartSec: activeV?.trimStartSec ?? 0, trimEndSec: activeV?.trimEndSec ?? 0, t1OffsetSec: activeV?.t1OffsetSec,
         lowCutEnabled: activeV?.lowCutEnabled ?? true, enableTonePolish: activeV?.enableTonePolish ?? true,
         anacrusisSteps: p.anacrusisSteps || [], mainSteps: p.mainSteps || [], pitchCurve: p.pitchCurve || [],
         melodyneRegions: p.melodyneRegions || [],

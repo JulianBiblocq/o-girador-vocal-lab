@@ -99,6 +99,8 @@ export function generateToadaFromSheet(project: ToadaProject, parsed: ParsedToad
     const nextAttackBeat = nextPat?.timeAnchors?.find((a) => !a.isRest)?.beat;
     if (curPat?.exitBeat === 1 && curPat?.measuresCount === 2 && nextAttackBeat !== undefined && nextAttackBeat > 1) {
       newSlots[s].advanceMeasures = 1;
+    } else if (curPat?.measuresCount === 1) {
+      newSlots[s].advanceMeasures = 1;
     }
   }
 

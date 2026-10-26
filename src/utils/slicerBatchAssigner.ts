@@ -7,6 +7,7 @@ import type { SliceSegment } from '../types/slicerSegments.types';
 import { getBeatsPerMeasure } from './musicalMath';
 import { getDefaultBeatResolutions } from './alignmentMath';
 import { extractPatternMelodicData } from '../audio/melodicExtractionHelper';
+import { calculateSliceMetricT1Sec } from './slicerAlignmentHelper';
 
 export interface BatchAssignOptions {
   project: ToadaProject;
@@ -33,8 +34,17 @@ export function executeBatchAssign(options: BatchAssignOptions): { processedCoun
   activeSegments.forEach((segment, idx) => {
     let targetPattern: VocalPatternItem | undefined;
     let targetId = segment.targetPatternId;
-    const measuresCount = segment.measuresCount ?? 2;
     const hasAnacrusis = segment.hasAnacrusis !== false;
+    const rawBpm = targetId !== 'new' ? project.patterns.find((p) => p.id === targetId)?.bpm : undefined;
+    const bpm = rawBpm ?? project.bpm ?? 88;
+    const beatDuration = 60 / bpm;
+    const measureDuration = beatsPerMeasure * beatDuration;
+    const anacBeats = segment.anacrusisBeats ?? (hasAnacrusis ? 2 : 0);
+    const metricT1Sec = segment.metricT1Sec ?? calculateSliceMetricT1Sec(segment.startSec, bpm, 0.8, hasAnacrusis, anacBeats);
+
+    // Non-inflation par le débordement post-T1 : durée métrique réelle
+    const rawSpan = Math.max(1, Math.round((segment.endSec - metricT1Sec - 0.15) / measureDuration));
+    const measuresCount = (segment.measuresCount ?? Math.min(4, Math.max(1, rawSpan))) as 1 | 2 | 3 | 4;
 
     if (targetId === 'new') {
       const role: VocalRole = segment.role ?? 'puxador';
@@ -53,12 +63,6 @@ export function executeBatchAssign(options: BatchAssignOptions): { processedCoun
     if (!firstAssignedId) firstAssignedId = targetId;
 
     onProgress?.(idx + 1, activeSegments.length, targetPattern.name);
-
-    const bpm = targetPattern.bpm ?? targetPattern.baseBpm ?? project.bpm ?? 88;
-    const beatDuration = 60 / bpm;
-    const measureDuration = beatsPerMeasure * beatDuration;
-    const anacBeats = segment.anacrusisBeats ?? (hasAnacrusis ? 2 : 0);
-    const metricT1Sec = segment.metricT1Sec ?? (hasAnacrusis ? segment.startSec + anacBeats * beatDuration : segment.startSec);
 
     // 1. Fenêtrage large centré sur la grille métrique et les bornes de coupe
     const rawStartSec = Math.max(0, Math.min(metricT1Sec - 1.5, segment.startSec - 0.3));
@@ -84,16 +88,16 @@ export function executeBatchAssign(options: BatchAssignOptions): { processedCoun
       t1OffsetSec,
     });
 
-    // 3. Mise à jour de la déclinaison active et du pattern avec ancre absolue t1OffsetSec
+    // 3. Mise à jour de la déclinaison active et du pattern avec ancre absolue t1OffsetSec et recordedBpm
     const activeVarKey = targetPattern.activeVariantKey || 'spd100_pit0';
     updateVariant(targetId, activeVarKey, {
-      recordingResult: { pcm: slicedPCM, sampleRate, t1OffsetSec },
+      recordingResult: { pcm: slicedPCM, sampleRate, t1OffsetSec, recordedBpm: bpm },
       trimStartSec, trimEndSec, t1OffsetSec,
     });
 
     updatePattern(targetId, {
       baseBpm: bpm, bpm: bpm, measuresCount, hasAnacrusis, anacrusisBeats: segment.anacrusisBeats, pack: res.pack, rawAudioSamples: res.cleanPCM,
-      recordingResult: { pcm: slicedPCM, sampleRate, t1OffsetSec }, trimStartSec, trimEndSec, t1OffsetSec,
+      recordingResult: { pcm: slicedPCM, sampleRate, t1OffsetSec, recordedBpm: bpm }, trimStartSec, trimEndSec, t1OffsetSec,
       rawPitchCurve: res.pitchCurve, pitchCurve: res.pitchCurve,
       anacrusisSteps: res.anacrusisSteps, mainSteps: res.mainSteps,
       isMidiInitialized: true, midiLocked: true,
