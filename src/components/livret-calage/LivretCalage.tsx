@@ -43,8 +43,9 @@ export const LivretCalage: React.FC = () => {
     const file = e.target.files?.[0];
     if (!file) return;
     const res = await decodeAudioFile(file);
-    const measureDuration = beatsPerMeasure * (60 / effectiveBpm);
-    const totalDurationSec = getPatternTotalDurationSec(hasAnacrusis, measuresCount, measureDuration, 0.25);
+    const beatDuration = 60 / effectiveBpm;
+    const measureDuration = beatsPerMeasure * beatDuration;
+    const totalDurationSec = getPatternTotalDurationSec(hasAnacrusis, measuresCount, measureDuration, 0.25, beatDuration);
     updateVariant(activePattern.id, activeVariant.variantKey, {
       recordingResult: { pcm: res.pcm, sampleRate: res.sampleRate },
       trimStartSec: 0,

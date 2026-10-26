@@ -21,14 +21,15 @@ export function getPatternT1OffsetSec(
 }
 
 /**
- * Calcule la durée totale théorique d'un bloc de chant (T1 offset + N mesures + post-roll).
+ * Calcule la durée totale théorique d'un bloc de chant (T1 offset + N mesures + extraEndBeatsSec + post-roll).
  */
 export function getPatternTotalDurationSec(
   hasAnacrusis: boolean | undefined,
   measuresCount: number,
   measureDurationSec: number,
-  postRollSec = 0.25
+  postRollSec = 0.25,
+  extraEndBeatsSec = 0
 ): number {
   const t1Offset = getPatternT1OffsetSec(hasAnacrusis, measureDurationSec);
-  return t1Offset + measuresCount * measureDurationSec + postRollSec;
+  return t1Offset + measuresCount * measureDurationSec + extraEndBeatsSec + postRollSec;
 }

@@ -55,7 +55,8 @@ export function usePriseRecorder(params: UsePriseRecorderParams) {
 
   const handleToggleRecord = useCallback(async () => {
     const measureDuration = beatsPerMeasure * beatDuration;
-    const totalRecordedSec = getPatternTotalDurationSec(hasAnacrusis, measuresCount, measureDuration, 0.25);
+    const extraEndBeatSec = beatDuration;
+    const totalRecordedSec = getPatternTotalDurationSec(hasAnacrusis, measuresCount, measureDuration, 0.25, extraEndBeatSec);
     if (isCycleActive) {
       engine.stop(); cueHandleRef.current?.stop(); takeGuideRef.current?.stop();
       updateVariant(activePattern.id, activeVariant.variantKey, { recordingResult: { pcm: recorder.stop(), sampleRate: recordedSampleRate }, trimStartSec: 0, trimEndSec: totalRecordedSec });

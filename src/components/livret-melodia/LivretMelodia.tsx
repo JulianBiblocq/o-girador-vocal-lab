@@ -94,7 +94,7 @@ export const LivretMelodia: React.FC<LivretMelodiaProps> = (props) => {
   const beatsPerMeasure = getBeatsPerMeasure(project.timeSignature);
   const beatDuration = 60 / (activePattern.baseBpm ?? project.bpm ?? 55);
   const measureDuration = beatsPerMeasure * beatDuration;
-  const totalDurationSec = getPatternTotalDurationSec(activePattern.hasAnacrusis !== false, activePattern.measuresCount, measureDuration, 0.25);
+  const totalDurationSec = getPatternTotalDurationSec(activePattern.hasAnacrusis !== false, activePattern.measuresCount, measureDuration, 0.25, beatDuration);
 
   return (
     <LivretMelodiaWorkspace

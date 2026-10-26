@@ -54,9 +54,10 @@ export function drawRulerBar(ctx: CanvasRenderingContext2D, opts: DrawRulerOptio
       ctx.strokeStyle = isT1 ? '#d4af37' : (isLight ? 'rgba(26, 26, 26, 0.40)' : 'rgba(245, 240, 230, 0.45)');
       ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, height); ctx.stroke();
 
+      const isExtraEndBeat = (bm === 0 && b > 0 && b === totalBeats - 1);
       ctx.font = isT1 ? 'bold 10px monospace' : 'bold 9.5px monospace';
-      ctx.fillStyle = isT1 ? '#d4af37' : (hasAnacrusis && m === 0) ? (isLight ? '#b45309' : '#fbbf24') : (isLight ? 'rgba(26, 26, 26, 0.85)' : 'rgba(245, 240, 230, 0.85)');
-      const label = hasAnacrusis ? (m === 0 ? elanLabel : isT1 ? m1Label : `${measurePrefix}${m}`) : (m === 0 ? m1Label : `${measurePrefix}${m + 1}`);
+      ctx.fillStyle = isT1 ? '#d4af37' : isExtraEndBeat ? '#f59e0b' : (hasAnacrusis && m === 0) ? (isLight ? '#b45309' : '#fbbf24') : (isLight ? 'rgba(26, 26, 26, 0.85)' : 'rgba(245, 240, 230, 0.85)');
+      const label = isExtraEndBeat ? '+T1' : (hasAnacrusis ? (m === 0 ? elanLabel : isT1 ? m1Label : `${measurePrefix}${m}`) : (m === 0 ? m1Label : `${measurePrefix}${m + 1}`));
       ctx.fillText(label, x + 6, 14.5);
     } else {
       ctx.lineWidth = 1;
@@ -64,8 +65,9 @@ export function drawRulerBar(ctx: CanvasRenderingContext2D, opts: DrawRulerOptio
       ctx.beginPath(); ctx.moveTo(x, 21); ctx.lineTo(x, height); ctx.stroke();
     }
 
+    const isExtraEndBeat = (bm === 0 && b > 0 && b === totalBeats - 1);
     ctx.font = isT1 ? 'bold 9.5px monospace' : '9px monospace';
-    ctx.fillStyle = isT1 ? '#d4af37' : (isLight ? 'rgba(26, 26, 26, 0.65)' : 'rgba(245, 240, 230, 0.65)');
+    ctx.fillStyle = isT1 ? '#d4af37' : isExtraEndBeat ? '#f59e0b' : (isLight ? 'rgba(26, 26, 26, 0.65)' : 'rgba(245, 240, 230, 0.65)');
     ctx.fillText(`T${bm + 1}`, x + 5, 34);
   }
 

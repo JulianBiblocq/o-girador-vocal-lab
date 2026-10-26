@@ -41,7 +41,7 @@ export const WaveformTrimEditor: React.FC<WaveformTrimEditorProps> = (props) => 
   const beatDuration = 60 / bpm, measureDurationSec = beatsPerMeasure * beatDuration;
   const t1OffsetSec = getPatternT1OffsetSec(hasAnacrusis, measureDurationSec);
   const recordedDurationSec = rawPCM.length / sampleRate;
-  const totalDurationSec = Math.max(recordedDurationSec, getPatternTotalDurationSec(hasAnacrusis, measuresCount, measureDurationSec, 0.25));
+  const totalDurationSec = Math.max(recordedDurationSec, getPatternTotalDurationSec(hasAnacrusis, measuresCount, measureDurationSec, 0.25, beatDuration));
 
   const [trimStartSec, setTrimStartSec] = useState<number>(() => initialTrimStartSec ?? 0);
   const [trimEndSec, setTrimEndSec] = useState<number>(() => (initialTrimEndSec && initialTrimEndSec > 0 ? initialTrimEndSec : totalDurationSec));

@@ -54,9 +54,10 @@ export function quantizePitchToSteps(params: QuantizerParams): QuantizedGridResu
 
   const segments = segmentPitchCurve(pitchCurve, { minDurationSec: 0.045, pitchJumpThreshold: 1.2 });
 
-  for (let m = startM; m < measuresCount; m++) {
+  for (let m = startM; m <= measuresCount; m++) {
     const mBaseSec = m === -1 ? 0 : (t1 + m * measureDuration);
-    for (let b = 0; b < beatsPerMeasure; b++) {
+    const beatsInThisM = (m === measuresCount) ? 1 : beatsPerMeasure;
+    for (let b = 0; b < beatsInThisM; b++) {
       const beatStartTime = mBaseSec + b * beatDuration;
       const resolution = beatResolutions[b] || 4, stepDuration = beatDuration / resolution;
 
@@ -126,11 +127,8 @@ export function requantizeStepsInTimeRange(
       result[i] = { ...result[i], active: false, note: '', midiNumber: 0 };
       previousSegmentId = -1; continue;
     }
-
-    const targetMidi = bestSegment.medianMidi;
-    const prev = i > 0 ? result[i - 1] : null;
+    const targetMidi = bestSegment.medianMidi, prev = i > 0 ? result[i - 1] : null;
     const isTie = previousSegmentId === bestSegment.id && prev && prev.active && prev.midiNumber === targetMidi && !result[i].syllableAttack;
-
     result[i] = {
       ...result[i], active: true, note: isTie ? '───' : midiToNoteName(targetMidi),
       midiNumber: targetMidi, velocity: isTie ? 90 : (result[i].velocity || 100), decay: stepDurationSec,

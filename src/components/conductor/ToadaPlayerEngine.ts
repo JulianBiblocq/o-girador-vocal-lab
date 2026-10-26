@@ -71,7 +71,7 @@ export class ToadaPlayerEngine {
       currentMeasure += (slot.advanceMeasures ?? measuresInSlot);
     });
 
-    const totalDurationMs = Math.max(10, (audioCtxStart + currentMeasure * measureDurationSec + 0.5 - ctx.currentTime) * 1000);
+    const totalDurationMs = Math.max(10, (audioCtxStart + (currentMeasure + 1) * measureDurationSec + 0.5 - ctx.currentTime) * 1000);
     const finalTimer = window.setTimeout(() => {
       this.stop();
       if (onComplete) onComplete();
