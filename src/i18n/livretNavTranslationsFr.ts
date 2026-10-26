@@ -39,4 +39,13 @@ export const livretNavTranslationsFr: LivretNavTranslations = {
   reglagesListeningSection: 'Mode d\'Écoute & Volume du Guide',
   reglagesCalibrationSection: 'Calibration & Latence Matérielle',
   reglagesTessituraSection: 'Bornage Tessiture & Viterbi',
+  takeModePattern: '🎯 Ce pattern seul',
+  takeModePatternTitle: 'Enregistrer seulement le pattern sélectionné',
+  takeModePuxador: '🔴 Tout le Puxador d’un coup',
+  takeModePuxadorTitle: 'Enregistrer tous les blocs Puxador de la chanson d\'une traite',
+  takeModeCoro: '🟢 Tout le Coro d’un coup',
+  takeModeCoroTitle: 'Enregistrer tous les blocs Chœur de la chanson d\'une traite avec le Puxador dans le casque',
+  continuousPrompterLive: 'PRISE CONTINUE EN COURS',
+  continuousPrompterRest: 'Écoute / Attente',
+  continuousPrompterNext: 'À suivre',
 };

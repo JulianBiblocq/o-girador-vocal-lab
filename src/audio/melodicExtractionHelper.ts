@@ -27,6 +27,7 @@ export interface ExtractMelodicParams {
   pitchShiftSemitones?: number;
   tessitura?: TessituraRange;
   assignedLyricsText?: string;
+  timeAnchors?: import('../types/toadaDocument.types').TimeAnchor[];
   lowCutEnabled?: boolean;
   enableTonePolish?: boolean;
 }
@@ -45,7 +46,7 @@ export function extractPatternMelodicData(params: ExtractMelodicParams): Extract
   const {
     rawPCM, sampleRate, bpm, timeSignature, measuresCount, beatsPerMeasure,
     beatResolutions, hasAnacrusis, referencePitch, pitchShiftSemitones = 0,
-    tessitura, assignedLyricsText, lowCutEnabled = true, enableTonePolish = true,
+    tessitura, assignedLyricsText, timeAnchors, lowCutEnabled = true, enableTonePolish = true,
   } = params;
 
   const beatDuration = 60 / bpm;
@@ -82,6 +83,7 @@ export function extractPatternMelodicData(params: ExtractMelodicParams): Extract
     hasAnacrusis,
     t1OffsetSec,
     pitchOffsetSemitones: pitchShiftSemitones,
+    timeAnchors,
   });
 
   const rawSteps = hasAnacrusis ? [...q.anacrusisSteps, ...q.gridSteps] : q.gridSteps;

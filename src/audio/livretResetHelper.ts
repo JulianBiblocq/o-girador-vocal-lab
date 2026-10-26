@@ -58,6 +58,7 @@ export function resetLivret1MelodicData(params: ResetLivret1Params): ResetLivret
     smoothingLevel,
     tonic,
     scaleType,
+    timeAnchors: activePattern.timeAnchors,
     pcm: rawAudio,
     sampleRate,
   });

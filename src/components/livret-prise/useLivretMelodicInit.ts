@@ -51,6 +51,7 @@ export function useLivretMelodicInit(params: UseLivretMelodicInitParams) {
       pitchCurve, bpm: effectiveBpm, beatsPerMeasure, measuresCount, beatResolutions,
       trimStartSec: vTrimStart, trimEndSec: vTrimEnd, pcm: cleanPCM, sampleRate: recordedSampleRate,
       hasAnacrusis, t1OffsetSec, pitchOffsetSemitones: activeVariant.pitchShiftSemitones,
+      timeAnchors: activePattern.timeAnchors,
     });
     const rawSteps = hasAnacrusis ? [...q.anacrusisSteps, ...q.gridSteps] : q.gridSteps;
     const allSteps = activePattern.assignedLyricsText ? applyLyricsSyllablesToSteps(rawSteps, activePattern.assignedLyricsText) : rawSteps;

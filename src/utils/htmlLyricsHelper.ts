@@ -1,6 +1,7 @@
 /**
  * htmlLyricsHelper.ts
- * Découpe et extraction des fragments HTML (<strong>, <b>) et Markdown (**...**) (< 85 lignes).
+ * Découpe et extraction des fragments HTML (<strong>, <b>, <u>) et Markdown (**...**) (< 85 lignes).
+ * Préserve les balises <u>...</u> pour le découpage syllabique explicite.
  */
 import type { VocalRole } from '../types/toadaProject.types';
 
@@ -20,21 +21,24 @@ export function splitHtmlOrTextIntoRawLines(input: string): string[] {
     .filter((l) => l.length > 0 && l !== '&nbsp;');
 }
 
-export function cleanHtmlText(text: string): string {
-  return text
-    .replace(/<[^>]+>/g, '')
+export function cleanHtmlText(text: string, preserveUnderline = true): string {
+  let cleaned = text
     .replace(/&nbsp;/g, ' ')
     .replace(/&amp;/g, '&')
     .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .trim();
+    .replace(/&#39;/g, "'");
+
+  if (preserveUnderline) {
+    cleaned = cleaned.replace(/<(?!(\/?u\b))[^>]+>/gi, '');
+  } else {
+    cleaned = cleaned.replace(/<[^>]+>/g, '');
+  }
+  return cleaned.trim();
 }
 
 export function parseRichLineIntoSegments(rawLine: string, boldRole: VocalRole): RawTextSegment[] {
-  // Convert Markdown **bold** to <b>bold</b>
   let line = rawLine.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>').replace(/\*([^*]+)\*/g, '<b>$1</b>');
 
-  // Detect explicit role prefixes
   let forcedRole: VocalRole | null = null;
   const puxMatch = line.match(/^(puxador|solo)\s*[:\-]\s*/i);
   const coroMatch = line.match(/^(coro|choeur|refrão|refrao)\s*[:\-]\s*/i);
@@ -47,16 +51,15 @@ export function parseRichLineIntoSegments(rawLine: string, boldRole: VocalRole):
 
   while ((match = regex.exec(line)) !== null) {
     const chunk = match[0];
-    if (chunk.startsWith('<') && !/<(?:strong|b)>/i.test(chunk)) continue;
+    if (chunk.startsWith('<') && !/<(?:strong|b|u)>/i.test(chunk)) continue;
     const isBold = /<(?:strong|b)>/i.test(chunk);
-    const cleaned = cleanHtmlText(chunk);
+    const cleaned = cleanHtmlText(chunk, true);
     if (!cleaned) continue;
 
     const role: VocalRole = forcedRole ?? (isBold ? boldRole : (boldRole === 'coro' ? 'puxador' : 'coro'));
     segments.push({ role, text: cleaned });
   }
 
-  // Merge adjacent segments with same role
   const merged: RawTextSegment[] = [];
   for (const seg of segments) {
     const last = merged[merged.length - 1];

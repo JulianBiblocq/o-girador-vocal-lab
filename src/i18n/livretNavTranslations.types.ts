@@ -37,4 +37,13 @@ export interface LivretNavTranslations {
   reglagesListeningSection: string;
   reglagesCalibrationSection: string;
   reglagesTessituraSection: string;
+  takeModePattern: string;
+  takeModePatternTitle: string;
+  takeModePuxador: string;
+  takeModePuxadorTitle: string;
+  takeModeCoro: string;
+  takeModeCoroTitle: string;
+  continuousPrompterLive: string;
+  continuousPrompterRest: string;
+  continuousPrompterNext: string;
 }

@@ -1,7 +1,6 @@
 /**
  * LivretPrise.tsx
- * Livret 2 : Cabine d'enregistrement épurée avec boussole de pattern, balancier 60 FPS,
- * macaron studio centré et déclinaisons en accordéon Cordel (< 125 lignes).
+ * Livret 2 : Cabine d'enregistrement avec mode pattern & prise continue sur le Conducteur (< 145 lignes).
  */
 import React, { useMemo, useCallback } from 'react';
 import { useToadaProject } from '../../context/ToadaProjectContext';
@@ -20,6 +19,9 @@ import { CuePatternSelector } from './CuePatternSelector';
 import { HarmonyProfileSelector } from '../common/HarmonyProfileSelector';
 import { CordelAccordion } from '../common/CordelAccordion';
 import { PatternVariantSelector } from './PatternVariantSelector';
+import { TakeModeSelector } from './TakeModeSelector';
+import { ContinuousPrompterBanner } from './ContinuousPrompterBanner';
+import { useContinuousTakeController } from './useContinuousTakeController';
 import { usePriseRecorder } from './usePriseRecorder';
 import { getBeatsPerMeasure, transposePitchNote } from '../../utils/musicalMath';
 import { RotateCcw, Scissors, Music } from 'lucide-react';
@@ -27,7 +29,7 @@ import { RotateCcw, Scissors, Music } from 'lucide-react';
 export const LivretPrise: React.FC = () => {
   const {
     project, activePattern, activeVariant, updatePattern, updateVariant,
-    cueMode, getPreviousConductorPattern, updateHarmonyConfig,
+    cueMode, getPreviousConductorPattern, updateHarmonyConfig, loadProject,
   } = useToadaProject();
   const {
     engine, recorder, selectedDeviceId, selectedOutputDeviceId,
@@ -54,6 +56,14 @@ export const LivretPrise: React.FC = () => {
     setRecordedSampleRate, activeLivret, harmonyConfig: project.harmonyConfig,
   });
 
+  const {
+    takeMode, setTakeMode, isContinuousActive, prompterInfo, handleToggleContinuous,
+  } = useContinuousTakeController({
+    project, loadProject, engine, recorder, listeningMode,
+    selectedDeviceId, selectedOutputDeviceId, activeLivret,
+  });
+
+  const isRecordingAny = isCycleActive || isContinuousActive;
   const hasRecording = activeVariant.recordingResult !== null && activeVariant.recordingResult.pcm.length > 0;
   const recordedCount = Object.values(activePattern.variants || {}).filter((v) => v.recordingResult !== null).length;
   const isMainVariant = activeVariant.speedRatio === 1.0 && activeVariant.pitchShiftSemitones === 0;
@@ -67,13 +77,13 @@ export const LivretPrise: React.FC = () => {
   }, [t, updateVariant, activePattern.id, activeVariant.variantKey]);
 
   return (
-    <div className="flex flex-col gap-3.5 w-full">
+    <div className="flex flex-col gap-3 w-full">
       <LatencyReminderBanner />
-      {/* 1. Mini-bandeau Boussole & Statut Matériel */}
+      <TakeModeSelector mode={takeMode} onChangeMode={setTakeMode} disabled={isRecordingAny} />
+      {takeMode !== 'pattern' && <ContinuousPrompterBanner info={prompterInfo} isActive={isContinuousActive} />}
       <PatternCompassBar />
       <StudioSettingsStatusBar />
 
-      {/* 2. Paroles & Accords actifs du pattern */}
       <div className="flex flex-col gap-2">
         <PatternLyricsBanner />
         <div className="cordel-card p-1.5 rounded">
@@ -87,18 +97,16 @@ export const LivretPrise: React.FC = () => {
         </div>
       </div>
 
-      {/* 3. Balancier Pendulaire 60 FPS */}
-      <PendulumVisualizer engine={engine} isActive={isCycleActive} measuresCount={measuresCount} beatsPerMeasure={beatsPerMeasure}>
-        {/* Bouton Macaron Enregistrement Centré */}
-        <RecordActionButton isCycleActive={isCycleActive} measuresCount={measuresCount} onToggleRecord={handleToggleRecord} />
-
-        {/* Barre d'accompagnement & Options de Prise */}
+      <PendulumVisualizer engine={engine} isActive={isRecordingAny} measuresCount={measuresCount} beatsPerMeasure={beatsPerMeasure}>
+        <RecordActionButton
+          isCycleActive={takeMode === 'pattern' ? isCycleActive : isContinuousActive}
+          measuresCount={measuresCount}
+          onToggleRecord={takeMode === 'pattern' ? handleToggleRecord : handleToggleContinuous}
+        />
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 pt-1 border-t border-[var(--cordel-border-sub)]">
-          <div className="flex-1 min-w-[200px]"><CuePatternSelector disabled={isCycleActive} /></div>
-          <div className="shrink-0"><HarmonyProfileSelector config={project.harmonyConfig ?? { enabled: true, profile: 'maracatu', volume: 0.7 }} onChange={updateHarmonyConfig} disabled={isCycleActive} /></div>
+          <div className="flex-1 min-w-[200px]"><CuePatternSelector disabled={isRecordingAny} /></div>
+          <div className="shrink-0"><HarmonyProfileSelector config={project.harmonyConfig ?? { enabled: true, profile: 'maracatu', volume: 0.7 }} onChange={updateHarmonyConfig} disabled={isRecordingAny} /></div>
         </div>
-
-        {/* Actions Rapides si prise déjà enregistrée */}
         {hasRecording && (
           <div className="flex flex-wrap items-center justify-center gap-2 pt-2 border-t border-[var(--cordel-border-sub)]">
             <button type="button" onClick={() => setActiveLivret('calage')} className="cordel-btn-primary px-3 py-1.5 text-xs font-mono font-bold flex items-center gap-1.5 cursor-pointer">
@@ -114,14 +122,13 @@ export const LivretPrise: React.FC = () => {
         )}
       </PendulumVisualizer>
 
-      {/* 4. Menu Accordéon Repliable : Déclinaisons Vitesse & Tonalité */}
       <CordelAccordion
         title={t('grainPlayerAccordionTitle')}
         summaryBadge={t('grainPlayerAccordionSummary', { recorded: recordedCount, active: isMainVariant ? 'Principale' : `${Math.round(activeVariant.speedRatio * 100)}% / ${activeVariant.pitchShiftSemitones}st` })}
         storageKey={`variants_${activePattern.id}`}
         defaultOpen={false}
       >
-        <PatternVariantSelector baseBpm={bpm} referencePitch={referencePitch} disabled={isCycleActive} onPlayPitchPreview={(p) => engine.playReferencePitchPreview(p, 1.5, selectedOutputDeviceId)} />
+        <PatternVariantSelector baseBpm={bpm} referencePitch={referencePitch} disabled={isRecordingAny} onPlayPitchPreview={(p) => engine.playReferencePitchPreview(p, 1.5, selectedOutputDeviceId)} />
       </CordelAccordion>
     </div>
   );

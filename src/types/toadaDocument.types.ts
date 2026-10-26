@@ -44,6 +44,8 @@ export interface TimeAnchor {
   beat: number; // 1..12
   measureOffset: number;
   isRest: boolean;
+  isInitialRest?: boolean;
+  isSustainedHold?: boolean;
   charOffset?: number;
   textSlice?: string;
   syllables?: string[];

@@ -39,4 +39,13 @@ export const livretNavTranslationsBr: LivretNavTranslations = {
   reglagesListeningSection: 'Modo de Escuta e Volume do Guia',
   reglagesCalibrationSection: 'Calibração e Latência',
   reglagesTessituraSection: 'Limites de Tessitura e Viterbi',
+  takeModePattern: '🎯 Este pattern apenas',
+  takeModePatternTitle: 'Gravar apenas o pattern selecionado',
+  takeModePuxador: '🔴 Todo o Puxador de uma vez',
+  takeModePuxadorTitle: 'Gravar todos os blocos Puxador da canção continuamente',
+  takeModeCoro: '🟢 Todo o Coro de uma vez',
+  takeModeCoroTitle: 'Gravar todos os blocos Coro da canção continuamente com o Puxador nos fones',
+  continuousPrompterLive: 'GRAVAÇÃO CONTÍNUA EM ANDAMENTO',
+  continuousPrompterRest: 'Escuta / Espera',
+  continuousPrompterNext: 'A seguir',
 };
