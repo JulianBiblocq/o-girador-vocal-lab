@@ -35,7 +35,7 @@ export const PatternInjectionBar: React.FC<PatternInjectionBarProps> = ({
       <div className="flex items-center gap-1.5 min-w-0">
         <Sparkles className="w-3 h-3 text-amber-400 shrink-0" />
         <span className="text-[var(--cordel-secondary-text)] truncate">
-          Source : <strong className="text-amber-300 font-bold">{sourcePattern.name}</strong>
+          Source : <strong className="text-[#9a3412] dark:text-amber-400 font-bold">{sourcePattern.name}</strong>
         </span>
       </div>
 

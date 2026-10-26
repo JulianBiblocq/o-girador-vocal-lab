@@ -68,7 +68,7 @@ export function usePriseRecorder(params: UsePriseRecorderParams) {
     const cue = cueMode === 'none' ? null : cueMode === 'auto_previous' ? getPreviousConductorPattern() : projectPatterns.find((p: any) => p.id === cueMode);
     const hasCue = !!cue && !!(cue.recordingResult?.pcm?.length || cue.variants?.[cue.activeVariantKey]?.recordingResult?.pcm?.length);
     const cueMeasures = hasCue && cue ? cue.measuresCount : 1;
-    const preRollMeasures = hasAnacrusis ? (hasCue ? (1 + cueMeasures) : 2) : (hasCue ? cueMeasures : 1);
+    const preRollMeasures = hasCue ? cueMeasures : (hasAnacrusis ? 2 : 1);
     const countdownSec = hasAnacrusis ? (preRollMeasures - 1) * measureDuration : preRollMeasures * measureDuration;
     const preMarginSec = hasAnacrusis ? 0 : NO_ANACRUSIS_PRE_MARGIN_SEC;
     const cycleStart = ctx.currentTime + 0.08, sig = buildDeviceSignature(selectedDeviceId, selectedOutputDeviceId, sampleRate);
@@ -76,7 +76,8 @@ export function usePriseRecorder(params: UsePriseRecorderParams) {
     if (hasCue && cue && listeningMode === 'headphones') cueHandleRef.current = scheduleCuePatternAudio(ctx, cue, cycleStart, beatsPerMeasure, beatDuration);
     const isTake1 = activeVariant.variantKey === 'spd100_pit0';
     if (!isTake1 && activePattern.midiLocked && activePattern.mainSteps?.length > 0 && listeningMode === 'headphones') {
-      takeGuideRef.current = scheduleSecondaryTakeGuide(ctx, ctx.destination, activePattern.anacrusisSteps || [], activePattern.mainSteps || [], cycleStart + countdownSec, measureDuration, effectiveBpm, activeVariant.pitchShiftSemitones);
+      const guideT1 = cycleStart + preRollMeasures * measureDuration, guideAna = hasAnacrusis ? measureDuration : 0;
+      takeGuideRef.current = scheduleSecondaryTakeGuide(ctx, ctx.destination, activePattern.anacrusisSteps || [], activePattern.mainSteps || [], guideT1 - guideAna, guideAna, effectiveBpm, activeVariant.pitchShiftSemitones);
     }
     recorder.start(captureStart, totalRecordedSec);
     setIsCycleActive(true);

@@ -31,8 +31,9 @@ export function applyPhaseStyles(
     } else if (status.phase === 'anacrusis') {
       phaseLabel.textContent = t('phaseAnacrusis', { beat: beatNum, beats: bpmTotal });
     } else if (status.phase === 'singing') {
+      const isExtra = status.currentMeasure >= measuresCount;
       const mNum = status.currentMeasure + 1;
-      phaseLabel.textContent = t('phaseSinging', { current: mNum, total: measuresCount, beat: beatNum, beats: bpmTotal });
+      phaseLabel.textContent = isExtra ? 'Chant • +T1' : t('phaseSinging', { current: mNum, total: measuresCount, beat: beatNum, beats: bpmTotal });
     } else if (status.phase === 'completed') {
       phaseLabel.textContent = t('phaseCompletedTitle');
     }

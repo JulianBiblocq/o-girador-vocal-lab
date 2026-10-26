@@ -33,7 +33,7 @@ export class MetronomeEngine {
   private ctx: AudioContext | null = null; private isRunning = false;
   private harmonyEngine = new HarmonyPlayerEngine();
   private startTime = 0; private totalDurationSec = 0; private beatDurationSec = 0;
-  private beatsPerMeasure = 4; private measuresCount = 2; private preRollMeasures = 2;
+  private beatsPerMeasure = 4; private measuresCount = 2; private preRollMeasures = 2; private hasAnacrusis = true;
   private totalBeats = 16; private completionTimerId: number | null = null;
   private onCompleteCallback: (() => void) | null = null;
   private activeNodes: (AudioNode | AudioScheduledSourceNode)[] = [];
@@ -59,6 +59,7 @@ export class MetronomeEngine {
     this.beatsPerMeasure = getBeatsPerMeasure(config.timeSignature);
     this.beatDurationSec = 60 / config.bpm;
     this.preRollMeasures = config.preRollMeasures ?? 2;
+    this.hasAnacrusis = config.hasAnacrusis !== false;
 
     // Décompte/écoute (preRollMeasures) + N mesures de chant + 1 temps (Temps 1 mesure suivante)
     this.totalBeats = (this.preRollMeasures + this.measuresCount) * this.beatsPerMeasure + 1;
@@ -101,7 +102,7 @@ export class MetronomeEngine {
       isRunning: this.isRunning, ctx: this.ctx, startTime: this.startTime,
       totalDurationSec: this.totalDurationSec, beatDurationSec: this.beatDurationSec,
       beatsPerMeasure: this.beatsPerMeasure, measuresCount: this.measuresCount,
-      totalBeats: this.totalBeats, preRollMeasures: this.preRollMeasures,
+      totalBeats: this.totalBeats, preRollMeasures: this.preRollMeasures, hasAnacrusis: this.hasAnacrusis,
     });
   }
 

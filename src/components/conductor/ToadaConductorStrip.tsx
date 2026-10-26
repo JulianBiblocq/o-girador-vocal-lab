@@ -34,7 +34,7 @@ export const ToadaConductorStrip: React.FC<{ outputDeviceId?: string }> = ({ out
   };
 
   return (
-    <div className="cordel-card p-2 w-full h-full flex flex-col justify-between select-none">
+    <div className="cordel-card p-2 w-full h-full flex flex-col select-none">
       <div className="flex items-center justify-between text-xs font-mono mb-1.5">
         <span className="font-bold text-theme-ink flex items-center gap-1.5 uppercase text-[11px] tracking-wider">
           <Layers className="w-3.5 h-3.5 text-theme-accent" />
@@ -61,7 +61,7 @@ export const ToadaConductorStrip: React.FC<{ outputDeviceId?: string }> = ({ out
       </div>
 
       {/* Grille des blocs sequentiels avec defilement gap-2.5 */}
-      <div className="flex items-stretch gap-2.5 overflow-x-auto pb-1 cordel-scrollbar">
+      <div className="flex items-stretch gap-2.5 overflow-x-auto pb-1 cordel-scrollbar mt-4">
         {/* En-tete des Rails */}
         <div className="flex flex-col justify-end gap-1 shrink-0 w-20 text-[10px] font-mono font-bold">
           <div className="h-6 flex items-center justify-end pr-1 text-role-puxador truncate">{t('railPuxador')}</div>

@@ -24,8 +24,9 @@ export function computeCycleStatus(params: {
   measuresCount: number;
   totalBeats: number;
   preRollMeasures?: number;
+  hasAnacrusis?: boolean;
 }): CycleStatus {
-  const { isRunning, ctx, startTime, totalDurationSec, beatDurationSec, beatsPerMeasure, measuresCount, totalBeats, preRollMeasures = 2 } = params;
+  const { isRunning, ctx, startTime, totalDurationSec, beatDurationSec, beatsPerMeasure, measuresCount, totalBeats, preRollMeasures = 2, hasAnacrusis = true } = params;
 
   if (!isRunning || !ctx) {
     return {
@@ -59,21 +60,10 @@ export function computeCycleStatus(params: {
   let currentMeasure = -preRollMeasures;
   let currentBeat = beatIndexInCycle;
 
-  const anacrusisBeatStart = (preRollMeasures - 1) * beatsPerMeasure;
   const singingBeatStart = preRollMeasures * beatsPerMeasure;
+  const anacrusisBeatStart = hasAnacrusis ? (preRollMeasures - 1) * beatsPerMeasure : singingBeatStart;
 
-  if (preRollMeasures <= 1) {
-    if (beatIndexInCycle < singingBeatStart) {
-      phase = 'countdown';
-      currentMeasure = -1;
-      currentBeat = beatIndexInCycle;
-    } else {
-      phase = 'singing';
-      const singingBeatIdx = beatIndexInCycle - singingBeatStart;
-      currentMeasure = Math.floor(singingBeatIdx / beatsPerMeasure);
-      currentBeat = singingBeatIdx % beatsPerMeasure;
-    }
-  } else if (beatIndexInCycle < anacrusisBeatStart) {
+  if (beatIndexInCycle < anacrusisBeatStart) {
     phase = 'countdown';
     currentMeasure = -preRollMeasures + Math.floor(beatIndexInCycle / beatsPerMeasure);
     currentBeat = beatIndexInCycle % beatsPerMeasure;

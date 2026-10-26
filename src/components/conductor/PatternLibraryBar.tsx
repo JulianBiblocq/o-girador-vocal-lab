@@ -75,7 +75,7 @@ export const PatternLibraryBar: React.FC = () => {
             type="button" onClick={() => selectAllPatterns(!allSelected)}
             title={allSelected ? t('deselectAll') : t('selectAll')}
             className={`px-1.5 py-0.5 text-[9px] font-bold font-mono border cursor-pointer rounded ${
-              selectedPatternIds.length > 0 ? 'bg-amber-500/20 text-amber-300 border-amber-500/50' : 'cordel-card-sm text-[var(--cordel-text)]/70'
+              selectedPatternIds.length > 0 ? 'bg-[#b45309] text-[#f4ecd8] border-[#92400e]' : 'cordel-card-sm text-[var(--cordel-text)]/70'
             }`}
           >
             {allSelected ? t('deselectAll') : selectedPatternIds.length > 0 ? `${t('selectAll')} (${selectedPatternIds.length})` : t('selectAll')}
