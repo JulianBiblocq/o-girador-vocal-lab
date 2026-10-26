@@ -90,13 +90,17 @@ export const SlicerSegmentWaveform: React.FC<SlicerSegmentWaveformProps> = ({
     if (mode === 'body' && segId) {
       const segIdx = segments.findIndex((s) => s.id === segId);
       if (segIdx < 0) return;
-      const measureDur = (60 / (bpm || 55)) * 4;
+      const targetSeg = segments[segIdx];
+      const beatDur = 60 / (bpm || 55);
+      const measureDur = beatDur * 4;
+      const anacDur = targetSeg.hasAnacrusis !== false ? (targetSeg.anacrusisBeats ?? 2) * beatDur : 0;
       const rawTargetStart = origStart + delta;
-      // Magnétisme sur T1
-      const nearestT1 = Math.round((rawTargetStart - gridOffsetSec) / measureDur) * measureDur + gridOffsetSec;
-      const snapStart = Math.abs(rawTargetStart - nearestT1) < 0.25 ? nearestT1 : rawTargetStart;
-      const clampedStart = Math.max(0, snapStart);
-      const shift = clampedStart - segments[segIdx].startSec;
+      const rawTargetT1 = rawTargetStart + anacDur;
+      // Magnétisme strict de T1 sur les lignes de mesure M de la grille
+      const nearestT1 = Math.round((rawTargetT1 - gridOffsetSec) / measureDur) * measureDur + gridOffsetSec;
+      const snapT1 = Math.abs(rawTargetT1 - nearestT1) < 0.35 ? nearestT1 : rawTargetT1;
+      const clampedStart = Math.max(0, snapT1 - anacDur);
+      const shift = clampedStart - targetSeg.startSec;
 
       onSegmentsChange(segments.map((s, idx) => {
         if (s.id === segId) { const len = origEnd - origStart; return { ...s, startSec: clampedStart, endSec: Math.min(durationSec, clampedStart + len) }; }

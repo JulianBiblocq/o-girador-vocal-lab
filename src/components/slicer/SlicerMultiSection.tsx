@@ -35,8 +35,9 @@ export const SlicerMultiSection: React.FC<SlicerMultiSectionProps> = ({
   const [gridOffsetSec, setGridOffsetSec] = useState(0.8);
   const [cascadeMove, setCascadeMove] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [slicerBpm, setSlicerBpm] = useState(project.bpm || 55);
 
-  const bpm = project.bpm || 55;
+  const bpm = slicerBpm;
   const beatDur = 60 / bpm;
   const measureDur = beatDur * 4;
 
@@ -88,6 +89,7 @@ export const SlicerMultiSection: React.FC<SlicerMultiSectionProps> = ({
         segmentCount={segments.length} durationSec={audio.durationSec} bpm={bpm} gridOffsetSec={gridOffsetSec}
         metronomeActive={metronomeActive} cascadeMove={cascadeMove} isSyncing={isSyncing}
         onToggleMetronome={() => { const n = !metronomeActive; setMetronomeActive(n); engine.setMetronome(n, bpm, gridOffsetSec); }}
+        onBpmChange={(nb) => { setSlicerBpm(nb); if (metronomeActive) engine.setMetronome(true, nb, gridOffsetSec); onProjectUpdate?.({ ...project, bpm: nb }); }}
         onNudgeOffset={(d) => setGridOffsetSec((prev) => Math.max(0, Math.round((prev + d) * 100) / 100))}
         onToggleCascade={() => setCascadeMove((v) => !v)} onAlignOrganizador={handleAlignOrganizador}
         onSyncOrganizador={handleSyncOrganizador} onDetectSilences={handleAlignOrganizador}

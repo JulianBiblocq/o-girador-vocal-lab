@@ -57,6 +57,7 @@ export interface VocalPatternItem {
   trimStartSec: number; trimEndSec: number; lowCutEnabled: boolean; enableTonePolish?: boolean;
   anacrusisSteps: VocalStepData[]; mainSteps: VocalStepData[]; pitchCurve: PitchCurvePoint[];
   pack?: VocalPackExport | null; midiLocked?: boolean; isMidiInitialized?: boolean; hasAnacrusis?: boolean;
+  anacrusisBeats?: number;
   melodyneRegions?: MelodyneRegion[]; assignedLyricsText?: string; assignedPhoneticText?: string;
   variantPitchesConfig?: VariantPitchesConfig; variantSpeedsConfig?: VariantSpeedsConfig;
   harmonyGrid?: PatternHarmonyGrid;

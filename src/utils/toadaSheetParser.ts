@@ -19,8 +19,8 @@ export function parseRichTextLyricsAndPhonetics(rawOriginal: string, rawPhonetic
   for (const line of lines) {
     if (/^\s+/.test(line) && mergedLines.length > 0) {
       mergedLines[mergedLines.length - 1] += ' ' + line.trim();
-    } else if (line.trim().length > 0) {
-      mergedLines.push(line);
+    } else {
+      mergedLines.push(line.trim());
     }
   }
 
@@ -50,7 +50,6 @@ export function parseRichTextLyricsAndPhonetics(rawOriginal: string, rawPhonetic
     const isMixedLine = rawSegs.length > 1;
 
     rawSegs.forEach((seg, sIdx) => {
-      const matchedPhon = phonSegs[sIdx] ?? phonSegs.find((p) => p.role === seg.role);
       const dir = extractInlineLineDirectives(seg.text);
 
       if (dir.sectionName) {
@@ -62,9 +61,10 @@ export function parseRichTextLyricsAndPhonetics(rawOriginal: string, rawPhonetic
       segments.push({
         role: seg.role,
         text: dir.cleanText || seg.text,
-        phoneticText: matchedPhon?.text,
+        phoneticText: (phonSegs[sIdx] ?? phonSegs.find((p) => p.role === seg.role))?.text,
         measuresCount: dir.measuresCount,
         hasAnacrusis: dir.hasAnacrusis ?? (sIdx === 0 ? hasLineAnacrusis : false),
+        anacrusisBeats: dir.anacrusisBeats,
         isLinkedMeasure: dir.isLinkedMeasure ?? (sIdx === 0 ? isLineLinked : false),
         isMixedPair: isMixedLine && (sIdx === 0 || sIdx === 1),
         chords: dir.chords,

@@ -12,6 +12,7 @@ export interface LineDirectives {
   cleanText: string;
   measuresCount?: 1 | 2 | 3 | 4;
   hasAnacrusis?: boolean;
+  anacrusisBeats?: number;
   isLinkedMeasure?: boolean;
   sectionName?: string;
   sectionBpm?: number;
@@ -69,10 +70,12 @@ export function extractInlineLineDirectives(rawText: string): LineDirectives {
   const anchorRes = extractTimeAnchors(text);
   let timeAnchors: TimeAnchor[] | undefined;
   let exitBeat: number | undefined;
+  let anacrusisBeats: number | undefined;
   if (anchorRes.timeAnchors.length > 0) {
     timeAnchors = anchorRes.timeAnchors;
     if (measuresCount === undefined) measuresCount = anchorRes.measuresCount;
     if (hasAnacrusis === undefined) hasAnacrusis = anchorRes.hasAnacrusis;
+    anacrusisBeats = anchorRes.anacrusisBeats;
     exitBeat = anchorRes.exitBeat;
   }
 
@@ -84,5 +87,5 @@ export function extractInlineLineDirectives(rawText: string): LineDirectives {
     .replace(/\s{2,}/g, ' ')
     .trim();
 
-  return { cleanText, measuresCount, hasAnacrusis, isLinkedMeasure, chords, timeAnchors, exitBeat };
+  return { cleanText, measuresCount, hasAnacrusis, anacrusisBeats, isLinkedMeasure, chords, timeAnchors, exitBeat };
 }

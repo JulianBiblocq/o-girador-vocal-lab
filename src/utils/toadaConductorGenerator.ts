@@ -35,6 +35,7 @@ function initPatternFromSegment(
   const pat = createDefaultVocalPattern(role, buildPatternNameFromFirstWord(seg.text, existingNames), measuresCount, seg.sectionBpm ?? bpm);
   pat.assignedLyricsText = seg.text;
   pat.hasAnacrusis = seg.hasAnacrusis ?? defaultAna;
+  pat.anacrusisBeats = seg.anacrusisBeats ?? (pat.hasAnacrusis ? 2 : undefined);
   pat.timeAnchors = seg.timeAnchors;
   pat.exitBeat = seg.exitBeat;
   if (seg.chords?.length) pat.harmonyGrid = createHarmonyGridFromChords(seg.chords, measuresCount);
@@ -136,11 +137,8 @@ export function generateToadaFromSheet(project: ToadaProject, parsed: ParsedToad
     generated.toadaMeta.questionsQcm = quizItems;
     if (globalHarmony && !generated.toadaMeta.harmonyGrid) generated.toadaMeta.harmonyGrid = globalHarmony;
   }
-
   if (globalHarmony) {
-    generated.patterns.forEach((pat) => {
-      if (!pat.harmonyGrid || pat.harmonyGrid.measures.length === 0) pat.harmonyGrid = globalHarmony;
-    });
+    generated.patterns.forEach((p) => { if (!p.harmonyGrid?.measures?.length) p.harmonyGrid = globalHarmony; });
   }
 
   return generated;

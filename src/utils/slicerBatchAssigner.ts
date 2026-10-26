@@ -92,7 +92,7 @@ export function executeBatchAssign(options: BatchAssignOptions): { processedCoun
     });
 
     updatePattern(targetId, {
-      measuresCount, hasAnacrusis, pack: res.pack, rawAudioSamples: res.cleanPCM,
+      measuresCount, hasAnacrusis, anacrusisBeats: segment.anacrusisBeats, pack: res.pack, rawAudioSamples: res.cleanPCM,
       recordingResult: { pcm: slicedPCM, sampleRate }, trimStartSec, trimEndSec,
       rawPitchCurve: res.pitchCurve, pitchCurve: res.pitchCurve,
       anacrusisSteps: res.anacrusisSteps, mainSteps: res.mainSteps,

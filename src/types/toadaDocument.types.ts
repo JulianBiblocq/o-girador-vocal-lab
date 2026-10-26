@@ -57,6 +57,7 @@ export interface ParsedLyricsSegment {
   phoneticText?: string;
   measuresCount?: 1 | 2 | 3 | 4;
   hasAnacrusis?: boolean;
+  anacrusisBeats?: number;
   isLinkedMeasure?: boolean;
   isMixedPair?: boolean;
   chords?: string[];

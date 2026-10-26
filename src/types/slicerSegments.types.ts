@@ -13,6 +13,7 @@ export interface SliceSegment {
   name?: string;
   measuresCount?: 1 | 2 | 3 | 4;
   hasAnacrusis?: boolean;
+  anacrusisBeats?: number;
   hasTailBeat?: boolean;
 }
 

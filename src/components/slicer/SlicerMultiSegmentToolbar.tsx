@@ -9,14 +9,15 @@ import { useLanguage } from '../../i18n/LanguageContext';
 interface SlicerMultiSegmentToolbarProps {
   segmentCount: number; durationSec: number; bpm: number; gridOffsetSec: number;
   metronomeActive: boolean; cascadeMove: boolean; isSyncing?: boolean;
-  onToggleMetronome: () => void; onNudgeOffset: (deltaSec: number) => void;
+  onToggleMetronome: () => void; onBpmChange?: (newBpm: number) => void;
+  onNudgeOffset: (deltaSec: number) => void;
   onToggleCascade: () => void; onAlignOrganizador: () => void; onSyncOrganizador: () => void;
   onDetectSilences: () => void; onAddSegment: () => void; onClearSegments: () => void; onChangeFile: () => void;
 }
 
 export const SlicerMultiSegmentToolbar: React.FC<SlicerMultiSegmentToolbarProps> = ({
   durationSec, bpm, gridOffsetSec, metronomeActive, cascadeMove, isSyncing,
-  onToggleMetronome, onNudgeOffset, onToggleCascade, onAlignOrganizador, onSyncOrganizador,
+  onToggleMetronome, onBpmChange, onNudgeOffset, onToggleCascade, onAlignOrganizador, onSyncOrganizador,
   onDetectSilences, onAddSegment, onClearSegments, onChangeFile,
 }) => {
   const { t } = useLanguage();
@@ -34,8 +35,16 @@ export const SlicerMultiSegmentToolbar: React.FC<SlicerMultiSegmentToolbarProps>
             title="Activer/Désactiver le métronome synchrone pendant la lecture"
           >
             {metronomeActive ? <Volume2 className="w-3.5 h-3.5 fill-current" /> : <VolumeX className="w-3.5 h-3.5" />}
-            <span>Métronome {bpm} BPM</span>
+            <span>Métronome</span>
           </button>
+
+          {/* Réglage direct BPM */}
+          <div className="flex items-center gap-1 cordel-card-sm px-1.5 py-0.5 rounded text-[11px]">
+            <span className="text-[var(--cordel-secondary-text)]">BPM:</span>
+            <button type="button" onClick={() => onBpmChange?.(Math.max(30, bpm - 1))} className="px-1 py-0.2 hover:bg-theme-accent/20 rounded cursor-pointer font-bold">-1</button>
+            <strong className="text-amber-500 font-black px-0.5">{bpm}</strong>
+            <button type="button" onClick={() => onBpmChange?.(Math.min(220, bpm + 1))} className="px-1 py-0.2 hover:bg-theme-accent/20 rounded cursor-pointer font-bold">+1</button>
+          </div>
 
           {/* Micro-décalage T1 Maître */}
           <div className="flex items-center gap-0.5 cordel-card-sm px-1.5 py-0.5 rounded text-[11px]">

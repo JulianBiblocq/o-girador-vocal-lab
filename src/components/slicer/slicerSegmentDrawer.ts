@@ -58,12 +58,13 @@ export function drawSegmentWaveform(ctx: CanvasRenderingContext2D, opts: DrawSeg
     const xEnd = secToX(seg.endSec);
     const segW = Math.max(2, xEnd - xStart);
     const isSelected = seg.id === selectedSegmentId;
-    const hasAna = seg.hasAnacrusis !== false;
+    const hasAna = seg.hasAnacrusis !== false && (seg.anacrusisBeats ?? 2) > 0;
     const hasTail = seg.hasTailBeat !== false;
-    const mCount = seg.measuresCount ?? 2;
+    const mCount = seg.measuresCount ?? 1;
+    const anacBeats = seg.anacrusisBeats ?? (hasAna ? 2 : 0);
+    const anacDur = hasAna ? anacBeats * beatDur : 0;
 
-    // Calcul du Temps 1 interne au bloc
-    const t1Sec = hasAna ? Math.min(seg.endSec, seg.startSec + measureDur) : seg.startSec;
+    const t1Sec = hasAna ? seg.startSec + anacDur : seg.startSec;
     const xT1 = secToX(t1Sec);
 
     // Fond de tranche
@@ -72,18 +73,18 @@ export function drawSegmentWaveform(ctx: CanvasRenderingContext2D, opts: DrawSeg
 
     // Zone Anacrouse (-Ana) avant T1
     if (hasAna && xT1 > xStart) {
-      ctx.fillStyle = 'rgba(217, 119, 6, 0.18)';
+      ctx.fillStyle = 'rgba(217, 119, 6, 0.22)';
       ctx.fillRect(xStart, 0, xT1 - xStart, height);
       ctx.font = 'bold 8px monospace';
       ctx.fillStyle = '#d97706';
-      ctx.fillText('-Ana', xStart + 2, height - 4);
+      ctx.fillText(`-Ana(${anacBeats}T)`, xStart + 2, height - 4);
     }
 
     // Zone débordement (+1T) après le corps du bloc
     const bodyEndSec = t1Sec + mCount * measureDur;
     const xBodyEnd = secToX(bodyEndSec);
     if (hasTail && xBodyEnd < xEnd) {
-      ctx.fillStyle = 'rgba(16, 185, 129, 0.18)';
+      ctx.fillStyle = 'rgba(16, 185, 129, 0.22)';
       ctx.fillRect(xBodyEnd, 0, xEnd - xBodyEnd, height);
       ctx.font = 'bold 8px monospace';
       ctx.fillStyle = '#10b981';
@@ -91,25 +92,20 @@ export function drawSegmentWaveform(ctx: CanvasRenderingContext2D, opts: DrawSeg
     }
 
     // Bordures Début & Fin
-    ctx.strokeStyle = isSelected ? '#f59e0b' : '#d97706';
-    ctx.lineWidth = isSelected ? 2.5 : 1.5;
+    ctx.strokeStyle = isSelected ? '#f59e0b' : '#d97706'; ctx.lineWidth = isSelected ? 2.5 : 1.5;
     ctx.beginPath(); ctx.moveTo(xStart, 0); ctx.lineTo(xStart, height); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(xEnd, 0); ctx.lineTo(xEnd, height); ctx.stroke();
 
     // Ligne T1 marquée du bloc
-    if (hasAna && xT1 > xStart && xT1 < xEnd) {
-      ctx.strokeStyle = '#ef4444';
-      ctx.lineWidth = 2;
+    if (xT1 >= xStart && xT1 <= xEnd) {
+      ctx.strokeStyle = '#ef4444'; ctx.lineWidth = 2;
       ctx.beginPath(); ctx.moveTo(xT1, 0); ctx.lineTo(xT1, height); ctx.stroke();
-      ctx.fillStyle = '#b91c1c';
-      ctx.fillRect(xT1 - 8, 2, 16, 12);
-      ctx.fillStyle = '#ffffff';
-      ctx.font = 'bold 8px monospace';
-      ctx.fillText('T1', xT1 - 5, 11);
+      ctx.fillStyle = '#b91c1c'; ctx.fillRect(xT1 - 8, 2, 16, 12);
+      ctx.fillStyle = '#ffffff'; ctx.font = 'bold 8px monospace'; ctx.fillText('T1', xT1 - 5, 11);
     }
 
     // Badge haut de tranche
-    const label = `T${idx + 1} (${mCount}M)`;
+    const label = `T${idx + 1} (${mCount}M${hasAna ? ' +Ana' : ''})`;
     ctx.font = 'bold 9px monospace';
     const textW = ctx.measureText(label).width + 8;
     ctx.fillStyle = '#b45309';

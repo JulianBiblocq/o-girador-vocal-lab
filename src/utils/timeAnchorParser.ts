@@ -58,6 +58,8 @@ export interface ExtractedAnchorsResult {
   timeAnchors: TimeAnchor[];
   measuresCount?: 1 | 2 | 3 | 4;
   hasAnacrusis?: boolean;
+  anacrusisBeats?: number;
+  anacrusisStartBeat?: number;
   exitBeat?: number;
 }
 
@@ -74,8 +76,17 @@ export function extractTimeAnchors(rawText: string): ExtractedAnchorsResult {
   if (matches.length === 0) return { cleanText: rawText, timeAnchors: [] };
 
   const firstOneIdx = matches.findIndex((m) => m.beat === 1);
-  const textBefore = rawText.slice(0, matches[0].index).replace(/\[[^\]]+\]/g, '').replace(/[\*_]/g, '').trim();
-  const hasAnacrusis = firstOneIdx > 0 || (firstOneIdx === 0 && textBefore.length > 0) || (firstOneIdx === -1 && (matches.length > 0 || textBefore.length > 0));
+  let hasAnacrusis = false, anacrusisStartBeat: number | undefined, anacrusisBeats: number | undefined;
+  if (firstOneIdx > 0) {
+    const sBeat = matches[0].beat;
+    hasAnacrusis = true; anacrusisStartBeat = sBeat; anacrusisBeats = Math.max(1, 5 - sBeat);
+  } else if (firstOneIdx === 0) {
+    const textBefore = rawText.slice(0, matches[0].index).replace(/\[[^\]]+\]/g, '').replace(/[\*_]/g, '').trim();
+    if (textBefore.length > 0) { hasAnacrusis = true; anacrusisStartBeat = 4; anacrusisBeats = 1; }
+  } else if (firstOneIdx === -1 && matches.length > 0 && matches[0].beat > 1) {
+    const sBeat = matches[0].beat;
+    hasAnacrusis = true; anacrusisStartBeat = sBeat; anacrusisBeats = Math.max(1, 5 - sBeat);
+  }
 
   const timeAnchors: TimeAnchor[] = [];
   let measureOffset = 0, hasEncounteredSyllables = false;
@@ -111,18 +122,13 @@ export function extractTimeAnchors(rawText: string): ExtractedAnchorsResult {
   const rawMeasuresCount = Math.min(4, Math.max(1, count1 > 0 ? count1 : (hasAnacrusis ? (measureOffset || 1) : measureOffset + 1))) as 1 | 2 | 3 | 4;
   const lastAnchor = timeAnchors[timeAnchors.length - 1];
 
-  return { cleanText, timeAnchors, measuresCount: rawMeasuresCount, hasAnacrusis, exitBeat: lastAnchor?.beat };
+  return { cleanText, timeAnchors, measuresCount: rawMeasuresCount, hasAnacrusis, anacrusisBeats, anacrusisStartBeat, exitBeat: lastAnchor?.beat };
 }
 
 export function buildBeatLyricsMap(timeAnchors: TimeAnchor[]): Record<string, { isInitialRest: boolean; isSustainedHold: boolean; syllables: string[] }> {
   const map: Record<string, { isInitialRest: boolean; isSustainedHold: boolean; syllables: string[] }> = {};
   for (const a of timeAnchors) {
-    const key = `${a.measureOffset}_${a.beat}`;
-    map[key] = {
-      isInitialRest: !!a.isInitialRest,
-      isSustainedHold: !!a.isSustainedHold,
-      syllables: a.syllables || [],
-    };
+    map[`${a.measureOffset}_${a.beat}`] = { isInitialRest: !!a.isInitialRest, isSustainedHold: !!a.isSustainedHold, syllables: a.syllables || [] };
   }
   return map;
 }

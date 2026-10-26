@@ -12,13 +12,32 @@ export interface RawTextSegment {
 
 export function splitHtmlOrTextIntoRawLines(input: string): string[] {
   if (!input) return [];
-  const normalized = input
-    .replace(/<\/?(p|div|br|tr|li)[^>]*>/gi, '\n')
-    .replace(/\r\n/g, '\n');
-  return normalized
-    .split('\n')
-    .map((l) => l.trim())
-    .filter((l) => l.length > 0 && l !== '&nbsp;');
+  const text = input
+    .replace(/\r\n/g, '\n')
+    .replace(/<br\s*\/?>/gi, ' ')
+    .replace(/<\/?(p|div|tr|li)[^>]*>/gi, '\n\n');
+
+  const rawParagraphs = text.split(/\n{2,}/);
+  const result: string[] = [];
+
+  for (const para of rawParagraphs) {
+    const trimmed = para.trim();
+    if (!trimmed || trimmed === '&nbsp;') continue;
+
+    const subLines = trimmed.split('\n').map((l) => l.trim()).filter(Boolean);
+    let currentBlock = '';
+
+    for (const sub of subLines) {
+      if (/^\s*\[Section/i.test(sub)) {
+        if (currentBlock) { result.push(currentBlock); currentBlock = ''; }
+        result.push(sub);
+      } else {
+        currentBlock = currentBlock ? `${currentBlock} ${sub}` : sub;
+      }
+    }
+    if (currentBlock) result.push(currentBlock);
+  }
+  return result.filter((l) => l.length > 0 && l !== '&nbsp;');
 }
 
 export function cleanHtmlText(text: string, preserveUnderline = true): string {
