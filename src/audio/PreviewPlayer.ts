@@ -76,18 +76,18 @@ export class PreviewPlayer {
     this.sourcePolished.start(now);
     this.sourceDry.start(now);
 
+    const beatDuration = 60 / bpm;
+    const t1 = options.t1OffsetSec ?? getPatternT1OffsetSec(options.hasAnacrusis, beatsPerMeasure * beatDuration);
+
     if (options.harmonyConfig?.enabled && options.harmonyGrid) {
       this.harmonyEngine.schedule(this.ctx, this.ctx.destination, {
         grid: options.harmonyGrid, bpm, beatsPerMeasure,
         measuresCount: options.measuresCount || 2, startTime: now, totalDurationSec,
-        hasAnacrusis: options.hasAnacrusis, pitchShiftSemitones: options.pitchShiftSemitones,
+        hasAnacrusis: options.hasAnacrusis, t1OffsetSec: t1, pitchShiftSemitones: options.pitchShiftSemitones,
         profile: options.harmonyConfig.profile, volume: options.harmonyConfig.volume,
         muteBass: options.harmonyConfig.muteBass,
       });
     }
-
-    const beatDuration = 60 / bpm;
-    const t1 = options.t1OffsetSec ?? getPatternT1OffsetSec(options.hasAnacrusis, beatsPerMeasure * beatDuration);
     for (let t = t1 - beatDuration; t >= 0; t -= beatDuration) {
       schedulePreviewClick(this.ctx, now + t, t < 0.01, this.clickGainNode, this.activeNodes);
     }

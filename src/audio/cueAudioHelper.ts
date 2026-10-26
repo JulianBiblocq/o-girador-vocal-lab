@@ -24,7 +24,8 @@ export function scheduleCuePatternAudio(
 
   const { pcm, sampleRate } = rec;
   const measureDurationSec = beatsPerMeasure * beatDurationSec;
-  const cueT1OffsetSec = getPatternT1OffsetSec(cuePattern.hasAnacrusis !== false, measureDurationSec);
+  const explicitT1 = variant?.t1OffsetSec ?? cuePattern.t1OffsetSec ?? rec?.t1OffsetSec;
+  const cueT1OffsetSec = getPatternT1OffsetSec(cuePattern.hasAnacrusis !== false, measureDurationSec, explicitT1);
   const trimStartSec = cuePattern.trimStartSec || variant?.trimStartSec || 0;
   const trimEndSec = (cuePattern.trimEndSec || variant?.trimEndSec || 0) > 0
     ? (cuePattern.trimEndSec || variant?.trimEndSec || 0)

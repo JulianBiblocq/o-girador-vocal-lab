@@ -56,10 +56,10 @@ export function scheduleContinuousCounterRole(
           source.buffer = buffer;
           source.connect(ctx.destination);
 
-          const t1OffsetSec = getPatternT1OffsetSec(patToPlay.hasAnacrusis, measureDurationSec);
-          const anacrusisSec = Math.max(0, t1OffsetSec - trimStartSec);
+          const explicitT1 = match?.variant?.t1OffsetSec ?? patToPlay.t1OffsetSec ?? rec?.t1OffsetSec;
+          const t1OffsetSec = getPatternT1OffsetSec(patToPlay.hasAnacrusis, measureDurationSec, explicitT1);
           const blockT1Sec = marginBeforeM0Sec + currentMeasure * measureDurationSec;
-          const startTime = audioCtxStart + blockT1Sec - anacrusisSec;
+          const startTime = audioCtxStart + blockT1Sec + (trimStartSec - t1OffsetSec);
 
           if (match && match.residualSemitones !== 0) {
             try { source.detune.setValueAtTime(match.residualSemitones * 100, startTime); } catch {}

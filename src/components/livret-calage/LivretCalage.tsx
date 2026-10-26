@@ -114,6 +114,7 @@ export const LivretCalage: React.FC = () => {
           measuresCount={measuresCount} beatsPerMeasure={beatsPerMeasure} beatResolutions={beatResolutions}
           referencePitch={effectivePitch} outputDeviceId={selectedOutputDeviceId}
           initialTrimStartSec={activeVariant.trimStartSec} initialTrimEndSec={activeVariant.trimEndSec}
+          initialT1OffsetSec={activeVariant.t1OffsetSec ?? activePattern.t1OffsetSec ?? activePattern.recordingResult?.t1OffsetSec}
           hasAnacrusis={hasAnacrusis} harmonyGrid={activePattern.harmonyGrid}
           harmonyConfig={project.harmonyConfig ?? { enabled: true, profile: 'maracatu', volume: 0.7 }}
           pitchShiftSemitones={activeVariant.pitchShiftSemitones}
@@ -121,6 +122,10 @@ export const LivretCalage: React.FC = () => {
           onUpdateHarmonyConfig={updateHarmonyConfig}
           onReset={() => updateVariant(activePattern.id, activeVariant.variantKey, { recordingResult: null })}
           onTrimChange={(s, e) => updateVariant(activePattern.id, activeVariant.variantKey, { trimStartSec: s, trimEndSec: e })}
+          onT1OffsetChange={(t1) => {
+            updateVariant(activePattern.id, activeVariant.variantKey, { t1OffsetSec: t1 });
+            updatePattern(activePattern.id, { t1OffsetSec: t1 });
+          }}
           onPackReady={handlePackReady}
         />
       ) : (

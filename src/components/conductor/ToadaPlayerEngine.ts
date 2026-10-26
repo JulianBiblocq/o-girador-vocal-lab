@@ -114,17 +114,23 @@ export class ToadaPlayerEngine {
     source.buffer = buffer;
     source.connect(ctx.destination);
 
-    // Tuilage : startTime = audioCtxStart + blockT1Sec - anacrusisSec
-    const t1OffsetSec = getPatternT1OffsetSec(pat.hasAnacrusis, measureDurationSec);
-    const anacrusisSec = Math.max(0, t1OffsetSec - trimStartSec);
-    const startTime = audioCtxStart + blockT1Sec - anacrusisSec;
+    // Ancrage métrique absolu : when = blockT1Time + (trimStartSec - t1OffsetSec)
+    const explicitT1 = variant?.t1OffsetSec ?? pat.t1OffsetSec ?? rec.t1OffsetSec;
+    const t1OffsetSec = getPatternT1OffsetSec(pat.hasAnacrusis, measureDurationSec, explicitT1);
+    const startTime = audioCtxStart + blockT1Sec + (trimStartSec - t1OffsetSec);
 
     if (match && match.residualSemitones !== 0) {
-      try { source.detune.setValueAtTime(match.residualSemitones * 100, startTime); } catch {}
+      try { source.detune.setValueAtTime(match.residualSemitones * 100, Math.max(ctx.currentTime, startTime)); } catch {}
     }
 
     try {
-      source.start(startTime);
+      if (startTime >= ctx.currentTime) {
+        source.start(startTime);
+      } else {
+        const elapsed = ctx.currentTime - startTime;
+        if (elapsed < len / sampleRate) source.start(ctx.currentTime, elapsed);
+        else return;
+      }
       this.activeSources.push(source);
     } catch {}
   }

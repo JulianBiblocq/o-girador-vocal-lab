@@ -73,6 +73,7 @@ export const translationsBr: VocalLabTranslations = {
   // Livreto 1 - Onda & Trim
   waveformTitle: 'Editor de Forma de Onda e Normalizacao', trimStartFlag: 'INICIO', trimEndFlag: 'FIM',
   trimHelpNotice: 'Arraste as alças Início e Fim para cortar as respirações: alinhamento rítmico 100% travado.',
+  calageAnchorT1Label: 'Âncora T1',
   zoomSeeStart: 'Ver Inicio', zoomSeeEnd: 'Ver Fim', zoomComplete: '1x (Completo)',
   zoomInTitle: 'Aumentar zoom (Ctrl + Roda para frente)', zoomOutTitle: 'Diminuir zoom (Ctrl + Roda para tras)',
   zoomSeeStartTitle: 'Centralizar visualizacao na alca de Inicio', zoomSeeEndTitle: 'Centralizar visualizacao na alca de Fim',

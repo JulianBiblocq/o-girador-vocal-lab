@@ -27,7 +27,7 @@ export interface ExtractedPatternResult {
   cleanPCM: Float32Array; totalDurationSec: number; anacrusisDurationSec: number;
   pitchCurve: PitchCurvePoint[]; anacrusisSteps: VocalStepData[]; mainSteps: VocalStepData[];
   pack: VocalPackExport; role: VocalRole; name: string; measuresCount: 1 | 2 | 3 | 4;
-  hasAnacrusis: boolean; phraseBpm: number;
+  hasAnacrusis: boolean; phraseBpm: number; t1OffsetSec?: number;
   assignedLyricsText?: string; assignedPhoneticText?: string;
 }
 
@@ -85,7 +85,7 @@ export function extractPatternFromMaster(params: MasterExtractParams): Extracted
     cleanPCM, totalDurationSec, anacrusisDurationSec, pitchCurve,
     anacrusisSteps: hasAnacrusis ? steps.slice(0, anacLen) : [],
     mainSteps: steps.slice(anacLen),
-    pack, role, name: patternName, measuresCount, hasAnacrusis, phraseBpm,
+    pack, role, name: patternName, measuresCount, hasAnacrusis, phraseBpm, t1OffsetSec: anacrusisDurationSec,
     assignedLyricsText: lyricsText, assignedPhoneticText: phoneticText,
   };
 }

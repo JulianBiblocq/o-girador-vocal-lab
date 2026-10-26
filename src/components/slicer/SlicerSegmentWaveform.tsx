@@ -50,6 +50,14 @@ export const SlicerSegmentWaveform: React.FC<SlicerSegmentWaveformProps> = ({
     }
 
     const hitTolPx = 9;
+    for (let i = 0; i < segments.length - 1; i++) {
+      const s1 = segments[i], s2 = segments[i + 1];
+      if (Math.abs(s1.endSec - s2.startSec) <= 0.05 && Math.abs(x - (s1.endSec / durationSec) * width) <= hitTolPx) {
+        e.currentTarget.setPointerCapture(e.pointerId);
+        dragRef.current = { mode: 'joint', segId: s1.id, segId2: s2.id, startSec: sec } as any;
+        onSelectSegment(s1.id); return;
+      }
+    }
     for (const seg of segments) {
       const xs = (seg.startSec / durationSec) * width, xe = (seg.endSec / durationSec) * width;
       if (Math.abs(x - xs) <= hitTolPx) {
@@ -63,21 +71,18 @@ export const SlicerSegmentWaveform: React.FC<SlicerSegmentWaveformProps> = ({
         onSelectSegment(seg.id); return;
       }
     }
-
     const clickedSeg = segments.find((s) => sec >= s.startSec && sec <= s.endSec);
     if (clickedSeg) {
       e.currentTarget.setPointerCapture(e.pointerId);
       dragRef.current = { mode: 'body', segId: clickedSeg.id, startSec: sec, origStart: clickedSeg.startSec, origEnd: clickedSeg.endSec };
       onSelectSegment(clickedSeg.id);
-    } else {
-      onSelectSegment(null); onSeek(sec);
-    }
+    } else { onSelectSegment(null); onSeek(sec); }
   };
 
   const handlePointerMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
     if (!dragRef.current) return;
     const { sec } = getCanvasCoords(e);
-    const { mode, segId, startSec, origStart = 0, origEnd = 0 } = dragRef.current;
+    const { mode, segId, startSec, origStart = 0, origEnd = 0 } = dragRef.current as any;
     const delta = sec - startSec;
 
     if (mode === 'grid') {
@@ -86,17 +91,19 @@ export const SlicerSegmentWaveform: React.FC<SlicerSegmentWaveformProps> = ({
       dragRef.current.startSec = sec;
       return;
     }
-
+    if (mode === 'joint') {
+      const { segId: sId1, segId2: sId2 } = dragRef.current as any;
+      const cut = Math.max(0.1, Math.min(durationSec - 0.1, sec));
+      onSegmentsChange(segments.map((s) => s.id === sId1 ? { ...s, endSec: cut } : s.id === sId2 ? { ...s, startSec: cut } : s));
+      return;
+    }
     if (mode === 'body' && segId) {
       const segIdx = segments.findIndex((s) => s.id === segId);
       if (segIdx < 0) return;
       const targetSeg = segments[segIdx];
-      const beatDur = 60 / (bpm || 55);
-      const measureDur = beatDur * 4;
+      const beatDur = 60 / (bpm || 55), measureDur = beatDur * 4;
       const anacDur = targetSeg.hasAnacrusis !== false ? (targetSeg.anacrusisBeats ?? 2) * beatDur : 0;
-      const rawTargetStart = origStart + delta;
-      const rawTargetT1 = rawTargetStart + anacDur;
-      // Magnétisme strict de T1 sur les lignes de mesure M de la grille
+      const rawTargetT1 = origStart + delta + anacDur;
       const nearestT1 = Math.round((rawTargetT1 - gridOffsetSec) / measureDur) * measureDur + gridOffsetSec;
       const snapT1 = Math.abs(rawTargetT1 - nearestT1) < 0.35 ? nearestT1 : rawTargetT1;
       const clampedStart = Math.max(0, snapT1 - anacDur);
@@ -104,7 +111,7 @@ export const SlicerSegmentWaveform: React.FC<SlicerSegmentWaveformProps> = ({
 
       onSegmentsChange(segments.map((s, idx) => {
         if (s.id === segId) { const len = origEnd - origStart; return { ...s, startSec: clampedStart, endSec: Math.min(durationSec, clampedStart + len) }; }
-        if (cascadeMove && idx > segIdx) { return { ...s, startSec: Math.max(0, s.startSec + shift), endSec: Math.min(durationSec, s.endSec + shift) }; }
+        if (cascadeMove && idx > segIdx) return { ...s, startSec: Math.max(0, s.startSec + shift), endSec: Math.min(durationSec, s.endSec + shift) };
         return s;
       }));
     } else if (segId) {
@@ -115,17 +122,26 @@ export const SlicerSegmentWaveform: React.FC<SlicerSegmentWaveformProps> = ({
   };
 
   const handlePointerUp = (e: React.PointerEvent<HTMLCanvasElement>) => {
-    if (!dragRef.current) return;
-    try { e.currentTarget.releasePointerCapture(e.pointerId); } catch {}
-    dragRef.current = null;
+    if (dragRef.current) { try { e.currentTarget.releasePointerCapture(e.pointerId); } catch {} dragRef.current = null; }
+  };
+
+  const handleDoubleClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    const { sec } = getCanvasCoords(e);
+    const seg = segments.find((s) => sec > s.startSec + 0.35 && sec < s.endSec - 0.35);
+    if (seg) {
+      const cut = Math.round(sec * 100) / 100;
+      const s1: SliceSegment = { ...seg, endSec: cut };
+      const s2: SliceSegment = { ...seg, id: `seg-${Date.now()}`, startSec: cut, metricT1Sec: cut, targetPatternId: 'new' };
+      onSegmentsChange(segments.flatMap((s) => s.id === seg.id ? [s1, s2] : [s]));
+      onSelectSegment(s2.id);
+    } else { onAddSegmentAtSec(sec); }
   };
 
   return (
     <div className="w-full h-36 bg-[var(--cordel-surface)] border border-[var(--cordel-border-panel)] rounded relative select-none">
       <canvas
         ref={canvasRef} onPointerDown={handlePointerDown} onPointerMove={handlePointerMove} onPointerUp={handlePointerUp}
-        onDoubleClick={(e) => onAddSegmentAtSec(getCanvasCoords(e).sec)} onContextMenu={(e) => e.preventDefault()}
-        className="w-full h-full block cursor-crosshair"
+        onDoubleClick={handleDoubleClick} onContextMenu={(e) => e.preventDefault()} className="w-full h-full block cursor-crosshair"
       />
     </div>
   );

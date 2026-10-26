@@ -45,7 +45,7 @@ export function quantizePitchToSteps(params: QuantizerParams): QuantizedGridResu
   const segments = segmentPitchCurve(pitchCurve, { minDurationSec: 0.045, pitchJumpThreshold: 1.2 });
 
   for (let m = startM; m <= measuresCount; m++) {
-    const mBaseSec = m === -1 ? 0 : (t1 + m * measureDuration);
+    const mBaseSec = m === -1 ? (t1 - measureDuration) : (t1 + m * measureDuration);
     const beatsInThisM = (m === measuresCount) ? 1 : beatsPerMeasure;
     const mOffset = hasAnac ? (m === -1 ? 0 : m + 1) : m;
 

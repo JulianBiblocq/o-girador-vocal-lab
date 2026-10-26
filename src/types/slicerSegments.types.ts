@@ -8,6 +8,7 @@ export interface SliceSegment {
   id: string;
   startSec: number;
   endSec: number;
+  metricT1Sec?: number;
   targetPatternId: string; // patternId | 'ignore' | 'new'
   role?: VocalRole;
   name?: string;

@@ -16,6 +16,7 @@ export interface HarmonyPlaybackOptions {
   startTime: number;
   totalDurationSec: number;
   hasAnacrusis?: boolean;
+  t1OffsetSec?: number;
   pitchShiftSemitones?: number;
   profile?: HarmonyProfileId;
   volume?: number;
@@ -41,7 +42,7 @@ export class HarmonyPlayerEngine {
     const { bpm, beatsPerMeasure, measuresCount, startTime, hasAnacrusis = true, pitchShiftSemitones = 0, profile = 'maracatu', muteBass = false } = options;
     const beatDurationSec = 60 / bpm;
     const measureDurationSec = beatsPerMeasure * beatDurationSec;
-    const t1OffsetSec = hasAnacrusis ? measureDurationSec : 0;
+    const t1OffsetSec = options.t1OffsetSec ?? (hasAnacrusis ? measureDurationSec : 0);
     const seek = options.seekStartSec || 0;
 
     // 1. Accompagnement pendant l'Élan M-1 (si anacrouse présente et départ avant T1)
@@ -49,7 +50,7 @@ export class HarmonyPlayerEngine {
       const firstChordSymbol = options.grid.measures[0]?.chordsByBeat?.[0] || 'C';
       const firstChord = parseChordSymbol(firstChordSymbol, pitchShiftSemitones);
       if (firstChord) {
-        const mStart = startTime - seek;
+        const mStart = startTime + (t1OffsetSec - measureDurationSec) - seek;
         if (mStart + measureDurationSec > ctx.currentTime) {
           scheduleHarmonyProfileMeasure(profile, {
             ctx, dest: this.gainNode, chord: firstChord, measureStartTime: mStart,

@@ -73,6 +73,7 @@ export const translationsFr: VocalLabTranslations = {
   // Livret 1 - Onde & Trim
   waveformTitle: "Editeur de Forme d'Onde & Normalisation", trimStartFlag: 'DEBUT', trimEndFlag: 'FIN',
   trimHelpNotice: 'Glissez les poignées Début et Fin pour couper les respirations : calage rythmique 100 % verrouillé.',
+  calageAnchorT1Label: 'Ancre T1',
   zoomSeeStart: 'Voir Debut', zoomSeeEnd: 'Voir Fin', zoomComplete: '1x (Complet)',
   zoomInTitle: 'Zoomer (Ctrl + Molette avant)', zoomOutTitle: 'Dezoomer (Ctrl + Molette arriere)',
   zoomSeeStartTitle: 'Centrer la vue sur la poignee Debut', zoomSeeEndTitle: 'Centrer la vue sur la poignee Fin',

@@ -38,13 +38,15 @@ function encodeWavBlob(pcm: Float32Array, sampleRate: number): Blob {
 }
 
 function schedulePatternAudio(ctx: BaseAudioContext, pat: VocalPatternItem, slotT1Sec: number, measureDurationSec: number) {
-  const rec = pat.variants?.[pat.activeVariantKey]?.recordingResult ?? pat.recordingResult;
-  const t1OffsetSec = getPatternT1OffsetSec(pat.hasAnacrusis, measureDurationSec);
+  const variant = pat.variants?.[pat.activeVariantKey];
+  const rec = variant?.recordingResult ?? pat.recordingResult;
+  const explicitT1 = variant?.t1OffsetSec ?? pat.t1OffsetSec ?? rec?.t1OffsetSec;
+  const t1OffsetSec = getPatternT1OffsetSec(pat.hasAnacrusis, measureDurationSec, explicitT1);
 
   if (rec && rec.pcm && rec.pcm.length > 0) {
     const { pcm, sampleRate } = rec;
-    const trimStartSec = pat.trimStartSec || 0;
-    const trimEndSec = pat.trimEndSec && pat.trimEndSec > 0 ? pat.trimEndSec : pcm.length / sampleRate;
+    const trimStartSec = variant?.trimStartSec || pat.trimStartSec || 0;
+    const trimEndSec = (variant?.trimEndSec || pat.trimEndSec || 0) > 0 ? (variant?.trimEndSec || pat.trimEndSec || 0) : pcm.length / sampleRate;
     const sStart = Math.max(0, Math.floor(trimStartSec * sampleRate));
     const sEnd = Math.min(pcm.length, Math.floor(trimEndSec * sampleRate));
     const len = Math.max(0, sEnd - sStart);
@@ -55,8 +57,13 @@ function schedulePatternAudio(ctx: BaseAudioContext, pat: VocalPatternItem, slot
     const source = ctx.createBufferSource();
     source.buffer = audioBuf;
     source.connect(ctx.destination);
-    const anacrusisSec = Math.max(0, t1OffsetSec - trimStartSec);
-    source.start(Math.max(0, slotT1Sec - anacrusisSec));
+    const when = slotT1Sec + (trimStartSec - t1OffsetSec);
+    if (when >= 0) {
+      source.start(when);
+    } else {
+      const elapsed = -when;
+      if (elapsed < len / sampleRate) source.start(0, elapsed);
+    }
   } else if (pat.mainSteps && pat.mainSteps.length > 0) {
     const stepDur = measureDurationSec / 16;
     if (pat.hasAnacrusis && pat.anacrusisSteps?.length > 0) {

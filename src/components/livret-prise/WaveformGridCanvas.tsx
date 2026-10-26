@@ -53,7 +53,7 @@ export const WaveformGridCanvas: React.FC<WaveformGridCanvasProps> = ({
     // 2. Grille temporelle (Mesures M1..MN et subdivisions)
     const startM = hasAnac ? -1 : 0;
     for (let m = startM; m < measuresCount; m++) {
-      const mBaseSec = m === -1 ? 0 : (t1Offset + m * measureDurationSec);
+      const mBaseSec = m === -1 ? (t1Offset - measureDurationSec) : (t1Offset + m * measureDurationSec);
       for (let bm = 0; bm < beatsPerMeasure; bm++) {
         const t = mBaseSec + bm * beatDuration;
         const x = (t / totalDurationSec) * width;

@@ -103,7 +103,7 @@ export const MasterTakeSlicerModal: React.FC<SlicerModalProps> = ({
       updatePattern(patId, {
         measuresCount: res.measuresCount, baseBpm: Math.round(res.phraseBpm), hasAnacrusis: res.hasAnacrusis,
         pack: res.pack, rawAudioSamples: res.cleanPCM, rawPitchCurve: res.pitchCurve, pitchCurve: res.pitchCurve,
-        anacrusisSteps: res.anacrusisSteps, mainSteps: res.mainSteps, isMidiInitialized: true, midiLocked: true,
+        anacrusisSteps: res.anacrusisSteps, mainSteps: res.mainSteps, t1OffsetSec: res.t1OffsetSec, isMidiInitialized: true, midiLocked: true,
       });
       setLastExtracted(res.name);
     } finally { setIsExtracting(false); }

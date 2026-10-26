@@ -81,7 +81,7 @@ export interface VocalLabTranslationsCore {
   calibStepCompute: string; calibClapBadge: string; calibAutoTestBadge: string;
 
   // Livret 1 - Onde & Trim
-  waveformTitle: string; trimStartFlag: string; trimEndFlag: string; trimHelpNotice: string;
+  waveformTitle: string; trimStartFlag: string; trimEndFlag: string; trimHelpNotice: string; calageAnchorT1Label: string;
   zoomSeeStart: string; zoomSeeEnd: string; zoomComplete: string;
   zoomInTitle: string; zoomOutTitle: string; zoomSeeStartTitle: string; zoomSeeEndTitle: string;
   lowCutStudio: string; clarityDeEsser: string; clarityDeEsserTooltip: string; clickWitness: string; listenTakeAgain: string; extractMelodyAndLyrics: string;

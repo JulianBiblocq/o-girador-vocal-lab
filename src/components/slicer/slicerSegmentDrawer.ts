@@ -64,7 +64,7 @@ export function drawSegmentWaveform(ctx: CanvasRenderingContext2D, opts: DrawSeg
     const anacBeats = seg.anacrusisBeats ?? (hasAna ? 2 : 0);
     const anacDur = hasAna ? anacBeats * beatDur : 0;
 
-    const t1Sec = hasAna ? seg.startSec + anacDur : seg.startSec;
+    const t1Sec = seg.metricT1Sec ?? (hasAna ? seg.startSec + anacDur : seg.startSec);
     const xT1 = secToX(t1Sec);
 
     // Fond de tranche
@@ -75,8 +75,7 @@ export function drawSegmentWaveform(ctx: CanvasRenderingContext2D, opts: DrawSeg
     if (hasAna && xT1 > xStart) {
       ctx.fillStyle = 'rgba(217, 119, 6, 0.22)';
       ctx.fillRect(xStart, 0, xT1 - xStart, height);
-      ctx.font = 'bold 8px monospace';
-      ctx.fillStyle = '#d97706';
+      ctx.font = 'bold 8px monospace'; ctx.fillStyle = '#d97706';
       ctx.fillText(`-Ana(${anacBeats}T)`, xStart + 2, height - 4);
     }
 
@@ -86,8 +85,7 @@ export function drawSegmentWaveform(ctx: CanvasRenderingContext2D, opts: DrawSeg
     if (hasTail && xBodyEnd < xEnd) {
       ctx.fillStyle = 'rgba(16, 185, 129, 0.22)';
       ctx.fillRect(xBodyEnd, 0, xEnd - xBodyEnd, height);
-      ctx.font = 'bold 8px monospace';
-      ctx.fillStyle = '#10b981';
+      ctx.font = 'bold 8px monospace'; ctx.fillStyle = '#10b981';
       ctx.fillText('+1T', xBodyEnd + 2, height - 4);
     }
 
@@ -96,8 +94,16 @@ export function drawSegmentWaveform(ctx: CanvasRenderingContext2D, opts: DrawSeg
     ctx.beginPath(); ctx.moveTo(xStart, 0); ctx.lineTo(xStart, height); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(xEnd, 0); ctx.lineTo(xEnd, height); ctx.stroke();
 
+    // Point de coupe lié (•) entre deux tranches consécutives soudées
+    const nextSeg = segments[idx + 1];
+    if (nextSeg && Math.abs(seg.endSec - nextSeg.startSec) <= 0.05) {
+      ctx.fillStyle = '#10b981'; ctx.beginPath(); ctx.arc(xEnd, midY, 5, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1.5; ctx.stroke();
+      ctx.fillStyle = '#ffffff'; ctx.font = 'bold 9px sans-serif'; ctx.fillText('•', xEnd - 2.5, midY + 3);
+    }
+
     // Ligne T1 marquée du bloc
-    if (xT1 >= xStart && xT1 <= xEnd) {
+    if (xT1 >= xStart - 10 && xT1 <= xEnd) {
       ctx.strokeStyle = '#ef4444'; ctx.lineWidth = 2;
       ctx.beginPath(); ctx.moveTo(xT1, 0); ctx.lineTo(xT1, height); ctx.stroke();
       ctx.fillStyle = '#b91c1c'; ctx.fillRect(xT1 - 8, 2, 16, 12);
@@ -108,10 +114,8 @@ export function drawSegmentWaveform(ctx: CanvasRenderingContext2D, opts: DrawSeg
     const label = `T${idx + 1} (${mCount}M${hasAna ? ' +Ana' : ''})`;
     ctx.font = 'bold 9px monospace';
     const textW = ctx.measureText(label).width + 8;
-    ctx.fillStyle = '#b45309';
-    ctx.fillRect(xStart + 2, 2, textW, 14);
-    ctx.fillStyle = '#ffffff';
-    ctx.fillText(label, xStart + 6, 12);
+    ctx.fillStyle = '#b45309'; ctx.fillRect(xStart + 2, 2, textW, 14);
+    ctx.fillStyle = '#ffffff'; ctx.fillText(label, xStart + 6, 12);
   });
 
   // 3. Forme d'onde downsampled

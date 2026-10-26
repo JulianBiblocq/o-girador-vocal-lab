@@ -26,14 +26,21 @@ export interface VocalAudioVariantCoverage {
   maxSemitones: number;
 }
 
+export interface AudioRecordingResult {
+  pcm: Float32Array;
+  sampleRate: number;
+  t1OffsetSec?: number;
+}
+
 export interface VocalAudioVariant {
   variantKey: string;
   speedRatio: number;
   pitchShiftSemitones: number;
   coverage: VocalAudioVariantCoverage;
-  recordingResult: { pcm: Float32Array; sampleRate: number } | null;
+  recordingResult: AudioRecordingResult | null;
   trimStartSec: number;
   trimEndSec: number;
+  t1OffsetSec?: number;
   lowCutEnabled: boolean;
   enableTonePolish?: boolean;
 }
@@ -54,8 +61,8 @@ export interface VocalPatternItem {
   tessitura?: TessituraRange;
   variants: Record<string, VocalAudioVariant>;
   activeVariantKey: string;
-  recordingResult: { pcm: Float32Array; sampleRate: number } | null;
-  trimStartSec: number; trimEndSec: number; lowCutEnabled: boolean; enableTonePolish?: boolean;
+  recordingResult: AudioRecordingResult | null;
+  trimStartSec: number; trimEndSec: number; t1OffsetSec?: number; lowCutEnabled: boolean; enableTonePolish?: boolean;
   anacrusisSteps: VocalStepData[]; mainSteps: VocalStepData[]; pitchCurve: PitchCurvePoint[];
   pack?: VocalPackExport | null; midiLocked?: boolean; isMidiInitialized?: boolean; hasAnacrusis?: boolean;
   anacrusisBeats?: number;

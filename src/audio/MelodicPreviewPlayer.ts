@@ -68,7 +68,7 @@ export class MelodicPreviewPlayer {
 
     const beatDuration = 60 / bpm, stepDuration = beatDuration / 4;
     const t1 = options.t1OffsetSec ?? getPatternT1OffsetSec(options.hasAnacrusis, beatsPerMeasure * beatDuration);
-    const startOffsetSec = options.hasAnacrusis === false ? t1 : 0;
+    const startOffsetSec = options.hasAnacrusis === false ? t1 : Math.max(0, t1 - beatsPerMeasure * beatDuration);
     const effectiveSteps = (pitchShiftSemitones && pitchShiftSemitones !== 0)
       ? allSteps.map((s) => (s.active && s.midiNumber > 0 && s.note !== '───') ? { ...s, midiNumber: s.midiNumber + pitchShiftSemitones } : s)
       : allSteps;
@@ -77,7 +77,7 @@ export class MelodicPreviewPlayer {
     if (options.harmonyConfig?.enabled && options.harmonyGrid) {
       this.harmonyEngine.schedule(this.ctx, this.ctx.destination, {
         grid: options.harmonyGrid, bpm, beatsPerMeasure, measuresCount: options.measuresCount || 2,
-        startTime: now, totalDurationSec, hasAnacrusis: options.hasAnacrusis, pitchShiftSemitones,
+        startTime: now, totalDurationSec, hasAnacrusis: options.hasAnacrusis, t1OffsetSec: t1, pitchShiftSemitones,
         profile: options.harmonyConfig.profile, volume: options.harmonyConfig.volume,
         muteBass: options.harmonyConfig.muteBass, seekStartSec: this.seekStartSec,
       });

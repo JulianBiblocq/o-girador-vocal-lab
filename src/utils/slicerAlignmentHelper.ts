@@ -17,40 +17,79 @@ export function buildOrganizadorSlices(
   const targetRole = defaultRole === 'coro' ? 'coro' : 'puxador';
   const rolePats = patterns.filter((p) => p.role === targetRole);
   const targetList = rolePats.length > 0 ? rolePats : patterns;
+  if (targetList.length === 0) return [];
 
-  let prevBodyEnd = gridOffsetSec;
-  return targetList.map((pat, idx) => {
+  // 1. Calcul du T1 métrique de chaque bloc sur la grille de mesures
+  const metaList: Array<{ pat: VocalPatternItem; t1: number; mCount: number; hasAna: boolean; anacDur: number; isIslandStart: boolean }> = [];
+  let prevT1 = gridOffsetSec;
+  let prevMCount = 2;
+
+  targetList.forEach((pat, idx) => {
     const hasAna = pat.hasAnacrusis !== false;
     const anacBeats = pat.anacrusisBeats ?? (hasAna ? 2 : 0);
     const anacDur = hasAna ? anacBeats * beatDur : 0;
     const mCount = pat.measuresCount ?? 1;
 
-    let t1 = prevBodyEnd;
+    let t1 = prevT1 + (idx === 0 ? 0 : prevMCount * measureDur);
+    let isIslandStart = idx === 0;
+
     if (idx === 0) {
       const d0 = detected[0];
       const estT1 = d0 ? d0.startSec + anacDur * 0.5 : gridOffsetSec;
-      t1 = Math.round((estT1 - gridOffsetSec) / measureDur) * measureDur + gridOffsetSec;
+      t1 = Math.max(anacDur, Math.round((estT1 - gridOffsetSec) / measureDur) * measureDur + gridOffsetSec);
     } else {
-      // Chercher une île vocale éloignée après un silence franc (> 1.8s)
+      const prevBodyEnd = prevT1 + prevMCount * measureDur;
+      // Détection d'un saut franc (> 1.8s de silence) vers une nouvelle île vocale
       const nextDet = detected.find((d) => d.startSec > prevBodyEnd + 1.8);
       if (nextDet) {
         const estT1 = nextDet.startSec + anacDur * 0.5;
         const snapM = Math.round((estT1 - gridOffsetSec) / measureDur) * measureDur + gridOffsetSec;
-        t1 = Math.max(prevBodyEnd, snapM);
+        if (snapM > prevBodyEnd + measureDur) {
+          t1 = snapM;
+          isIslandStart = true;
+        }
       }
     }
-    t1 = Math.max(anacDur, t1);
-    prevBodyEnd = t1 + mCount * measureDur;
 
-    return {
-      id: `seg-org-${pat.id}-${idx}`,
-      startSec: Math.round((t1 - anacDur) * 100) / 100,
-      endSec: Math.round((t1 + mCount * measureDur + beatDur) * 100) / 100,
-      targetPatternId: pat.id,
-      measuresCount: mCount,
-      hasAnacrusis: hasAna,
-      anacrusisBeats: anacBeats,
-      hasTailBeat: true,
-    };
+    metaList.push({ pat, t1, mCount, hasAna, anacDur, isIslandStart });
+    prevT1 = t1;
+    prevMCount = mCount;
   });
+
+  // 2. Définition des bornes [startSec, endSec] avec points de coupe liés (zéro-trou)
+  const segments: SliceSegment[] = [];
+  for (let i = 0; i < metaList.length; i++) {
+    const cur = metaList[i];
+    const next = metaList[i + 1];
+    const isNextConsecutive = Boolean(next && !next.isIslandStart);
+
+    // Début : si premier bloc d'île, départ à T1 - anacDur. Sinon soudé sur la fin du précédent.
+    const startSec = (i === 0 || cur.isIslandStart)
+      ? Math.max(0, Math.round((cur.t1 - cur.anacDur) * 100) / 100)
+      : segments[i - 1].endSec;
+
+    // Fin : si le bloc suivant est consécutif, point de coupe lié juste après son T1 (tenue)
+    let endSec: number;
+    if (isNextConsecutive && next) {
+      endSec = Math.round((next.t1 + 0.15) * 100) / 100;
+    } else {
+      endSec = Math.round((cur.t1 + cur.mCount * measureDur + beatDur * 0.75) * 100) / 100;
+    }
+
+    segments.push({
+      id: `seg-org-${cur.pat.id}-${i}`,
+      startSec,
+      endSec,
+      metricT1Sec: cur.t1,
+      targetPatternId: cur.pat.id,
+      role: cur.pat.role,
+      name: cur.pat.name,
+      measuresCount: cur.mCount as 1 | 2 | 3 | 4,
+      hasAnacrusis: cur.hasAna,
+      anacrusisBeats: cur.pat.anacrusisBeats ?? (cur.hasAna ? 2 : 0),
+      hasTailBeat: true,
+    });
+  }
+
+  return segments;
 }

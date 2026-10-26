@@ -30,6 +30,7 @@ export interface ExtractMelodicParams {
   timeAnchors?: import('../types/toadaDocument.types').TimeAnchor[];
   lowCutEnabled?: boolean;
   enableTonePolish?: boolean;
+  t1OffsetSec?: number;
 }
 
 export interface ExtractMelodicResult {
@@ -51,8 +52,8 @@ export function extractPatternMelodicData(params: ExtractMelodicParams): Extract
 
   const beatDuration = 60 / bpm;
   const measureDuration = beatsPerMeasure * beatDuration;
-  const t1OffsetSec = getPatternT1OffsetSec(hasAnacrusis, measureDuration);
-  const totalDurationSec = getPatternTotalDurationSec(hasAnacrusis, measuresCount, measureDuration, 0.25, beatDuration);
+  const t1OffsetSec = getPatternT1OffsetSec(hasAnacrusis, measureDuration, params.t1OffsetSec);
+  const totalDurationSec = getPatternTotalDurationSec(hasAnacrusis, measuresCount, measureDuration, 0.25, beatDuration, t1OffsetSec);
 
   const vTrimStart = Math.max(0, params.trimStartSec ?? 0);
   const vTrimEnd = params.trimEndSec && params.trimEndSec > 0 ? Math.min(totalDurationSec, params.trimEndSec) : totalDurationSec;

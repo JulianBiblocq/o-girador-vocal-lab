@@ -20,18 +20,18 @@ import type { PatternHarmonyGrid, HarmonyConfig } from '../../types/harmony.type
 export interface WaveformTrimEditorProps {
   rawPCM: Float32Array; sampleRate: number; bpm: number; timeSignature: TimeSignatureString;
   measuresCount: number; beatsPerMeasure: number; beatResolutions: number[]; referencePitch: string;
-  initialTrimStartSec?: number; initialTrimEndSec?: number; hasAnacrusis?: boolean; outputDeviceId?: string;
+  initialTrimStartSec?: number; initialTrimEndSec?: number; initialT1OffsetSec?: number; hasAnacrusis?: boolean; outputDeviceId?: string;
   harmonyGrid?: PatternHarmonyGrid; harmonyConfig?: HarmonyConfig; pitchShiftSemitones?: number;
   onUpdateGrid?: (newGrid: PatternHarmonyGrid) => void; onUpdateHarmonyConfig?: (config: HarmonyConfig) => void;
-  onReset: () => void; onTrimChange?: (startSec: number, endSec: number) => void; onPackReady: (pack: VocalPackExport) => void;
+  onReset: () => void; onTrimChange?: (startSec: number, endSec: number) => void; onT1OffsetChange?: (t1Sec: number) => void; onPackReady: (pack: VocalPackExport) => void;
 }
 
 export const WaveformTrimEditor: React.FC<WaveformTrimEditorProps> = (props) => {
   const {
     rawPCM, sampleRate, bpm, timeSignature, measuresCount, beatsPerMeasure,
-    beatResolutions, referencePitch, initialTrimStartSec, initialTrimEndSec,
+    beatResolutions, referencePitch, initialTrimStartSec, initialTrimEndSec, initialT1OffsetSec,
     hasAnacrusis = true, outputDeviceId, harmonyGrid, harmonyConfig, pitchShiftSemitones = 0,
-    onUpdateGrid, onUpdateHarmonyConfig, onReset, onTrimChange, onPackReady,
+    onUpdateGrid, onUpdateHarmonyConfig, onReset, onTrimChange, onT1OffsetChange, onPackReady,
   } = props;
   const { t } = useLanguage(), containerRef = useRef<HTMLDivElement>(null);
   const [containerWidth, setContainerWidth] = useState<number>(600);
@@ -39,9 +39,13 @@ export const WaveformTrimEditor: React.FC<WaveformTrimEditorProps> = (props) => 
   const { zoomLevel, setZoom, zoomIn, zoomOut, scrollToSec, scrollContainerRef } = useWaveformZoom(1.0);
 
   const beatDuration = 60 / bpm, measureDurationSec = beatsPerMeasure * beatDuration;
-  const t1OffsetSec = getPatternT1OffsetSec(hasAnacrusis, measureDurationSec);
+  const [t1OffsetSec, setT1OffsetSec] = useState<number>(() => getPatternT1OffsetSec(hasAnacrusis, measureDurationSec, initialT1OffsetSec));
+  useEffect(() => {
+    if (typeof initialT1OffsetSec === 'number' && initialT1OffsetSec >= 0) setT1OffsetSec(initialT1OffsetSec);
+  }, [initialT1OffsetSec]);
+
   const recordedDurationSec = rawPCM.length / sampleRate;
-  const totalDurationSec = Math.max(recordedDurationSec, getPatternTotalDurationSec(hasAnacrusis, measuresCount, measureDurationSec, 0.25, beatDuration));
+  const totalDurationSec = Math.max(recordedDurationSec, getPatternTotalDurationSec(hasAnacrusis, measuresCount, measureDurationSec, 0.25, beatDuration, t1OffsetSec));
 
   const [trimStartSec, setTrimStartSec] = useState<number>(() => initialTrimStartSec ?? 0);
   const [trimEndSec, setTrimEndSec] = useState<number>(() => (initialTrimEndSec && initialTrimEndSec > 0 ? initialTrimEndSec : totalDurationSec));
@@ -105,7 +109,17 @@ export const WaveformTrimEditor: React.FC<WaveformTrimEditorProps> = (props) => 
         </div>
       </div>
       <p className="text-[11px] font-mono text-theme-ink/80 text-center leading-snug px-1">{t('trimHelpNotice')}</p>
-      <LatencyNudgeBar latencyOffsetMs={latencyOffsetMs} onChange={setLatencyOffsetMs} disabled={isPlaying} />
+      <div className="flex flex-col sm:flex-row items-center gap-2 w-full">
+        <div className="flex-1 w-full"><LatencyNudgeBar latencyOffsetMs={latencyOffsetMs} onChange={setLatencyOffsetMs} disabled={isPlaying} /></div>
+        <div className="cordel-card flex items-center justify-between gap-2 p-1.5 rounded text-xs font-mono shrink-0">
+          <span className="font-bold text-theme-ink/80">{t('calageAnchorT1Label') || 'Ancre T1'}</span>
+          <div className="flex items-center gap-1">
+            <button type="button" onClick={() => { const n = Math.max(0, Math.round((t1OffsetSec - 0.01) * 1000) / 1000); setT1OffsetSec(n); onT1OffsetChange?.(n); }} className="cordel-btn px-1.5 py-0.5 text-xs font-mono font-bold cursor-pointer">◀ -10ms</button>
+            <span className="font-bold text-theme-wood px-1">{t1OffsetSec.toFixed(3)}s</span>
+            <button type="button" onClick={() => { const n = Math.round((t1OffsetSec + 0.01) * 1000) / 1000; setT1OffsetSec(n); onT1OffsetChange?.(n); }} className="cordel-btn px-1.5 py-0.5 text-xs font-mono font-bold cursor-pointer">+10ms ▶</button>
+          </div>
+        </div>
+      </div>
       <PreviewControls
         isPlaying={isPlaying} onTogglePlay={handleTogglePlay} clickEnabled={clickEnabled} onToggleClick={() => setClickEnabled((p) => { const n = !p; player.setClickEnabled(n); return n; })}
         highPassEnabled={highPassEnabled} onToggleHighPass={() => setHighPassEnabled((v) => !v)} tonePolishEnabled={tonePolishEnabled} onToggleTonePolish={() => setTonePolishEnabled((p) => { const n = !p; player.setTonePolishEnabled(n); return n; })}

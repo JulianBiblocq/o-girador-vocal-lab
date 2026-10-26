@@ -27,7 +27,6 @@ export function executeBatchAssign(options: BatchAssignOptions): { processedCoun
   const beatsPerMeasure = getBeatsPerMeasure(project.timeSignature);
   const defaultResolutions = getDefaultBeatResolutions(project.timeSignature);
   const masterDurationSec = masterPCM.length / sampleRate;
-  const marginSec = 0.40;
   let firstAssignedId: string | null = null;
   let processedCount = 0;
 
@@ -36,7 +35,6 @@ export function executeBatchAssign(options: BatchAssignOptions): { processedCoun
     let targetId = segment.targetPatternId;
     const measuresCount = segment.measuresCount ?? 2;
     const hasAnacrusis = segment.hasAnacrusis !== false;
-    const hasTailBeat = segment.hasTailBeat !== false;
 
     if (targetId === 'new') {
       const role: VocalRole = segment.role ?? 'puxador';
@@ -59,20 +57,21 @@ export function executeBatchAssign(options: BatchAssignOptions): { processedCoun
     const bpm = targetPattern.bpm ?? targetPattern.baseBpm ?? project.bpm ?? 88;
     const beatDuration = 60 / bpm;
     const measureDuration = beatsPerMeasure * beatDuration;
-    const tailSec = hasTailBeat ? beatDuration : 0;
-    const minGridSpanSec = measuresCount * measureDuration + tailSec;
-    const audioSpanSec = Math.max(segment.endSec - segment.startSec, minGridSpanSec);
+    const anacBeats = segment.anacrusisBeats ?? (hasAnacrusis ? 2 : 0);
+    const metricT1Sec = segment.metricT1Sec ?? (hasAnacrusis ? segment.startSec + anacBeats * beatDuration : segment.startSec);
 
-    // 1. Découpage avec marge de sécurité
-    const rawStartSec = Math.max(0, segment.startSec - marginSec);
-    const rawEndSec = Math.min(masterDurationSec, segment.startSec + audioSpanSec + marginSec);
+    // 1. Fenêtrage large centré sur la grille métrique et les bornes de coupe
+    const rawStartSec = Math.max(0, Math.min(metricT1Sec - 1.5, segment.startSec - 0.3));
+    const rawEndSec = Math.min(masterDurationSec, Math.max(metricT1Sec + measuresCount * measureDuration + 1.0, segment.endSec + 0.3));
     const sStart = Math.floor(rawStartSec * sampleRate);
     const sEnd = Math.floor(rawEndSec * sampleRate);
     if (sEnd <= sStart) return;
 
     const slicedPCM = masterPCM.slice(sStart, sEnd);
-    const trimStartSec = segment.startSec - rawStartSec;
-    const trimEndSec = Math.min(slicedPCM.length / sampleRate, trimStartSec + audioSpanSec);
+    const bufferStartSec = sStart / sampleRate;
+    const t1OffsetSec = Math.max(0, metricT1Sec - bufferStartSec);
+    const trimStartSec = Math.max(0, segment.startSec - bufferStartSec);
+    const trimEndSec = Math.min(slicedPCM.length / sampleRate, Math.max(trimStartSec + 0.1, segment.endSec - bufferStartSec));
     const beatResolutions = targetPattern.pack?.metadata.beatResolutions || defaultResolutions;
 
     // 2. Extraction mélodique & pas MIDI selon les mesures choisies
@@ -82,18 +81,19 @@ export function executeBatchAssign(options: BatchAssignOptions): { processedCoun
       trimStartSec, trimEndSec, referencePitch: targetPattern.referencePitch ?? 'C4',
       pitchShiftSemitones: 0, tessitura: targetPattern.tessitura, assignedLyricsText: targetPattern.assignedLyricsText,
       lowCutEnabled: targetPattern.lowCutEnabled !== false, enableTonePolish: targetPattern.enableTonePolish !== false,
+      t1OffsetSec,
     });
 
-    // 3. Mise à jour de la déclinaison active et du pattern
+    // 3. Mise à jour de la déclinaison active et du pattern avec ancre absolue t1OffsetSec
     const activeVarKey = targetPattern.activeVariantKey || 'spd100_pit0';
     updateVariant(targetId, activeVarKey, {
-      recordingResult: { pcm: slicedPCM, sampleRate },
-      trimStartSec, trimEndSec,
+      recordingResult: { pcm: slicedPCM, sampleRate, t1OffsetSec },
+      trimStartSec, trimEndSec, t1OffsetSec,
     });
 
     updatePattern(targetId, {
       baseBpm: bpm, bpm: bpm, measuresCount, hasAnacrusis, anacrusisBeats: segment.anacrusisBeats, pack: res.pack, rawAudioSamples: res.cleanPCM,
-      recordingResult: { pcm: slicedPCM, sampleRate }, trimStartSec, trimEndSec,
+      recordingResult: { pcm: slicedPCM, sampleRate, t1OffsetSec }, trimStartSec, trimEndSec, t1OffsetSec,
       rawPitchCurve: res.pitchCurve, pitchCurve: res.pitchCurve,
       anacrusisSteps: res.anacrusisSteps, mainSteps: res.mainSteps,
       isMidiInitialized: true, midiLocked: true,

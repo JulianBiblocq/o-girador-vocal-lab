@@ -48,7 +48,7 @@ export const PriseRecordingSection: React.FC<PriseRecordingSectionProps> = ({
   onOpenSlicerModal, onDirectImportAudio,
 }) => {
   const { t } = useLanguage();
-  const { activePattern, project, updatePattern, updateHarmonyConfig } = useToadaProject();
+  const { activePattern, project, updatePattern, updateVariant, updateHarmonyConfig } = useToadaProject();
 
   return (
     <div className="flex flex-col gap-3 w-full">
@@ -68,13 +68,19 @@ export const PriseRecordingSection: React.FC<PriseRecordingSectionProps> = ({
             referencePitch={effectivePitch} outputDeviceId={selectedOutputDeviceId}
             initialTrimStartSec={activeVariant.trimStartSec}
             initialTrimEndSec={activeVariant.trimEndSec}
+            initialT1OffsetSec={activeVariant.t1OffsetSec ?? activePattern.t1OffsetSec ?? activePattern.recordingResult?.t1OffsetSec}
             hasAnacrusis={hasAnacrusis}
             harmonyGrid={activePattern.harmonyGrid}
             harmonyConfig={project.harmonyConfig ?? DEFAULT_HARMONY_CONFIG}
             pitchShiftSemitones={activeVariant.pitchShiftSemitones}
             onUpdateGrid={(g) => updatePattern(activePattern.id, { harmonyGrid: g })}
             onUpdateHarmonyConfig={updateHarmonyConfig}
-            onReset={onResetRecording} onTrimChange={onTrimChange} onPackReady={onPackReady}
+            onReset={onResetRecording} onTrimChange={onTrimChange}
+            onT1OffsetChange={(t1) => {
+              updateVariant(activePattern.id, activeVariant.variantKey, { t1OffsetSec: t1 });
+              updatePattern(activePattern.id, { t1OffsetSec: t1 });
+            }}
+            onPackReady={onPackReady}
           />
         </>
       ) : (
