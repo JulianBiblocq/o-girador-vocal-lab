@@ -4,6 +4,16 @@
  */
 import type { ToadaDocument } from '../types/toadaDocument.types';
 import { SAMAMBAIA_12_TOADAS, getSamambaiaToadaById } from '../data/toadas/samambaiaToadasIndex';
+import { normalizeSongTitle } from './varalSongFilter';
+
+export function findDocByIdOrNormalizedTitle(docs: ToadaDocument[], queryIdOrTitle?: string | null): ToadaDocument | undefined {
+  if (!queryIdOrTitle) return undefined;
+  const direct = docs.find((d) => d.id === queryIdOrTitle);
+  if (direct) return direct;
+  const targetNorm = normalizeSongTitle(queryIdOrTitle);
+  if (!targetNorm) return undefined;
+  return docs.find((d) => normalizeSongTitle(d.titre) === targetNorm);
+}
 
 export function mergeWithLocalSamambaiaToadas(fetchedDocs: ToadaDocument[]): ToadaDocument[] {
   const map = new Map<string, ToadaDocument>();
@@ -12,12 +22,13 @@ export function mergeWithLocalSamambaiaToadas(fetchedDocs: ToadaDocument[]): Toa
   // 1. Les documents Firestore sont la source de vérité absolue (SSOT)
   fetchedDocs.forEach((d) => {
     map.set(d.id, d);
-    if (d.titre) fetchedTitles.add(d.titre.trim().toLowerCase());
+    const norm = normalizeSongTitle(d.titre);
+    if (norm) fetchedTitles.add(norm);
   });
 
   // 2. On n'ajoute une toada locale QUE si elle n'existe absolument pas dans Firestore
   SAMAMBAIA_12_TOADAS.forEach((local) => {
-    const titleKey = local.titre.trim().toLowerCase();
+    const titleKey = normalizeSongTitle(local.titre);
     if (!map.has(local.id) && !fetchedTitles.has(titleKey)) {
       map.set(local.id, local);
     }

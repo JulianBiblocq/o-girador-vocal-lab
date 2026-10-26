@@ -54,27 +54,15 @@ export function generateToadaFromSheet(project: ToadaProject, parsed: ParsedToad
     const nextSeg = parsed.segments[i + 1];
 
     if (seg.isMixedPair && nextSeg && nextSeg.isMixedPair && seg.role !== nextSeg.role) {
-      const puxSeg = seg.role === 'puxador' ? seg : nextSeg;
-      const coroSeg = seg.role === 'coro' ? seg : nextSeg;
+      const puxSeg = seg.role === 'puxador' ? seg : nextSeg, coroSeg = seg.role === 'coro' ? seg : nextSeg;
       const puxKey = buildNormalizedPatternKey('puxador', puxSeg.text, puxSeg.timeAnchors);
       let patPuxId = map.get(puxKey);
-      if (!patPuxId) {
-        const patPux = initPatternFromSegment('puxador', puxSeg, targetBpm, newPatterns.map((p) => p.name), 1);
-        newPatterns.push(patPux);
-        map.set(puxKey, (patPuxId = patPux.id));
-      }
-
+      if (!patPuxId) { const patPux = initPatternFromSegment('puxador', puxSeg, targetBpm, newPatterns.map((p) => p.name), 1); newPatterns.push(patPux); map.set(puxKey, (patPuxId = patPux.id)); }
       const coroKey = buildNormalizedPatternKey('coro', coroSeg.text, coroSeg.timeAnchors);
       let patCoroId = map.get(coroKey);
-      if (!patCoroId) {
-        const patCoro = initPatternFromSegment('coro', coroSeg, targetBpm, newPatterns.map((p) => p.name), 1);
-        newPatterns.push(patCoro);
-        map.set(coroKey, (patCoroId = patCoro.id));
-      }
-
+      if (!patCoroId) { const patCoro = initPatternFromSegment('coro', coroSeg, targetBpm, newPatterns.map((p) => p.name), 1); newPatterns.push(patCoro); map.set(coroKey, (patCoroId = patCoro.id)); }
       newSlots.push({ slotId: `slot-${newSlots.length + 1}`, puxadorPatternId: patPuxId, coroPatternId: patCoroId });
-      i += 2;
-      continue;
+      i += 2; continue;
     }
 
     let measuresCount: 1 | 2 | 3 | 4 = (seg.measuresCount ?? 1) as 1 | 2 | 3 | 4;
@@ -128,7 +116,6 @@ export function generateToadaFromSheet(project: ToadaProject, parsed: ParsedToad
   // Conservation prioritaire des lexiques et quiz existants (venant d'Organizador)
   const existingLex = parsed.docMeta?.notesLexique?.length ? parsed.docMeta.notesLexique : (project.toadaMeta?.notesLexique || []);
   const detectedLex = existingLex.length > 0 ? existingLex : detectToadaLexicon(generated);
-
   const existingQuiz = parsed.docMeta?.questionsQcm?.length ? parsed.docMeta.questionsQcm : (project.toadaMeta?.questionsQcm || []);
   const quizItems = existingQuiz.length > 0 ? existingQuiz : generateQuizFromLexicon(detectedLex);
 
@@ -140,6 +127,5 @@ export function generateToadaFromSheet(project: ToadaProject, parsed: ParsedToad
   if (globalHarmony) {
     generated.patterns.forEach((p) => { if (!p.harmonyGrid?.measures?.length) p.harmonyGrid = globalHarmony; });
   }
-
   return generated;
 }

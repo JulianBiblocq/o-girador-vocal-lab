@@ -18,6 +18,18 @@ export const TOADA_DE_NORTE_A_SUL: ToadaDocument = {
   signature: '4/4',
   bpmDefaut: 55,
   tonaliteDefaut: 'Dm',
+  rawTxtCode: `*[3]_ Negro _ [4]vem _ de _ Lu[1]anda _ [2]Trazen[3]_ do _ [4]o _ baque _ vir[1]ado _ [2]nação*
+[3]_ Negro _ [4]vem _ de _ Lu[1]anda _ [2]Trazen[3]_ do _ o _ [4]baque _ vir[1]ado _ [2]nação _ [3]_ [4]_
+*[1]_ [2]_ Trouxe _ a _ [3]caixa, _ Trouxe _ o _ [4]gonguê*
+*[1]_ [2]_ A _ ma[3]raca _ e _ o _ [4]tambor [1]_ [2]_ [3]_ [4]_*
+*[1]_ Mais _ [2]é _ no _ [3]baque _ do _ [4]maracatu*
+*[1]_ Es[2]trela _ Bri[3]lhante _ Brilha _ [4]de _ norte _ a _ sul*
+*[1]_ [2]É _ no _ [3]baque _ do _ [4]maracatu*
+*[1]_ [2]Sou _ batu[3]queiro _ de _ [4]Cangarussu*
+[1]_ Mais _ [2]é _ no _ [3]baque _ do _ [4]maracatu
+[1]_ Es[2]trela _ Bri[3]lhante _ Brilha _ [4]de _ norte _ a _ sul
+[1]_ [2]É _ no _ [3]baque _ do _ [4]maracatu
+[1]_ [2]Sou _ batu[3]queiro _ de _ [4]Cangarussu`,
   parolesOriginales: `Signature: 4/4
 Tempo: 55
 Tonalite: Dm
@@ -26,14 +38,9 @@ Tonalite: Dm
 /*Trazendo a coroa do rei Xangô*
 [Dm] +Negro nagô, negro nagô
 /Trazendo a coroa do rei Xangô
-[Dm] +*Negro nagô, negro nagô*
-/*Trazendo a coroa do rei Xangô*
-[Dm] +Negro nagô, negro nagô
-/Trazendo a coroa do rei Xangô
 [Section Couplet]
 [Gm] *Trouxe a caixa, trouxe o gonguê*
 [Dm] /*A maraca e o tambor*
-/*____*
 [A7] +*Mais é no baque do maracatu*
 [Dm] /*De norte a sul*
 [A7] +Mais é no baque do maracatu
@@ -46,13 +53,8 @@ Tonalite: Dm
 trazendou a coroa dou reï Changô
 Négrou nagô, négrou nagô
 trazendou a coroa dou reï Changô
-Négrou nagô, négrou nagô
-trazendou a coroa dou reï Changô
-Négrou nagô, négrou nagô
-trazendou a coroa dou reï Changô
 troussi a kaïcha, troussi ou gongouè
 a maraca i ou tambor
-____
 maïzé nou baqui dou maracatou
 di norti a sou
 maïzé nou baqui dou maracatou

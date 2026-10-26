@@ -9,7 +9,7 @@ import app, { auth, db } from '../firebase/config';
 import type { ToadaDocument } from '../types/toadaDocument.types';
 import type { ToadaProject } from '../types/toadaProject.types';
 import { isVaralSong, normalizeToadaDoc, mergeAndDeduplicateToadas } from '../utils/varalSongFilter';
-import { mergeWithLocalSamambaiaToadas, resolveLocalSamambaiaToada } from '../utils/samambaiaToadaResolver';
+import { mergeWithLocalSamambaiaToadas, resolveLocalSamambaiaToada, findDocByIdOrNormalizedTitle } from '../utils/samambaiaToadaResolver';
 import { normalizeHarmonyGrid, normalizeLexiconList, normalizeQuizList } from '../utils/toadaDocNormalizer';
 
 export type { ToadaDocument };
@@ -64,13 +64,20 @@ export async function fetchOrganizadorToadas(groupId?: string | null): Promise<T
   return mergeWithLocalSamambaiaToadas(mergeAndDeduplicateToadas(primaryDocs, repertoireDocs));
 }
 
-export async function fetchOrganizadorToadaById(songId: string, groupId?: string | null): Promise<ToadaDocument | null> {
+export async function fetchOrganizadorToadaById(songId: string, groupId?: string | null, songTitle?: string | null): Promise<ToadaDocument | null> {
   const local = resolveLocalSamambaiaToada(songId);
   try {
     const docSnap = await getDoc(doc(db, 'documents', songId));
     if (docSnap.exists() && isVaralSong(docSnap.data())) {
       return normalizeToadaDoc(docSnap.id, docSnap.data());
     }
+  } catch {}
+
+  const targetTitle = songTitle || (local ? local.titre : songId);
+  try {
+    const all = await fetchOrganizadorToadas(groupId);
+    const matched = findDocByIdOrNormalizedTitle(all, songId) || findDocByIdOrNormalizedTitle(all, targetTitle);
+    if (matched) return matched;
   } catch {}
 
   const groupCandidates = Array.from(new Set([groupId, groupId?.toLowerCase(), 'Samambaia', 'samambaia'].filter(Boolean) as string[]));
@@ -81,12 +88,10 @@ export async function fetchOrganizadorToadaById(songId: string, groupId?: string
         const pData = pSnap.data();
         const toadaDocId = pData.toadaDocId || pData.toadaId;
         if (toadaDocId) {
-          const linked = await fetchOrganizadorToadaById(toadaDocId, groupId);
+          const linked = await fetchOrganizadorToadaById(toadaDocId, groupId, songTitle);
           if (linked) { linked.repertoireId = pSnap.id; return linked; }
         }
-        if (isVaralSong(pData)) {
-          return normalizeToadaDoc(pSnap.id, pData, pSnap.id);
-        }
+        if (isVaralSong(pData)) return normalizeToadaDoc(pSnap.id, pData, pSnap.id);
       }
     } catch {}
   }

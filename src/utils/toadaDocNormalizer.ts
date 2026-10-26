@@ -94,6 +94,9 @@ export function normalizeToadaDoc(id: string, data: any, repertoireId?: string):
   const questionsQcm = normalizeQuizList(data.questionsQcm || data.quiz || data.customQuestions);
   const harmonyGrid = normalizeHarmonyGrid(data.harmonyGrid || data.globalHarmonyGrid || data.grilleHarmonique || data.chords);
 
+  const rawBpm = data.bpmDefaut ?? data.bpm ?? data.tempo ?? data.bpm_defaut ?? data.metadata?.bpmDefaut ?? data.metadata?.bpm ?? data.metadata?.tempo;
+  const parsedBpm = rawBpm !== undefined && rawBpm !== null && !isNaN(Number(rawBpm)) ? Number(rawBpm) : undefined;
+
   return {
     id,
     titre: data.titre || data.title || data.nom || 'Sans titre',
@@ -107,10 +110,10 @@ export function normalizeToadaDoc(id: string, data: any, repertoireId?: string):
     signature: data.signature || data.timeSignature || '4/4',
     timeSignature: data.timeSignature || data.signature || '4/4',
     tonaliteDefaut: data.tonaliteDefaut,
-    bpmDefaut: data.bpmDefaut || data.bpm,
+    bpmDefaut: parsedBpm,
     parolesOriginales: paroles,
     parolesPhonetiques: data.parolesPhonetiques || data.phonetique || data.activeToada?.parolesPhonetiques || '',
-    rawTxtCode: data.rawTxtCode || (typeof paroles === 'string' && paroles.includes('[') ? paroles : undefined),
+    rawTxtCode: data.rawTxtCode || (typeof paroles === 'string' && /\[(?:[1-9]|1[0-2])\]/.test(paroles) ? paroles : undefined),
     traduction: data.traduction || '',
     anecdote: data.anecdote || '',
     notesLexique,

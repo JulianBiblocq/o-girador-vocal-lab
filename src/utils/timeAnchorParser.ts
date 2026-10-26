@@ -68,24 +68,19 @@ export function extractTimeAnchors(rawText: string): ExtractedAnchorsResult {
   let m: RegExpExecArray | null;
   const regex = /\[(?:M(\d+)[•\.:])?([1-9]|1[0-2])\]/gi;
   while ((m = regex.exec(rawText)) !== null) {
-    matches.push({
-      absMeasure: m[1] ? parseInt(m[1], 10) : undefined,
-      beat: parseInt(m[2], 10), index: m.index, fullLength: m[0].length,
-    });
+    matches.push({ absMeasure: m[1] ? parseInt(m[1], 10) : undefined, beat: parseInt(m[2], 10), index: m.index, fullLength: m[0].length });
   }
   if (matches.length === 0) return { cleanText: rawText, timeAnchors: [] };
 
   const firstOneIdx = matches.findIndex((m) => m.beat === 1);
   let hasAnacrusis = false, anacrusisStartBeat: number | undefined, anacrusisBeats: number | undefined;
   if (firstOneIdx > 0) {
-    const sBeat = matches[0].beat;
-    hasAnacrusis = true; anacrusisStartBeat = sBeat; anacrusisBeats = Math.max(1, 5 - sBeat);
+    const sBeat = matches[0].beat; hasAnacrusis = true; anacrusisStartBeat = sBeat; anacrusisBeats = Math.max(1, 5 - sBeat);
   } else if (firstOneIdx === 0) {
     const textBefore = rawText.slice(0, matches[0].index).replace(/\[[^\]]+\]/g, '').replace(/[\*_]/g, '').trim();
     if (textBefore.length > 0) { hasAnacrusis = true; anacrusisStartBeat = 4; anacrusisBeats = 1; }
   } else if (firstOneIdx === -1 && matches.length > 0 && matches[0].beat > 1) {
-    const sBeat = matches[0].beat;
-    hasAnacrusis = true; anacrusisStartBeat = sBeat; anacrusisBeats = Math.max(1, 5 - sBeat);
+    const sBeat = matches[0].beat; hasAnacrusis = true; anacrusisStartBeat = sBeat; anacrusisBeats = Math.max(1, 5 - sBeat);
   }
 
   const timeAnchors: TimeAnchor[] = [];
@@ -127,9 +122,7 @@ export function extractTimeAnchors(rawText: string): ExtractedAnchorsResult {
 
 export function buildBeatLyricsMap(timeAnchors: TimeAnchor[]): Record<string, { isInitialRest: boolean; isSustainedHold: boolean; syllables: string[] }> {
   const map: Record<string, { isInitialRest: boolean; isSustainedHold: boolean; syllables: string[] }> = {};
-  for (const a of timeAnchors) {
-    map[`${a.measureOffset}_${a.beat}`] = { isInitialRest: !!a.isInitialRest, isSustainedHold: !!a.isSustainedHold, syllables: a.syllables || [] };
-  }
+  for (const a of timeAnchors) map[`${a.measureOffset}_${a.beat}`] = { isInitialRest: !!a.isInitialRest, isSustainedHold: !!a.isSustainedHold, syllables: a.syllables || [] };
   return map;
 }
 

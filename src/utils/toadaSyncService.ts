@@ -4,6 +4,7 @@
  */
 import type { ToadaProject } from '../types/toadaProject.types';
 import { fetchOrganizadorToadas, fetchOrganizadorToadaById, type ToadaDocument } from '../services/firebaseClient';
+import { normalizeSongTitle } from './varalSongFilter';
 import { parseToadaDocument } from './toadaSheetParser';
 import { generateToadaFromSheet } from './toadaConductorGenerator';
 
@@ -12,16 +13,17 @@ export async function syncProjectWithOrganizador(
   groupId?: string | null
 ): Promise<{ updatedProject: ToadaProject; toastMessage: string } | null> {
   const targetId = project.toadaMeta?.id || project.id;
+  const projectTitle = project.title || project.toadaMeta?.titre;
   let doc: ToadaDocument | null = null;
 
   try {
     if (targetId) {
-      doc = await fetchOrganizadorToadaById(targetId, groupId);
+      doc = await fetchOrganizadorToadaById(targetId, groupId, projectTitle);
     }
-    if (!doc && project.title) {
+    if (!doc && projectTitle) {
       const all = await fetchOrganizadorToadas(groupId);
-      const cleanTitle = project.title.trim().toLowerCase();
-      doc = all.find((d) => d.titre.trim().toLowerCase() === cleanTitle) ?? null;
+      const cleanTitle = normalizeSongTitle(projectTitle);
+      doc = all.find((d) => normalizeSongTitle(d.titre) === cleanTitle) ?? null;
     }
   } catch (err) {
     console.warn('[toadaSyncService] Échec récupération Organizador :', err);
@@ -30,9 +32,11 @@ export async function syncProjectWithOrganizador(
   if (!doc) return null;
 
   const parsed = parseToadaDocument(doc, 'puxador');
+  const targetBpm = Number(doc.bpmDefaut || (doc as any).bpm || (doc as any).tempo || parsed.docMeta?.bpmDefaut || project.bpm || 55);
   const freshProject = generateToadaFromSheet(project, parsed, {
-    bpm: doc.bpmDefaut || project.bpm || 55,
+    bpm: targetBpm,
   });
+  freshProject.bpm = targetBpm;
 
   // Préservation des audios enregistrés si les motifs correspondent
   const existingMap = new Map(project.patterns.map((p) => [`${p.role}_${p.name}`, p]));

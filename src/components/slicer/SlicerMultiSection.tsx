@@ -41,6 +41,13 @@ export const SlicerMultiSection: React.FC<SlicerMultiSectionProps> = ({
   const beatDur = 60 / bpm;
   const measureDur = beatDur * 4;
 
+  useEffect(() => {
+    if (project.bpm && project.bpm !== slicerBpm) {
+      setSlicerBpm(project.bpm);
+      if (metronomeActive) engine.setMetronome(true, project.bpm, gridOffsetSec);
+    }
+  }, [project.bpm, metronomeActive, engine, gridOffsetSec]);
+
   const handleAlignOrganizador = useCallback(() => {
     const detected = detectVocalPhrases(audio.pcm, audio.sampleRate);
     const generated = buildOrganizadorSlices(patterns, defaultRole, bpm, detected, gridOffsetSec);
@@ -52,7 +59,13 @@ export const SlicerMultiSection: React.FC<SlicerMultiSectionProps> = ({
     try {
       const res = await syncProjectWithOrganizador(project);
       if (res) {
+        const freshBpm = res.updatedProject.bpm || 55;
+        setSlicerBpm(freshBpm);
+        if (metronomeActive) engine.setMetronome(true, freshBpm, gridOffsetSec);
         onProjectUpdate?.(res.updatedProject);
+        const detected = detectVocalPhrases(audio.pcm, audio.sampleRate);
+        const freshSlices = buildOrganizadorSlices(res.updatedProject.patterns, defaultRole, freshBpm, detected, gridOffsetSec);
+        onSegmentsChange(freshSlices);
         window.dispatchEvent(new CustomEvent('app-toast', { detail: { type: 'success', message: res.toastMessage } }));
       }
     } finally { setIsSyncing(false); }

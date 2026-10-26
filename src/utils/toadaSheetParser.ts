@@ -10,9 +10,14 @@ import { splitHtmlOrTextIntoRawLines, parseRichLineIntoSegments } from './htmlLy
 import { extractInlineLineDirectives } from './sheetDirectiveHelper';
 import { extractSheetHeaders } from './sheetHeaderParser';
 import { preprocessTwoLineLyrics } from './timeAnchorParser';
+import { isOrganizadorStructureText, parseOrganizadorToadaSegments } from './toadaCardParser';
 
 export function parseRichTextLyricsAndPhonetics(rawOriginal: string, rawPhonetic?: string, boldRole: VocalRole = 'puxador'): ParsedLyricsSegment[] {
   const { cleanLyricsText } = extractSheetHeaders(rawOriginal);
+  if (isOrganizadorStructureText(cleanLyricsText)) {
+    return parseOrganizadorToadaSegments(cleanLyricsText, rawPhonetic, boldRole);
+  }
+
   const preprocessedLyrics = preprocessTwoLineLyrics(cleanLyricsText);
   const lines = preprocessedLyrics.split(/\r?\n/);
   const mergedLines: string[] = [];
@@ -94,7 +99,7 @@ export function parseToadaDocument(doc: ToadaDocument, boldRole: VocalRole = 'pu
     questionsQcm: doc.questionsQcm,
     harmonyGrid: doc.harmonyGrid,
     globalHarmonyGrid: doc.globalHarmonyGrid || doc.harmonyGrid,
-    bpmDefaut: doc.bpmDefaut || hMeta.bpmDefaut,
+    bpmDefaut: doc.bpmDefaut || hMeta.bpmDefaut || (doc as any).bpm || (doc as any).tempo ? Number(doc.bpmDefaut || hMeta.bpmDefaut || (doc as any).bpm || (doc as any).tempo) : undefined,
     tonaliteDefaut: doc.tonaliteDefaut || hMeta.tonaliteDefaut,
     rawTxtCode: doc.rawTxtCode,
     signature: doc.signature || doc.timeSignature || hMeta.signature,
