@@ -5,17 +5,19 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useToadaProject } from '../../context/ToadaProjectContext';
 import { useLanguage } from '../../i18n/LanguageContext';
-import { Play, Square, Plus, X, Layers } from 'lucide-react';
+import { Play, Square, Plus, X, Layers, GripVertical } from 'lucide-react';
 import { ToadaPlayerEngine } from './ToadaPlayerEngine';
 import { ConductorLiveTempoControl } from './ConductorLiveTempoControl';
 import { ConductorWaveformTimeline } from './ConductorWaveformTimeline';
 
 export const ToadaConductorStrip: React.FC<{ outputDeviceId?: string }> = ({ outputDeviceId }) => {
-  const { project, addSlot, removeSlot, updateSlot } = useToadaProject();
+  const { project, addSlot, removeSlot, updateSlot, reorderSlots } = useToadaProject();
   const { t } = useLanguage();
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentSlotIdx, setCurrentSlotIdx] = useState<number | null>(null);
   const [liveBpm, setLiveBpm] = useState(project.bpm || 88);
+  const [draggedIdx, setDraggedIdx] = useState<number | null>(null);
+  const [dropTargetIdx, setDropTargetIdx] = useState<number | null>(null);
 
   const player = useMemo(() => new ToadaPlayerEngine(), []);
   const puxPatterns = useMemo(() => project.patterns.filter((p) => p.role === 'puxador'), [project.patterns]);
@@ -78,15 +80,35 @@ export const ToadaConductorStrip: React.FC<{ outputDeviceId?: string }> = ({ out
 
         {project.slots.map((slot, idx) => {
           const isCurrent = currentSlotIdx === idx;
+          const isDropTarget = dropTargetIdx === idx && draggedIdx !== idx;
           return (
             <div
               key={slot.slotId}
+              draggable
+              onDragStart={(e) => { e.dataTransfer.setData('text/plain', String(idx)); setDraggedIdx(idx); }}
+              onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; }}
+              onDragEnter={() => setDropTargetIdx(idx)}
+              onDragLeave={() => { if (dropTargetIdx === idx) setDropTargetIdx(null); }}
+              onDrop={(e) => {
+                e.preventDefault();
+                if (draggedIdx !== null && draggedIdx !== idx) reorderSlots(draggedIdx, idx);
+                setDraggedIdx(null); setDropTargetIdx(null);
+              }}
+              onDragEnd={() => { setDraggedIdx(null); setDropTargetIdx(null); }}
               className={`flex flex-col gap-1 p-1 min-w-[125px] max-w-[145px] shrink-0 border transition-all rounded ${
-                isCurrent ? 'border-theme-accent bg-theme-accent/15 ring-2 ring-theme-accent shadow-md' : 'border-[var(--cordel-border-sub)] bg-[var(--cordel-subcard-bg)]'
+                isDropTarget ? 'border-amber-400 ring-2 ring-amber-500 bg-amber-500/15' :
+                isCurrent ? 'border-theme-accent bg-theme-accent/15 ring-2 ring-theme-accent shadow-md' :
+                draggedIdx === idx ? 'opacity-40 border-dashed border-[var(--cordel-border-sub)]' :
+                'border-[var(--cordel-border-sub)] bg-[var(--cordel-subcard-bg)]'
               }`}
             >
               <div className="flex items-center justify-between text-[10px] font-mono px-0.5 text-[var(--cordel-text)] font-bold">
-                <span>{t('blockLabel', { n: idx + 1 })}</span>
+                <div className="flex items-center gap-1 min-w-0">
+                  <span className="p-0.5 text-[var(--cordel-text)]/50 hover:text-theme-accent cursor-grab active:cursor-grabbing" title="Glisser pour réordonner">
+                    <GripVertical className="w-3 h-3" />
+                  </span>
+                  <span className="truncate">{t('blockLabel', { n: idx + 1 })}</span>
+                </div>
                 {project.slots.length > 1 && (
                   <button type="button" onClick={() => removeSlot(slot.slotId)} className="p-0.5 text-[var(--cordel-text)]/50 hover:text-red-500 cursor-pointer">
                     <X className="w-2.5 h-2.5" />

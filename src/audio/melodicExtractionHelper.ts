@@ -52,22 +52,26 @@ export function extractPatternMelodicData(params: ExtractMelodicParams): Extract
 
   const beatDuration = 60 / bpm;
   const measureDuration = beatsPerMeasure * beatDuration;
-  const t1OffsetSec = getPatternT1OffsetSec(hasAnacrusis, measureDuration, params.t1OffsetSec);
-  const totalDurationSec = getPatternTotalDurationSec(hasAnacrusis, measuresCount, measureDuration, 0.25, beatDuration, t1OffsetSec);
+  const cleanT1OffsetSec = hasAnacrusis ? measureDuration : 0.15;
+  const rawT1OffsetSec = getPatternT1OffsetSec(hasAnacrusis, measureDuration, params.t1OffsetSec);
+  const totalDurationSec = getPatternTotalDurationSec(hasAnacrusis, measuresCount, measureDuration, 0.25, beatDuration, cleanT1OffsetSec);
 
-  const vTrimStart = Math.max(0, params.trimStartSec ?? 0);
-  const vTrimEnd = params.trimEndSec && params.trimEndSec > 0 ? Math.min(totalDurationSec, params.trimEndSec) : totalDurationSec;
+  const rawTrimStart = Math.max(0, params.trimStartSec ?? 0);
+  const rawTrimEnd = params.trimEndSec && params.trimEndSec > 0 ? params.trimEndSec : (rawPCM.length / sampleRate);
+  const deltaT = cleanT1OffsetSec - rawT1OffsetSec;
+  const cleanTrimStart = Math.max(0, rawTrimStart + deltaT);
+  const cleanTrimEnd = Math.min(totalDurationSec, Math.max(cleanTrimStart + 0.1, rawTrimEnd + deltaT));
 
   const cleanPCM = createPaddedPreviewBuffer(
-    rawPCM, sampleRate, totalDurationSec, vTrimStart, vTrimEnd, 0,
-    lowCutEnabled, true, enableTonePolish
+    rawPCM, sampleRate, totalDurationSec, rawTrimStart, rawTrimEnd, 0,
+    lowCutEnabled, true, enableTonePolish, rawT1OffsetSec, cleanT1OffsetSec
   );
 
   const pitchCurve = extractContinuousPitchCurve(cleanPCM, {
     sampleRate,
     totalDurationSec,
-    trimStartSec: vTrimStart,
-    trimEndSec: vTrimEnd,
+    trimStartSec: cleanTrimStart,
+    trimEndSec: cleanTrimEnd,
     tessitura,
   });
 
@@ -77,12 +81,12 @@ export function extractPatternMelodicData(params: ExtractMelodicParams): Extract
     beatsPerMeasure,
     measuresCount,
     beatResolutions,
-    trimStartSec: vTrimStart,
-    trimEndSec: vTrimEnd,
+    trimStartSec: cleanTrimStart,
+    trimEndSec: cleanTrimEnd,
     pcm: cleanPCM,
     sampleRate,
     hasAnacrusis,
-    t1OffsetSec,
+    t1OffsetSec: cleanT1OffsetSec,
     pitchOffsetSemitones: pitchShiftSemitones,
     timeAnchors,
   });
@@ -93,7 +97,7 @@ export function extractPatternMelodicData(params: ExtractMelodicParams): Extract
   const anacrusisSteps = hasAnacrusis ? allSteps.slice(0, anacCount) : [];
   const mainSteps = (hasAnacrusis ? allSteps.slice(anacCount) : allSteps).map((s, idx) => ({ ...s, stepIndex: idx }));
 
-  const alignment = computeAlignmentMeta(t1OffsetSec, vTrimStart, vTrimEnd, bpm, hasAnacrusis);
+  const alignment = computeAlignmentMeta(cleanT1OffsetSec, cleanTrimStart, cleanTrimEnd, bpm, hasAnacrusis);
   const audioBase64 = audioBufferToWavBase64(cleanPCM, sampleRate);
   const pack: VocalPackExport = {
     schemaVersion: '1.0',
@@ -125,8 +129,8 @@ export function extractPatternMelodicData(params: ExtractMelodicParams): Extract
       audioBase64,
       nudgeMs: 0,
       trim: {
-        startSec: vTrimStart,
-        endSec: vTrimEnd,
+        startSec: cleanTrimStart,
+        endSec: cleanTrimEnd,
       },
     },
   };

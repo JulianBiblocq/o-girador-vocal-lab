@@ -17,6 +17,7 @@ export interface VocalStepData {
   midiNumber: number; // Ex: 60 pour C4
   syllable?: string; // Syllabe de la Letra chantée
   syllableAttack?: boolean; // Attaque franche ou plosive détectée
+  isTie?: boolean; // Note tenue liée au pas précédent
   velocity: number; // 0..127 ou 0..1
   decay: number; // Durée relative ou millisecondes
   microtiming?: number; // Décalage fin (nudge en ms ou fraction de pas)

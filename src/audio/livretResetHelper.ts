@@ -33,7 +33,7 @@ export interface ResetLivret1Result {
 }
 
 export function resetLivret1MelodicData(params: ResetLivret1Params): ResetLivret1Result {
-  const { rawAudio, sampleRate, totalDurationSec, activePattern, initialPack, beatsPerMeasure, measuresCount, hasAnacrusis, t1OffsetSec, smoothingLevel, tonic, scaleType } = params;
+  const { rawAudio, sampleRate, totalDurationSec, activePattern, initialPack, beatsPerMeasure, measuresCount, hasAnacrusis, smoothingLevel, tonic, scaleType } = params;
 
   // 1. Extraction neuve depuis le son brut sanctuarisé (YIN filtré + sanitizer anti-stalactites)
   const freshCurve = extractContinuousPitchCurve(rawAudio, {
@@ -45,6 +45,7 @@ export function resetLivret1MelodicData(params: ResetLivret1Params): ResetLivret
   });
 
   // 2. Quantification totale MIDI avec forçage de déverrouillage
+  const cleanT1 = hasAnacrusis ? beatsPerMeasure * (60 / (initialPack.metadata.bpm || 88)) : 0.15;
   const q = quantizePitchToSteps({
     pitchCurve: freshCurve,
     bpm: initialPack.metadata.bpm,
@@ -54,7 +55,7 @@ export function resetLivret1MelodicData(params: ResetLivret1Params): ResetLivret
     trimStartSec: 0,
     trimEndSec: totalDurationSec,
     hasAnacrusis,
-    t1OffsetSec,
+    t1OffsetSec: cleanT1,
     smoothingLevel,
     tonic,
     scaleType,

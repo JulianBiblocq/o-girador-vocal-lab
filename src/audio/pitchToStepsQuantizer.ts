@@ -89,7 +89,7 @@ export function quantizePitchToSteps(params: QuantizerParams): QuantizedGridResu
 
         allSteps.push({
           stepIndex: globalStepIndex++, active: true, note: canTie ? '───' : midiToNoteName(effectiveMidi),
-          midiNumber: effectiveMidi, syllable: '', syllableAttack: hasAttack, velocity: canTie ? 90 : 100, decay: stepDuration,
+          midiNumber: effectiveMidi, syllable: '', syllableAttack: hasAttack, isTie: Boolean(canTie), velocity: canTie ? 90 : 100, decay: stepDuration,
         });
         previousSegmentId = bestSegment.id;
       }

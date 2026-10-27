@@ -38,7 +38,9 @@ export const LivretMelodia: React.FC<LivretMelodiaProps> = (props) => {
   const rawPCM = activeVariant.recordingResult?.pcm ?? null;
   const sampleRate = activeVariant.recordingResult?.sampleRate ?? recordedSampleRate;
   const hasAudio = Boolean(rawPCM && rawPCM.length > 0);
-  const isMelodiaReady = Boolean(activePattern.pack && activePattern.rawAudioSamples && (activePattern.mainSteps?.length ?? 0) > 0);
+  const isMelodiaReady = Boolean(
+    activePattern.pack && activePattern.rawAudioSamples && (activePattern.mainSteps?.length ?? 0) > 0 && (activePattern as any).hasCanonicalAlignment
+  );
 
   useEffect(() => {
     if (!hasAudio || !rawPCM || isMelodiaReady) return;
@@ -49,11 +51,13 @@ export const LivretMelodia: React.FC<LivretMelodiaProps> = (props) => {
     const beatsPerMeasure = getBeatsPerMeasure(project.timeSignature);
     const beatResolutions = getDefaultBeatResolutions(project.timeSignature);
     const hasAnacrusis = activePattern.hasAnacrusis !== false;
+    const rawT1 = activeVariant.t1OffsetSec ?? activePattern.t1OffsetSec ?? activePattern.recordingResult?.t1OffsetSec;
 
     const res = extractPatternMelodicData({
       rawPCM, sampleRate, bpm: effectiveBpm, timeSignature: project.timeSignature,
       measuresCount: activePattern.measuresCount, beatsPerMeasure, beatResolutions,
       hasAnacrusis, trimStartSec: activeVariant.trimStartSec, trimEndSec: activeVariant.trimEndSec,
+      t1OffsetSec: rawT1,
       referencePitch: effectivePitch, pitchShiftSemitones: activeVariant.pitchShiftSemitones,
       tessitura: activePattern.tessitura, assignedLyricsText: activePattern.assignedLyricsText,
       lowCutEnabled: activeVariant.lowCutEnabled, enableTonePolish: activeVariant.enableTonePolish !== false,
@@ -62,7 +66,7 @@ export const LivretMelodia: React.FC<LivretMelodiaProps> = (props) => {
     updatePattern(activePattern.id, {
       pack: res.pack, rawAudioSamples: res.cleanPCM, rawPitchCurve: res.pitchCurve,
       pitchCurve: res.pitchCurve, anacrusisSteps: res.anacrusisSteps, mainSteps: res.mainSteps,
-      isMidiInitialized: true, midiLocked: true,
+      isMidiInitialized: true, midiLocked: true, hasCanonicalAlignment: true as any,
     });
   }, [hasAudio, rawPCM, isMelodiaReady, activePattern, activeVariant, project, sampleRate, updatePattern]);
 

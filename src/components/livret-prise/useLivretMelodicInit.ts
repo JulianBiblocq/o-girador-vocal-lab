@@ -38,7 +38,7 @@ interface UseLivretMelodicInitParams {
 export function useLivretMelodicInit(params: UseLivretMelodicInitParams) {
   const {
     recordedPCM, recordedSampleRate, totalDurationSec, effectiveBpm, beatsPerMeasure,
-    measuresCount, beatResolutions, hasAnacrusis, t1OffsetSec, activePattern, activeVariant,
+    measuresCount, beatResolutions, hasAnacrusis, activePattern, activeVariant,
     updatePattern, setActiveLivret, setMelodicData,
   } = params;
 
@@ -47,17 +47,18 @@ export function useLivretMelodicInit(params: UseLivretMelodicInitParams) {
       sampleRate: recordedSampleRate, totalDurationSec, trimStartSec: vTrimStart, trimEndSec: vTrimEnd,
       tessitura: tessitura || activePattern.tessitura,
     });
+    const cleanT1 = hasAnacrusis ? beatsPerMeasure * (60 / effectiveBpm) : 0.15;
     const q = quantizePitchToSteps({
       pitchCurve, bpm: effectiveBpm, beatsPerMeasure, measuresCount, beatResolutions,
       trimStartSec: vTrimStart, trimEndSec: vTrimEnd, pcm: cleanPCM, sampleRate: recordedSampleRate,
-      hasAnacrusis, t1OffsetSec, pitchOffsetSemitones: activeVariant.pitchShiftSemitones,
+      hasAnacrusis, t1OffsetSec: cleanT1, pitchOffsetSemitones: activeVariant.pitchShiftSemitones,
       timeAnchors: activePattern.timeAnchors,
     });
     const rawSteps = hasAnacrusis ? [...q.anacrusisSteps, ...q.gridSteps] : q.gridSteps;
     const allSteps = activePattern.assignedLyricsText ? applyLyricsSyllablesToSteps(rawSteps, activePattern.assignedLyricsText) : rawSteps;
     const anacCount = hasAnacrusis ? q.anacrusisSteps.length : 0;
     return { pitchCurve, allSteps, anacCount };
-  }, [recordedSampleRate, totalDurationSec, activePattern, effectiveBpm, beatsPerMeasure, measuresCount, beatResolutions, hasAnacrusis, t1OffsetSec, activeVariant.pitchShiftSemitones]);
+  }, [recordedSampleRate, totalDurationSec, activePattern, effectiveBpm, beatsPerMeasure, measuresCount, beatResolutions, hasAnacrusis, activeVariant.pitchShiftSemitones]);
 
   const handlePackReady = useCallback((pack: VocalPackExport) => {
     if (!recordedPCM) return;

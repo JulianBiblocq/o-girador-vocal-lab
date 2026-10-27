@@ -23,6 +23,7 @@ export interface ToadaProjectContextValue {
   addSlot: () => void;
   removeSlot: (slotId: string) => void;
   updateSlot: (slotId: string, puxadorId: string | null, coroId: string | null) => void;
+  reorderSlots: (fromIndex: number, toIndex: number) => void;
   setCueMode: (mode: string) => void;
   getPreviousConductorPattern: () => VocalPatternItem | null;
   swapAllRoles: () => void;

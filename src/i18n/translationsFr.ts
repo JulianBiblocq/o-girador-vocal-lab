@@ -112,9 +112,9 @@ export const translationsFr: VocalLabTranslations = {
 
   // Jalon 4.H - Découpe Melodyne & Gestion de Pack
   toolMelodyneCut: 'Découpe Melodyne', toolMelodyneCutTooltip: "Découper l'attaque (voix naturelle) sans scinder la note MIDI",
-  melodyneAttackSlider: "Préserver l'attaque : {percent} %", reExtractNotes: '↺ Repartir du Livret 1 (Son & Notes)',
-  reExtractNotesTooltip: "Annule les retouches Melodyne et MIDI pour retrouver le son d'origine du Livret 1 et ré-extraire les notes à neuf",
-  reExtractNotesConfirm: "Voulez-vous repartir du Livret 1 ? Les retouches Melodyne seront annulées et les briques MIDI ré-extraites depuis le son brut d'origine (les paroles saisies seront conservées).",
+  melodyneAttackSlider: "Préserver l'attaque : {percent} %", reExtractNotes: "🥁 Recalquer Rythme & Tenues sur l'Onde",
+  reExtractNotesTooltip: "Recalcule fidèlement les briques MIDI et les tenues de notes (isTie) calées sur la courbe verte pour Sequenciador",
+  reExtractNotesConfirm: "Recalquer les briques MIDI et les tenues de notes fidèlement sur la courbe verte de l'onde ?",
   reExtractSuccessToast: "Son et notes réinitialisés d'après le Livret 1",
   openPack: 'Ouvrir Pack (.json)', openPackTooltip: 'Charger et modifier un projet ou pack vocal JSON',
   exportPack: 'Exporter Pack (.json)', exportPackTooltip: 'Télécharger la Toada complète et toutes les déclinaisons audio',

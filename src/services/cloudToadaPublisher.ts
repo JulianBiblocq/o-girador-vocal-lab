@@ -1,14 +1,15 @@
 /**
  * cloudToadaPublisher.ts
- * Téléversement des WAV dans Storage et publication du pack Toada dans Firestore pour Sequenciador (< 125 lignes).
+ * Téléversement des WAV découpés dans Storage et publication du pack Toada (< 50 Ko)
+ * dans Firestore pour Sequenciador (< 120 lignes, Rule 6.A).
  */
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { doc, setDoc } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { storage } from './firebaseClient';
 import type { ToadaProject } from '../types/toadaProject.types';
-
 import { getSequenciadorToadaUrl } from '../utils/ecosystemUrls';
+import { pcmToWavBlob, slicePatternPcm, sanitizePatternForFirestore } from './toadaPublishHelpers';
 
 export function removeUndefinedFields<T>(obj: T): T {
   if (obj === null || obj === undefined) return null as unknown as T;
@@ -21,40 +22,6 @@ export function removeUndefinedFields<T>(obj: T): T {
     return clean as T;
   }
   return obj;
-}
-
-function pcmToWavBlob(pcm: Float32Array, sampleRate: number): Blob {
-  const numChannels = 1, bitsPerSample = 16;
-  const byteRate = sampleRate * numChannels * (bitsPerSample / 8);
-  const blockAlign = numChannels * (bitsPerSample / 8);
-  const dataSize = pcm.length * (bitsPerSample / 8);
-  const buffer = new ArrayBuffer(44 + dataSize);
-  const view = new DataView(buffer);
-
-  const writeStr = (off: number, s: string) => {
-    for (let i = 0; i < s.length; i++) view.setUint8(off + i, s.charCodeAt(i));
-  };
-  writeStr(0, 'RIFF');
-  view.setUint32(4, 36 + dataSize, true);
-  writeStr(8, 'WAVE');
-  writeStr(12, 'fmt ');
-  view.setUint32(16, 16, true);
-  view.setUint16(20, 1, true);
-  view.setUint16(22, numChannels, true);
-  view.setUint32(24, sampleRate, true);
-  view.setUint32(28, byteRate, true);
-  view.setUint16(32, blockAlign, true);
-  view.setUint16(34, bitsPerSample, true);
-  writeStr(36, 'data');
-  view.setUint32(40, dataSize, true);
-
-  let offset = 44;
-  for (let i = 0; i < pcm.length; i++) {
-    const s = Math.max(-1, Math.min(1, pcm[i]));
-    view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
-    offset += 2;
-  }
-  return new Blob([buffer], { type: 'audio/wav' });
 }
 
 export function getSequenciadorUrl(toadaId: string): string {
@@ -74,12 +41,24 @@ export async function publishToadaToSequencer(
     let audioUrl: string | undefined;
 
     const variant = p.variants?.[p.activeVariantKey] || Object.values(p.variants || {})[0];
-    const pcm = p.correctedAudioSamples || p.rawAudioSamples || variant?.recordingResult?.pcm;
+    const fullPcm = p.correctedAudioSamples || p.rawAudioSamples || variant?.recordingResult?.pcm;
     const sampleRate = variant?.recordingResult?.sampleRate || 44100;
+    const rawT1 = p.t1OffsetSec ?? variant?.t1OffsetSec ?? 0;
+    const trimStart = variant?.trimStartSec ?? p.trimStartSec ?? 0;
+    const trimEnd = variant?.trimEndSec ?? p.trimEndSec ?? (fullPcm ? fullPcm.length / sampleRate : 0);
 
-    if (pcm && pcm.length > 0) {
+    let slicedDurationSec: number | undefined;
+    let exportedT1OffsetSec: number | undefined;
+    let startOffsetSec: number | undefined;
+
+    if (fullPcm && fullPcm.length > 0) {
       try {
-        const wavBlob = pcmToWavBlob(pcm, sampleRate);
+        const sliced = slicePatternPcm(fullPcm, sampleRate, rawT1, trimStart, trimEnd);
+        slicedDurationSec = sliced.slicedDurationSec;
+        exportedT1OffsetSec = sliced.exportedT1OffsetSec;
+        startOffsetSec = sliced.startOffsetSec;
+
+        const wavBlob = pcmToWavBlob(sliced.slicedPcm, sampleRate);
         const storageRef = ref(storage, `vocalRecordings/${toadaId}_${p.id}.wav`);
         await uploadBytes(storageRef, wavBlob, { contentType: 'audio/wav' });
         audioUrl = await getDownloadURL(storageRef);
@@ -88,17 +67,8 @@ export async function publishToadaToSequencer(
       }
     }
 
-    processedPatterns.push({
-      ...p,
-      audioUrl,
-      variants: {
-        ...(p.variants || {}),
-        [p.activeVariantKey]: {
-          ...variant,
-          audioUrl,
-        },
-      },
-    });
+    const cleanPat = sanitizePatternForFirestore(p, audioUrl, slicedDurationSec, exportedT1OffsetSec, startOffsetSec);
+    processedPatterns.push(cleanPat);
   }
 
   onProgress?.('Enregistrement du pack dans Firestore...');

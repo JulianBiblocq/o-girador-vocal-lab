@@ -18,7 +18,6 @@ import { ChordGridBar } from '../common/ChordGridBar';
 import { HarmonyProfileSelector } from '../common/HarmonyProfileSelector';
 import { DEFAULT_HARMONY_CONFIG } from '../../types/harmony.types';
 import { moveBrick, type PianoRollTool } from './pianoRollInteractions';
-import { getPatternT1OffsetSec } from '../../utils/anacrusisTimingHelper';
 import { buildUpdatedVocalPackExport } from '../../audio/livretResetHelper';
 import { useMelodiaActions } from './useMelodiaActions';
 import { useLanguage } from '../../i18n/LanguageContext';
@@ -42,7 +41,7 @@ export const LivretMelodiaWorkspace: React.FC<LivretMelodiaWorkspaceProps> = ({
   const rawPCM = useMemo(() => activePattern.rawAudioSamples ?? cleanPCM ?? new Float32Array(0), [activePattern.rawAudioSamples, cleanPCM]);
   const rawPitchCurve = useMemo(() => activePattern.rawPitchCurve ?? pitchCurve, [activePattern.rawPitchCurve, pitchCurve]);
   const hasAnac = activePattern.hasAnacrusis !== false, anacLen = hasAnac ? beatsPerMeasure * (initialPack.metadata.beatResolutions?.[0] || 4) : 0;
-  const t1OffsetSec = getPatternT1OffsetSec(hasAnac, beatsPerMeasure * (60 / initialPack.metadata.bpm), activePattern.t1OffsetSec ?? activePattern.recordingResult?.t1OffsetSec);
+  const t1OffsetSec = hasAnac ? beatsPerMeasure * (60 / (initialPack.metadata.bpm || 88)) : 0.15;
   const activePCM = activePattern.correctedAudioSamples ?? rawPCM;
   const harmonyConfig = project.harmonyConfig ?? DEFAULT_HARMONY_CONFIG;
   const rawDefaultSteps = initialSteps ?? [...(activePattern.anacrusisSteps || []), ...(activePattern.mainSteps || [])];
