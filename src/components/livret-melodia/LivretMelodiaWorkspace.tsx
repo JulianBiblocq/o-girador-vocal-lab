@@ -22,7 +22,7 @@ import { MelodiaNextStepFooter } from './MelodiaNextStepFooter';
 import { HarmonyProfileSelector } from '../common/HarmonyProfileSelector';
 import { DEFAULT_HARMONY_CONFIG } from '../../types/harmony.types';
 import { moveBrick, type PianoRollTool } from './pianoRollInteractions';
-import { buildUpdatedVocalPackExport, upgradeStalePatternStepsIfNeeded } from '../../audio/livretResetHelper';
+import { buildUpdatedVocalPackExport, upgradeStalePatternStepsIfNeeded, extractProjectRawLyricsSource } from '../../audio/livretResetHelper';
 import { useMelodiaActions } from './useMelodiaActions';
 import { useLanguage } from '../../i18n/LanguageContext';
 
@@ -48,11 +48,10 @@ export const LivretMelodiaWorkspace: React.FC<LivretMelodiaWorkspaceProps> = ({
   const anacLen = hasAnac ? beatsPerMeasure * resPerBeat : 0, t1OffsetSec = hasAnac ? beatsPerMeasure * (60 / (initialPack.metadata.bpm || 88)) : 0.15;
   const activePCM = activePattern.correctedAudioSamples ?? rawPCM, harmonyConfig = project.harmonyConfig ?? DEFAULT_HARMONY_CONFIG;
   const rawDefaultSteps = initialSteps ?? [...(activePattern.anacrusisSteps || []), ...(activePattern.mainSteps || [])];
-  const expectedStepsCount = ((hasAnac ? beatsPerMeasure : 0) + measuresCount * beatsPerMeasure + 1) * resPerBeat;
+  const expectedStepsCount = ((hasAnac ? beatsPerMeasure : 0) + measuresCount * beatsPerMeasure + 1) * resPerBeat, rawTxtCode = useMemo(() => extractProjectRawLyricsSource(project, activePattern), [project, activePattern]);
   const defaultSteps = useMemo(() => upgradeStalePatternStepsIfNeeded({
-    rawDefaultSteps, expectedStepsCount, rawPitchCurve, activePattern, initialPack, beatsPerMeasure, measuresCount,
-    hasAnac, t1OffsetSec, resPerBeat, totalDurationSec, tonic, scaleType, rawPCM, sampleRate, rawTxtCode: project.toadaMeta?.rawTxtCode,
-  }), [rawDefaultSteps, expectedStepsCount, rawPitchCurve, activePattern, initialPack, beatsPerMeasure, measuresCount, hasAnac, t1OffsetSec, resPerBeat, totalDurationSec, tonic, scaleType, rawPCM, sampleRate, project.toadaMeta?.rawTxtCode]);
+    rawDefaultSteps, expectedStepsCount, rawPitchCurve, activePattern, initialPack, beatsPerMeasure, measuresCount, hasAnac, t1OffsetSec, resPerBeat, totalDurationSec, tonic, scaleType, rawPCM, sampleRate, rawTxtCode,
+  }), [rawDefaultSteps, expectedStepsCount, rawPitchCurve, activePattern, initialPack, beatsPerMeasure, measuresCount, hasAnac, t1OffsetSec, resPerBeat, totalDurationSec, tonic, scaleType, rawPCM, sampleRate, rawTxtCode]);
 
   const { regions, selectedRegionId, selectedRegion, displayedCurve, isProcessing, setSelectedRegionId, addRegion, addWholePhraseRegion, applyAutoSweetSpot, syncMovedBrickRegion, updateSelectedRegion, updateBounds, deleteSelected, clearAllRegions, restoreRegions } = useMelodyneAudioProcessor({
     initialRegions: activePattern.melodyneRegions || [], rawAudio: rawPCM, sampleRate, totalDurationSec, rawPitchCurve, allSteps: defaultSteps,
@@ -83,16 +82,17 @@ export const LivretMelodiaWorkspace: React.FC<LivretMelodiaWorkspaceProps> = ({
   }, [setAllSteps, initialPack, hasAnac, beatsPerMeasure, displayedCurve, anacLen, activePattern.id, updatePattern]);
 
   const recompute = useCallback((smooth: number, ton: string, sc: ScaleType) => {
-    const anchors = resolveFreshTimeAnchors(activePattern.rawLineCode, activePattern.timeAnchors, beatsPerMeasure, !hasAnac, activePattern.assignedLyricsText, project.toadaMeta?.rawTxtCode);
+    const anchors = resolveFreshTimeAnchors(activePattern.rawLineCode, activePattern.timeAnchors, beatsPerMeasure, !hasAnac, activePattern.assignedLyricsText, rawTxtCode);
     const q = quantizePitchToSteps({ pitchCurve: rawPitchCurve, bpm: initialPack.metadata.bpm, beatsPerMeasure, measuresCount, beatResolutions: initialPack.metadata.beatResolutions, trimStartSec: 0, trimEndSec: totalDurationSec, hasAnacrusis: hasAnac, t1OffsetSec, smoothingLevel: smooth, tonic: ton, scaleType: sc, pcm: rawPCM, sampleRate, timeAnchors: anchors });
     const rawSteps = hasAnac ? [...q.anacrusisSteps, ...q.gridSteps] : q.gridSteps;
     const aligned = (activePattern.assignedLyricsText || anchors?.length) ? applyLyricsSyllablesToSteps(rawSteps, activePattern.assignedLyricsText, anchors, beatsPerMeasure, resPerBeat) : rawSteps;
-    const steps = recalibrateBricksToLocalPitchCurve(aligned, rawPitchCurve, hasAnac ? 0 : t1OffsetSec, (60 / (initialPack.metadata.bpm || 88)) / resPerBeat, ton, sc);
+    const steps = recalibrateBricksToLocalPitchCurve(aligned, rawPitchCurve, hasAnac ? 0 : t1OffsetSec, (60 / (initialPack.metadata.bpm || 88)) / resPerBeat, ton, sc, smooth);
+    if (anchors && anchors !== activePattern.timeAnchors) updatePattern(activePattern.id, { timeAnchors: anchors });
     commitCurrentSnapshot({ steps }); handleUpdateSteps(steps, false);
-  }, [rawPitchCurve, initialPack, beatsPerMeasure, measuresCount, totalDurationSec, hasAnac, t1OffsetSec, rawPCM, sampleRate, activePattern.rawLineCode, activePattern.assignedLyricsText, activePattern.timeAnchors, project.toadaMeta?.rawTxtCode, resPerBeat, commitCurrentSnapshot, handleUpdateSteps]);
+  }, [rawPitchCurve, initialPack, beatsPerMeasure, measuresCount, totalDurationSec, hasAnac, t1OffsetSec, rawPCM, sampleRate, activePattern.id, activePattern.rawLineCode, activePattern.assignedLyricsText, activePattern.timeAnchors, rawTxtCode, resPerBeat, updatePattern, commitCurrentSnapshot, handleUpdateSteps]);
 
   const { handleReset, handleShiftOctave, handleAlignOctaveToBricks, handleDeleteSelected, handleSimplifyMelody, handleWeldSelected } = useMelodiaActions({
-    rawPCM, sampleRate, totalDurationSec, activePattern, initialPack, beatsPerMeasure, measuresCount, hasAnac, t1OffsetSec, smoothingLevel, tonic, scaleType, rawPitchCurve, allSteps, selectedRegion, selectedRegionId, selectedStepIdx, regions, clearAllRegions, deleteSelected, commitCurrentSnapshot, setAllSteps, updatePattern, handleUpdateSteps, t,
+    rawPCM, sampleRate, totalDurationSec, activePattern, initialPack, beatsPerMeasure, measuresCount, hasAnac, t1OffsetSec, smoothingLevel, tonic, scaleType, rawPitchCurve, allSteps, selectedRegion, selectedRegionId, selectedStepIdx, regions, clearAllRegions, deleteSelected, commitCurrentSnapshot, setAllSteps, updatePattern, handleUpdateSteps, t, rawTxtCode,
   });
 
   useEffect(() => useVocalTransportStore.getState().registerHandlers({

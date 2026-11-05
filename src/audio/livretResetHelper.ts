@@ -13,29 +13,30 @@ import { resolveFreshTimeAnchors } from '../utils/timeAnchorParser';
 import type { ScaleType } from './scaleQuantizer';
 
 export interface ResetLivret1Params {
-  rawAudio: Float32Array;
-  sampleRate: number;
-  totalDurationSec: number;
-  activePattern: VocalPatternItem;
-  initialPack: VocalPackExport;
-  beatsPerMeasure: number;
-  measuresCount: number;
-  hasAnacrusis: boolean;
-  t1OffsetSec: number;
-  smoothingLevel: number;
-  tonic: string;
-  scaleType: ScaleType;
+  rawAudio: Float32Array; sampleRate: number; totalDurationSec: number;
+  activePattern: VocalPatternItem; initialPack: VocalPackExport; beatsPerMeasure: number;
+  measuresCount: number; hasAnacrusis: boolean; t1OffsetSec: number;
+  smoothingLevel: number; tonic: string; scaleType: ScaleType; rawTxtCode?: string;
 }
 
 export interface ResetLivret1Result {
-  freshCurve: PitchCurvePoint[];
-  newSteps: VocalStepData[];
-  anacrusisSteps: VocalStepData[];
-  mainSteps: VocalStepData[];
+  freshCurve: PitchCurvePoint[]; newSteps: VocalStepData[];
+  anacrusisSteps: VocalStepData[]; mainSteps: VocalStepData[];
+  freshAnchors?: import('../types/toadaDocument.types').TimeAnchor[];
+}
+
+export function extractProjectRawLyricsSource(project?: any, pat?: VocalPatternItem): string | undefined {
+  if (pat?.rawLineCode && /\[(?:M\d+[•·\.:])?([1-9]|1[0-2])\]/i.test(pat.rawLineCode)) return pat.rawLineCode;
+  const sheetLines: string[] = Array.isArray(project?.sheetLines)
+    ? project.sheetLines.map((s: any) => s?.rawLineCode).filter(Boolean)
+    : [];
+  const metaOrig = typeof project?.toadaMeta?.parolesOriginales === 'string' ? project.toadaMeta.parolesOriginales : '';
+  const metaRaw = project?.toadaMeta?.rawTxtCode || '';
+  return [pat?.rawLineCode, ...sheetLines, metaRaw, metaOrig].filter(Boolean).join('\n') || undefined;
 }
 
 export function resetLivret1MelodicData(params: ResetLivret1Params): ResetLivret1Result {
-  const { rawAudio, sampleRate, totalDurationSec, activePattern, initialPack, beatsPerMeasure, measuresCount, hasAnacrusis, smoothingLevel, tonic, scaleType } = params;
+  const { rawAudio, sampleRate, totalDurationSec, activePattern, initialPack, beatsPerMeasure, measuresCount, hasAnacrusis, smoothingLevel, tonic, scaleType, rawTxtCode } = params;
 
   const freshCurve = extractContinuousPitchCurve(rawAudio, {
     sampleRate, totalDurationSec, trimStartSec: 0, trimEndSec: totalDurationSec, tessitura: activePattern.tessitura,
@@ -43,7 +44,7 @@ export function resetLivret1MelodicData(params: ResetLivret1Params): ResetLivret
 
   const bpm = initialPack.metadata.bpm || 88, beatDur = 60 / bpm;
   const cleanT1 = hasAnacrusis ? beatsPerMeasure * beatDur : 0.15;
-  const freshAnchors = resolveFreshTimeAnchors(activePattern.rawLineCode, activePattern.timeAnchors, beatsPerMeasure, !hasAnacrusis, activePattern.assignedLyricsText);
+  const freshAnchors = resolveFreshTimeAnchors(activePattern.rawLineCode, activePattern.timeAnchors, beatsPerMeasure, !hasAnacrusis, activePattern.assignedLyricsText, rawTxtCode);
   const q = quantizePitchToSteps({
     pitchCurve: freshCurve, bpm, beatsPerMeasure, measuresCount,
     beatResolutions: initialPack.metadata.beatResolutions, trimStartSec: 0, trimEndSec: totalDurationSec,
@@ -56,12 +57,11 @@ export function resetLivret1MelodicData(params: ResetLivret1Params): ResetLivret
   const alignedSteps = (activePattern.assignedLyricsText || freshAnchors?.length)
     ? applyLyricsSyllablesToSteps(rawSteps, activePattern.assignedLyricsText, freshAnchors, beatsPerMeasure, stepsPerBeat)
     : rawSteps;
-  const newSteps = recalibrateBricksToLocalPitchCurve(alignedSteps, freshCurve, hasAnacrusis ? 0 : cleanT1, beatDur / stepsPerBeat, tonic, scaleType);
+  const newSteps = recalibrateBricksToLocalPitchCurve(alignedSteps, freshCurve, hasAnacrusis ? 0 : cleanT1, beatDur / stepsPerBeat, tonic, scaleType, smoothingLevel);
   const anacLen = hasAnacrusis ? q.anacrusisSteps.length : 0;
 
   return {
-    freshCurve,
-    newSteps,
+    freshCurve, newSteps, freshAnchors,
     anacrusisSteps: hasAnacrusis ? newSteps.slice(0, anacLen) : [],
     mainSteps: (hasAnacrusis ? newSteps.slice(anacLen) : newSteps).map((s, idx) => ({ ...s, stepIndex: idx })),
   };
@@ -78,9 +78,9 @@ export function upgradeStalePatternStepsIfNeeded(params: {
   const anchors = resolveFreshTimeAnchors(activePattern.rawLineCode, activePattern.timeAnchors, beatsPerMeasure, !hasAnac, activePattern.assignedLyricsText, rawTxtCode);
   const bpm = initialPack.metadata.bpm || 88, stepDur = (60 / bpm) / resPerBeat;
   const hasStaleLeadingRest = Boolean(rawPitchCurve.length > 0 && anchors?.some((a) => {
-    if (!a.hasLeadingRest || !(a.syllables?.length)) return false;
+    if (a.isRest || a.isInitialRest || !(a.syllables?.length)) return false;
     const bStart = (a.measureOffset * beatsPerMeasure + (a.beat - 1)) * resPerBeat;
-    const subSteps = rawDefaultSteps.slice(bStart + 1, bStart + resPerBeat);
+    const subSteps = rawDefaultSteps.slice(bStart + (a.hasLeadingRest ? 1 : 0), bStart + resPerBeat);
     return !subSteps.some((s) => s.active && s.note !== '───' && s.syllable);
   }));
   if (hasStaleLeadingRest) {

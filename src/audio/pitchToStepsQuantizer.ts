@@ -57,7 +57,8 @@ export function quantizePitchToSteps(params: QuantizerParams): QuantizedGridResu
       const sylCount = anchor?.syllables?.length || 0, startSub = hasLeadingRest ? 1 : 0, availRes = hasLeadingRest ? Math.max(1, resolution - 1) : resolution;
       const subdivTargets = new Set<number>();
       for (let k = 0; k < sylCount; k++) subdivTargets.add(Math.min(resolution - 1, startSub + Math.floor((k * availRes) / sylCount)));
-      const beatPitch = computeTrimmedMedianMidi(pitchCurve, beatStartTime, beatStartTime + beatDuration, 0.2);
+      const beatPitch = computeTrimmedMedianMidi(pitchCurve, beatStartTime, beatStartTime + beatDuration, 0.15)
+        ?? (sylCount > 0 && !isInitialRest ? computeTrimmedMedianMidi(pitchCurve, beatStartTime, beatStartTime + beatDuration * 1.6, 0.15) : null);
       let hasVoicedInBeat = false;
 
       for (let s = 0; s < resolution; s++) {
@@ -68,7 +69,7 @@ export function quantizePitchToSteps(params: QuantizerParams): QuantizedGridResu
           prevMidiFloat = 0; continue;
         }
         if (hasLeadingRest && s === 0) {
-          const s0Voiced = computeTrimmedMedianMidi(pitchCurve, stepStart, stepEnd, 0.2) !== null;
+          const s0Voiced = computeTrimmedMedianMidi(pitchCurve, stepStart, stepEnd, 0.15) !== null;
           if (prevStep?.active && prevStep.midiNumber > 0 && s0Voiced) {
             allSteps.push({ stepIndex: globalStepIndex++, active: true, note: '───', midiNumber: prevStep.midiNumber, syllable: '', syllableAttack: false, isTie: true, velocity: 90, decay: stepDuration });
           } else {
@@ -78,9 +79,9 @@ export function quantizePitchToSteps(params: QuantizerParams): QuantizedGridResu
           continue;
         }
 
-        let localPitch = computeTrimmedMedianMidi(pitchCurve, stepStart, stepEnd, 0.2);
+        let localPitch = computeTrimmedMedianMidi(pitchCurve, stepStart, stepEnd, 0.15);
         if (!localPitch && sylCount > 0 && s >= startSub && beatPitch && (subdivTargets.has(s) || hasVoicedInBeat)) {
-          localPitch = computeTrimmedMedianMidi(pitchCurve, stepStart, beatStartTime + beatDuration, 0.2) ?? beatPitch;
+          localPitch = computeTrimmedMedianMidi(pitchCurve, stepStart, beatStartTime + beatDuration, 0.15) ?? beatPitch;
         }
         const bestSegment = findSegmentForStep(segments, stepStart, stepEnd, stepDuration);
         if (!localPitch && (!bestSegment || stepEnd <= trimStartSec)) {
@@ -113,7 +114,7 @@ export function quantizePitchToSteps(params: QuantizerParams): QuantizedGridResu
   }
 
   const baseStepDur = beatDuration / (beatResolutions[0] || 4);
-  const calibrated = recalibrateBricksToLocalPitchCurve(allSteps, pitchCurve, gridStartSec, baseStepDur, tonic, scaleType);
+  const calibrated = recalibrateBricksToLocalPitchCurve(allSteps, pitchCurve, gridStartSec, baseStepDur, tonic, scaleType, params.smoothingLevel ?? 0.15);
   const anacrusisCount = hasAnac ? beatsPerMeasure * (beatResolutions[0] || 4) : 0;
   return {
     anacrusisSteps: hasAnac ? calibrated.slice(0, anacrusisCount) : [],

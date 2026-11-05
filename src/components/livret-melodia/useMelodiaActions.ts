@@ -20,7 +20,7 @@ interface UseMelodiaActionsParams {
   regions: MelodyneRegion[]; clearAllRegions: () => void; deleteSelected: () => void;
   commitCurrentSnapshot: (partial?: any) => void; setAllSteps: (steps: VocalStepData[], commit?: boolean) => void;
   updatePattern: (id: string, partial: any) => void; handleUpdateSteps: (newSteps: VocalStepData[], commit?: boolean) => void;
-  t: (k: any) => string;
+  t: (k: any) => string; rawTxtCode?: string;
 }
 
 export function useMelodiaActions(p: UseMelodiaActionsParams) {
@@ -30,13 +30,14 @@ export function useMelodiaActions(p: UseMelodiaActionsParams) {
       rawAudio: p.rawPCM, sampleRate: p.sampleRate, totalDurationSec: p.totalDurationSec,
       activePattern: p.activePattern, initialPack: p.initialPack, beatsPerMeasure: p.beatsPerMeasure,
       measuresCount: p.measuresCount, hasAnacrusis: p.hasAnac, t1OffsetSec: p.t1OffsetSec,
-      smoothingLevel: p.smoothingLevel, tonic: p.tonic, scaleType: p.scaleType,
+      smoothingLevel: p.smoothingLevel, tonic: p.tonic, scaleType: p.scaleType, rawTxtCode: p.rawTxtCode,
     });
     p.commitCurrentSnapshot({ steps: res.newSteps, rawPitchCurve: res.freshCurve, melodyneRegions: [] });
     p.setAllSteps(res.newSteps, false);
     p.updatePattern(p.activePattern.id, {
       rawPitchCurve: res.freshCurve, pitchCurve: res.freshCurve, anacrusisSteps: res.anacrusisSteps,
-      mainSteps: res.mainSteps, correctedAudioSamples: null, melodyneRegions: [], isMidiInitialized: true, midiLocked: false,
+      mainSteps: res.mainSteps, timeAnchors: res.freshAnchors ?? p.activePattern.timeAnchors,
+      correctedAudioSamples: null, melodyneRegions: [], isMidiInitialized: true, midiLocked: false,
     });
     window.dispatchEvent(new CustomEvent('app-toast', { detail: { message: p.t('reExtractSuccessToast'), type: 'success' } }));
   }, [p]);

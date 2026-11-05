@@ -7,6 +7,7 @@ import type { VocalStepData } from '../../types/vocalPack.types';
 import { applyLyricsSyllablesToSteps, reconstructWordsFromSteps } from '../../utils/syllableAligner';
 import { resolveFreshTimeAnchors } from '../../utils/timeAnchorParser';
 import { recalibrateBricksToLocalPitchCurve } from '../../audio/pitchStepSegmentation';
+import { extractProjectRawLyricsSource } from '../../audio/livretResetHelper';
 import { getBeatsPerMeasure } from '../../utils/musicalMath';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { CordelScroll, CordelBulb, CordelSpark } from '../common/CordelIcons';
@@ -45,7 +46,7 @@ export const LetraEditorPanel: React.FC<LetraEditorPanelProps> = ({ allSteps, on
     const anchors = resolveFreshTimeAnchors(
       isSameText ? activePattern.rawLineCode : rawText,
       isSameText ? activePattern.timeAnchors : undefined,
-      beatsPerM, !hasAnac, rawText, project.toadaMeta?.rawTxtCode
+      beatsPerM, !hasAnac, rawText, extractProjectRawLyricsSource(project, activePattern)
     );
     const aligned = applyLyricsSyllablesToSteps(allSteps, rawText, anchors, beatsPerM, 4);
     const stepDur = (60 / (activePattern.bpm ?? project.bpm ?? 88)) / 4;

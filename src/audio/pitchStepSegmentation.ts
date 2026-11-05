@@ -26,18 +26,18 @@ export function computeTrimmedMedianMidi(
   pitchCurve: PitchCurvePoint[],
   startSec: number,
   endSec: number,
-  trimRatio = 0.2
+  trimRatio = 0.15
 ): { midi: number; midiFloat: number } | null {
   if (!pitchCurve || pitchCurve.length === 0 || endSec <= startSec) return null;
   let pts = pitchCurve.filter((p) => p.timeSec >= startSec && p.timeSec <= endSec && p.midiFloat >= 36 && p.midiFloat <= 96);
   if (pts.length === 0) {
-    pts = pitchCurve.filter((p) => p.timeSec >= startSec - 0.018 && p.timeSec <= endSec + 0.018 && p.midiFloat >= 36 && p.midiFloat <= 96);
+    pts = pitchCurve.filter((p) => p.timeSec >= startSec - 0.025 && p.timeSec <= endSec + 0.025 && p.midiFloat >= 36 && p.midiFloat <= 96);
   }
   if (pts.length === 0) return null;
 
   const sorted = pts.map((p) => p.midiFloat).sort((a, b) => a - b);
   const n = sorted.length;
-  const trimCount = n >= 5 ? Math.floor(n * trimRatio) : (n >= 3 ? 1 : 0);
+  const trimCount = n >= 4 ? Math.max(1, Math.floor(n * trimRatio)) : (n === 3 ? 1 : 0);
   const central = sorted.slice(trimCount, n - trimCount);
   const mid = Math.floor(central.length / 2);
   const midiFloat = central.length % 2 === 0 ? (central[mid - 1] + central[mid]) / 2 : central[mid];
@@ -50,28 +50,40 @@ export function recalibrateBricksToLocalPitchCurve(
   gridStartSec: number,
   stepDurationSec: number,
   tonic = 'C',
-  scaleType: ScaleType = 'chromatic'
+  scaleType: ScaleType = 'chromatic',
+  smoothingLevel = 0.15
 ): VocalStepData[] {
   if (!pitchCurve || pitchCurve.length === 0 || !steps.length || stepDurationSec <= 0) return steps;
   const result = steps.map((s) => ({ ...s }));
+  const bricks: Array<{ startIdx: number; endIdx: number; midiFloat: number }> = [];
 
   for (let i = 0; i < result.length; i++) {
     if (!result[i].active || result[i].note === '───') continue;
     let endIdx = i;
     while (endIdx + 1 < result.length && result[endIdx + 1].active && result[endIdx + 1].note === '───') endIdx++;
-
-    const startSec = gridStartSec + i * stepDurationSec;
-    const endSec = gridStartSec + (endIdx + 1) * stepDurationSec;
-    const local = computeTrimmedMedianMidi(pitchCurve, startSec, endSec, 0.2);
-    if (local) {
-      let targetMidi = local.midi;
-      if (scaleType !== 'chromatic') targetMidi = snapMidiToScale(targetMidi, tonic, scaleType);
-      result[i] = { ...result[i], midiNumber: targetMidi, note: midiToNoteName(targetMidi), isTie: false };
-      for (let k = i + 1; k <= endIdx; k++) {
-        result[k] = { ...result[k], midiNumber: targetMidi, note: '───', isTie: true };
-      }
-    }
+    const startSec = gridStartSec + i * stepDurationSec, endSec = gridStartSec + (endIdx + 1) * stepDurationSec;
+    const local = computeTrimmedMedianMidi(pitchCurve, startSec, endSec, 0.15);
+    bricks.push({ startIdx: i, endIdx, midiFloat: local ? local.midiFloat : result[i].midiNumber });
     i = endIdx;
+  }
+
+  for (let b = 0; b < bricks.length; b++) {
+    const cur = bricks[b];
+    let effFloat = cur.midiFloat;
+    if (smoothingLevel > 0.25 && bricks.length > 1) {
+      const prevF = b > 0 ? bricks[b - 1].midiFloat : cur.midiFloat;
+      const nextF = b + 1 < bricks.length ? bricks[b + 1].midiFloat : cur.midiFloat;
+      const maxJump = 0.6 + smoothingLevel * 1.4;
+      const pWeight = Math.abs(prevF - cur.midiFloat) <= maxJump ? (smoothingLevel - 0.25) * 0.45 : 0;
+      const nWeight = Math.abs(nextF - cur.midiFloat) <= maxJump ? (smoothingLevel - 0.25) * 0.45 : 0;
+      effFloat = (cur.midiFloat + prevF * pWeight + nextF * nWeight) / (1 + pWeight + nWeight);
+    }
+    let targetMidi = Math.round(effFloat);
+    if (scaleType !== 'chromatic') targetMidi = snapMidiToScale(targetMidi, tonic, scaleType);
+    result[cur.startIdx] = { ...result[cur.startIdx], midiNumber: targetMidi, note: midiToNoteName(targetMidi), isTie: false };
+    for (let k = cur.startIdx + 1; k <= cur.endIdx; k++) {
+      result[k] = { ...result[k], midiNumber: targetMidi, note: '───', isTie: true };
+    }
   }
   return result;
 }

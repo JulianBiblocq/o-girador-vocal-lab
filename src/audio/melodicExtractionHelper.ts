@@ -11,6 +11,7 @@ import { extractContinuousPitchCurve } from './pitchExtractor';
 import { quantizePitchToSteps } from './pitchToStepsQuantizer';
 import { recalibrateBricksToLocalPitchCurve } from './pitchStepSegmentation';
 import { applyLyricsSyllablesToSteps } from '../utils/syllableAligner';
+import { resolveFreshTimeAnchors } from '../utils/timeAnchorParser';
 import { getPatternT1OffsetSec, getPatternTotalDurationSec } from '../utils/anacrusisTimingHelper';
 import { computeAlignmentMeta } from '../utils/alignmentMath';
 
@@ -72,17 +73,18 @@ export function extractPatternMelodicData(params: ExtractMelodicParams): Extract
   const pitchCurve = extractContinuousPitchCurve(cleanPCM, {
     sampleRate, totalDurationSec, trimStartSec: cleanTrimStart, trimEndSec: cleanTrimEnd, tessitura,
   });
+  const effectiveAnchors = resolveFreshTimeAnchors(undefined, timeAnchors, beatsPerMeasure, !hasAnacrusis, assignedLyricsText);
 
   const q = quantizePitchToSteps({
     pitchCurve, bpm, beatsPerMeasure, measuresCount, beatResolutions,
     trimStartSec: cleanTrimStart, trimEndSec: cleanTrimEnd, pcm: cleanPCM, sampleRate,
-    hasAnacrusis, t1OffsetSec: cleanT1OffsetSec, pitchOffsetSemitones: pitchShiftSemitones, timeAnchors,
+    hasAnacrusis, t1OffsetSec: cleanT1OffsetSec, pitchOffsetSemitones: pitchShiftSemitones, timeAnchors: effectiveAnchors,
   });
 
   const rawSteps = hasAnacrusis ? [...q.anacrusisSteps, ...q.gridSteps] : q.gridSteps;
   const stepsPerBeat = beatResolutions[0] || 4;
-  const alignedSteps = (assignedLyricsText || (timeAnchors && timeAnchors.length > 0))
-    ? applyLyricsSyllablesToSteps(rawSteps, assignedLyricsText, timeAnchors, beatsPerMeasure, stepsPerBeat)
+  const alignedSteps = (assignedLyricsText || (effectiveAnchors && effectiveAnchors.length > 0))
+    ? applyLyricsSyllablesToSteps(rawSteps, assignedLyricsText, effectiveAnchors, beatsPerMeasure, stepsPerBeat)
     : rawSteps;
   const allSteps = recalibrateBricksToLocalPitchCurve(
     alignedSteps, pitchCurve, hasAnacrusis ? 0 : cleanT1OffsetSec, beatDuration / stepsPerBeat, referencePitch.replace(/\d+$/, '') || 'C', 'chromatic'

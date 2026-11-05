@@ -184,4 +184,20 @@ const upgraded = upgradeStalePatternStepsIfNeeded({
 assert.equal(upgraded[9].syllable, 'Ne', 'upgradeStalePatternStepsIfNeeded doit restaurer "Ne" sur ELAN•T3 s=1');
 assert.equal(upgraded[10].syllable, 'gro ', 'upgradeStalePatternStepsIfNeeded doit restaurer "gro " sur ELAN•T3 s=2');
 
-console.log('✅ TOUS LES TESTS LIVRET 4 (LEADING REST & LOCAL TRIMMED MEDIAN PITCH) SONTVERTS !');
+// 8. Vérification de resolveFreshTimeAnchors sans rawLineCode (auto-réparation depuis parolesOriginales ou fallbackText)
+const corruptedAnchors = dir.timeAnchors.map((a) =>
+  (a.beat === 3 && (a.measureOffset === 0 || a.measureOffset === 1))
+    ? { ...a, isRest: a.measureOffset === 0, isInitialRest: a.measureOffset === 0, isSustainedHold: a.measureOffset === 1, hasLeadingRest: false, textSlice: '', syllables: [] }
+    : a
+);
+const repairedFromFallbackOnly = resolveFreshTimeAnchors(undefined, corruptedAnchors, 4, false, 'Negro vem de Luanda Trazendo o baque virado nação');
+assert.deepEqual(repairedFromFallbackOnly[0].syllables, ['Ne', 'gro '], 'Auto-réparation de ELAN•T3 depuis fallbackText seul');
+assert.equal(repairedFromFallbackOnly[0].hasLeadingRest, true);
+assert.deepEqual(repairedFromFallbackOnly[4].syllables, ['do ', 'o '], 'Auto-réparation de M1•T3 depuis fallbackText seul');
+assert.equal(repairedFromFallbackOnly[4].hasLeadingRest, true);
+
+const repairedFromRawSheet = resolveFreshTimeAnchors(undefined, corruptedAnchors, 4, false, 'Negro vem de Luanda Trazendo o baque virado nação', rawLine);
+assert.deepEqual(repairedFromRawSheet[0].syllables, ['Ne', 'gro '], 'Auto-réparation de ELAN•T3 depuis rawTxtCode/parolesOriginales (même avec Trazen[3]_ do vs Trazendo)');
+assert.deepEqual(repairedFromRawSheet[4].syllables, ['do ', 'o '], 'Auto-réparation de M1•T3 depuis rawTxtCode/parolesOriginales');
+
+console.log('✅ TOUS LES TESTS LIVRET 4 (LEADING REST & LOCAL TRIMMED MEDIAN PITCH) SONT VERTS !');

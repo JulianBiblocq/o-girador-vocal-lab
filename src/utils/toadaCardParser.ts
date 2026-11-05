@@ -16,7 +16,7 @@ export interface InlineDirectives {
 
 export function isOrganizadorStructureText(text: string): boolean {
   if (!text) return false;
-  return /\[(?:M\d+[•\.:])?([1-9]|1[0-2])\]/.test(text) || isAnchorOnlyLine(text);
+  return /\[(?:M\d+[•·\.:])?([1-9]|1[0-2])\]/.test(text) || text.split(/\r?\n/).some((l) => isAnchorOnlyLine(l));
 }
 
 export function extractInlineLineDirectives(rawSegmentText: string, beatsPerMeasure = 4): InlineDirectives {

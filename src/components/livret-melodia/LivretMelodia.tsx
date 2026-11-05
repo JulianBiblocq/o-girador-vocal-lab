@@ -11,6 +11,8 @@ import { PatternCompassBar } from '../common/PatternCompassBar';
 import { MelodiaEmptyNotice } from './MelodiaEmptyNotice';
 import { LivretMelodiaWorkspace } from './LivretMelodiaWorkspace';
 import { extractPatternMelodicData } from '../../audio/melodicExtractionHelper';
+import { extractProjectRawLyricsSource } from '../../audio/livretResetHelper';
+import { resolveFreshTimeAnchors } from '../../utils/timeAnchorParser';
 import { getBeatsPerMeasure, transposePitchNote } from '../../utils/musicalMath';
 import { getDefaultBeatResolutions } from '../../utils/alignmentMath';
 import { getPatternTotalDurationSec } from '../../utils/anacrusisTimingHelper';
@@ -52,6 +54,7 @@ export const LivretMelodia: React.FC<LivretMelodiaProps> = (props) => {
     const beatResolutions = getDefaultBeatResolutions(project.timeSignature);
     const hasAnacrusis = activePattern.hasAnacrusis !== false;
     const rawT1 = activeVariant.t1OffsetSec ?? activePattern.t1OffsetSec ?? activePattern.recordingResult?.t1OffsetSec;
+    const freshAnchors = resolveFreshTimeAnchors(activePattern.rawLineCode, activePattern.timeAnchors, beatsPerMeasure, !hasAnacrusis, activePattern.assignedLyricsText, extractProjectRawLyricsSource(project, activePattern));
 
     const res = extractPatternMelodicData({
       rawPCM, sampleRate, bpm: effectiveBpm, timeSignature: project.timeSignature,
@@ -60,14 +63,14 @@ export const LivretMelodia: React.FC<LivretMelodiaProps> = (props) => {
       t1OffsetSec: rawT1,
       referencePitch: effectivePitch, pitchShiftSemitones: activeVariant.pitchShiftSemitones,
       tessitura: activePattern.tessitura, assignedLyricsText: activePattern.assignedLyricsText,
-      timeAnchors: activePattern.timeAnchors,
+      timeAnchors: freshAnchors,
       lowCutEnabled: activeVariant.lowCutEnabled, enableTonePolish: activeVariant.enableTonePolish !== false,
     });
 
     const preserveMidi = Boolean(activePattern.midiLocked && (activePattern.mainSteps?.length ?? 0) > 0);
     updatePattern(activePattern.id, {
       pack: res.pack, rawAudioSamples: res.cleanPCM, rawPitchCurve: res.pitchCurve,
-      pitchCurve: res.pitchCurve,
+      pitchCurve: res.pitchCurve, timeAnchors: freshAnchors,
       anacrusisSteps: preserveMidi ? (activePattern.anacrusisSteps || []) : res.anacrusisSteps,
       mainSteps: preserveMidi ? (activePattern.mainSteps || []) : res.mainSteps,
       isMidiInitialized: true, midiLocked: preserveMidi, hasCanonicalAlignment: true as any, correctedAudioSamples: null,
@@ -106,6 +109,7 @@ export const LivretMelodia: React.FC<LivretMelodiaProps> = (props) => {
 
   return (
     <LivretMelodiaWorkspace
+      key={`${project.id}-${activePattern.id}`}
       {...props}
       initialPack={pack}
       cleanPCM={activePattern.rawAudioSamples}

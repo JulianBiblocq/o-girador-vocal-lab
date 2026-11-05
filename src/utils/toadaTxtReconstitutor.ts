@@ -68,10 +68,8 @@ export function toadaToCleanHtml(rawTxtCode: string): string {
 function normalizeWordsOnly(str: string): string {
   return str
     .replace(/\[[^\]]+\]/g, '')
-    .replace(/<(?!(\/?u\b))[^>]*>/gi, '')
-    .replace(/[\*_]/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim()
+    .replace(/<[^>]*>/g, '')
+    .replace(/[^\p{L}\p{N}]/gu, '')
     .toLowerCase();
 }
 

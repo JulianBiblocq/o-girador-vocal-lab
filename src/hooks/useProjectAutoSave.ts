@@ -8,6 +8,7 @@ import type { ToadaProject } from '../types/toadaProject.types';
 import { saveProjectToIndexedDB, loadProjectFromIndexedDB } from '../utils/projectAutoSave';
 import { saveToadaToLibrary } from '../utils/toadaLibraryStorage';
 import { resolveFreshTimeAnchors } from '../utils/timeAnchorParser';
+import { extractProjectRawLyricsSource } from '../audio/livretResetHelper';
 import { getBeatsPerMeasure } from '../utils/musicalMath';
 
 const AUTOSAVE_DEBOUNCE_MS = 800;
@@ -41,10 +42,9 @@ export function useProjectAutoSave(
     loadProjectFromIndexedDB().then((saved) => {
       if (isMounted && saved && saved.patterns && saved.patterns.length > 0) {
         const bpmCount = getBeatsPerMeasure(saved.timeSignature);
-        const rawTxt = saved.toadaMeta?.rawTxtCode;
         const hydratedPatterns = saved.patterns.map((pat) => ({
           ...pat,
-          timeAnchors: resolveFreshTimeAnchors(pat.rawLineCode, pat.timeAnchors, bpmCount, pat.hasAnacrusis === false, pat.assignedLyricsText, rawTxt),
+          timeAnchors: resolveFreshTimeAnchors(pat.rawLineCode, pat.timeAnchors, bpmCount, pat.hasAnacrusis === false, pat.assignedLyricsText, extractProjectRawLyricsSource(saved, pat)),
         }));
         const hydrated = { ...saved, patterns: hydratedPatterns };
         lastSummarySigRef.current = getSummarySignature(hydrated);
