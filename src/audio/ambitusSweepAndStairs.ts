@@ -8,6 +8,7 @@ import { midiToNoteName } from '../utils/noteUtils';
 
 export interface SweepAnalysisResult {
   candidateLowMidi: number;
+  candidateMedianMidi: number;
   candidateHighMidi: number;
   validFramesCount: number;
   hasEnoughPower: boolean;
@@ -34,8 +35,9 @@ export function analyzeAmbitusSweep(
 
   if (voiced.length < 6) {
     return {
-      candidateLowMidi: 55, // G3 (Sol3) par defaut
-      candidateHighMidi: 67, // G4 (Sol4) par defaut
+      candidateLowMidi: 50, // D3 (Ré3) par defaut
+      candidateMedianMidi: 55, // G3 (Sol3) mediane confort par defaut
+      candidateHighMidi: 64, // E4 (Mi4) par defaut
       validFramesCount: voiced.length,
       hasEnoughPower: false,
     };
@@ -43,16 +45,20 @@ export function analyzeAmbitusSweep(
 
   const sortedPitches = voiced.map((s) => s.pitchMidi).sort((a, b) => a - b);
   const p10Index = Math.min(sortedPitches.length - 1, Math.floor(sortedPitches.length * 0.10));
+  const p50Index = Math.min(sortedPitches.length - 1, Math.floor(sortedPitches.length * 0.50));
   const p90Index = Math.min(sortedPitches.length - 1, Math.floor(sortedPitches.length * 0.90));
 
   let low = Math.round(sortedPitches[p10Index]);
+  let median = Math.round(sortedPitches[p50Index]);
   let high = Math.round(sortedPitches[p90Index]);
 
-  low = Math.max(38, Math.min(72, low));
+  low = Math.max(36, Math.min(72, low));
   high = Math.max(low + 4, Math.min(84, high));
+  median = Math.max(low, Math.min(high, median));
 
   return {
     candidateLowMidi: low,
+    candidateMedianMidi: median,
     candidateHighMidi: high,
     validFramesCount: voiced.length,
     hasEnoughPower: true,

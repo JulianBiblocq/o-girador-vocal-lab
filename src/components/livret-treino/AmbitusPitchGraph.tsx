@@ -1,8 +1,7 @@
 /**
  * AmbitusPitchGraph.tsx
- * Canvas Cordel réactif traçant la brique de la note cible, le couloir de tolérance (+/- 45 cents)
- * et la courbe réelle de la voix (Vert #2a9d8f au centre, Ambre #d97706 en écart).
- * Support du mode note unique et mode escalier 5-6 notes. Strictement < 135 lignes.
+ * Canvas Cordel réactif (240px) avec Auto-Scale vertical dynamique (minPlotMidi/maxPlotMidi, plage min 18 demi-tons),
+ * repères de notes latéraux (Sol2, Do3, Sol3, Do4...) et mode Escalier (< 135 lignes).
  */
 import React, { useEffect, useRef } from 'react';
 import type { ValidationSample } from '../../audio/ambitusValidator';
@@ -10,18 +9,14 @@ import type { StaircaseStep } from '../../audio/ambitusSweepAndStairs';
 import { midiToNoteName } from '../../utils/noteUtils';
 
 interface Props {
-  mode: 'single' | 'staircase';
-  targetMidi: number;
-  samples: ValidationSample[];
-  staircaseSteps?: StaircaseStep[];
-  targetHoldSec?: number;
+  mode: 'single' | 'staircase' | 'sweep'; targetMidi: number; samples: ValidationSample[];
+  staircaseSteps?: StaircaseStep[]; targetHoldSec?: number;
 }
 
 export const AmbitusPitchGraph: React.FC<Props> = ({
   mode, targetMidi, samples, staircaseSteps = [], targetHoldSec = 2.0,
 }) => {
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const [themeTick, setThemeTick] = React.useState(0);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null), [themeTick, setThemeTick] = React.useState(0);
 
   React.useEffect(() => {
     const obs = new MutationObserver(() => setThemeTick((t) => t + 1));
@@ -30,112 +25,111 @@ export const AmbitusPitchGraph: React.FC<Props> = ({
   }, []);
 
   useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    const w = canvas.width;
-    const h = canvas.height;
+    const canvas = canvasRef.current, ctx = canvas?.getContext('2d');
+    if (!canvas || !ctx) return;
+    const w = canvas.width, h = canvas.height;
     ctx.clearRect(0, 0, w, h);
 
     const isLight = document.documentElement.getAttribute('data-theme') === 'light';
-    const bgFill = isLight ? '#fbf8f0' : '#1e1813';
-    const textFill = isLight ? '#2a211b' : '#efe6d2';
-    const borderStroke = isLight ? 'rgba(26, 26, 26, 0.2)' : 'rgba(239, 230, 210, 0.12)';
+    const bgFill = isLight ? '#fbf8f0' : '#1e1813', textFill = isLight ? '#2a211b' : '#efe6d2';
+    const gridStroke = isLight ? 'rgba(42, 33, 27, 0.12)' : 'rgba(239, 230, 210, 0.12)';
+    const borderStroke = isLight ? 'rgba(26, 26, 26, 0.22)' : 'rgba(239, 230, 210, 0.16)';
 
-    // Fond surface Cordel
-    ctx.fillStyle = bgFill;
-    ctx.fillRect(0, 0, w, h);
+    ctx.fillStyle = bgFill; ctx.fillRect(0, 0, w, h);
 
-    if (mode === 'single') {
-      const centerY = h / 2;
-      const semitonePx = h / 5;
-      const tolPx = 0.45 * semitonePx;
+    if (mode === 'single' || mode === 'sweep') {
+      const voicedMidiPoints = samples.filter((s) => s.pitchMidi >= 30 && s.pitchMidi <= 96).map((s) => s.pitchMidi);
+      const sorted = [...voicedMidiPoints].sort((a, b) => a - b);
+      const medianMidi = sorted.length > 0 ? sorted[Math.floor(sorted.length / 2)] : targetMidi;
+      const refPoints = voicedMidiPoints.length > 0 ? (mode === 'single' ? [...voicedMidiPoints, targetMidi] : voicedMidiPoints) : [targetMidi];
 
-      // Couloir de tolérance (+/- 45 cents)
-      ctx.fillStyle = isLight ? 'rgba(15, 118, 110, 0.12)' : 'rgba(42, 157, 143, 0.20)';
-      ctx.fillRect(0, centerY - tolPx, w, tolPx * 2);
+      let minPlotMidi = Math.floor(Math.min(...refPoints) - 3), maxPlotMidi = Math.ceil(Math.max(...refPoints) + 3);
+      if (maxPlotMidi - minPlotMidi < 18) {
+        const deficit = 18 - (maxPlotMidi - minPlotMidi);
+        minPlotMidi = Math.min(minPlotMidi, Math.floor(medianMidi - 9), minPlotMidi - Math.floor(deficit / 2));
+        maxPlotMidi = Math.max(maxPlotMidi, Math.ceil(medianMidi + 9), minPlotMidi + 18);
+      }
 
-      // Ligne cible centrale
-      ctx.strokeStyle = '#0f766e';
-      ctx.lineWidth = 1.5;
-      ctx.setLineDash([4, 4]);
-      ctx.beginPath();
-      ctx.moveTo(0, centerY);
-      ctx.lineTo(w, centerY);
-      ctx.stroke();
+      const padY = 20, leftPad = 46, plotW = w - leftPad - 12, plotH = h - padY * 2;
+      const spanMidi = Math.max(1, maxPlotMidi - minPlotMidi);
+      const midiToY = (m: number) => Math.max(padY - 4, Math.min(h - padY + 4, padY + ((maxPlotMidi - m) / spanMidi) * plotH));
+
+      // Repères horizontaux (Do, Mi, Sol, La) sur le bord gauche
+      for (let m = minPlotMidi; m <= maxPlotMidi; m++) {
+        const pc = ((m % 12) + 12) % 12;
+        if (pc === 0 || pc === 4 || pc === 7 || pc === 9) {
+          const y = midiToY(m);
+          ctx.strokeStyle = pc === 0 ? (isLight ? 'rgba(42,33,27,0.22)' : 'rgba(239,230,210,0.22)') : gridStroke;
+          ctx.lineWidth = pc === 0 ? 1.2 : 0.8;
+          ctx.beginPath(); ctx.moveTo(leftPad, y); ctx.lineTo(w - 8, y); ctx.stroke();
+          ctx.fillStyle = isLight ? 'rgba(42,33,27,0.75)' : 'rgba(239,230,210,0.75)';
+          ctx.font = pc === 0 ? 'bold 10px monospace' : '9px monospace';
+          ctx.fillText(midiToNoteName(m), 6, y + 3);
+        }
+      }
+
+      // Couloir de la note cible ou médiane détectée
+      const focusMidi = mode === 'sweep' ? Math.round(medianMidi) : targetMidi;
+      const targetY = midiToY(focusMidi);
+      const tolPx = Math.max(6, (0.45 / spanMidi) * plotH);
+      ctx.fillStyle = isLight ? 'rgba(15, 118, 110, 0.14)' : 'rgba(42, 157, 143, 0.22)';
+      ctx.fillRect(leftPad, targetY - tolPx, plotW, tolPx * 2);
+
+      ctx.strokeStyle = '#0f766e'; ctx.lineWidth = 1.5; ctx.setLineDash([4, 4]);
+      ctx.beginPath(); ctx.moveTo(leftPad, targetY); ctx.lineTo(w - 8, targetY); ctx.stroke();
       ctx.setLineDash([]);
 
-      // Label note cible
-      ctx.fillStyle = textFill;
-      ctx.font = 'bold 11px monospace';
-      ctx.fillText(`${midiToNoteName(targetMidi)} (Cible ±45 cents)`, 10, 16);
+      ctx.fillStyle = textFill; ctx.font = 'bold 11px monospace';
+      const headerLabel = mode === 'sweep'
+        ? (voicedMidiPoints.length > 0 ? `Balayage : ${midiToNoteName(Math.round(sorted[0]))} ➔ Médiane ${midiToNoteName(Math.round(medianMidi))} ➔ ${midiToNoteName(Math.round(sorted[sorted.length - 1]))}` : 'Sirène vocale Grave ➔ Aigu')
+        : `${midiToNoteName(targetMidi)} (Cible ±45 cents)`;
+      ctx.fillText(headerLabel, leftPad + 4, 15);
 
-      // Tracé de la courbe vocale
+      // Tracé intégral de la courbe vocale (100 % contenue dans le cadre)
+      const maxSampleSec = samples.length > 0 ? Math.max(...samples.map((s) => s.timeSec)) : 0;
+      const totalSec = Math.max(targetHoldSec, maxSampleSec, 0.5);
       if (samples.length > 1) {
+        ctx.lineCap = 'round'; ctx.lineJoin = 'round';
         for (let i = 1; i < samples.length; i++) {
           const s1 = samples[i - 1], s2 = samples[i];
-          const x1 = (s1.timeSec / targetHoldSec) * w;
-          const x2 = (s2.timeSec / targetHoldSec) * w;
-          const y1 = centerY - (s1.pitchMidi - targetMidi) * semitonePx;
-          const y2 = centerY - (s2.pitchMidi - targetMidi) * semitonePx;
-          const isGood = Math.abs(s2.pitchMidi - targetMidi) <= 0.45;
-
-          ctx.strokeStyle = isGood ? '#0f766e' : '#c25e38';
-          ctx.lineWidth = 2.5;
-          ctx.beginPath();
-          ctx.moveTo(x1, y1);
-          ctx.lineTo(x2, y2);
-          ctx.stroke();
+          if (s1.pitchMidi < 30 || s2.pitchMidi < 30) continue;
+          const x1 = leftPad + Math.min(1, s1.timeSec / totalSec) * plotW;
+          const x2 = leftPad + Math.min(1, s2.timeSec / totalSec) * plotW;
+          const y1 = midiToY(s1.pitchMidi), y2 = midiToY(s2.pitchMidi);
+          const isGood = mode === 'sweep' || Math.abs(s2.pitchMidi - targetMidi) <= 0.65;
+          ctx.strokeStyle = isGood ? '#0f766e' : '#d97706';
+          ctx.lineWidth = 2.8;
+          ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
         }
       }
     } else {
-      // Mode Escalier multi-marches
       const n = staircaseSteps.length;
       if (n > 0) {
-        const stepW = w / n;
-        const minM = staircaseSteps[0].midi;
-        const maxM = staircaseSteps[n - 1].midi;
-        const span = Math.max(1, maxM - minM);
-
+        const stepW = w / n, minM = staircaseSteps[0].midi - 2, maxM = staircaseSteps[n - 1].midi + 2;
+        const span = Math.max(6, maxM - minM);
         staircaseSteps.forEach((st, idx) => {
-          const x = idx * stepW;
-          const normY = (st.midi - minM) / span;
-          const y = h - 35 - normY * (h - 70);
-
+          const x = idx * stepW, normY = (st.midi - minM) / span, y = h - 30 - normY * (h - 60);
           ctx.fillStyle = isLight ? 'rgba(15, 118, 110, 0.15)' : 'rgba(42, 157, 143, 0.22)';
-          ctx.strokeStyle = '#0f766e';
-          ctx.lineWidth = 1.5;
-          ctx.fillRect(x + 4, y - 8, stepW - 8, 16);
-          ctx.strokeRect(x + 4, y - 8, stepW - 8, 16);
-
-          ctx.fillStyle = textFill;
-          ctx.font = 'bold 10px monospace';
-          ctx.fillText(st.noteName, x + 8, y + 4);
-
+          ctx.strokeStyle = '#0f766e'; ctx.lineWidth = 1.5;
+          ctx.fillRect(x + 4, y - 9, stepW - 8, 18); ctx.strokeRect(x + 4, y - 9, stepW - 8, 18);
+          ctx.fillStyle = textFill; ctx.font = 'bold 10px monospace'; ctx.fillText(st.noteName, x + 8, y + 4);
           const stepSamples = samples.filter((s) => s.timeSec >= idx * 1.8 && s.timeSec < (idx + 1) * 1.8);
           if (stepSamples.length > 2) {
             const avgP = stepSamples.reduce((a, s) => a + s.pitchMidi, 0) / stepSamples.length;
-            const diff = avgP - st.midi;
-            const ok = Math.abs(diff) <= 0.45;
-            ctx.fillStyle = ok ? '#0f766e' : '#c25e38';
-            ctx.font = 'bold 12px monospace';
+            const diff = avgP - st.midi, ok = Math.abs(diff) <= 0.55;
+            ctx.fillStyle = ok ? '#0f766e' : '#c25e38'; ctx.font = 'bold 12px monospace';
             ctx.fillText(ok ? '✓' : (diff > 0 ? '↓' : '↑'), x + stepW - 20, y + 4);
           }
         });
       }
     }
 
-    // Bordure cadre Cordel
-    ctx.strokeStyle = borderStroke;
-    ctx.lineWidth = 1;
-    ctx.strokeRect(0, 0, w, h);
+    ctx.strokeStyle = borderStroke; ctx.lineWidth = 1; ctx.strokeRect(0, 0, w, h);
   }, [mode, targetMidi, samples, staircaseSteps, targetHoldSec, themeTick]);
 
   return (
     <div className="w-full cordel-card-sm overflow-hidden rounded">
-      <canvas ref={canvasRef} width={560} height={150} className="w-full h-[150px] block" />
+      <canvas ref={canvasRef} width={640} height={240} className="w-full h-[240px] block" />
     </div>
   );
 };
