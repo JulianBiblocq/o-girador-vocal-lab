@@ -1,14 +1,16 @@
 /**
  * cloudToadaPublisher.ts
  * Téléversement des WAV découpés dans Storage et publication du pack Toada (< 50 Ko)
- * dans Firestore pour Sequenciador (< 120 lignes, Rule 6.A).
+ * dans Firestore pour Sequenciador (< 125 lignes, Rule 6.A).
  */
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { doc, setDoc } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { storage } from './firebaseClient';
-import type { ToadaProject } from '../types/toadaProject.types';
+import { type ToadaProject, DEFAULT_TOADA_BPM } from '../types/toadaProject.types';
 import { getSequenciadorToadaUrl } from '../utils/ecosystemUrls';
+import { getBeatsPerMeasure } from '../utils/musicalMath';
+import { getPatternT1OffsetSec } from '../utils/anacrusisTimingHelper';
 import { pcmToWavBlob, slicePatternPcm, sanitizePatternForFirestore } from './toadaPublishHelpers';
 
 export function removeUndefinedFields<T>(obj: T): T {
@@ -34,18 +36,40 @@ export async function publishToadaToSequencer(
 ): Promise<{ success: boolean; toadaId: string; sequenciadorUrl: string }> {
   const toadaId = project.id;
   const processedPatterns = [];
+  const projectBpm = Number(project.bpm || project.toadaMeta?.bpmDefaut || DEFAULT_TOADA_BPM);
+  const beatsPerMeasure = getBeatsPerMeasure(project.timeSignature);
 
   for (let i = 0; i < project.patterns.length; i++) {
     const p = project.patterns[i];
     onProgress?.(`Téléversement audio (${i + 1}/${project.patterns.length})...`);
     let audioUrl: string | undefined;
 
+    const patBpm = Number(p.baseBpm || p.bpm || projectBpm);
+    const measureDurationSec = beatsPerMeasure * (60 / patBpm);
     const variant = p.variants?.[p.activeVariantKey] || Object.values(p.variants || {})[0];
-    const fullPcm = p.correctedAudioSamples || p.rawAudioSamples || variant?.recordingResult?.pcm;
-    const sampleRate = variant?.recordingResult?.sampleRate || 44100;
-    const rawT1 = p.t1OffsetSec ?? variant?.t1OffsetSec ?? 0;
-    const trimStart = variant?.trimStartSec ?? p.trimStartSec ?? 0;
-    const trimEnd = variant?.trimEndSec ?? p.trimEndSec ?? (fullPcm ? fullPcm.length / sampleRate : 0);
+    const rec = variant?.recordingResult ?? p.recordingResult;
+    const sampleRate = rec?.sampleRate || p.pack?.audio?.sampleRate || 44100;
+
+    let fullPcm: Float32Array | null | undefined;
+    let rawT1: number;
+    let trimStart: number;
+    let trimEnd: number;
+
+    if (p.correctedAudioSamples && p.correctedAudioSamples.length > 0) {
+      // Référentiel cleanPCM (retouche Melodyne active)
+      fullPcm = p.correctedAudioSamples;
+      rawT1 = getPatternT1OffsetSec(p.hasAnacrusis, measureDurationSec);
+      trimStart = p.pack?.audio?.trim?.startSec ?? 0;
+      trimEnd = p.pack?.audio?.trim?.endSec ?? (fullPcm.length / sampleRate);
+    } else {
+      // Référentiel recordingResult.pcm (prise directe ou tranche Slicer)
+      fullPcm = rec?.pcm ?? p.rawAudioSamples;
+      const explicitT1 = p.t1OffsetSec ?? variant?.t1OffsetSec ?? rec?.t1OffsetSec;
+      rawT1 = getPatternT1OffsetSec(p.hasAnacrusis, measureDurationSec, explicitT1);
+      trimStart = variant?.trimStartSec ?? p.trimStartSec ?? 0;
+      const rawEnd = variant?.trimEndSec || p.trimEndSec || 0;
+      trimEnd = rawEnd > 0 ? rawEnd : (fullPcm ? fullPcm.length / sampleRate : 0);
+    }
 
     let slicedDurationSec: number | undefined;
     let exportedT1OffsetSec: number | undefined;
@@ -75,10 +99,12 @@ export async function publishToadaToSequencer(
   const packDoc = {
     id: toadaId,
     title: project.title,
+    bpm: projectBpm,
+    timeSignature: project.timeSignature,
     project: {
       id: project.id,
       title: project.title,
-      bpm: project.bpm,
+      bpm: projectBpm,
       timeSignature: project.timeSignature,
       measuresCount: (project as any).measuresCount || 2,
       harmonyConfig: project.harmonyConfig ?? null,
@@ -87,17 +113,11 @@ export async function publishToadaToSequencer(
     metadata: {
       title: project.title,
       toada: project.title,
-      bpm: project.bpm,
+      bpm: projectBpm,
       timeSignature: project.timeSignature,
-      harmonyConfig: project.harmonyConfig ?? null,
-      toadaMeta: project.toadaMeta ?? null,
-      notesLexique: project.toadaMeta?.notesLexique || [],
-      questionsQcm: project.toadaMeta?.questionsQcm || [],
       publishedAt: Date.now(),
     },
     toadaMeta: project.toadaMeta ?? null,
-    notesLexique: project.toadaMeta?.notesLexique || [],
-    questionsQcm: project.toadaMeta?.questionsQcm || [],
     patterns: processedPatterns,
     arrangementSlots: project.slots || [],
     slots: project.slots || [],

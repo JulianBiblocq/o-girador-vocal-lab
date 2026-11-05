@@ -1,14 +1,13 @@
 /**
  * toadaConductorGenerator.ts
- * Frise Conducteur automatique avec agrégation des mesures liées (/) et superposition mixte (< 140 lignes).
+ * Frise Conducteur canonique : 1 carte Organizador = 1 VocalPatternItem avec cardIndex et rawLineCode (< 140 lignes).
  */
 import type { ToadaProject, VocalPatternItem, ToadaArrangementSlot, VocalRole } from '../types/toadaProject.types';
 import type { ParsedToadaSheetResult } from '../types/toadaDocument.types';
-import { createDefaultVocalPattern } from '../types/toadaProject.types';
+import { createDefaultVocalPattern, DEFAULT_TOADA_BPM } from '../types/toadaProject.types';
 import { createHarmonyGridFromChords } from './chordGridHelper';
 import { detectToadaLexicon } from './toadaLexiconDetector';
 import { generateQuizFromLexicon } from './toadaQuizGenerator';
-import { buildNormalizedPatternKey } from './timeAnchorParser';
 
 export interface ToadaSheetGenOptions {
   bpm?: number;
@@ -30,13 +29,16 @@ export function buildPatternNameFromFirstWord(text: string, existingNames: strin
 }
 
 function initPatternFromSegment(
-  role: VocalRole, seg: any, bpm: number, existingNames: string[], measuresCount: 1 | 2 | 3 | 4 = 1, defaultAna = false
+  role: VocalRole, seg: any, bpm: number, existingNames: string[], measuresCount: 1 | 2 | 3 | 4 = 1, defaultAna = false, cardIndex = 0
 ): VocalPatternItem {
   const effBpm = seg.sectionBpm ?? bpm;
   const pat = createDefaultVocalPattern(role, buildPatternNameFromFirstWord(seg.text, existingNames), measuresCount, effBpm);
+  pat.cardIndex = seg.cardIndex ?? cardIndex;
+  pat.rawLineCode = seg.rawLineCode;
   pat.baseBpm = effBpm;
   pat.bpm = effBpm;
   pat.assignedLyricsText = seg.text;
+  pat.assignedPhoneticText = seg.phoneticText;
   pat.hasAnacrusis = seg.hasAnacrusis ?? defaultAna;
   pat.anacrusisBeats = seg.anacrusisBeats ?? (pat.hasAnacrusis ? 2 : undefined);
   pat.timeAnchors = seg.timeAnchors;
@@ -48,8 +50,7 @@ function initPatternFromSegment(
 export function generateToadaFromSheet(project: ToadaProject, parsed: ParsedToadaSheetResult, options?: ToadaSheetGenOptions): ToadaProject {
   const newPatterns: VocalPatternItem[] = [];
   const newSlots: ToadaArrangementSlot[] = [];
-  const map = new Map<string, string>();
-  const targetBpm = options?.bpm ?? parsed.docMeta?.bpmDefaut ?? project.bpm ?? 88;
+  const targetBpm = options?.bpm ?? parsed.docMeta?.bpmDefaut ?? project.bpm ?? DEFAULT_TOADA_BPM;
 
   let i = 0;
   while (i < parsed.segments.length) {
@@ -58,13 +59,11 @@ export function generateToadaFromSheet(project: ToadaProject, parsed: ParsedToad
 
     if (seg.isMixedPair && nextSeg && nextSeg.isMixedPair && seg.role !== nextSeg.role) {
       const puxSeg = seg.role === 'puxador' ? seg : nextSeg, coroSeg = seg.role === 'coro' ? seg : nextSeg;
-      const puxKey = buildNormalizedPatternKey('puxador', puxSeg.text, puxSeg.timeAnchors);
-      let patPuxId = map.get(puxKey);
-      if (!patPuxId) { const patPux = initPatternFromSegment('puxador', puxSeg, targetBpm, newPatterns.map((p) => p.name), 1); newPatterns.push(patPux); map.set(puxKey, (patPuxId = patPux.id)); }
-      const coroKey = buildNormalizedPatternKey('coro', coroSeg.text, coroSeg.timeAnchors);
-      let patCoroId = map.get(coroKey);
-      if (!patCoroId) { const patCoro = initPatternFromSegment('coro', coroSeg, targetBpm, newPatterns.map((p) => p.name), 1); newPatterns.push(patCoro); map.set(coroKey, (patCoroId = patCoro.id)); }
-      newSlots.push({ slotId: `slot-${newSlots.length + 1}`, puxadorPatternId: patPuxId, coroPatternId: patCoroId });
+      const patPux = initPatternFromSegment('puxador', puxSeg, targetBpm, newPatterns.map((p) => p.name), 1, false, newPatterns.length);
+      newPatterns.push(patPux);
+      const patCoro = initPatternFromSegment('coro', coroSeg, targetBpm, newPatterns.map((p) => p.name), 1, false, newPatterns.length);
+      newPatterns.push(patCoro);
+      newSlots.push({ slotId: `slot-${newSlots.length + 1}`, puxadorPatternId: patPux.id, coroPatternId: patCoro.id });
       i += 2; continue;
     }
 
@@ -75,18 +74,18 @@ export function generateToadaFromSheet(project: ToadaProject, parsed: ParsedToad
       lookAhead++;
     }
 
-    const key = buildNormalizedPatternKey(seg.role, seg.text, seg.timeAnchors);
-    let patId = map.get(key);
-    if (!patId) {
-      const pat = initPatternFromSegment(seg.role, seg, targetBpm, newPatterns.filter((p) => p.role === seg.role).map((p) => p.name), measuresCount, options?.defaultHasAnacrusis ?? true);
-      newPatterns.push(pat);
-      map.set(key, (patId = pat.id));
-    }
+    const pat = initPatternFromSegment(
+      seg.role, seg, targetBpm,
+      newPatterns.filter((p) => p.role === seg.role).map((p) => p.name),
+      measuresCount, options?.defaultHasAnacrusis ?? false,
+      seg.cardIndex ?? newSlots.length
+    );
+    newPatterns.push(pat);
 
     newSlots.push({
       slotId: `slot-${newSlots.length + 1}`,
-      puxadorPatternId: seg.role === 'puxador' ? patId : null,
-      coroPatternId: seg.role === 'coro' ? patId : null
+      puxadorPatternId: seg.role === 'puxador' ? pat.id : null,
+      coroPatternId: seg.role === 'coro' ? pat.id : null,
     });
     i = lookAhead;
   }
@@ -113,12 +112,11 @@ export function generateToadaFromSheet(project: ToadaProject, parsed: ParsedToad
     patterns: newPatterns.length > 0 ? newPatterns : project.patterns,
     slots: newSlots.length > 0 ? newSlots : project.slots,
     activePatternId: newPatterns[0]?.id || project.activePatternId,
-    toadaMeta: parsed.docMeta ? { ...project.toadaMeta, ...parsed.docMeta } : project.toadaMeta,
-    sheetLines: parsed.segments.map((s) => ({ role: s.role, text: s.text, phoneticText: s.phoneticText })),
+    toadaMeta: parsed.docMeta ? { ...project.toadaMeta, ...parsed.docMeta, bpmDefaut: targetBpm } : project.toadaMeta,
+    sheetLines: parsed.segments.map((s) => ({ role: s.role, text: s.text, phoneticText: s.phoneticText, cardIndex: s.cardIndex, rawLineCode: s.rawLineCode })),
     globalHarmonyGrid: globalHarmony,
   };
 
-  // Conservation prioritaire des lexiques et quiz existants (venant d'Organizador)
   const existingLex = parsed.docMeta?.notesLexique?.length ? parsed.docMeta.notesLexique : (project.toadaMeta?.notesLexique || []);
   const detectedLex = existingLex.length > 0 ? existingLex : detectToadaLexicon(generated);
   const existingQuiz = parsed.docMeta?.questionsQcm?.length ? parsed.docMeta.questionsQcm : (project.toadaMeta?.questionsQcm || []);

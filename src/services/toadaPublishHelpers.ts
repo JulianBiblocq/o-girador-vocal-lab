@@ -1,6 +1,6 @@
 /**
  * toadaPublishHelpers.ts
- * Extraction du buffer WAV découpé et assainissement strict (< 50 Ko)
+ * Extraction du buffer WAV découpé et assainissement strict (< 50 Ko, zéro Base64)
  * du payload Firestore pour Sequenciador (< 120 lignes, Rule 6.A).
  */
 import type { VocalPatternItem } from '../types/toadaProject.types';
@@ -63,8 +63,8 @@ export function slicePatternPcm(
   const slicedDurationSec = slicedPcm.length / sampleRate;
 
   // L'ancre Temps 1 dans le buffer coupé qui démarre à 0s :
-  const exportedT1OffsetSec = rawT1OffsetSec - safeStart;
-  const startOffsetSec = safeStart - rawT1OffsetSec; // = -exportedT1OffsetSec
+  const exportedT1OffsetSec = Math.max(0, rawT1OffsetSec - safeStart);
+  const startOffsetSec = -exportedT1OffsetSec;
 
   return { slicedPcm, slicedDurationSec, exportedT1OffsetSec, startOffsetSec };
 }
@@ -77,30 +77,43 @@ export function sanitizePatternForFirestore(
   startOffsetSec?: number
 ): Record<string, any> {
   const sanitizedVariants: Record<string, any> = {};
+  const activeKey = p.activeVariantKey || 'spd100_pit+0';
+
   for (const [key, v] of Object.entries(p.variants || {})) {
-    const { recordingResult, audioBuffer, ...vRest } = v as any;
+    const isActive = key === activeKey;
+    const hasOwnRecording = Boolean(v.recordingResult?.pcm?.length || (v as any).audioUrl);
+    if (!isActive && !hasOwnRecording) continue;
+
+    const { recordingResult: _rec, audioBuffer: _buf, audioBase64: _b64, ...vRest } = v as any;
+    const varAudioUrl = isActive ? (audioUrl || (v as any).audioUrl) : (v as any).audioUrl;
+    if (!varAudioUrl) continue;
+
     sanitizedVariants[key] = {
       ...vRest,
-      audioUrl: audioUrl || (v as any).audioUrl,
+      audioUrl: varAudioUrl,
       trimStartSec: 0,
-      trimEndSec: slicedDurationSec ?? v.trimEndSec,
-      t1OffsetSec: exportedT1OffsetSec ?? v.t1OffsetSec,
-      startOffsetSec: startOffsetSec ?? (v as any).startOffsetSec,
-      durationSec: slicedDurationSec ?? (v as any).durationSec,
+      trimEndSec: isActive ? (slicedDurationSec ?? v.trimEndSec) : v.trimEndSec,
+      t1OffsetSec: isActive ? (exportedT1OffsetSec ?? v.t1OffsetSec) : v.t1OffsetSec,
+      startOffsetSec: isActive ? (startOffsetSec ?? (v as any).startOffsetSec) : (v as any).startOffsetSec,
+      durationSec: isActive ? (slicedDurationSec ?? (v as any).durationSec) : (v as any).durationSec,
     };
   }
 
   const {
-    rawAudioSamples,
-    correctedAudioSamples,
-    recordingResult,
-    rawPitchCurve,
-    pitchCurve,
+    pack: _pack,
+    rawAudioSamples: _raw,
+    correctedAudioSamples: _corr,
+    recordingResult: _recRes,
+    rawPitchCurve: _rawCurve,
+    pitchCurve: _curve,
     ...patternRest
   } = p as any;
 
+  const patBpm = p.bpm ?? p.baseBpm ?? 88;
   return {
     ...patternRest,
+    bpm: patBpm,
+    baseBpm: patBpm,
     audioUrl,
     t1OffsetSec: exportedT1OffsetSec ?? p.t1OffsetSec,
     startOffsetSec: startOffsetSec ?? (p as any).startOffsetSec,

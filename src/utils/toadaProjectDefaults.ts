@@ -1,6 +1,6 @@
 /**
  * toadaProjectDefaults.ts
- * Fonctions de fabrique et valeurs par défaut pour les projets et patterns Toada (< 80 lignes).
+ * Fonctions de fabrique et valeurs par défaut pour les projets et patterns Toada (< 85 lignes).
  */
 import type {
   VocalRole,
@@ -9,6 +9,8 @@ import type {
   VocalPatternItem,
   ToadaProject,
 } from '../types/toadaProject.types';
+
+export const DEFAULT_TOADA_BPM = 88;
 
 export function computeVariantCoverage(speedRatio: number, pitchShiftSemitones: number): VocalAudioVariantCoverage {
   let minBpmRatio = 0.87; let maxBpmRatio = 1.15;
@@ -46,7 +48,7 @@ export function createDefaultVocalPattern(
   role: VocalRole = 'puxador',
   name = 'Appel 1',
   measuresCount: 1 | 2 | 3 | 4 = 2,
-  baseBpm = 88,
+  baseBpm = DEFAULT_TOADA_BPM,
   referencePitch = 'C4'
 ): VocalPatternItem {
   const v1 = createDefaultVariant(1.0, 0);
@@ -67,10 +69,10 @@ export function createDefaultVocalPattern(
 }
 
 export function createDefaultToadaProject(): ToadaProject {
-  const p1 = createDefaultVocalPattern('puxador', 'Appel 1', 2, 88);
-  const p2 = createDefaultVocalPattern('coro', 'Reponse Choeur', 2, 88);
+  const p1 = createDefaultVocalPattern('puxador', 'Appel 1', 2, DEFAULT_TOADA_BPM);
+  const p2 = createDefaultVocalPattern('coro', 'Reponse Choeur', 2, DEFAULT_TOADA_BPM);
   return {
-    id: 'toada-default', title: 'Toada Sem Titulo', bpm: 88, timeSignature: '4/4',
+    id: 'toada-default', title: 'Toada Sem Titulo', bpm: DEFAULT_TOADA_BPM, timeSignature: '4/4',
     patterns: [p1, p2],
     slots: [
       { slotId: 'slot-1', puxadorPatternId: p1.id, coroPatternId: null },

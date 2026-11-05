@@ -49,7 +49,7 @@ export const LivretMelodiaWorkspace: React.FC<LivretMelodiaWorkspaceProps> = ({
   const expectedStepsCount = ((hasAnac ? beatsPerMeasure : 0) + measuresCount * beatsPerMeasure + 1) * resPerBeat;
   const defaultSteps = useMemo(() => {
     if (rawDefaultSteps.length >= expectedStepsCount || rawDefaultSteps.length === 0) return rawDefaultSteps;
-    const missing = expectedStepsCount - rawDefaultSteps.length, stepDur = (60 / (initialPack.metadata.bpm || 60)) / resPerBeat;
+    const missing = expectedStepsCount - rawDefaultSteps.length, stepDur = (60 / (initialPack.metadata.bpm || 88)) / resPerBeat;
     const pad: VocalStepData[] = Array.from({ length: missing }, (_, k) => ({ stepIndex: rawDefaultSteps.length + k, active: false, note: '', midiNumber: 0, velocity: 0, decay: stepDur }));
     return [...rawDefaultSteps, ...pad];
   }, [rawDefaultSteps, expectedStepsCount, initialPack.metadata.bpm, resPerBeat]);

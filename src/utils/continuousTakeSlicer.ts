@@ -18,7 +18,7 @@ export function sliceContinuousTake(
   sampleRate: number,
   marginBeforeM0Sec = 0.6
 ): SlicedTakeResult {
-  const bpm = project.bpm || 55;
+  const bpm = project.bpm || 88;
   const beatsPerMeasure = getBeatsPerMeasure(project.timeSignature);
   const beatDuration = 60 / bpm;
   const measureDuration = beatsPerMeasure * beatDuration;

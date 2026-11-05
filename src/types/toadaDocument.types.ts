@@ -1,6 +1,6 @@
 /**
  * toadaDocument.types.ts
- * Contrat d'interface ToadaDocument d'organizador (< 60 lignes).
+ * Contrat d'interface ToadaDocument d'Organizador (< 80 lignes).
  * Supporte métadonnées, paroles riches et phonétiques, lexique, QCM et rawTxtCode.
  */
 import type { VocalRole } from './toadaProject.types';
@@ -21,6 +21,7 @@ export interface ToadaDocument {
   annee?: number;
   lienSequenceurId?: string;
   audioUrl?: string;
+  videoUrl?: string;
   fileUrl?: string;
   parolesOriginales: string | Array<{ puxador?: string; coro?: string; choeur?: string; isMixed?: boolean }>;
   parolesPhonetiques?: string | Array<{ puxador?: string; coro?: string; choeur?: string; isMixed?: boolean }>;
@@ -52,6 +53,9 @@ export interface TimeAnchor {
 }
 
 export interface ParsedLyricsSegment {
+  cardIndex?: number;
+  rawLineCode?: string;
+  lineSignature?: string;
   role: VocalRole;
   text: string;
   phoneticText?: string;

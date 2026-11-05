@@ -4,7 +4,7 @@
  * Decode les WAV Base64 synchronement en Float32Array PCM.
  */
 import type { ToadaProject, VocalPatternItem, VocalAudioVariant } from '../types/toadaProject.types';
-import { createDefaultToadaProject } from '../types/toadaProject.types';
+import { createDefaultToadaProject, DEFAULT_TOADA_BPM } from '../types/toadaProject.types';
 
 export function decodeBase64Wav(rawB64: string): { pcm: Float32Array; sampleRate: number } | null {
   try {
@@ -44,7 +44,7 @@ export function parseToadaPack(jsonText: string): ToadaProject {
   if (!data) throw new Error('Format JSON invalide');
 
   if (data.schemaVersion === '2.0' && data.patterns) {
-    const patterns: VocalPatternItem[] = data.patterns.map((p: any) => {
+    const patterns: VocalPatternItem[] = data.patterns.map((p: any, idx: number) => {
       const variants: Record<string, VocalAudioVariant> = {};
       for (const [key, v] of Object.entries(p.variants || {})) {
         const ev = v as any;
@@ -59,19 +59,23 @@ export function parseToadaPack(jsonText: string): ToadaProject {
       }
       const activeKey = p.activeVariantKey || Object.keys(variants)[0] || 'spd100_pit0';
       const activeV = variants[activeKey] ?? Object.values(variants)[0];
+      const patBpm = p.bpm ?? p.baseBpm ?? data.project?.bpm ?? DEFAULT_TOADA_BPM;
       return {
-        id: p.id, name: p.name, role: p.role, measuresCount: p.measuresCount ?? 2,
+        id: p.id, cardIndex: p.cardIndex ?? idx, rawLineCode: p.rawLineCode,
+        name: p.name, role: p.role, measuresCount: p.measuresCount ?? 2,
         hasAnacrusis: p.hasAnacrusis ?? (p.anacrusisSteps && p.anacrusisSteps.length > 0 ? true : (p.anacrusisSteps !== undefined ? false : true)),
-        baseBpm: p.baseBpm ?? data.project?.bpm ?? 88, bpm: p.bpm ?? p.baseBpm ?? data.project?.bpm ?? 88, referencePitch: p.referencePitch ?? 'C4',
+        anacrusisBeats: p.anacrusisBeats,
+        baseBpm: patBpm, bpm: patBpm, referencePitch: p.referencePitch ?? 'C4',
         pitchCorrectionAmount: p.pitchCorrectionAmount ?? 0, linkedSourcePatternId: p.linkedSourcePatternId ?? null,
         activeVariantKey: activeKey, variants, recordingResult: activeV?.recordingResult ?? null,
         rawAudioSamples: activeV?.recordingResult?.pcm ?? null, correctedAudioSamples: null,
-        trimStartSec: activeV?.trimStartSec ?? 0, trimEndSec: activeV?.trimEndSec ?? 0, t1OffsetSec: activeV?.t1OffsetSec,
+        trimStartSec: activeV?.trimStartSec ?? 0, trimEndSec: activeV?.trimEndSec ?? 0, t1OffsetSec: activeV?.t1OffsetSec ?? p.t1OffsetSec,
         lowCutEnabled: activeV?.lowCutEnabled ?? true, enableTonePolish: activeV?.enableTonePolish ?? true,
         anacrusisSteps: p.anacrusisSteps || [], mainSteps: p.mainSteps || [], pitchCurve: p.pitchCurve || [],
         melodyneRegions: p.melodyneRegions || [],
         assignedLyricsText: p.assignedLyricsText,
         assignedPhoneticText: p.assignedPhoneticText,
+        timeAnchors: p.timeAnchors,
         harmonyGrid: p.harmonyGrid,
         pack: null, midiLocked: true, isMidiInitialized: (p.mainSteps && p.mainSteps.length > 0),
       };
@@ -80,7 +84,7 @@ export function parseToadaPack(jsonText: string): ToadaProject {
     return {
       id: data.project?.id || `toada-${Date.now().toString(36)}`,
       title: data.project?.title || 'Toada Restauree',
-      bpm: data.project?.bpm || 55, timeSignature: data.project?.timeSignature || '4/4',
+      bpm: data.project?.bpm || DEFAULT_TOADA_BPM, timeSignature: data.project?.timeSignature || '4/4',
       patterns, slots: data.arrangementSlots || [], activePatternId: patterns[0]?.id || '',
       toadaMeta: data.project?.toadaMeta || data.toadaMeta,
       globalHarmonyGrid: data.globalHarmonyGrid || data.project?.globalHarmonyGrid,
@@ -90,10 +94,11 @@ export function parseToadaPack(jsonText: string): ToadaProject {
 
   if (data.schemaVersion === '1.0' && data.audio) {
     const proj = createDefaultToadaProject();
-    proj.bpm = data.metadata?.bpm || 55; proj.timeSignature = data.metadata?.timeSignature || '4/4';
+    proj.bpm = data.metadata?.bpm || DEFAULT_TOADA_BPM; proj.timeSignature = data.metadata?.timeSignature || '4/4';
     const decoded = data.audio.audioBase64 ? decodeBase64Wav(data.audio.audioBase64) : null;
     if (proj.patterns[0]) {
       const pat = proj.patterns[0];
+      pat.bpm = proj.bpm; pat.baseBpm = proj.bpm;
       pat.anacrusisSteps = data.alignment?.anacrusis?.steps || [];
       pat.mainSteps = data.grid?.steps || []; pat.pitchCurve = data.pitchCurve || [];
       pat.isMidiInitialized = true; pat.midiLocked = true; pat.recordingResult = decoded; pat.rawAudioSamples = decoded?.pcm ?? null;

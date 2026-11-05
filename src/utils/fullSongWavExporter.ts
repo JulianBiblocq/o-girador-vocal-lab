@@ -74,7 +74,7 @@ function schedulePatternAudio(ctx: BaseAudioContext, pat: VocalPatternItem, slot
 }
 
 export async function exportFullSongWav(project: ToadaProject): Promise<void> {
-  const bpm = project.bpm || 100;
+  const bpm = project.bpm || 88;
   const beatsPerMeasure = getBeatsPerMeasure(project.timeSignature);
   const measureDurationSec = beatsPerMeasure * (60 / bpm);
 

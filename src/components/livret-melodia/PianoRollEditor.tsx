@@ -45,7 +45,7 @@ export const PianoRollEditor: React.FC<PianoRollEditorProps> = (p) => {
   const activeMidis = useMemo(() => p.allSteps.filter((s) => s.active && s.midiNumber > 0).map((s) => s.midiNumber), [p.allSteps]);
   const { minMidi, maxMidi } = useMemo(() => calculateTessitura(activeMidis), [activeMidis]);
   const canvasHeight = Math.max(1, maxMidi - minMidi + 1) * ROW_HEIGHT, gridWidth = Math.round(baseWidth * zoomLevel);
-  const t1OffsetSec = p.t1OffsetSec ?? getPatternT1OffsetSec(p.hasAnacrusis, p.beatsPerMeasure * (60 / (p.bpm || 60)));
+  const t1OffsetSec = p.t1OffsetSec ?? getPatternT1OffsetSec(p.hasAnacrusis, p.beatsPerMeasure * (60 / (p.bpm || 88)));
 
   useEffect(() => {
     const el = scrollRef.current; if (!el || hasAutoCentered.current) return;

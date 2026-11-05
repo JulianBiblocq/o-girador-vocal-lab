@@ -1,6 +1,6 @@
 /**
  * OrganizadorToadaModal.tsx
- * Modale de sélection directe des fiches de chant d'Organizador avec pré-configuration (< 140 lignes).
+ * Modale de sélection directe des fiches de chant d'Organizador avec pré-configuration (< 145 lignes).
  */
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
@@ -9,6 +9,7 @@ import { useLanguage } from '../../i18n/LanguageContext';
 import { fetchOrganizadorToadas, type ToadaDocument } from '../../services/firebaseClient';
 import { parseToadaDocument, parseToadaJsonOrText } from '../../utils/toadaSheetParser';
 import { generateToadaFromSheet } from '../../utils/toadaConductorGenerator';
+import { DEFAULT_TOADA_BPM } from '../../types/toadaProject.types';
 import { OrganizadorDocRow } from './OrganizadorDocRow';
 import { ImportPreconfigBar } from './ImportPreconfigBar';
 import { Scroll, Search, X, Loader2, FileText, LogIn } from 'lucide-react';
@@ -26,13 +27,14 @@ export const OrganizadorToadaModal: React.FC<OrganizadorToadaModalProps> = ({
   const [docs, setDocs] = useState<ToadaDocument[]>([]);
   const [search, setSearch] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [importBpm, setImportBpm] = useState<number>(project.bpm ?? 55);
+  const [importBpm, setImportBpm] = useState<number>(project.bpm ?? DEFAULT_TOADA_BPM);
   const [importMeasures, setImportMeasures] = useState<1 | 2 | 4>(2);
   const [importHasAnacrusis, setImportHasAnacrusis] = useState<boolean>(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!isOpen) return;
+    setImportBpm(project.bpm ?? DEFAULT_TOADA_BPM);
     setIsLoading(true);
     fetchOrganizadorToadas(groupId)
       .then((res) => {
@@ -52,13 +54,19 @@ export const OrganizadorToadaModal: React.FC<OrganizadorToadaModalProps> = ({
   }, [docs, search]);
 
   const loadWithConfig = (parsed: any, bpmVal?: number, toastMsg?: string) => {
-    const opts = { bpm: bpmVal ?? importBpm, defaultMeasuresCount: importMeasures, defaultHasAnacrusis: importHasAnacrusis };
+    const targetBpm = bpmVal ?? parsed?.docMeta?.bpmDefaut ?? importBpm ?? DEFAULT_TOADA_BPM;
+    const opts = { bpm: targetBpm, defaultMeasuresCount: importMeasures, defaultHasAnacrusis: importHasAnacrusis };
     loadProject(generateToadaFromSheet(project, parsed, opts));
     if (toastMsg) window.dispatchEvent(new CustomEvent('app-toast', { detail: { type: 'success', message: toastMsg } }));
     onClose();
   };
 
-  const applyDoc = (doc: ToadaDocument) => loadWithConfig(parseToadaDocument(doc, 'puxador'), doc.bpmDefaut, `${doc.titre} chargée !`);
+  const applyDoc = (doc: ToadaDocument) => {
+    const parsed = parseToadaDocument(doc, 'puxador');
+    const docBpm = doc.bpmDefaut ?? parsed.docMeta?.bpmDefaut;
+    if (docBpm) setImportBpm(docBpm);
+    loadWithConfig(parsed, docBpm, `${doc.titre} chargée !`);
+  };
 
   const handleTxtFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
@@ -66,7 +74,9 @@ export const OrganizadorToadaModal: React.FC<OrganizadorToadaModalProps> = ({
     const r = new FileReader();
     r.onload = (ev) => {
       const res = parseToadaJsonOrText(ev.target?.result as string, 'puxador');
-      loadWithConfig(res.parsed, res.parsed.docMeta?.bpmDefaut, `${f.name} importé !`);
+      const docBpm = res.parsed.docMeta?.bpmDefaut;
+      if (docBpm) setImportBpm(docBpm);
+      loadWithConfig(res.parsed, docBpm, `${f.name} importé !`);
     };
     r.readAsText(f);
   };
@@ -97,7 +107,6 @@ export const OrganizadorToadaModal: React.FC<OrganizadorToadaModalProps> = ({
           </div>
         )}
 
-        {/* Bandeau de pré-configuration (Micro-sécurité 3) */}
         <ImportPreconfigBar
           bpm={importBpm} onBpmChange={setImportBpm} measuresCount={importMeasures}
           onMeasuresCountChange={setImportMeasures} hasAnacrusis={importHasAnacrusis} onHasAnacrusisChange={setImportHasAnacrusis}

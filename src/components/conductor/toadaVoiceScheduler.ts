@@ -18,7 +18,7 @@ export function schedulePatternVoice(
   slotT1Time: number,
   clock: ToadaTimelineClock
 ): ScheduledVoiceResult | null {
-  const match = selectBestAudioVariant(pat.variants, 1.0, 0, pat.baseBpm ?? 100);
+  const match = selectBestAudioVariant(pat.variants, 1.0, 0, pat.baseBpm ?? pat.bpm ?? 88);
   const variant = match?.variant ?? pat.variants?.[pat.activeVariantKey];
   const rec = variant?.recordingResult ?? pat.recordingResult;
   if (!rec?.pcm?.length) return null;

@@ -1,11 +1,11 @@
 /**
  * organizadorToadaPublisher.ts
- * Publication et synchronisation bidirectionnelle vers Firestore /documents (< 100 lignes).
- * Stocke rawTxtCode, paroles, métadonnées culturelles, notesLexique et questionsQcm pour les quiz.
+ * Publication et synchronisation bidirectionnelle vers Firestore /documents (< 105 lignes).
+ * Préserve intégralement rawTxtCode (1 ligne = 1 carte), parolesOriginales, BPM, lexique, QCM et métadonnées.
  */
 import { doc, collection, addDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../firebase/config';
-import type { ToadaProject } from '../types/toadaProject.types';
+import { type ToadaProject, DEFAULT_TOADA_BPM } from '../types/toadaProject.types';
 import { reconstituteToadaTxt } from '../utils/toadaTxtReconstitutor';
 import { detectToadaLexicon } from '../utils/toadaLexiconDetector';
 import { generateQuizFromLexicon } from '../utils/toadaQuizGenerator';
@@ -15,7 +15,8 @@ export async function publishToadaToOrganizador(
   groupId: string = 'samambaia'
 ): Promise<{ success: boolean; documentId: string }> {
   const { rawTxtCode, cleanHtml } = reconstituteToadaTxt(project);
-  const targetGroupId = (groupId || 'samambaia').trim().toLowerCase();
+  const rawGroupId = project.toadaMeta?.groupId || groupId || 'samambaia';
+  const targetGroupId = rawGroupId.trim().toLowerCase();
 
   // 1. Détection ou consolidation du lexique bilingue & diction
   const existingLexicon = project.toadaMeta?.notesLexique || [];
@@ -33,29 +34,34 @@ export async function publishToadaToOrganizador(
     ? phoneticsList.join('\n')
     : (project.toadaMeta?.parolesPhonetiques || '');
 
+  const resolvedBpm = Number(project.bpm || project.toadaMeta?.bpmDefaut || DEFAULT_TOADA_BPM);
+  const resolvedHarmony = project.globalHarmonyGrid || project.toadaMeta?.harmonyGrid || project.patterns[0]?.harmonyGrid || null;
+
   const payload: any = {
     titre: project.title,
     type: 'song',
-    categoryId: 'Toadas',
-    categorie: 'Toadas',
+    categoryId: project.toadaMeta?.categoryId || 'Toadas',
+    categorie: project.toadaMeta?.categorie || 'Toadas',
     groupId: targetGroupId,
+    nacao: project.toadaMeta?.nacao || '',
+    rythme: project.toadaMeta?.rythme || '',
     rawTxtCode,
-    parolesOriginales: cleanHtml,
+    parolesOriginales: project.toadaMeta?.parolesOriginales || cleanHtml,
     parolesPhonetiques,
     signature: project.timeSignature || '4/4',
     timeSignature: project.timeSignature || '4/4',
-    bpmDefaut: project.bpm || 88,
+    bpmDefaut: resolvedBpm,
     tonaliteDefaut: project.toadaMeta?.tonaliteDefaut || (project as any).referencePitch || 'D',
     cantadorToadaId: project.id,
     traduction: project.toadaMeta?.traduction || '',
     anecdote: project.toadaMeta?.anecdote || '',
     notesLexique,
     questionsQcm,
-    harmonyGrid: project.globalHarmonyGrid || project.patterns[0]?.harmonyGrid || null,
-    globalHarmonyGrid: project.globalHarmonyGrid || null,
+    harmonyGrid: resolvedHarmony,
+    globalHarmonyGrid: resolvedHarmony,
     quizCount: questionsQcm.length,
     lexiqueCount: notesLexique.length,
-    annee: new Date().getFullYear(),
+    annee: project.toadaMeta?.annee || new Date().getFullYear(),
     dateMaj: new Date().toISOString(),
   };
 
@@ -71,16 +77,15 @@ export async function publishToadaToOrganizador(
     } catch {}
   }
 
-  // Création d'un nouveau document dans /documents
   const newDocRef = await addDoc(collection(db, 'documents'), payload);
 
-  // Synchronisation optionnelle du morceau de répertoire lié
   const repId = project.toadaMeta?.repertoireId;
   if (repId) {
     try {
       await updateDoc(doc(db, 'associations', targetGroupId, 'repertoire', repId), {
         cantadorToadaId: project.id,
         toadaDocId: newDocRef.id,
+        bpmDefaut: resolvedBpm,
       });
     } catch {}
   }

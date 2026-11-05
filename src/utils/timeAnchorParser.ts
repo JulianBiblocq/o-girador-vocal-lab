@@ -63,7 +63,7 @@ export interface ExtractedAnchorsResult {
   exitBeat?: number;
 }
 
-export function extractTimeAnchors(rawText: string): ExtractedAnchorsResult {
+export function extractTimeAnchors(rawText: string, beatsPerMeasure = 4): ExtractedAnchorsResult {
   const matches: Array<{ beat: number; absMeasure?: number; index: number; fullLength: number }> = [];
   let m: RegExpExecArray | null;
   const regex = /\[(?:M(\d+)[•\.:])?([1-9]|1[0-2])\]/gi;
@@ -72,15 +72,15 @@ export function extractTimeAnchors(rawText: string): ExtractedAnchorsResult {
   }
   if (matches.length === 0) return { cleanText: rawText, timeAnchors: [] };
 
-  const firstOneIdx = matches.findIndex((m) => m.beat === 1);
+  const firstOneIdx = matches.findIndex((x) => x.beat === 1);
   let hasAnacrusis = false, anacrusisStartBeat: number | undefined, anacrusisBeats: number | undefined;
   if (firstOneIdx > 0) {
-    const sBeat = matches[0].beat; hasAnacrusis = true; anacrusisStartBeat = sBeat; anacrusisBeats = Math.max(1, 5 - sBeat);
+    const sBeat = matches[0].beat; hasAnacrusis = true; anacrusisStartBeat = sBeat; anacrusisBeats = Math.max(1, beatsPerMeasure + 1 - sBeat);
   } else if (firstOneIdx === 0) {
     const textBefore = rawText.slice(0, matches[0].index).replace(/\[[^\]]+\]/g, '').replace(/[\*_]/g, '').trim();
-    if (textBefore.length > 0) { hasAnacrusis = true; anacrusisStartBeat = 4; anacrusisBeats = 1; }
+    if (textBefore.length > 0) { hasAnacrusis = true; anacrusisStartBeat = beatsPerMeasure; anacrusisBeats = 1; }
   } else if (firstOneIdx === -1 && matches.length > 0 && matches[0].beat > 1) {
-    const sBeat = matches[0].beat; hasAnacrusis = true; anacrusisStartBeat = sBeat; anacrusisBeats = Math.max(1, 5 - sBeat);
+    const sBeat = matches[0].beat; hasAnacrusis = true; anacrusisStartBeat = sBeat; anacrusisBeats = Math.max(1, beatsPerMeasure + 1 - sBeat);
   }
 
   const timeAnchors: TimeAnchor[] = [];
@@ -97,9 +97,10 @@ export function extractTimeAnchors(rawText: string): ExtractedAnchorsResult {
     }
 
     const nextIndex = matches[k + 1] ? matches[k + 1].index : rawText.length;
-    const chunk = rawText.slice(cur.index + cur.fullLength, nextIndex), trimmedChunk = chunk.trim();
-    const isRestSymbol = trimmedChunk === '' || trimmedChunk === '_' || trimmedChunk.startsWith('_');
-    const textSlice = isRestSymbol ? '' : chunk.replace(/_/g, ' ').replace(/\s{2,}/g, ' ').trim();
+    const chunk = rawText.slice(cur.index + cur.fullLength, nextIndex);
+    const cleanChunkWords = chunk.replace(/\[[^\]]+\]/g, '').replace(/[\*_]/g, ' ').trim();
+    const isRestSymbol = cleanChunkWords.length === 0;
+    const textSlice = isRestSymbol ? '' : chunk.replace(/\[[^\]]+\]/g, '').replace(/[\*_]/g, ' ').replace(/\s{2,}/g, ' ').trim();
     const syllables = textSlice ? splitTextIntoLetraSyllables(textSlice) : [];
 
     if (syllables.length > 0) hasEncounteredSyllables = true;
@@ -112,11 +113,9 @@ export function extractTimeAnchors(rawText: string): ExtractedAnchorsResult {
     });
   }
 
-  const cleanText = rawText.replace(/\[(?:M\d+[•\.:])?[^\]]+\]/g, '').replace(/_/g, ' ').replace(/\s{2,}/g, ' ').trim();
-  const count1 = matches.filter((m) => m.beat === 1).length;
-  const isTrailingBeat1Chute = matches.length > 1 && matches[matches.length - 1].beat === 1;
-  const effectiveCount1 = isTrailingBeat1Chute && count1 > 1 ? count1 - 1 : count1;
-  const rawMeasuresCount = Math.min(4, Math.max(1, effectiveCount1 > 0 ? effectiveCount1 : (hasAnacrusis ? (measureOffset || 1) : measureOffset + 1))) as 1 | 2 | 3 | 4;
+  const cleanText = rawText.replace(/\[(?:M\d+[•\.:])?([1-9]|1[0-2])\]/gi, '').replace(/_/g, ' ').replace(/\s{2,}/g, ' ').trim();
+  const count1 = matches.filter((x) => x.beat === 1).length;
+  const rawMeasuresCount = Math.min(4, Math.max(1, count1 > 0 ? count1 : (hasAnacrusis ? (measureOffset || 1) : measureOffset + 1))) as 1 | 2 | 3 | 4;
   const lastAnchor = timeAnchors[timeAnchors.length - 1];
 
   return { cleanText, timeAnchors, measuresCount: rawMeasuresCount, hasAnacrusis, anacrusisBeats, anacrusisStartBeat, exitBeat: lastAnchor?.beat };

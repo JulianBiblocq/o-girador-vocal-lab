@@ -100,7 +100,7 @@ export const SlicerSegmentWaveform: React.FC<SlicerSegmentWaveformProps> = ({
       const segIdx = segments.findIndex((s) => s.id === segId);
       if (segIdx < 0) return;
       const targetSeg = segments[segIdx];
-      const beatDur = 60 / (bpm || 55), measureDur = beatDur * 4;
+      const beatDur = 60 / (bpm || 88), measureDur = beatDur * 4;
       const anacDur = targetSeg.hasAnacrusis !== false ? (targetSeg.anacrusisBeats ?? 2) * beatDur : 0;
       const rawTargetT1 = origStart + delta + anacDur;
       const nearestT1 = Math.round((rawTargetT1 - gridOffsetSec) / measureDur) * measureDur + gridOffsetSec;

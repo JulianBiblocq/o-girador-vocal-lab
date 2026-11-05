@@ -20,7 +20,7 @@ export function scheduleContinuousCounterRole(
 ): ContinuousCueHandle {
   const counterRole: VocalRole = targetRole === 'puxador' ? 'coro' : 'puxador';
   const beatsPerMeasure = getBeatsPerMeasure(project.timeSignature);
-  const beatDuration = 60 / (project.bpm || 55);
+  const beatDuration = 60 / (project.bpm || 88);
   const measureDurationSec = beatsPerMeasure * beatDuration;
   const sources: AudioBufferSourceNode[] = [];
 
@@ -33,7 +33,7 @@ export function scheduleContinuousCounterRole(
 
     const patToPlay: VocalPatternItem | undefined = counterRole === 'puxador' ? puxPat : coroPat;
     if (patToPlay) {
-      const match = selectBestAudioVariant(patToPlay.variants, 1.0, 0, patToPlay.baseBpm ?? 100);
+      const match = selectBestAudioVariant(patToPlay.variants, 1.0, 0, patToPlay.baseBpm ?? patToPlay.bpm ?? 88);
       const variant = match?.variant ?? patToPlay.variants?.[patToPlay.activeVariantKey];
       const rec = variant?.recordingResult ?? patToPlay.recordingResult;
 

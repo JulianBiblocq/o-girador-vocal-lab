@@ -16,12 +16,12 @@ import { BookOpen, RefreshCw } from 'lucide-react';
 
 export const ProjectSelectorBar: React.FC = () => {
   const { project, loadProject } = useToadaProject();
-  const { currentUser, groupId, loginWithGoogle } = useOrganizadorAuth();
+  const { currentUser, groupId, isLoading, loginWithGoogle } = useOrganizadorAuth();
   const [isOrganizadorOpen, setIsOrganizadorOpen] = useState(false);
   const [isLexiconOpen, setIsLexiconOpen] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
 
-  useOrganizadorDeepLink(groupId);
+  useOrganizadorDeepLink(groupId, isLoading);
 
   const handleSyncOrganizador = async () => {
     setIsSyncing(true);

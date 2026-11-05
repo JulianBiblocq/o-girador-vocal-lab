@@ -9,7 +9,7 @@ export interface ExtractedSheetHeaders {
   cleanLyricsText: string;
 }
 
-const HEADER_REGEX = /^\s*(signature|timeSignature|tempo|bpm|tonalit[eé]|tonality|titre|title|rythme|rhythm|na[cç][aã]o)\s*:\s*(.+)$/i;
+const HEADER_REGEX = /^\s*#?\s*(signature|timeSignature|tempo|bpm|tonalit[eé]|tonality|titre|title|rythme|rhythm|na[cç][aã]o)\s*:\s*(.+)$/i;
 
 export function extractSheetHeaders(rawInput: string): ExtractedSheetHeaders {
   if (!rawInput) return { meta: {}, cleanLyricsText: '' };
@@ -37,6 +37,9 @@ export function extractSheetHeaders(rawInput: string): ExtractedSheetHeaders {
       else if (key === 'titre' || key === 'title') meta.titre = val;
       else if (key === 'rythme' || key === 'rhythm') meta.rythme = val;
       else if (key.startsWith('na')) meta.nacao = val;
+    } else if (/^\s*#/.test(trimmed)) {
+      // Ignorer les lignes de commentaires ou de légende (# ===...)
+      continue;
     } else {
       inHeaderZone = false;
       remainingLines.push(line);

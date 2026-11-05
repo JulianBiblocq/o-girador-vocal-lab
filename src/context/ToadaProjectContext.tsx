@@ -40,7 +40,7 @@ export const ToadaProjectProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
   const addPattern = useCallback((role: VocalRole, name?: string): string => {
     const defaultName = role === 'puxador' ? `Appel ${Date.now() % 100}` : `Choeur ${Date.now() % 100}`;
-    const newPat = createDefaultVocalPattern(role, name ?? defaultName, 2, project.bpm ?? 55, 'C4');
+    const newPat = createDefaultVocalPattern(role, name ?? defaultName, 2, project.bpm ?? 88, 'C4');
     if (activePattern?.hasAnacrusis !== undefined) newPat.hasAnacrusis = activePattern.hasAnacrusis;
     setProject((prev) => ({ ...prev, patterns: [...prev.patterns, newPat], activePatternId: newPat.id }));
     return newPat.id;

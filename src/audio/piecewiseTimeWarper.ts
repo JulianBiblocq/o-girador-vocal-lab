@@ -10,7 +10,7 @@ export interface TimeWarpAnalysis {
 }
 
 export function analyzeBeatPegs(pegs: number[], customBpm?: number): TimeWarpAnalysis {
-  if (pegs.length < 2) return { averageBeatSec: 0.6, phraseBpm: customBpm || 100, targetPegs: [...pegs] };
+  if (pegs.length < 2) return { averageBeatSec: 60 / 88, phraseBpm: customBpm || 88, targetPegs: [...pegs] };
   const avgBeat = customBpm && customBpm > 20 ? 60 / customBpm : (pegs[pegs.length - 1] - pegs[0]) / (pegs.length - 1);
   const phraseBpm = Math.round((60 / avgBeat) * 10) / 10;
   const targetPegs = pegs.map((_, i) => pegs[0] + i * avgBeat);

@@ -83,7 +83,7 @@ export function executeBatchAssign(options: BatchAssignOptions): { processedCoun
       rawPCM: slicedPCM, sampleRate, bpm, timeSignature: project.timeSignature,
       measuresCount, beatsPerMeasure, beatResolutions, hasAnacrusis,
       trimStartSec, trimEndSec, referencePitch: targetPattern.referencePitch ?? 'C4',
-      pitchShiftSemitones: 0, tessitura: targetPattern.tessitura, assignedLyricsText: targetPattern.assignedLyricsText,
+      pitchShiftSemitones: 0, tessitura: targetPattern.tessitura, assignedLyricsText: targetPattern.assignedLyricsText, timeAnchors: targetPattern.timeAnchors,
       lowCutEnabled: targetPattern.lowCutEnabled !== false, enableTonePolish: targetPattern.enableTonePolish !== false,
       t1OffsetSec,
     });

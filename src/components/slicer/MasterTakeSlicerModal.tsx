@@ -50,7 +50,7 @@ export const MasterTakeSlicerModal: React.FC<SlicerModalProps> = ({
   const loadAudioWithAutoSlices = useCallback((aud: DecodedAudioResult) => {
     setAudio(aud); setTrimIn(0); setTrimOut(Math.min(aud.durationSec, 8)); setBeatPegs([]);
     const detected = detectVocalPhrases(aud.pcm, aud.sampleRate);
-    setSegments(buildOrganizadorSlices(project.patterns, defaultRole, project.bpm || 55, detected, 0.8));
+    setSegments(buildOrganizadorSlices(project.patterns, defaultRole, project.bpm || 88, detected, 0.8));
   }, [defaultRole, project.patterns, project.bpm]);
 
   useEffect(() => {
@@ -101,7 +101,7 @@ export const MasterTakeSlicerModal: React.FC<SlicerModalProps> = ({
       });
       const patId = targetPatternId === 'new' ? addPattern(res.role, res.name) : targetPatternId;
       updatePattern(patId, {
-        measuresCount: res.measuresCount, baseBpm: Math.round(res.phraseBpm), hasAnacrusis: res.hasAnacrusis,
+        measuresCount: res.measuresCount, baseBpm: Math.round(res.phraseBpm), bpm: Math.round(res.phraseBpm), hasAnacrusis: res.hasAnacrusis,
         pack: res.pack, rawAudioSamples: res.cleanPCM, rawPitchCurve: res.pitchCurve, pitchCurve: res.pitchCurve,
         anacrusisSteps: res.anacrusisSteps, mainSteps: res.mainSteps, t1OffsetSec: res.t1OffsetSec, isMidiInitialized: true, midiLocked: true,
       });

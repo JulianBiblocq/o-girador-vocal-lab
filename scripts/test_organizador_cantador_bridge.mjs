@@ -3,9 +3,10 @@ import { normalizeToadaDoc, normalizeLexiconList, normalizeQuizList, normalizeHa
 import { parseToadaDocument } from '../src/utils/toadaSheetParser.ts';
 import { generateToadaFromSheet } from '../src/utils/toadaConductorGenerator.ts';
 import { createDefaultToadaProject } from '../src/types/toadaProject.types.ts';
-import { mergeWithLocalSamambaiaToadas } from '../src/utils/samambaiaToadaResolver.ts';
+import { mergeAndDeduplicateToadas } from '../src/utils/varalSongFilter.ts';
+import { sanitizePatternForFirestore } from '../src/services/toadaPublishHelpers.ts';
 
-console.log('🧪 Démarrage des tests de la Passerelle Organizador ➔ Cantador...');
+console.log('🧪 Démarrage des tests de la Passerelle Organizador ➔ Cantador ➔ Sequenciador...');
 
 // 1. Test de normalisation des notesLexique
 const rawLexique = [
@@ -40,6 +41,7 @@ console.log('✅ 3. Normalisation harmonyGrid OK');
 const mockOrganizadorDoc = {
   titre: 'De Norte a Sul - Live Edité',
   type: 'song',
+  bpmDefaut: 92,
   notesLexique: rawLexique,
   questionsQcm: rawQuiz,
   harmonyGrid: ['Dm', 'A7'],
@@ -50,6 +52,7 @@ const mockOrganizadorDoc = {
 
 const normalizedDoc = normalizeToadaDoc('test_doc_123', mockOrganizadorDoc);
 assert.strictEqual(normalizedDoc.titre, 'De Norte a Sul - Live Edité');
+assert.strictEqual(normalizedDoc.bpmDefaut, 92);
 assert.strictEqual(normalizedDoc.notesLexique?.length, 2);
 assert.strictEqual(normalizedDoc.questionsQcm?.length, 1);
 assert.ok(normalizedDoc.harmonyGrid);
@@ -65,6 +68,7 @@ assert.ok(parsed.docMeta?.harmonyGrid);
 
 const generatedProject = generateToadaFromSheet(baseProject, parsed);
 assert.strictEqual(generatedProject.title, 'De Norte a Sul - Live Edité');
+assert.strictEqual(generatedProject.bpm, 92, 'Le BPM du projet doit être 92');
 assert.strictEqual(generatedProject.toadaMeta?.notesLexique?.length, 2, 'Le lexique d Organizador ne doit pas être écrasé');
 assert.strictEqual(generatedProject.toadaMeta?.notesLexique[0].mot, 'Xangô');
 assert.strictEqual(generatedProject.toadaMeta?.questionsQcm?.length, 1, 'Le QCM d Organizador ne doit pas être écrasé');
@@ -73,21 +77,33 @@ assert.ok(generatedProject.globalHarmonyGrid, 'La grille harmonique globale doit
 assert.ok(generatedProject.patterns[0]?.harmonyGrid, 'Les patterns doivent recevoir la grille harmonique');
 console.log('✅ 5. Injection sans perte dans ToadaProject OK');
 
-// 6. Test de non-régression Samambaia (le document live Firestore prévaut sur le template local)
-const liveFirestoreSamambaia = normalizeToadaDoc('JldyOUUlSWSN2Nth63wt', {
-  titre: 'De Norte a Sul',
-  type: 'song',
-  notesLexique: [{ mot: 'Batuqueiro', explication: 'Percussionniste' }],
-  questionsQcm: [{ question: 'Que signifie Batuqueiro ?', options: ['Percussionniste', 'Chanteur'], correctIndex: 0 }],
-  parolesOriginales: `[Dm] *Negro vem de Luanda*\n[A7] Trazendo o baque virado`
-});
+// 6. Test déduplication Varal <-> Répertoire (sans pollution de templates locaux)
+const merged = mergeAndDeduplicateToadas([normalizedDoc], [
+  { id: 'rep_123', data: { toadaDocId: 'test_doc_123', titre: 'De Norte a Sul - Live Edité', rythme: 'Baque Virado' } }
+]);
+assert.strictEqual(merged.length, 1);
+assert.strictEqual(merged[0].repertoireId, 'rep_123');
+assert.strictEqual(merged[0].rythme, 'Baque Virado');
+console.log('✅ 6. Déduplication Varal <-> Répertoire purement Cloud OK');
 
-const mergedSamambaia = mergeWithLocalSamambaiaToadas([liveFirestoreSamambaia]);
-const foundMerged = mergedSamambaia.find((t) => t.id === 'JldyOUUlSWSN2Nth63wt');
-assert.ok(foundMerged, 'Le document Samambaia doit exister');
-assert.strictEqual(foundMerged.notesLexique?.length, 1, 'Le document Firestore ne doit pas être écrasé par le local vide');
-assert.strictEqual(foundMerged.notesLexique[0].mot, 'Batuqueiro');
-assert.strictEqual(foundMerged.questionsQcm?.length, 1);
-console.log('✅ 6. Priorité Firestore sur le template local Samambaia OK');
+// 7. Test pureté de sanitizePatternForFirestore (Zéro Base64, Zéro variante fantôme)
+const dirtyPat = {
+  ...generatedProject.patterns[0],
+  pack: { audio: { audioBase64: 'UklGRiQAAABXQVZFZm10IBAAAAABAAEA...' } },
+  rawAudioSamples: new Float32Array([0.1, -0.1]),
+  correctedAudioSamples: new Float32Array([0.2, -0.2]),
+  recordingResult: { pcm: new Float32Array([0.1]), sampleRate: 44100 },
+  rawPitchCurve: [{ timeSec: 0, freqHz: 220, midiFloat: 57, confidence: 0.9 }],
+  pitchCurve: [{ timeSec: 0, freqHz: 220, midiFloat: 57, confidence: 0.9 }],
+};
+const cleanPat = sanitizePatternForFirestore(dirtyPat, 'https://storage.googleapis.com/test.wav', 4.5, 1.36, -1.36);
+assert.strictEqual(cleanPat.pack, undefined, 'pack (et son audioBase64) doit être intégralement purgé');
+assert.strictEqual(cleanPat.rawAudioSamples, undefined, 'rawAudioSamples doit être purgé');
+assert.strictEqual(cleanPat.correctedAudioSamples, undefined, 'correctedAudioSamples doit être purgé');
+assert.strictEqual(cleanPat.recordingResult, undefined, 'recordingResult doit être purgé');
+assert.strictEqual(cleanPat.pitchCurve, undefined, 'pitchCurve doit être purgé');
+assert.strictEqual(Object.keys(cleanPat.variants).length, 1, 'Seule la variante réellement enregistrée doit être exportée');
+assert.strictEqual(cleanPat.variants['spd100_pit+0'].audioUrl, 'https://storage.googleapis.com/test.wav');
+console.log('✅ 7. Pureté du payload Firestore /toada_packs (Zéro Base64 & Zéro variante fantôme) OK');
 
-console.log('🎉 TOUS LES TESTS DE LA PASSERELLE ORGANIZADOR ➔ CANTADOR SONT PASSÉS AVEC SUCCÈS !');
+console.log('🎉 TOUS LES TESTS DE LA PASSERELLE ORGANIZADOR ➔ CANTADOR ➔ SEQUENCIADOR SONT PASSÉS AVEC SUCCÈS !');

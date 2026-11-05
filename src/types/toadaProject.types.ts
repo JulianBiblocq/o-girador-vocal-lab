@@ -1,6 +1,6 @@
 /**
  * toadaProject.types.ts
- * Modèle de données de la Toada : Multi-patterns, Déclinaisons Audio, Tessiture & Frise Conducteur (< 90 lignes).
+ * Modèle de données de la Toada : Multi-patterns, Déclinaisons Audio, Tessiture & Frise Conducteur (< 115 lignes).
  */
 import type { TimeSignatureString, VocalStepData, PitchCurvePoint, VocalPackExport, MelodyneRegion } from './vocalPack.types';
 import type { ToadaDocument, TimeAnchor } from './toadaDocument.types';
@@ -10,6 +10,7 @@ import type { PatternHarmonyGrid, HarmonyConfig } from './harmony.types';
 export * from './tessitura.types';
 export * from './harmony.types';
 export {
+  DEFAULT_TOADA_BPM,
   computeVariantCoverage,
   makeVariantKey,
   createDefaultVariant,
@@ -48,6 +49,8 @@ export interface VocalAudioVariant {
 
 export interface VocalPatternItem {
   id: string;
+  cardIndex?: number;
+  rawLineCode?: string;
   name: string;
   role: VocalRole;
   measuresCount: 1 | 2 | 3 | 4;

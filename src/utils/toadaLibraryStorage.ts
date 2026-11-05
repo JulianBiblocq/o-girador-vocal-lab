@@ -47,7 +47,7 @@ export async function listSavedToadas(): Promise<SavedToadaSummary[]> {
         const summaries: SavedToadaSummary[] = list.map((p) => ({
           id: p.id,
           title: p.title || 'Toada',
-          bpm: p.bpm || 55,
+          bpm: p.bpm || 88,
           timeSignature: p.timeSignature || '4/4',
           updatedAt: p.updatedAt || Date.now(),
           patternsCount: p.patterns?.length || 0,

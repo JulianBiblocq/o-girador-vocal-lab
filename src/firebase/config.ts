@@ -1,19 +1,21 @@
 /**
  * config.ts
- * Initialisation Firebase pour O Girador Vocal Lab (partagé avec organizador / sequenciador).
+ * Initialisation Firebase pour O Girador Vocal Lab (partagé avec Organizador / Sequenciador).
  * Strictement < 50 lignes.
  */
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 
+const env = (import.meta as any).env || {};
+
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || 'AIzaSyCTvRPj2p3zdIfEjftXoSvRJ43Uy0EfPMY',
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || 'o-girador-7828c.firebaseapp.com',
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || 'o-girador-7828c',
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || 'o-girador-7828c.firebasestorage.app',
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || '488703864701',
-  appId: import.meta.env.VITE_FIREBASE_APP_ID || '1:488703864701:web:50b8cbcd1ca4038e15e614',
+  apiKey: env.VITE_FIREBASE_API_KEY || 'AIzaSyCTvRPj2p3zdIfEjftXoSvRJ43Uy0EfPMY',
+  authDomain: env.VITE_FIREBASE_AUTH_DOMAIN || 'o-girador-7828c.firebaseapp.com',
+  projectId: env.VITE_FIREBASE_PROJECT_ID || 'o-girador-7828c',
+  storageBucket: env.VITE_FIREBASE_STORAGE_BUCKET || 'o-girador-7828c.firebasestorage.app',
+  messagingSenderId: env.VITE_FIREBASE_MESSAGING_SENDER_ID || '488703864701',
+  appId: env.VITE_FIREBASE_APP_ID || '1:488703864701:web:50b8cbcd1ca4038e15e614',
 };
 
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();

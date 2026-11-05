@@ -48,7 +48,7 @@ export class ContinuousTakeSession {
     const ctx = await engine.initContext();
     const sampleRate = await recorder.prepare(ctx, selectedDeviceId);
     const beatsPerMeasure = getBeatsPerMeasure(project.timeSignature);
-    const beatDuration = 60 / (project.bpm || 55);
+    const beatDuration = 60 / (project.bpm || 88);
     const measureDurationSec = beatsPerMeasure * beatDuration;
 
     let totalSongMeasures = 1;

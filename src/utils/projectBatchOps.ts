@@ -1,6 +1,6 @@
 /**
  * projectBatchOps.ts
- * Opérations de mise à jour groupée ou ciblée sur les patterns d'une Toada (< 120 lignes).
+ * Opérations de mise à jour groupée ou ciblée sur les patterns d'une Toada (< 125 lignes).
  * Supporte les portées : 'all' (tout le chant), 'active' (ce bloc), 'selected' (sélection).
  */
 import type { ToadaProject } from '../types/toadaProject.types';
@@ -30,12 +30,13 @@ export function batchUpdateProjectBpm(
     const patAny = p as any;
     const pack = p.pack ? { ...p.pack, metadata: { ...p.pack.metadata, bpm } } : p.pack;
     const metricConfig = patAny.metricConfig ? { ...patAny.metricConfig, bpm } : patAny.metricConfig;
-    return { ...p, baseBpm: bpm, pack, metricConfig };
+    return { ...p, baseBpm: bpm, bpm, pack, metricConfig };
   });
 
   return {
     ...project,
     bpm: scope === 'all' ? bpm : project.bpm,
+    toadaMeta: scope === 'all' && project.toadaMeta ? { ...project.toadaMeta, bpmDefaut: bpm } : project.toadaMeta,
     patterns: updatedPatterns,
   };
 }
@@ -115,4 +116,3 @@ export function batchUpdateProjectTessitura(
   const updatedPatterns = project.patterns.map((p) => (targets.has(p.id) ? { ...p, tessitura } : p));
   return { ...project, patterns: updatedPatterns };
 }
-

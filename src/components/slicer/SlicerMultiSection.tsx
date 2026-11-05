@@ -57,7 +57,7 @@ export const SlicerMultiSection: React.FC<SlicerMultiSectionProps> = ({
   const handleSyncOrganizador = async () => {
     setIsSyncing(true);
     try {
-      const res = await syncProjectWithOrganizador(project);
+      const res = await syncProjectWithOrganizador(project, project.toadaMeta?.groupId);
       if (res) {
         const freshBpm = res.updatedProject.bpm || 88;
         setSlicerBpm(freshBpm);
@@ -105,7 +105,7 @@ export const SlicerMultiSection: React.FC<SlicerMultiSectionProps> = ({
         onBpmChange={(nb) => {
           setSlicerBpm(nb);
           if (metronomeActive) engine.setMetronome(true, nb, gridOffsetSec);
-          onProjectUpdate?.({ ...project, bpm: nb, patterns: (project.patterns || []).map((p) => ({ ...p, bpm: nb, baseBpm: nb })) });
+          onProjectUpdate?.({ ...project, bpm: nb, toadaMeta: project.toadaMeta ? { ...project.toadaMeta, bpmDefaut: nb } : project.toadaMeta, patterns: (project.patterns || []).map((p) => ({ ...p, bpm: nb, baseBpm: nb })) });
         }}
         onNudgeOffset={(d) => setGridOffsetSec((prev) => Math.max(0, Math.round((prev + d) * 100) / 100))}
         onToggleCascade={() => setCascadeMove((v) => !v)} onAlignOrganizador={handleAlignOrganizador}

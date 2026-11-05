@@ -1,9 +1,12 @@
 /**
  * varalSongFilter.ts
  * Filtrage strict des fiches Varal (exclusion commissions/administratif)
- * et déduplication canonique Varal <-> Répertoire (< 110 lignes).
+ * et déduplication canonique Varal <-> Répertoire (< 120 lignes).
  */
 import type { ToadaDocument } from '../types/toadaDocument.types';
+import { normalizeToadaDoc, normalizeLexiconList, normalizeQuizList, normalizeHarmonyGrid } from './toadaDocNormalizer';
+
+export { normalizeToadaDoc };
 
 export function isVaralCommissionOrNonSong(data: any): boolean {
   if (!data || typeof data !== 'object') return true;
@@ -22,7 +25,7 @@ export function isVaralSong(data: any): boolean {
   if (isVaralCommissionOrNonSong(data)) return false;
   if (data.type === 'song' || data.typeMorceau === 'song') return true;
   if (data.categoryId === 'Toadas' || data.categoryId === 'Chants' || data.categorie === 'Toadas' || data.categorie === 'Chants') return true;
-  const hasLyrics = Boolean(data.parolesOriginales || data.paroles || data.lyrics || data.activeToada?.paroles);
+  const hasLyrics = Boolean(data.parolesOriginales || data.paroles || data.lyrics || data.activeToada?.paroles || data.rawTxtCode);
   return hasLyrics;
 }
 
@@ -37,9 +40,14 @@ export function normalizeSongTitle(title?: string | null): string {
     .trim();
 }
 
-import { normalizeToadaDoc, normalizeLexiconList, normalizeQuizList, normalizeHarmonyGrid } from './toadaDocNormalizer';
-
-export { normalizeToadaDoc };
+export function findDocByIdOrNormalizedTitle(docs: ToadaDocument[], idOrTitle?: string | null): ToadaDocument | undefined {
+  if (!idOrTitle) return undefined;
+  const direct = docs.find((d) => d.id === idOrTitle || d.repertoireId === idOrTitle);
+  if (direct) return direct;
+  const targetNorm = normalizeSongTitle(idOrTitle);
+  if (!targetNorm) return undefined;
+  return docs.find((d) => normalizeSongTitle(d.titre) === targetNorm || normalizeSongTitle(d.id) === targetNorm);
+}
 
 export function mergeAndDeduplicateToadas(
   primaryDocs: ToadaDocument[],
@@ -64,7 +72,6 @@ export function mergeAndDeduplicateToadas(
     }
 
     if (existing) {
-      // Trace de l'identifiant Répertoire pour le bouton d'ouverture 1-clic
       existing.repertoireId = rep.id;
       if (!existing.rythme && rep.data.rythme) existing.rythme = rep.data.rythme;
       if (!existing.nacao && rep.data.nacao) existing.nacao = rep.data.nacao;
@@ -72,7 +79,7 @@ export function mergeAndDeduplicateToadas(
         existing.audioUrl = rep.data.activeAudioUrl || rep.data.audioUrl;
       }
       if (!existing.bpmDefaut && (rep.data.bpmDefaut || rep.data.bpm)) {
-        existing.bpmDefaut = rep.data.bpmDefaut || rep.data.bpm;
+        existing.bpmDefaut = Number(rep.data.bpmDefaut || rep.data.bpm);
       }
       if (!existing.lienSequenceurId && (rep.data.sequenceurId || rep.data.lienSequenceurId)) {
         existing.lienSequenceurId = rep.data.sequenceurId || rep.data.lienSequenceurId;

@@ -25,27 +25,35 @@ export function useOrganizadorAuth(): OrganizadorAuthState {
   const [groupId, setGroupId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Consommation automatique du token SSO s'il est présent dans l'URL
   useEffect(() => {
-    handleSsoUrlToken().catch(() => {});
-  }, []);
+    let unsub: (() => void) | undefined;
+    let isMounted = true;
 
-  useEffect(() => {
-    const unsub = onAuthStateChanged(auth, async (user) => {
-      setCurrentUser(user);
-      if (user) {
-        try {
-          const gId = await getUserGroupId(user.uid);
-          setGroupId(gId);
-        } catch {
-          setGroupId(null);
-        }
-      } else {
-        setGroupId(null);
-      }
-      setIsLoading(false);
-    });
-    return () => unsub();
+    handleSsoUrlToken()
+      .catch(() => {})
+      .finally(() => {
+        if (!isMounted) return;
+        unsub = onAuthStateChanged(auth, async (user) => {
+          if (!isMounted) return;
+          setCurrentUser(user);
+          if (user) {
+            try {
+              const gId = await getUserGroupId(user.uid);
+              if (isMounted) setGroupId(gId);
+            } catch {
+              if (isMounted) setGroupId(null);
+            }
+          } else {
+            setGroupId(null);
+          }
+          if (isMounted) setIsLoading(false);
+        });
+      });
+
+    return () => {
+      isMounted = false;
+      if (unsub) unsub();
+    };
   }, []);
 
   const loginWithGoogle = useCallback(async () => {
