@@ -24,19 +24,20 @@ export const PianoRollLocatorRail: React.FC<Props> = ({
   const railRef = useRef<HTMLDivElement>(null);
   const [drag, setDrag] = useState<{ mode: DragMode; regionId?: string; startX: number; startSec: number; endSec: number } | null>(null);
 
+  const tGridStart = hasAnacrusis ? 0 : (t1OffsetSec ?? 0.15);
   const beatDur = bpm ? 60 / bpm : (hasAnacrusis && beatsPerMeasure > 0 ? anacrusisDurationSec / beatsPerMeasure : 0.6);
-  const totalBeats = Math.max(1, Math.round(totalDurationSec / beatDur)), gridDur = totalBeats * beatDur;
-  const t1Offset = t1OffsetSec ?? (hasAnacrusis ? 0 : 0.15);
+  const totalBeats = Math.max(1, Math.round((totalDurationSec - tGridStart - 0.25) / beatDur));
+  const gridDur = totalBeats * beatDur;
 
   const secToX = useCallback((sec: number) => {
-    const rel = hasAnacrusis ? sec : (sec - t1Offset);
+    const rel = sec - tGridStart;
     return Math.max(0, Math.min(gridWidth, (rel / gridDur) * gridWidth));
-  }, [hasAnacrusis, t1Offset, gridDur, gridWidth]);
+  }, [tGridStart, gridDur, gridWidth]);
 
   const xToSec = useCallback((x: number) => {
     const rel = (Math.max(0, Math.min(gridWidth, x)) / gridWidth) * gridDur;
-    return Math.max(0, Math.min(totalDurationSec, hasAnacrusis ? rel : (rel + t1Offset)));
-  }, [gridWidth, gridDur, totalDurationSec, hasAnacrusis, t1Offset]);
+    return Math.max(0, Math.min(totalDurationSec, tGridStart + rel));
+  }, [gridWidth, gridDur, totalDurationSec, tGridStart]);
 
   const startDrag = (e: React.PointerEvent, mode: DragMode, regionId?: string, sSec = 0, eSec = 0) => {
     e.stopPropagation(); (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);

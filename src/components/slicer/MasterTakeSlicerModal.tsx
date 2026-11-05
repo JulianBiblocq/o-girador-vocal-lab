@@ -105,6 +105,7 @@ export const MasterTakeSlicerModal: React.FC<SlicerModalProps> = ({
         measuresCount: res.measuresCount, baseBpm: Math.round(res.phraseBpm), bpm: Math.round(res.phraseBpm), hasAnacrusis: res.hasAnacrusis,
         pack: res.pack, rawAudioSamples: res.cleanPCM, rawPitchCurve: res.pitchCurve, pitchCurve: res.pitchCurve,
         anacrusisSteps: res.anacrusisSteps, mainSteps: res.mainSteps, t1OffsetSec: res.t1OffsetSec, isMidiInitialized: true, midiLocked: true,
+        hasCanonicalAlignment: true as any, correctedAudioSamples: null, melodyneRegions: [],
       });
       setLastExtracted(res.name);
     } finally { setIsExtracting(false); }

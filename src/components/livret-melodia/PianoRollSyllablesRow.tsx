@@ -35,11 +35,17 @@ export const PianoRollSyllablesRow: React.FC<PianoRollSyllablesRowProps> = ({
     return list;
   }, [allSteps, gridWidth]);
 
-  const defaultPhrase = useMemo(() => activeNotes.map((n) => n.syllable || '-').join('-'), [activeNotes]);
+  const defaultPhrase = useMemo(() => {
+    return activeNotes.map((n, idx) => {
+      const s = n.syllable || '-';
+      if (idx === activeNotes.length - 1) return s.trimEnd();
+      return s.endsWith(' ') ? s : `${s}-`;
+    }).join('');
+  }, [activeNotes]);
   const [cutterText, setCutterText] = useState(defaultPhrase);
 
   useEffect(() => {
-    setCutterText(activeNotes.map((n) => n.syllable || '-').join('-'));
+    setCutterText(defaultPhrase);
   }, [defaultPhrase]);
 
   const handleSyllableChange = (stepIdx: number, val: string) => {
@@ -61,7 +67,13 @@ export const PianoRollSyllablesRow: React.FC<PianoRollSyllablesRowProps> = ({
 
   const handleDistributeCut = () => {
     if (!cutterText.trim()) return;
-    const parts = cutterText.trim().split(/[\s-]+/).filter(Boolean);
+    const words = cutterText.trim().split(/\s+/).filter(Boolean);
+    const parts: string[] = [];
+    for (const word of words) {
+      if (word === '-' || word === '~') { parts.push('-'); continue; }
+      const syls = word.split('-').filter(Boolean);
+      syls.forEach((s, i) => parts.push(i === syls.length - 1 ? `${s} ` : s));
+    }
     const next = [...allSteps];
     activeNotes.forEach((n, idx) => {
       const syl = parts[idx] ?? '';

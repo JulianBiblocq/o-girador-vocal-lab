@@ -69,7 +69,7 @@ export function executeBatchAssign(options: BatchAssignOptions): {
     if (!firstAssignedId) firstAssignedId = targetId;
     onProgress?.(idx + 1, activeSegments.length, targetPattern.name);
 
-    const rawStartSec = Math.max(0, Math.min(metricT1Sec - 1.5, segment.startSec - 0.3));
+    const rawStartSec = Math.max(0, Math.min(metricT1Sec - (measureDuration + 0.3), segment.startSec - 0.3));
     const rawEndSec = Math.min(masterDurationSec, Math.max(metricT1Sec + measuresCount * measureDuration + 1.0, segment.endSec + 0.3));
     const sStart = Math.floor(rawStartSec * sampleRate);
     const sEnd = Math.floor(rawEndSec * sampleRate);
@@ -102,6 +102,7 @@ export function executeBatchAssign(options: BatchAssignOptions): {
       rawPitchCurve: res.pitchCurve, pitchCurve: res.pitchCurve,
       anacrusisSteps: res.anacrusisSteps, mainSteps: res.mainSteps,
       isMidiInitialized: true, midiLocked: true,
+      hasCanonicalAlignment: true as any, correctedAudioSamples: null, melodyneRegions: [],
     };
 
     workingProject = applyUpdateVariant(workingProject, targetId, activeVarKey, varPartial);

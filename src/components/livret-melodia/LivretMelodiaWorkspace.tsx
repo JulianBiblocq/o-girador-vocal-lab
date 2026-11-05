@@ -78,15 +78,18 @@ export const LivretMelodiaWorkspace: React.FC<LivretMelodiaWorkspaceProps> = ({
 
   const handleUpdateSteps = useCallback((newSteps: VocalStepData[], commit = true) => {
     setAllSteps(newSteps, commit);
-    updatePattern(activePattern.id, { anacrusisSteps: hasAnac ? newSteps.slice(0, anacLen) : [], mainSteps: (hasAnac ? newSteps.slice(anacLen) : newSteps).map((s, idx) => ({ ...s, stepIndex: idx })), isMidiInitialized: true });
-  }, [setAllSteps, hasAnac, anacLen, activePattern.id, updatePattern]);
+    const updatedPack = buildUpdatedVocalPackExport(initialPack, newSteps, hasAnac, beatsPerMeasure, displayedCurve);
+    updatePattern(activePattern.id, { pack: updatedPack, anacrusisSteps: hasAnac ? newSteps.slice(0, anacLen) : [], mainSteps: (hasAnac ? newSteps.slice(anacLen) : newSteps).map((s, idx) => ({ ...s, stepIndex: idx })), isMidiInitialized: true });
+  }, [setAllSteps, initialPack, hasAnac, beatsPerMeasure, displayedCurve, anacLen, activePattern.id, updatePattern]);
 
   const recompute = useCallback((smooth: number, ton: string, sc: ScaleType) => {
     const q = quantizePitchToSteps({ pitchCurve: rawPitchCurve, bpm: initialPack.metadata.bpm, beatsPerMeasure, measuresCount, beatResolutions: initialPack.metadata.beatResolutions, trimStartSec: 0, trimEndSec: totalDurationSec, hasAnacrusis: hasAnac, t1OffsetSec, smoothingLevel: smooth, tonic: ton, scaleType: sc, pcm: rawPCM, sampleRate, timeAnchors: activePattern.timeAnchors });
     const rawSteps = hasAnac ? [...q.anacrusisSteps, ...q.gridSteps] : q.gridSteps;
-    const steps = activePattern.assignedLyricsText ? applyLyricsSyllablesToSteps(rawSteps, activePattern.assignedLyricsText) : rawSteps;
+    const steps = (activePattern.assignedLyricsText || activePattern.timeAnchors?.length)
+      ? applyLyricsSyllablesToSteps(rawSteps, activePattern.assignedLyricsText, activePattern.timeAnchors, beatsPerMeasure, resPerBeat)
+      : rawSteps;
     commitCurrentSnapshot({ steps }); handleUpdateSteps(steps, false);
-  }, [rawPitchCurve, initialPack, beatsPerMeasure, measuresCount, totalDurationSec, hasAnac, t1OffsetSec, rawPCM, sampleRate, activePattern.assignedLyricsText, commitCurrentSnapshot, handleUpdateSteps]);
+  }, [rawPitchCurve, initialPack, beatsPerMeasure, measuresCount, totalDurationSec, hasAnac, t1OffsetSec, rawPCM, sampleRate, activePattern.assignedLyricsText, activePattern.timeAnchors, resPerBeat, commitCurrentSnapshot, handleUpdateSteps]);
 
   const { handleReset, handleShiftOctave, handleAlignOctaveToBricks, handleDeleteSelected } = useMelodiaActions({
     rawPCM, sampleRate, totalDurationSec, activePattern, initialPack, beatsPerMeasure, measuresCount, hasAnac,

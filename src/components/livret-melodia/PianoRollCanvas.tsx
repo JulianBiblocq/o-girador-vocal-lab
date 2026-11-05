@@ -18,6 +18,12 @@ export const PianoRollCanvas: React.FC<PianoRollCanvasProps> = (p) => {
   const dragRef = useRef<any>(null);
   const [themeTick, setThemeTick] = React.useState(0);
 
+  const hasAnac = p.hasAnacrusis !== false, tGridStart = hasAnac ? 0 : (p.t1OffsetSec ?? 0.15);
+  const beatDur = p.bpm ? 60 / p.bpm : (hasAnac && p.beatsPerMeasure > 0 ? p.anacrusisDurationSec / p.beatsPerMeasure : 0.6);
+  const stepDurSec = beatDur / (p.beatResolutions?.[0] || 4);
+  const totalSteps = Math.max(1, p.allSteps.length > 0 ? p.allSteps.length : Math.round((p.totalDurationSec - tGridStart - 0.25) / stepDurSec));
+  const gridDur = totalSteps * stepDurSec;
+
   useEffect(() => {
     const obs = new MutationObserver(() => setThemeTick((t) => t + 1));
     obs.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
@@ -51,7 +57,8 @@ export const PianoRollCanvas: React.FC<PianoRollCanvasProps> = (p) => {
     const y = Math.max(0, Math.min(p.height - 1, e.clientY - rect.top));
     const stepIdx = p.allSteps.length > 0 ? Math.min(p.allSteps.length - 1, Math.floor((x / p.width) * p.allSteps.length)) : 0;
     const rowIdx = Math.max(0, Math.floor(y / p.rowHeight));
-    return { stepIdx, midi: p.maxMidi - Math.min(p.maxMidi - p.minMidi, rowIdx), x, y, sec: (x / p.width) * p.totalDurationSec };
+    const sec = Math.max(0, Math.min(p.totalDurationSec, tGridStart + (x / p.width) * gridDur));
+    return { stepIdx, midi: p.maxMidi - Math.min(p.maxMidi - p.minMidi, rowIdx), x, y, sec };
   };
 
   const handlePointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
@@ -64,7 +71,7 @@ export const PianoRollCanvas: React.FC<PianoRollCanvasProps> = (p) => {
     if (p.activeTool === 'text' || p.activeTool === 'lyric') return triggerTextInput(stepIdx);
 
     if (p.activeTool === 'melodyne_cut') {
-      const hit = findRegionHandleAt(x, p.width, p.totalDurationSec, p.regions || []);
+      const hit = findRegionHandleAt(x, p.width, gridDur, p.regions || [], 8, tGridStart);
       e.currentTarget.setPointerCapture(e.pointerId);
       if (hit) {
         p.onSelectRegion?.(hit.regionId);
@@ -77,9 +84,7 @@ export const PianoRollCanvas: React.FC<PianoRollCanvasProps> = (p) => {
     }
     const step = p.allSteps[stepIdx];
     if (!step?.active) {
-      p.onSelectStep?.(stepIdx);
-      p.onUpdateSteps(createSingleNote(p.allSteps, stepIdx, midi));
-      p.onPlayNotePreview(midi);
+      p.onSelectStep?.(stepIdx); p.onUpdateSteps(createSingleNote(p.allSteps, stepIdx, midi)); p.onPlayNotePreview(midi);
       return;
     }
     const range = findBrickRange(p.allSteps, stepIdx);
@@ -106,11 +111,9 @@ export const PianoRollCanvas: React.FC<PianoRollCanvasProps> = (p) => {
       d.currentSec = sec;
     } else if (d.mode === 'move' && midi !== d.lastMidi) {
       d.lastMidi = midi; d.changed = true;
-      p.onUpdateSteps(moveBrick(p.allSteps, d.rootIdx, midi), false);
-      p.onPlayNotePreview(midi);
+      p.onUpdateSteps(moveBrick(p.allSteps, d.rootIdx, midi), false); p.onPlayNotePreview(midi);
     } else if (d.mode === 'resize') {
-      d.changed = true;
-      p.onUpdateSteps(resizeBrick(p.allSteps, d.rootIdx, stepIdx), false);
+      d.changed = true; p.onUpdateSteps(resizeBrick(p.allSteps, d.rootIdx, stepIdx), false);
     }
   };
 
@@ -120,9 +123,7 @@ export const PianoRollCanvas: React.FC<PianoRollCanvasProps> = (p) => {
     if (dragRef.current.mode === 'region_create') {
       const s0 = dragRef.current.startSec, s1 = dragRef.current.currentSec;
       if (Math.abs(s1 - s0) >= 0.05) p.onAddRegion?.(Math.min(s0, s1), Math.max(s0, s1));
-    } else if (dragRef.current.changed) {
-      p.onUpdateSteps(p.allSteps, true);
-    }
+    } else if (dragRef.current.changed) p.onUpdateSteps(p.allSteps, true);
     dragRef.current = null;
   };
 

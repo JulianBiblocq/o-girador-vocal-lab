@@ -44,13 +44,20 @@ function schedulePatternAudio(ctx: BaseAudioContext, pat: VocalPatternItem, slot
   const match = selectBestAudioVariant(pat.variants, 1.0, 0, pat.baseBpm ?? pat.bpm ?? projectBpm);
   const variant = match?.variant ?? pat.variants?.[pat.activeVariantKey];
   const rec = variant?.recordingResult ?? pat.recordingResult;
-  const explicitT1 = variant?.t1OffsetSec ?? pat.t1OffsetSec ?? rec?.t1OffsetSec;
-  const t1OffsetSec = getPatternT1OffsetSec(pat.hasAnacrusis, measureDurationSec, explicitT1);
+  const isMainVar = !variant || (variant.speedRatio === 1 && variant.pitchShiftSemitones === 0);
+  const useCorrected = Boolean(isMainVar && pat.correctedAudioSamples && pat.correctedAudioSamples.length > 0);
 
-  if (rec && rec.pcm && rec.pcm.length > 0) {
-    const { pcm, sampleRate } = rec;
-    const trimStartSec = variant?.trimStartSec || pat.trimStartSec || 0;
-    const rawTrimEnd = variant?.trimEndSec || pat.trimEndSec || 0;
+  if (useCorrected || (rec && rec.pcm && rec.pcm.length > 0)) {
+    const pcm = useCorrected ? pat.correctedAudioSamples! : rec!.pcm;
+    const sampleRate = useCorrected ? (pat.pack?.audio?.sampleRate ?? rec?.sampleRate ?? 44100) : rec!.sampleRate;
+    const recordedBpm = useCorrected ? (pat.pack?.metadata?.bpm || pat.bpm || pat.baseBpm || projectBpm) : (rec?.recordedBpm || pat.bpm || pat.baseBpm || projectBpm);
+    const origMeasureDur = measureDurationSec * (projectBpm / recordedBpm);
+    const explicitT1 = useCorrected
+      ? (pat.hasAnacrusis !== false ? origMeasureDur : 0.15)
+      : (variant?.t1OffsetSec ?? pat.t1OffsetSec ?? rec?.t1OffsetSec);
+    const t1OffsetSec = getPatternT1OffsetSec(pat.hasAnacrusis !== false, origMeasureDur, explicitT1);
+    const trimStartSec = useCorrected ? (pat.pack?.audio?.trim?.startSec ?? 0) : (variant?.trimStartSec || pat.trimStartSec || 0);
+    const rawTrimEnd = useCorrected ? (pat.pack?.audio?.trim?.endSec ?? 0) : (variant?.trimEndSec || pat.trimEndSec || 0);
     const trimEndSec = rawTrimEnd > trimStartSec ? rawTrimEnd : pcm.length / sampleRate;
     const sStart = Math.max(0, Math.floor(trimStartSec * sampleRate));
     const sEnd = Math.min(pcm.length, Math.floor(trimEndSec * sampleRate));
@@ -63,7 +70,6 @@ function schedulePatternAudio(ctx: BaseAudioContext, pat: VocalPatternItem, slot
     source.buffer = audioBuf;
     source.connect(ctx.destination);
 
-    const recordedBpm = rec.recordedBpm || pat.bpm || pat.baseBpm || projectBpm;
     const speedRatio = Math.max(0.25, Math.min(4.0, projectBpm / recordedBpm));
     source.playbackRate.value = speedRatio;
 
@@ -78,6 +84,7 @@ function schedulePatternAudio(ctx: BaseAudioContext, pat: VocalPatternItem, slot
       if (elapsedBuf < len / sampleRate) source.start(0, elapsedBuf);
     }
   } else if (pat.mainSteps && pat.mainSteps.length > 0) {
+    const t1OffsetSec = getPatternT1OffsetSec(pat.hasAnacrusis, measureDurationSec, pat.t1OffsetSec);
     const stepDur = measureDurationSec / 16;
     if (pat.hasAnacrusis && pat.anacrusisSteps?.length > 0) {
       scheduleMelodySteps(ctx as any, ctx.destination, pat.anacrusisSteps, stepDur, Math.max(0, slotT1Sec - t1OffsetSec));

@@ -28,6 +28,11 @@ export const PianoRollRulerCanvas: React.FC<PianoRollRulerCanvasProps> = (props)
   const { t } = useLanguage();
   const [themeTick, setThemeTick] = React.useState(0);
 
+  const tGridStart = hasAnacrusis ? 0 : (t1OffsetSec ?? 0.15);
+  const beatDur = bpm ? 60 / bpm : (hasAnacrusis && beatsPerMeasure > 0 ? anacrusisDurationSec / beatsPerMeasure : 0.6);
+  const totalBeats = Math.max(1, Math.round((totalDurationSec - tGridStart - 0.25) / beatDur));
+  const gridDur = totalBeats * beatDur;
+
   useEffect(() => {
     const obs = new MutationObserver(() => setThemeTick((v) => v + 1));
     obs.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
@@ -64,11 +69,14 @@ export const PianoRollRulerCanvas: React.FC<PianoRollRulerCanvasProps> = (props)
     return () => cancelAnimationFrame(animId);
   }, [isPlaying, draw]);
 
+  const xToSeekSec = (clientX: number, rectLeft: number) => {
+    const x = Math.max(0, Math.min(width - 1, clientX - rectLeft));
+    return Math.max(0, Math.min(totalDurationSec - 0.05, tGridStart + (x / width) * gridDur));
+  };
+
   const handlePointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
-    const x = Math.max(0, Math.min(width - 1, e.clientX - rect.left));
-    const sec = Math.max(0, Math.min(totalDurationSec - 0.05, (x / width) * totalDurationSec));
-    onSeek(sec);
+    onSeek(xToSeekSec(e.clientX, rect.left));
     isDraggingRef.current = true;
     e.currentTarget.setPointerCapture(e.pointerId);
   };
@@ -76,9 +84,7 @@ export const PianoRollRulerCanvas: React.FC<PianoRollRulerCanvasProps> = (props)
   const handlePointerMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
     if (!isDraggingRef.current) return;
     const rect = e.currentTarget.getBoundingClientRect();
-    const x = Math.max(0, Math.min(width - 1, e.clientX - rect.left));
-    const sec = Math.max(0, Math.min(totalDurationSec - 0.05, (x / width) * totalDurationSec));
-    onSeek(sec);
+    onSeek(xToSeekSec(e.clientX, rect.left));
   };
 
   const handlePointerUp = (e: React.PointerEvent<HTMLCanvasElement>) => {

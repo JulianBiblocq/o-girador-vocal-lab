@@ -130,6 +130,9 @@ export function sliceContinuousTake(
       pack: melodic.pack,
       midiLocked: true,
       isMidiInitialized: true,
+      hasCanonicalAlignment: true as any,
+      correctedAudioSamples: null,
+      melodyneRegions: [],
       variants: { ...(pat.variants || {}), [activeVarKey]: updatedVariant as any },
     };
   });

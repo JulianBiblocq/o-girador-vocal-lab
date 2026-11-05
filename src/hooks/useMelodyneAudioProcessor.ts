@@ -114,6 +114,16 @@ export function useMelodyneAudioProcessor(options: UseMelodyneOptions) {
     triggerAudioProcessing(newRegions);
   }, [triggerAudioProcessing]);
 
+  const prevStepsRef = useRef<VocalStepData[]>(allSteps);
+  useEffect(() => {
+    if (prevStepsRef.current !== allSteps) {
+      prevStepsRef.current = allSteps;
+      if (regions.some((r) => r.pitchCenterPct > 0 || r.flattenPct > 0)) {
+        triggerAudioProcessing(regions);
+      }
+    }
+  }, [allSteps, regions, triggerAudioProcessing]);
+
   useEffect(() => () => {
     if (debounceTimerRef.current) window.clearTimeout(debounceTimerRef.current);
   }, []);

@@ -56,6 +56,9 @@ export function quantizePitchToSteps(params: QuantizerParams): QuantizedGridResu
       const isInitialRest = anchor?.isInitialRest === true;
       const isSustainedHold = anchor?.isSustainedHold === true;
       const sylCount = anchor?.syllables?.length || 0;
+      const subdivTargets = new Set<number>();
+      for (let k = 0; k < sylCount; k++) subdivTargets.add(Math.floor((k * resolution) / sylCount));
+      let attacksInBeat = 0, hasVoicedInBeat = false;
 
       for (let s = 0; s < resolution; s++) {
         const stepStart = beatStartTime + s * stepDuration, stepEnd = stepStart + stepDuration;
@@ -73,18 +76,19 @@ export function quantizePitchToSteps(params: QuantizerParams): QuantizedGridResu
         let targetMidi = bestSegment.medianMidi;
         if (scaleType !== 'chromatic') targetMidi = snapMidiToScale(targetMidi, tonic, scaleType);
 
-        // Détection d'attaque sur le temps ou par répartition intra-temps des syllabes
-        const isBeatStartWithSyllable = s === 0 && sylCount > 0;
-        const isSubdivAttack = sylCount > 1 && (s === Math.floor(resolution / sylCount) || (sylCount >= 3 && s === Math.floor((2 * resolution) / sylCount)));
-        // Sur une tenue déclarée (_ après chant), aucune attaque n'est redéclenchée
-        const hasAttack = !isSustainedHold && (isBeatStartWithSyllable || isSubdivAttack || ((pcm && sampleRate) ? hasSyllableAttack(pcm, sampleRate, stepStart, stepEnd) : false));
+        const isFirstVoicedWithSyl = !hasVoicedInBeat && sylCount > 0;
+        hasVoicedInBeat = true;
+        const isSubdivAttack = sylCount > 0 && subdivTargets.has(s);
+        const allowAcousticAttack = timeAnchors.length === 0 || sylCount === 0 || attacksInBeat < sylCount;
+        const acousticAttack = allowAcousticAttack && pcm && sampleRate ? hasSyllableAttack(pcm, sampleRate, stepStart, stepEnd) : false;
+        const hasAttack = !isSustainedHold && (isFirstVoicedWithSyl || isSubdivAttack || acousticAttack);
 
         const prevStep = allSteps[allSteps.length - 1];
-        // En tenue (isSustainedHold), si le pas précédent est actif, liaison continue sans attaque
         const canTie = prevStep && prevStep.active && (
           isSustainedHold ||
           (!hasAttack && previousSegmentId === bestSegment.id && prevStep.midiNumber === targetMidi)
         );
+        if (!canTie) attacksInBeat++;
         const effectiveMidi = (canTie && isSustainedHold) ? prevStep.midiNumber : targetMidi;
 
         allSteps.push({
@@ -105,7 +109,7 @@ export function quantizePitchToSteps(params: QuantizerParams): QuantizedGridResu
 }
 
 export function requantizeStepsInTimeRange(
-  curve: PitchCurvePoint[], existingSteps: VocalStepData[], startSec: number, endSec: number, stepDurationSec: number, _anacCount = 0
+  curve: PitchCurvePoint[], existingSteps: VocalStepData[], startSec: number, endSec: number, stepDurationSec: number, _anacCount = 0, tGridStart = 0
 ): VocalStepData[] {
   if (!existingSteps || existingSteps.length === 0 || stepDurationSec <= 0) return existingSteps;
   const segments = segmentPitchCurve(curve, { minDurationSec: 0.045, pitchJumpThreshold: 1.2 });
@@ -113,7 +117,7 @@ export function requantizeStepsInTimeRange(
   let previousSegmentId = -1;
 
   for (let i = 0; i < result.length; i++) {
-    const sStart = i * stepDurationSec, sEnd = sStart + stepDurationSec;
+    const sStart = tGridStart + i * stepDurationSec, sEnd = sStart + stepDurationSec;
     if (sEnd <= startSec - 0.005 || sStart >= endSec + 0.005) {
       if (result[i].active) previousSegmentId = -1;
       continue;

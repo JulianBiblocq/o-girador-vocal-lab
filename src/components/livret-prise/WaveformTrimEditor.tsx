@@ -22,7 +22,8 @@ export interface WaveformTrimEditorProps {
   initialTrimStartSec?: number; initialTrimEndSec?: number; initialT1OffsetSec?: number; hasAnacrusis?: boolean; outputDeviceId?: string;
   harmonyGrid?: PatternHarmonyGrid; harmonyConfig?: HarmonyConfig; pitchShiftSemitones?: number;
   onUpdateGrid?: (newGrid: PatternHarmonyGrid) => void; onUpdateHarmonyConfig?: (config: HarmonyConfig) => void;
-  onReset: () => void; onTrimChange?: (startSec: number, endSec: number) => void; onT1OffsetChange?: (t1Sec: number) => void; onPackReady: (pack: VocalPackExport) => void;
+  onReset: () => void; onTrimChange?: (startSec: number, endSec: number) => void; onT1OffsetChange?: (t1Sec: number) => void;
+  onPackReady: (pack: VocalPackExport, calageMeta?: { trimStartSec: number; trimEndSec: number; t1OffsetSec: number }) => void;
 }
 
 export const WaveformTrimEditor: React.FC<WaveformTrimEditorProps> = (props) => {
@@ -82,12 +83,19 @@ export const WaveformTrimEditor: React.FC<WaveformTrimEditorProps> = (props) => 
 
   const handleProceed = useCallback(() => {
     player.stop(); setIsPlaying(false);
-    onPackReady(generateVocalPack({
-      rawPCM, sampleRate, trimStartSec, trimEndSec, latencyOffsetMs, bpm, timeSignature,
-      measuresCount, beatsPerMeasure, beatResolutions, referencePitch, alignment,
-      highPassFilterEnabled: highPassEnabled, enableTonePolish: tonePolishEnabled, normalizeRMS: true,
-    }));
-  }, [player, rawPCM, sampleRate, trimStartSec, trimEndSec, latencyOffsetMs, bpm, timeSignature, measuresCount, beatsPerMeasure, beatResolutions, referencePitch, alignment, highPassEnabled, tonePolishEnabled, onPackReady]);
+    const offsetSec = latencyOffsetMs / 1000;
+    const effTrimStart = Math.max(0, trimStartSec - offsetSec);
+    const effTrimEnd = Math.max(effTrimStart + 0.05, trimEndSec - offsetSec);
+    const effT1 = Math.max(0, t1OffsetSec - offsetSec);
+    onPackReady(
+      generateVocalPack({
+        rawPCM, sampleRate, trimStartSec, trimEndSec, latencyOffsetMs, bpm, timeSignature,
+        measuresCount, beatsPerMeasure, beatResolutions, referencePitch, alignment,
+        highPassFilterEnabled: highPassEnabled, enableTonePolish: tonePolishEnabled, normalizeRMS: true,
+      }),
+      { trimStartSec: effTrimStart, trimEndSec: effTrimEnd, t1OffsetSec: effT1 }
+    );
+  }, [player, rawPCM, sampleRate, trimStartSec, trimEndSec, latencyOffsetMs, t1OffsetSec, bpm, timeSignature, measuresCount, beatsPerMeasure, beatResolutions, referencePitch, alignment, highPassEnabled, tonePolishEnabled, onPackReady]);
 
   const zoomedWidth = Math.max(containerWidth, Math.round(containerWidth * zoomLevel));
 

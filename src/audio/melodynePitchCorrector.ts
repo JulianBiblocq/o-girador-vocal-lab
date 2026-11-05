@@ -16,17 +16,32 @@ export interface BrickPitchOffset {
   effectiveShift: number;
 }
 
+function resolveGridGeometry(allSteps: VocalStepData[], totalDurationSec: number, tGridStart?: number, gridDur?: number) {
+  const stepDur = (allSteps[0]?.decay > 0 && allSteps[0]?.decay < 5)
+    ? allSteps[0].decay
+    : (totalDurationSec / Math.max(1, allSteps.length));
+  const effGridDur = gridDur && gridDur > 0 ? gridDur : (allSteps.length * stepDur);
+  const effTGridStart = tGridStart !== undefined
+    ? tGridStart
+    : Math.max(0, Math.round((totalDurationSec - effGridDur - 0.25) * 1000) / 1000);
+  return { tGridStart: effTGridStart, gridDur: Math.max(0.01, effGridDur) };
+}
+
 export function findTargetMidiForRegion(
   r: MelodyneRegion,
   allSteps: VocalStepData[],
   totalDurationSec: number,
-  fallbackMidi = 60
+  fallbackMidi = 60,
+  tGridStart?: number,
+  gridDur?: number
 ): number {
   if (r.targetMidiOverride && r.targetMidiOverride > 0) return r.targetMidiOverride;
   if (!allSteps || allSteps.length === 0 || totalDurationSec <= 0) return fallbackMidi;
 
+  const geom = resolveGridGeometry(allSteps, totalDurationSec, tGridStart, gridDur);
   const midSec = (r.startSec + r.endSec) / 2;
-  const stepIdx = Math.max(0, Math.min(allSteps.length - 1, Math.floor((midSec / totalDurationSec) * allSteps.length)));
+  const relMidSec = Math.max(0, midSec - geom.tGridStart);
+  const stepIdx = Math.max(0, Math.min(allSteps.length - 1, Math.floor((relMidSec / geom.gridDur) * allSteps.length)));
   const step = allSteps[stepIdx];
   if (step?.active && step.midiNumber > 0) return step.midiNumber;
 
@@ -34,7 +49,7 @@ export function findTargetMidiForRegion(
   for (let i = 0; i < allSteps.length; i++) {
     const s = allSteps[i];
     if (s.active && s.midiNumber > 0) {
-      const sTime = (i / allSteps.length) * totalDurationSec;
+      const sTime = geom.tGridStart + ((i + 0.5) / allSteps.length) * geom.gridDur;
       const dist = Math.abs(sTime - midSec);
       if (dist < minDist) { minDist = dist; bestMidi = s.midiNumber; }
     }

@@ -36,7 +36,8 @@ export function alignPitchCurveOctaveToBricks(
   curve: PitchCurvePoint[],
   steps: VocalStepData[],
   stepDurationSec: number,
-  _anacrusisStepsCount = 0
+  _anacrusisStepsCount = 0,
+  tGridStart = 0
 ): PitchCurvePoint[] {
   if (!curve || curve.length === 0 || !steps || steps.length === 0 || stepDurationSec <= 0) {
     return curve;
@@ -47,7 +48,7 @@ export function alignPitchCurveOctaveToBricks(
   return curve.map((pt) => {
     if (pt.midiFloat < 24) return pt;
 
-    const centerIdx = Math.floor(pt.timeSec / stepDurationSec);
+    const centerIdx = Math.floor(Math.max(0, pt.timeSec - tGridStart) / stepDurationSec);
     let targetMidi = 0;
 
     // 1. Recherche du pas exact
@@ -101,7 +102,10 @@ export function applyOctaveShiftToMelodia(
 ): { newCurve: PitchCurvePoint[]; newSteps: VocalStepData[] } {
   const sStart = region ? region.startSec : 0, sEnd = region ? region.endSec : totalDurationSec;
   const newCurve = shiftPitchCurveOctaveInRange(rawCurve, sStart, sEnd, delta);
-  const stepDur = totalDurationSec / (allSteps.length || 1), anacCount = hasAnac ? beatsPerMeasure * beatResolution : 0;
-  const newSteps = requantizeStepsInTimeRange(newCurve, allSteps, sStart, sEnd, stepDur, anacCount);
+  const tGridStart = hasAnac ? 0 : 0.15;
+  const gridDur = Math.max(0.05, totalDurationSec - tGridStart - 0.25);
+  const stepDur = (allSteps[0]?.decay > 0 && allSteps[0]?.decay < 5) ? allSteps[0].decay : (gridDur / (allSteps.length || 1));
+  const anacCount = hasAnac ? beatsPerMeasure * beatResolution : 0;
+  const newSteps = requantizeStepsInTimeRange(newCurve, allSteps, sStart, sEnd, stepDur, anacCount, tGridStart);
   return { newCurve, newSteps };
 }

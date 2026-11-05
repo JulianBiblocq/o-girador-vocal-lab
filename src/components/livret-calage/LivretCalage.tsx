@@ -55,35 +55,47 @@ export const LivretCalage: React.FC = () => {
     const file = e.target.files?.[0];
     if (!file) return;
     const res = await decodeAudioFile(file);
-    updateVariant(activePattern.id, activeVariant.variantKey, {
-      recordingResult: { pcm: res.pcm, sampleRate: res.sampleRate },
-      trimStartSec: 0,
-      trimEndSec: Math.min(totalDurationSec, res.durationSec),
-    });
+    const trimEnd = Math.min(totalDurationSec, res.durationSec);
+    const rec = { pcm: res.pcm, sampleRate: res.sampleRate };
+    updatePatternAndVariant(
+      activePattern.id, activeVariant.variantKey,
+      { recordingResult: rec, trimStartSec: 0, trimEndSec: trimEnd, hasCanonicalAlignment: false as any, correctedAudioSamples: null, melodyneRegions: [] },
+      { recordingResult: rec, trimStartSec: 0, trimEndSec: trimEnd }
+    );
     setRecordedSampleRate(res.sampleRate);
     if (fileInputRef.current) fileInputRef.current.value = '';
     if (res.durationSec > 10 || res.durationSec > totalDurationSec * 1.8) {
       setIsSlicerOpen(true);
     }
-  }, [activePattern.id, activeVariant.variantKey, totalDurationSec, updateVariant, setRecordedSampleRate]);
+  }, [activePattern.id, activeVariant.variantKey, totalDurationSec, updatePatternAndVariant, setRecordedSampleRate]);
 
-  const handlePackReady = useCallback(() => {
+  const handlePackReady = useCallback((_pack: unknown, meta?: { trimStartSec: number; trimEndSec: number; t1OffsetSec: number }) => {
     if (!rawPCM) return;
+    const trimStartSec = meta?.trimStartSec ?? activeVariant.trimStartSec;
+    const trimEndSec = meta?.trimEndSec ?? activeVariant.trimEndSec;
+    const rawT1 = meta?.t1OffsetSec ?? activeVariant.t1OffsetSec ?? activePattern.t1OffsetSec ?? activePattern.recordingResult?.t1OffsetSec;
     const res = extractPatternMelodicData({
       rawPCM, sampleRate, bpm: effectiveBpm, timeSignature, measuresCount,
       beatsPerMeasure, beatResolutions, hasAnacrusis,
-      trimStartSec: activeVariant.trimStartSec, trimEndSec: activeVariant.trimEndSec,
+      trimStartSec, trimEndSec, t1OffsetSec: rawT1,
       referencePitch: effectivePitch, pitchShiftSemitones: activeVariant.pitchShiftSemitones,
       tessitura: activePattern.tessitura, assignedLyricsText: activePattern.assignedLyricsText,
+      timeAnchors: activePattern.timeAnchors,
       lowCutEnabled: activeVariant.lowCutEnabled, enableTonePolish: activeVariant.enableTonePolish !== false,
     });
-    updatePattern(activePattern.id, {
-      pack: res.pack, rawAudioSamples: res.cleanPCM, rawPitchCurve: res.pitchCurve,
-      pitchCurve: res.pitchCurve, anacrusisSteps: res.anacrusisSteps, mainSteps: res.mainSteps,
-      isMidiInitialized: true, midiLocked: true,
-    });
+    updatePatternAndVariant(
+      activePattern.id, activeVariant.variantKey,
+      {
+        pack: res.pack, rawAudioSamples: res.cleanPCM, rawPitchCurve: res.pitchCurve,
+        pitchCurve: res.pitchCurve, anacrusisSteps: res.anacrusisSteps, mainSteps: res.mainSteps,
+        trimStartSec, trimEndSec, t1OffsetSec: rawT1,
+        isMidiInitialized: true, midiLocked: true,
+        hasCanonicalAlignment: true as any, correctedAudioSamples: null, melodyneRegions: [],
+      },
+      { trimStartSec, trimEndSec, t1OffsetSec: rawT1 }
+    );
     setActiveLivret('melodia');
-  }, [rawPCM, sampleRate, effectiveBpm, timeSignature, measuresCount, beatsPerMeasure, beatResolutions, hasAnacrusis, activeVariant, effectivePitch, activePattern, updatePattern, setActiveLivret]);
+  }, [rawPCM, sampleRate, effectiveBpm, timeSignature, measuresCount, beatsPerMeasure, beatResolutions, hasAnacrusis, activeVariant, effectivePitch, activePattern, updatePatternAndVariant, setActiveLivret]);
 
   return (
     <div className="flex flex-col gap-3.5 w-full">
@@ -121,8 +133,8 @@ export const LivretCalage: React.FC = () => {
           onUpdateGrid={(g) => updatePattern(activePattern.id, { harmonyGrid: g })}
           onUpdateHarmonyConfig={updateHarmonyConfig}
           onReset={() => updateVariant(activePattern.id, activeVariant.variantKey, { recordingResult: null })}
-          onTrimChange={(s, e) => updatePatternAndVariant(activePattern.id, activeVariant.variantKey, { trimStartSec: s, trimEndSec: e }, { trimStartSec: s, trimEndSec: e })}
-          onT1OffsetChange={(t1) => updatePatternAndVariant(activePattern.id, activeVariant.variantKey, { t1OffsetSec: t1 }, { t1OffsetSec: t1 })}
+          onTrimChange={(s, e) => updatePatternAndVariant(activePattern.id, activeVariant.variantKey, { trimStartSec: s, trimEndSec: e, hasCanonicalAlignment: false as any, correctedAudioSamples: null }, { trimStartSec: s, trimEndSec: e })}
+          onT1OffsetChange={(t1) => updatePatternAndVariant(activePattern.id, activeVariant.variantKey, { t1OffsetSec: t1, hasCanonicalAlignment: false as any, correctedAudioSamples: null }, { t1OffsetSec: t1 })}
           onPackReady={handlePackReady}
         />
       ) : (

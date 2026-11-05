@@ -39,7 +39,10 @@ export const LetraEditorPanel: React.FC<LetraEditorPanelProps> = ({ allSteps, on
     updatePattern(activePattern.id, { assignedLyricsText: phrase, assignedPhoneticText: match?.assignedPhoneticText });
     onCommitHistory?.();
   };
-  const handleAlign = () => { onUpdateSteps(applyLyricsSyllablesToSteps(allSteps, rawText), true); };
+  const handleAlign = () => {
+    const anchors = rawText.trim() === (activePattern.assignedLyricsText || '').trim() ? activePattern.timeAnchors : undefined;
+    onUpdateSteps(applyLyricsSyllablesToSteps(allSteps, rawText, anchors), true);
+  };
 
   const handleSyllableChange = (stepIndex: number, text: string) => {
     onUpdateSteps(allSteps.map((st, i) => (i === stepIndex ? { ...st, syllable: text } : st)), false);

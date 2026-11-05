@@ -72,9 +72,10 @@ export function createPaddedPreviewBuffer(
   if (rawT1OffsetSec !== undefined && cleanT1OffsetSec !== undefined) {
     destStartSec = cleanT1OffsetSec + (trimStartSec - rawT1OffsetSec);
   }
-  const startSample = Math.max(0, Math.floor(destStartSec * sampleRate));
-  const copyLen = Math.min(activeSlice.length, Math.max(0, totalSamples - startSample));
-  if (copyLen > 0) fullBuffer.set(activeSlice.subarray(0, copyLen), startSample);
+  const srcSkipSamples = destStartSec < 0 ? Math.min(activeSlice.length, Math.round(-destStartSec * sampleRate)) : 0;
+  const startSample = destStartSec < 0 ? 0 : Math.round(destStartSec * sampleRate);
+  const copyLen = Math.min(activeSlice.length - srcSkipSamples, Math.max(0, totalSamples - startSample));
+  if (copyLen > 0) fullBuffer.set(activeSlice.subarray(srcSkipSamples, srcSkipSamples + copyLen), startSample);
   return fullBuffer;
 }
 

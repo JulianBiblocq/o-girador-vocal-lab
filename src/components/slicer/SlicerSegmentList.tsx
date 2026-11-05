@@ -17,13 +17,14 @@ interface SlicerSegmentListProps {
   onSelectSegment: (id: string | null) => void;
   onPlaySegment: (seg: SliceSegment) => void;
   onSplitSegment: (segId: string) => void;
+  onMergeSegment?: (segId: string) => void;
   onDeleteSegment: (segId: string) => void;
   onPreAssign: (mode: PreAssignMode) => void;
 }
 
 export const SlicerSegmentList: React.FC<SlicerSegmentListProps> = ({
   segments, patterns, playingSegmentId, selectedSegmentId,
-  onSegmentsChange, onSelectSegment, onPlaySegment, onSplitSegment, onDeleteSegment, onPreAssign,
+  onSegmentsChange, onSelectSegment, onPlaySegment, onSplitSegment, onMergeSegment, onDeleteSegment, onPreAssign,
 }) => {
   const { t } = useLanguage();
 
@@ -82,9 +83,12 @@ export const SlicerSegmentList: React.FC<SlicerSegmentListProps> = ({
               key={seg.id} segment={seg} index={idx} patterns={patterns}
               isPlaying={playingSegmentId === seg.id} isSelected={selectedSegmentId === seg.id}
               isDuplicateTarget={duplicateTargetIds.has(seg.targetPatternId)}
+              canMergeNext={idx < segments.length - 1}
               onSelect={() => onSelectSegment(seg.id)} onPlay={() => onPlaySegment(seg)}
               onUpdate={(partial) => handleUpdateSegment(seg.id, partial)}
-              onSplit={() => onSplitSegment(seg.id)} onDelete={() => onDeleteSegment(seg.id)}
+              onSplit={() => onSplitSegment(seg.id)}
+              onMergeNext={onMergeSegment ? () => onMergeSegment(seg.id) : undefined}
+              onDelete={() => onDeleteSegment(seg.id)}
             />
           ))
         )}

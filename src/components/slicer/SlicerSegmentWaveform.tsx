@@ -5,7 +5,7 @@
 import React, { useRef, useEffect, useCallback } from 'react';
 import type { SliceSegment } from '../../types/slicerSegments.types';
 import { drawSegmentWaveform } from './slicerSegmentDrawer';
-import { calculateSliceMetricT1Sec } from '../../utils/slicerAlignmentHelper';
+import { calculateSliceMetricT1Sec, splitSliceSegment } from '../../utils/slicerAlignmentHelper';
 
 interface SlicerSegmentWaveformProps {
   pcm: Float32Array; durationSec: number; segments: SliceSegment[]; selectedSegmentId: string | null;
@@ -93,7 +93,7 @@ export const SlicerSegmentWaveform: React.FC<SlicerSegmentWaveformProps> = ({
     if (mode === 'joint') {
       const { segId: sId1, segId2: sId2 } = dragRef.current as any;
       const cut = Math.max(0.1, Math.min(durationSec - 0.1, sec));
-      onSegmentsChange(segments.map((s) => s.id === sId1 ? { ...s, endSec: cut } : s.id === sId2 ? { ...s, startSec: cut, metricT1Sec: calculateSliceMetricT1Sec(cut, bpm, gridOffsetSec, s.hasAnacrusis, s.anacrusisBeats) } : s));
+      onSegmentsChange(segments.map((s) => s.id === sId1 ? { ...s, endSec: cut } : s.id === sId2 ? { ...s, startSec: cut, metricT1Sec: calculateSliceMetricT1Sec(cut, bpm, gridOffsetSec, s.hasAnacrusis, s.anacrusisBeats, s.metricT1Sec) } : s));
       return;
     }
     if (mode === 'body' && segId) {
@@ -115,7 +115,7 @@ export const SlicerSegmentWaveform: React.FC<SlicerSegmentWaveformProps> = ({
       }));
     } else if (segId) {
       onSegmentsChange(segments.map((s) => s.id !== segId ? s : mode === 'start'
-        ? { ...s, startSec: Math.max(0, Math.min(sec, s.endSec - 0.2)), metricT1Sec: calculateSliceMetricT1Sec(Math.max(0, Math.min(sec, s.endSec - 0.2)), bpm, gridOffsetSec, s.hasAnacrusis, s.anacrusisBeats) }
+        ? { ...s, startSec: Math.max(0, Math.min(sec, s.endSec - 0.2)), metricT1Sec: calculateSliceMetricT1Sec(Math.max(0, Math.min(sec, s.endSec - 0.2)), bpm, gridOffsetSec, s.hasAnacrusis, s.anacrusisBeats, s.metricT1Sec) }
         : { ...s, endSec: Math.min(durationSec, Math.max(sec, s.startSec + 0.2)) }));
     }
   };
@@ -128,11 +128,8 @@ export const SlicerSegmentWaveform: React.FC<SlicerSegmentWaveformProps> = ({
     const { sec } = getCanvasCoords(e);
     const seg = segments.find((s) => sec > s.startSec + 0.35 && sec < s.endSec - 0.35);
     if (seg) {
-      const cut = Math.round(sec * 100) / 100;
-      const s1: SliceSegment = { ...seg, endSec: cut };
-      const s2T1 = calculateSliceMetricT1Sec(cut, bpm, gridOffsetSec, false, 0);
-      const s2: SliceSegment = { ...seg, id: `seg-${Date.now()}`, startSec: cut, metricT1Sec: s2T1, targetPatternId: 'new' };
-      onSegmentsChange(segments.flatMap((s) => s.id === seg.id ? [s1, s2] : [s]));
+      const [s1, s2] = splitSliceSegment(seg, sec, bpm, gridOffsetSec);
+      onSegmentsChange(segments.flatMap((s) => (s.id === seg.id ? [s1, s2] : [s])));
       onSelectSegment(s2.id);
     } else { onAddSegmentAtSec(sec); }
   };

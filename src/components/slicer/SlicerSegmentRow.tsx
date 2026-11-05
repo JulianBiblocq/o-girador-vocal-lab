@@ -5,7 +5,7 @@
 import React from 'react';
 import type { VocalPatternItem } from '../../types/toadaProject.types';
 import type { SliceSegment } from '../../types/slicerSegments.types';
-import { Play, Square, Scissors, Trash2, AlertTriangle } from 'lucide-react';
+import { Play, Square, Scissors, Link2, Trash2, AlertTriangle } from 'lucide-react';
 import { useLanguage } from '../../i18n/LanguageContext';
 
 interface SlicerSegmentRowProps {
@@ -15,16 +15,18 @@ interface SlicerSegmentRowProps {
   isPlaying: boolean;
   isSelected: boolean;
   isDuplicateTarget: boolean;
+  canMergeNext?: boolean;
   onSelect: () => void;
   onPlay: () => void;
   onUpdate: (partial: Partial<SliceSegment>) => void;
   onSplit: () => void;
+  onMergeNext?: () => void;
   onDelete: () => void;
 }
 
 export const SlicerSegmentRow: React.FC<SlicerSegmentRowProps> = ({
-  segment, index, patterns, isPlaying, isSelected, isDuplicateTarget,
-  onSelect, onPlay, onUpdate, onSplit, onDelete,
+  segment, index, patterns, isPlaying, isSelected, isDuplicateTarget, canMergeNext = false,
+  onSelect, onPlay, onUpdate, onSplit, onMergeNext, onDelete,
 }) => {
   const { t } = useLanguage();
   const dur = (segment.endSec - segment.startSec).toFixed(1);
@@ -119,6 +121,14 @@ export const SlicerSegmentRow: React.FC<SlicerSegmentRowProps> = ({
         >
           <Scissors className="w-3.5 h-3.5" />
         </button>
+        {canMergeNext && onMergeNext && (
+          <button
+            type="button" onClick={onMergeNext} className="p-1 cordel-card-sm text-[var(--cordel-secondary-text)] hover:text-emerald-500 rounded cursor-pointer"
+            title="Fusionner avec la tranche suivante"
+          >
+            <Link2 className="w-3.5 h-3.5" />
+          </button>
+        )}
         <button
           type="button" onClick={onDelete} className="p-1 cordel-card-sm text-[var(--cordel-secondary-text)] hover:text-red-500 rounded cursor-pointer"
           title="Supprimer cette tranche"

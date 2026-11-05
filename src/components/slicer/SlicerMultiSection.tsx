@@ -8,7 +8,7 @@ import type { VocalPatternItem, VocalRole, ToadaProject } from '../../types/toad
 import type { SliceSegment } from '../../types/slicerSegments.types';
 import { SlicerAudioEngine } from '../../audio/slicerAudioEngine';
 import { detectVocalPhrases } from '../../audio/silenceDetector';
-import { buildOrganizadorSlices } from '../../utils/slicerAlignmentHelper';
+import { buildOrganizadorSlices, calculateSliceMetricT1Sec, splitSliceSegment, mergeAdjacentSliceSegments } from '../../utils/slicerAlignmentHelper';
 import { syncProjectWithOrganizador } from '../../utils/toadaSyncService';
 import { SlicerMultiSegmentToolbar } from './SlicerMultiSegmentToolbar';
 import { SlicerSegmentWaveform } from './SlicerSegmentWaveform';
@@ -28,31 +28,32 @@ export const SlicerMultiSection: React.FC<SlicerMultiSectionProps> = ({
   engine, onExecuteBatchAssign, onChangeFile, onProjectUpdate,
 }) => {
   const { t } = useLanguage();
-  const [selectedSegmentId, setSelectedSegmentId] = useState<string | null>(null);
-  const [playingSegmentId, setPlayingSegmentId] = useState<string | null>(null);
-  const [playheadSec, setPlayheadSec] = useState(-1);
-  const [metronomeActive, setMetronomeActive] = useState(true);
-  const [gridOffsetSec, setGridOffsetSec] = useState(0.8);
-  const [cascadeMove, setCascadeMove] = useState(true);
-  const [isSyncing, setIsSyncing] = useState(false);
-  const [slicerBpm, setSlicerBpm] = useState(project.bpm || 88);
-
-  const bpm = slicerBpm;
-  const beatDur = 60 / bpm;
-  const measureDur = beatDur * 4;
+  const [selectedSegmentId, setSelectedSegmentId] = useState<string | null>(null), [playingSegmentId, setPlayingSegmentId] = useState<string | null>(null);
+  const [playheadSec, setPlayheadSec] = useState(-1), [metronomeActive, setMetronomeActive] = useState(true);
+  const [gridOffsetSec, setGridOffsetSec] = useState(0.8), [cascadeMove, setCascadeMove] = useState(true);
+  const [isSyncing, setIsSyncing] = useState(false), [slicerBpm, setSlicerBpm] = useState(project.bpm || 88);
+  const bpm = slicerBpm, beatDur = 60 / bpm, measureDur = beatDur * 4;
 
   useEffect(() => {
     if (project.bpm && project.bpm !== slicerBpm) {
       setSlicerBpm(project.bpm);
       if (metronomeActive) engine.setMetronome(true, project.bpm, gridOffsetSec);
     }
-  }, [project.bpm, metronomeActive, engine, gridOffsetSec]);
+  }, [project.bpm, slicerBpm, metronomeActive, engine, gridOffsetSec]);
 
   const handleAlignOrganizador = useCallback(() => {
     const detected = detectVocalPhrases(audio.pcm, audio.sampleRate);
-    const generated = buildOrganizadorSlices(patterns, defaultRole, bpm, detected, gridOffsetSec);
-    onSegmentsChange(generated);
+    onSegmentsChange(buildOrganizadorSlices(patterns, defaultRole, bpm, detected, gridOffsetSec));
   }, [patterns, defaultRole, bpm, audio, gridOffsetSec, onSegmentsChange]);
+
+  const handleDetectRmsSilences = useCallback(() => {
+    const detected = detectVocalPhrases(audio.pcm, audio.sampleRate);
+    const rolePats = patterns.filter((p) => p.role === defaultRole), list = rolePats.length > 0 ? rolePats : patterns;
+    onSegmentsChange(detected.map((seg, idx) => {
+      const pat = list[idx], hasAnacrusis = pat ? pat.hasAnacrusis !== false : seg.hasAnacrusis !== false, anacrusisBeats = pat?.anacrusisBeats ?? (hasAnacrusis ? 2 : 0);
+      return { ...seg, targetPatternId: pat ? pat.id : 'new', role: pat?.role ?? defaultRole, name: pat?.name, measuresCount: pat?.measuresCount ?? seg.measuresCount ?? 2, hasAnacrusis, anacrusisBeats, metricT1Sec: calculateSliceMetricT1Sec(seg.startSec, bpm, gridOffsetSec, hasAnacrusis, anacrusisBeats) };
+    }));
+  }, [audio, patterns, defaultRole, bpm, gridOffsetSec, onSegmentsChange]);
 
   const handleSyncOrganizador = async () => {
     setIsSyncing(true);
@@ -64,8 +65,7 @@ export const SlicerMultiSection: React.FC<SlicerMultiSectionProps> = ({
         if (metronomeActive) engine.setMetronome(true, freshBpm, gridOffsetSec);
         onProjectUpdate?.(res.updatedProject);
         const detected = detectVocalPhrases(audio.pcm, audio.sampleRate);
-        const freshSlices = buildOrganizadorSlices(res.updatedProject.patterns, defaultRole, freshBpm, detected, gridOffsetSec);
-        onSegmentsChange(freshSlices);
+        onSegmentsChange(buildOrganizadorSlices(res.updatedProject.patterns, defaultRole, freshBpm, detected, gridOffsetSec));
         window.dispatchEvent(new CustomEvent('app-toast', { detail: { type: 'success', message: res.toastMessage } }));
       }
     } finally { setIsSyncing(false); }
@@ -103,13 +103,12 @@ export const SlicerMultiSection: React.FC<SlicerMultiSectionProps> = ({
         metronomeActive={metronomeActive} cascadeMove={cascadeMove} isSyncing={isSyncing}
         onToggleMetronome={() => { const n = !metronomeActive; setMetronomeActive(n); engine.setMetronome(n, bpm, gridOffsetSec); }}
         onBpmChange={(nb) => {
-          setSlicerBpm(nb);
-          if (metronomeActive) engine.setMetronome(true, nb, gridOffsetSec);
+          setSlicerBpm(nb); if (metronomeActive) engine.setMetronome(true, nb, gridOffsetSec);
           onProjectUpdate?.({ ...project, bpm: nb, toadaMeta: project.toadaMeta ? { ...project.toadaMeta, bpmDefaut: nb } : project.toadaMeta, patterns: (project.patterns || []).map((p) => ({ ...p, bpm: nb, baseBpm: nb })) });
         }}
         onNudgeOffset={(d) => setGridOffsetSec((prev) => Math.max(0, Math.round((prev + d) * 100) / 100))}
         onToggleCascade={() => setCascadeMove((v) => !v)} onAlignOrganizador={handleAlignOrganizador}
-        onSyncOrganizador={handleSyncOrganizador} onDetectSilences={handleAlignOrganizador}
+        onSyncOrganizador={handleSyncOrganizador} onDetectSilences={handleDetectRmsSilences}
         onAddSegment={() => onSegmentsChange([...segments, { id: `seg-${Date.now()}`, startSec: gridOffsetSec, endSec: gridOffsetSec + 2 * measureDur, targetPatternId: 'ignore', measuresCount: 2, hasAnacrusis: true, hasTailBeat: true }])}
         onClearSegments={() => onSegmentsChange([])} onChangeFile={onChangeFile}
       />
@@ -125,8 +124,13 @@ export const SlicerMultiSection: React.FC<SlicerMultiSectionProps> = ({
         onSegmentsChange={onSegmentsChange} onSelectSegment={setSelectedSegmentId} onPlaySegment={handlePlaySegment}
         onSplitSegment={(segId) => {
           const t = segments.find((s) => s.id === segId); if (!t) return;
-          const mid = (t.startSec + t.endSec) / 2;
-          onSegmentsChange(segments.flatMap((s) => s.id === segId ? [{ ...t, id: `seg-${Date.now()}-a`, endSec: mid }, { ...t, id: `seg-${Date.now()}-b`, startSec: mid, targetPatternId: 'new' }] : [s]));
+          const [s1, s2] = splitSliceSegment(t, (t.startSec + t.endSec) / 2, bpm, gridOffsetSec);
+          onSegmentsChange(segments.flatMap((s) => (s.id === segId ? [s1, s2] : [s])));
+        }}
+        onMergeSegment={(segId) => {
+          const idx = segments.findIndex((s) => s.id === segId); if (idx < 0 || idx >= segments.length - 1) return;
+          const merged = mergeAdjacentSliceSegments(segments[idx], segments[idx + 1], bpm, gridOffsetSec);
+          onSegmentsChange([...segments.slice(0, idx), merged, ...segments.slice(idx + 2)]);
         }}
         onDeleteSegment={(id) => onSegmentsChange(segments.filter((s) => s.id !== id))}
         onPreAssign={(mode) => {
@@ -134,14 +138,8 @@ export const SlicerMultiSection: React.FC<SlicerMultiSectionProps> = ({
           onSegmentsChange(segments.map((s, idx) => ({ ...s, targetPatternId: idx < list.length ? list[idx].id : 'new' })));
         }}
       />
-      <button
-        type="button" onClick={onExecuteBatchAssign} disabled={isAssigning || activeCount === 0}
-        className={`w-full py-2.5 px-4 cordel-btn-primary flex items-center justify-center gap-2 text-xs font-black tracking-wider uppercase cursor-pointer transition-colors bg-emerald-700 hover:bg-emerald-600 text-white shadow-md ${
-          activeCount === 0 ? 'opacity-50 cursor-not-allowed' : ''
-        }`}
-      >
-        {isAssigning ? (<><Loader2 className="w-4 h-4 animate-spin text-[#f4ecd8]" /><span>{t('slicerAssigningProgress')}</span></>)
-          : (<><Check className="w-4 h-4 text-[#f4ecd8]" /><span>{t('slicerExecuteBatchAssignBtn', { count: activeCount })}</span></>)}
+      <button type="button" onClick={onExecuteBatchAssign} disabled={isAssigning || activeCount === 0} className={`w-full py-2.5 px-4 cordel-btn-primary flex items-center justify-center gap-2 text-xs font-black tracking-wider uppercase cursor-pointer transition-colors bg-emerald-700 hover:bg-emerald-600 text-white shadow-md ${activeCount === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}>
+        {isAssigning ? (<><Loader2 className="w-4 h-4 animate-spin text-[#f4ecd8]" /><span>{t('slicerAssigningProgress')}</span></>) : (<><Check className="w-4 h-4 text-[#f4ecd8]" /><span>{t('slicerExecuteBatchAssignBtn', { count: activeCount })}</span></>)}
       </button>
     </div>
   );

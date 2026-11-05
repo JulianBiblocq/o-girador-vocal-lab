@@ -49,8 +49,10 @@ export function useMelodiaActions(p: UseMelodiaActionsParams) {
   }, [p]);
 
   const handleAlignOctaveToBricks = useCallback(() => {
-    const stepDur = p.totalDurationSec / (p.allSteps.length || 1);
-    const newCurve = alignPitchCurveOctaveToBricks(p.rawPitchCurve, p.allSteps, stepDur, 0);
+    const tGridStart = p.hasAnac ? 0 : 0.15;
+    const gridDur = Math.max(0.05, p.totalDurationSec - tGridStart - 0.25);
+    const stepDur = (p.allSteps[0]?.decay > 0 && p.allSteps[0]?.decay < 5) ? p.allSteps[0].decay : (gridDur / (p.allSteps.length || 1));
+    const newCurve = alignPitchCurveOctaveToBricks(p.rawPitchCurve, p.allSteps, stepDur, 0, tGridStart);
     p.commitCurrentSnapshot({ rawPitchCurve: newCurve });
     p.updatePattern(p.activePattern.id, { rawPitchCurve: newCurve, pitchCurve: newCurve });
   }, [p]);
