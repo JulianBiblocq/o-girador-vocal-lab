@@ -1,8 +1,8 @@
 /**
  * LetraEditorPanel.tsx
- * Éditeur « Letra da Toada » avec alignement strict non-destructif sur les briques existantes (< 130 lignes).
+ * Éditeur « Letra da Toada » avec navigation 1-Tab entre syllabes et alignement strict non-destructif (< 142 lignes).
  */
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import type { VocalStepData } from '../../types/vocalPack.types';
 import { assignSyllablesStrictlyToExistingBricks, reconstructWordsFromSteps } from '../../utils/syllableAligner';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
@@ -20,6 +20,7 @@ export const LetraEditorPanel: React.FC<LetraEditorPanelProps> = ({ allSteps, on
   const { t } = useLanguage(), { activePattern, updatePattern, project } = useToadaProject();
   const [rawText, setRawText] = useState<string>(activePattern.assignedLyricsText || '');
   const [focusPhrase, setFocusPhrase] = useState(''), [focusSyl, setFocusSyl] = useState('');
+  const sylInputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   useEffect(() => { setRawText(activePattern.assignedLyricsText || ''); }, [activePattern.id, activePattern.assignedLyricsText]);
 
@@ -36,10 +37,6 @@ export const LetraEditorPanel: React.FC<LetraEditorPanelProps> = ({ allSteps, on
     onCommitHistory?.();
   };
 
-  /**
-   * [ + Aligner ] : Assigne uniquement les syllabes aux briques d'attaque actuellement présentes
-   * dans le Piano Roll sans JAMAIS modifier les découpes (active/isTie) ni les hauteurs MIDI.
-   */
   const handleAlign = () => {
     onCommitHistory?.();
     const aligned = assignSyllablesStrictlyToExistingBricks(allSteps, rawText);
@@ -70,6 +67,18 @@ export const LetraEditorPanel: React.FC<LetraEditorPanelProps> = ({ allSteps, on
     [allSteps]
   );
   const reconstructedWords = useMemo(() => reconstructWordsFromSteps(allSteps), [allSteps]);
+
+  const handleSyllableKeyDown = (e: React.KeyboardEvent<HTMLInputElement>, cardIdx: number) => {
+    if (e.key === 'Tab') {
+      const nextIdx = e.shiftKey ? cardIdx - 1 : cardIdx + 1;
+      if (nextIdx >= 0 && nextIdx < activeStepEntries.length) {
+        e.preventDefault();
+        if (e.currentTarget.value !== focusSyl) onCommitHistory?.();
+        const targetEl = sylInputRefs.current[nextIdx];
+        if (targetEl) { targetEl.focus(); targetEl.select(); targetEl.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' }); }
+      }
+    } else if (e.key === 'Enter') { e.currentTarget.blur(); }
+  };
 
   return (
     <div className="cordel-card p-3 flex flex-col gap-2.5 rounded">
@@ -106,26 +115,19 @@ export const LetraEditorPanel: React.FC<LetraEditorPanelProps> = ({ allSteps, on
             const hasSpace = (st.syllable ?? '').endsWith(' ');
             return (
               <div key={arrayIdx} className="flex flex-col items-center bg-white/5 border border-theme-border/60 p-1 min-w-[62px] shrink-0 rounded-none">
-                <div className="flex items-center justify-between w-full px-0.5 text-[9px] font-mono">
-                  <span className="opacity-50">#{cardIdx + 1}</span>
-                  <span className="text-theme-accent font-black">{st.note}</span>
-                </div>
+                <div className="flex items-center justify-between w-full px-0.5 text-[9px] font-mono"><span className="opacity-50">#{cardIdx + 1}</span><span className="text-theme-accent font-black">{st.note}</span></div>
                 <input
-                  type="text" value={st.syllable ?? ''} onFocus={(e) => setFocusSyl(e.target.value)}
-                  onChange={(e) => handleSyllableChange(arrayIdx, e.target.value)}
-                  onBlur={(e) => { if (e.target.value !== focusSyl) onCommitHistory?.(); }} onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
+                  ref={(el) => { sylInputRefs.current[cardIdx] = el; }} data-syllable-idx={cardIdx} type="text" value={st.syllable ?? ''}
+                  onFocus={(e) => setFocusSyl(e.target.value)} onChange={(e) => handleSyllableChange(arrayIdx, e.target.value)}
+                  onBlur={(e) => { if (e.target.value !== focusSyl) onCommitHistory?.(); }} onKeyDown={(e) => handleSyllableKeyDown(e, cardIdx)}
                   className="letra-syllable-input w-full text-center text-[11px] font-mono px-0.5 py-0.5 mt-0.5 focus:outline-none rounded-none"
                 />
-                <button
-                  type="button" onClick={() => handleToggleTrailingSpace(arrayIdx)}
-                  className={`mt-1 px-1 py-0.5 text-[8.5px] font-mono w-full transition-all rounded-none cursor-pointer ${hasSpace ? 'letra-space-btn-active' : 'bg-white/5 text-theme-ink/60 hover:bg-white/10'}`}
-                  title={hasSpace ? t('letraSpaceTooltip') : t('letraTiedTooltip')}
-                >
+                <button type="button" tabIndex={-1} onClick={() => handleToggleTrailingSpace(arrayIdx)} className={`mt-1 px-1 py-0.5 text-[8.5px] font-mono w-full transition-all rounded-none cursor-pointer ${hasSpace ? 'letra-space-btn-active' : 'bg-white/5 text-theme-ink/60 hover:bg-white/10'}`} title={hasSpace ? t('letraSpaceTooltip') : t('letraTiedTooltip')}>
                   {hasSpace ? t('letraSpaceBadge') : t('letraTiedBadge')}
                 </button>
                 <div className="flex items-center justify-between w-full mt-1 px-0.5">
-                  <button type="button" onClick={() => handleShiftSyllable(arrayIdx, -1)} className="p-0.5 hover:bg-white/10 rounded-none cursor-pointer"><ChevronLeft className="w-3 h-3 text-theme-ink/60" /></button>
-                  <button type="button" onClick={() => handleShiftSyllable(arrayIdx, 1)} className="p-0.5 hover:bg-white/10 rounded-none cursor-pointer"><ChevronRight className="w-3 h-3 text-theme-ink/60" /></button>
+                  <button type="button" tabIndex={-1} onClick={() => handleShiftSyllable(arrayIdx, -1)} className="p-0.5 hover:bg-white/10 rounded-none cursor-pointer"><ChevronLeft className="w-3 h-3 text-theme-ink/60" /></button>
+                  <button type="button" tabIndex={-1} onClick={() => handleShiftSyllable(arrayIdx, 1)} className="p-0.5 hover:bg-white/10 rounded-none cursor-pointer"><ChevronRight className="w-3 h-3 text-theme-ink/60" /></button>
                 </div>
               </div>
             );

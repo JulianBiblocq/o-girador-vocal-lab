@@ -1,13 +1,13 @@
 /**
  * LivretMelodia.tsx
- * Livret 4 : Melodia & Letra (Piano Roll, Letra, Melodyne & Boussole de pattern) (< 110 lignes).
- * Auto-extraction a la volee si un enregistrement PCM est present sans pack melodic.
+ * Livret 4 : Melodia & Letra (Piano Roll, Letra, Melodyne & Boussole de pattern) (< 120 lignes).
+ * Auto-extraction à la volée dès la sélection d'un pattern disposant d'un audio enregistré.
  */
 import React, { useEffect } from 'react';
 import type { VocalPackExport, PitchCurvePoint, VocalStepData } from '../../types/vocalPack.types';
 import { useToadaProject } from '../../context/ToadaProjectContext';
 import { useAudioHardware } from '../../context/AudioHardwareContext';
-import { PatternCompassBar } from '../common/PatternCompassBar';
+import { PatternCompassBar, resolvePatternAudioSource, checkPatternHasMidi } from '../common/PatternCompassBar';
 import { MelodiaEmptyNotice } from './MelodiaEmptyNotice';
 import { LivretMelodiaWorkspace } from './LivretMelodiaWorkspace';
 import { extractPatternMelodicData } from '../../audio/melodicExtractionHelper';
@@ -37,51 +37,48 @@ export const LivretMelodia: React.FC<LivretMelodiaProps> = (props) => {
   const { project, activePattern, activeVariant, updatePattern } = useToadaProject();
   const { selectedOutputDeviceId, recordedSampleRate } = useAudioHardware();
 
-  const rawPCM = activeVariant.recordingResult?.pcm ?? null;
-  const sampleRate = activeVariant.recordingResult?.sampleRate ?? recordedSampleRate;
-  const hasAudio = Boolean(rawPCM && rawPCM.length > 0);
-  const isMelodiaReady = Boolean(
-    activePattern.pack && activePattern.rawAudioSamples && (activePattern.mainSteps?.length ?? 0) > 0
-  );
+  const { pcm: resolvedPCM, sampleRate } = resolvePatternAudioSource(activePattern, recordedSampleRate);
+  const hasAudio = Boolean(resolvedPCM && resolvedPCM.length > 0);
+  const isMelodiaReady = Boolean(activePattern.rawAudioSamples?.length && checkPatternHasMidi(activePattern));
 
   useEffect(() => {
-    if (!hasAudio || !rawPCM || isMelodiaReady) return;
+    if (!hasAudio || !resolvedPCM || isMelodiaReady) return;
     const bpm = activePattern.bpm ?? activePattern.baseBpm ?? project.bpm ?? 88;
-    const effectiveBpm = Math.max(30, Math.round(bpm * activeVariant.speedRatio));
+    const effectiveBpm = Math.max(30, Math.round(bpm * (activeVariant?.speedRatio ?? 1)));
     const referencePitch = activePattern.referencePitch ?? 'C4';
-    const effectivePitch = transposePitchNote(referencePitch, activeVariant.pitchShiftSemitones);
+    const effectivePitch = transposePitchNote(referencePitch, activeVariant?.pitchShiftSemitones ?? 0);
     const beatsPerMeasure = getBeatsPerMeasure(project.timeSignature);
     const beatResolutions = getDefaultBeatResolutions(project.timeSignature);
     const hasAnacrusis = activePattern.hasAnacrusis !== false;
-    const rawT1 = activeVariant.t1OffsetSec ?? activePattern.t1OffsetSec ?? activePattern.recordingResult?.t1OffsetSec;
+    const rawT1 = activeVariant?.t1OffsetSec ?? activePattern.t1OffsetSec ?? activePattern.recordingResult?.t1OffsetSec;
     const freshAnchors = resolveFreshTimeAnchors(activePattern.rawLineCode, activePattern.timeAnchors, beatsPerMeasure, !hasAnacrusis, activePattern.assignedLyricsText, extractProjectRawLyricsSource(project, activePattern));
 
     const res = extractPatternMelodicData({
-      rawPCM, sampleRate, bpm: effectiveBpm, timeSignature: project.timeSignature,
+      rawPCM: resolvedPCM, sampleRate, bpm: effectiveBpm, timeSignature: project.timeSignature,
       measuresCount: activePattern.measuresCount, beatsPerMeasure, beatResolutions,
-      hasAnacrusis, trimStartSec: activeVariant.trimStartSec, trimEndSec: activeVariant.trimEndSec,
-      t1OffsetSec: rawT1,
-      referencePitch: effectivePitch, pitchShiftSemitones: activeVariant.pitchShiftSemitones,
+      hasAnacrusis, trimStartSec: activeVariant?.trimStartSec ?? activePattern.trimStartSec ?? 0,
+      trimEndSec: activeVariant?.trimEndSec ?? activePattern.trimEndSec ?? (resolvedPCM.length / sampleRate),
+      t1OffsetSec: rawT1, referencePitch: effectivePitch, pitchShiftSemitones: activeVariant?.pitchShiftSemitones ?? 0,
       tessitura: activePattern.tessitura, assignedLyricsText: activePattern.assignedLyricsText,
-      timeAnchors: freshAnchors,
-      lowCutEnabled: activeVariant.lowCutEnabled, enableTonePolish: activeVariant.enableTonePolish !== false,
+      timeAnchors: freshAnchors, lowCutEnabled: activeVariant?.lowCutEnabled ?? activePattern.lowCutEnabled ?? true,
+      enableTonePolish: (activeVariant?.enableTonePolish ?? activePattern.enableTonePolish) !== false,
     });
 
-    const preserveMidi = Boolean(activePattern.midiLocked && (activePattern.mainSteps?.length ?? 0) > 0);
+    const preserveMidi = Boolean(activePattern.midiLocked && checkPatternHasMidi(activePattern));
     updatePattern(activePattern.id, {
       pack: res.pack, rawAudioSamples: res.cleanPCM, rawPitchCurve: res.pitchCurve,
       pitchCurve: res.pitchCurve, timeAnchors: freshAnchors,
       anacrusisSteps: preserveMidi ? (activePattern.anacrusisSteps || []) : res.anacrusisSteps,
       mainSteps: preserveMidi ? (activePattern.mainSteps || []) : res.mainSteps,
-      isMidiInitialized: true, midiLocked: preserveMidi, hasCanonicalAlignment: true as any, correctedAudioSamples: null,
+      isMidiInitialized: true, midiLocked: preserveMidi, correctedAudioSamples: null,
     });
-  }, [hasAudio, rawPCM, isMelodiaReady, activePattern, activeVariant, project, sampleRate, updatePattern]);
+  }, [hasAudio, resolvedPCM, isMelodiaReady, activePattern, activeVariant, project, sampleRate, updatePattern]);
 
   const pack = props.initialPack ?? activePattern.pack;
 
   if (!hasAudio && !pack) {
     return (
-      <div className="flex flex-col gap-3.5 w-full">
+      <div className="flex flex-col gap-3 w-full">
         <PatternCompassBar />
         <MelodiaEmptyNotice />
       </div>
@@ -90,7 +87,7 @@ export const LivretMelodia: React.FC<LivretMelodiaProps> = (props) => {
 
   if (!pack || !activePattern.rawAudioSamples) {
     return (
-      <div className="flex flex-col gap-3.5 w-full">
+      <div className="flex flex-col gap-3 w-full">
         <PatternCompassBar />
         <div className="cordel-card p-8 flex flex-col items-center justify-center text-center gap-2">
           <div className="w-8 h-8 rounded-full border-2 border-theme-accent border-t-transparent animate-spin" />
@@ -108,18 +105,21 @@ export const LivretMelodia: React.FC<LivretMelodiaProps> = (props) => {
   const totalDurationSec = getPatternTotalDurationSec(activePattern.hasAnacrusis !== false, activePattern.measuresCount, measureDuration, 0.25, beatDuration);
 
   return (
-    <LivretMelodiaWorkspace
-      key={`${project.id}-${activePattern.id}`}
-      {...props}
-      initialPack={pack}
-      cleanPCM={activePattern.rawAudioSamples}
-      sampleRate={sampleRate}
-      totalDurationSec={totalDurationSec}
-      beatsPerMeasure={beatsPerMeasure}
-      measuresCount={activePattern.measuresCount}
-      pitchCurve={activePattern.pitchCurve}
-      outputDeviceId={selectedOutputDeviceId}
-      pitchShiftSemitones={activeVariant.pitchShiftSemitones}
-    />
+    <div className="flex flex-col gap-3 w-full">
+      <PatternCompassBar />
+      <LivretMelodiaWorkspace
+        key={`${project.id}-${activePattern.id}`}
+        {...props}
+        initialPack={pack}
+        cleanPCM={activePattern.rawAudioSamples}
+        sampleRate={sampleRate}
+        totalDurationSec={totalDurationSec}
+        beatsPerMeasure={beatsPerMeasure}
+        measuresCount={activePattern.measuresCount}
+        pitchCurve={activePattern.pitchCurve}
+        outputDeviceId={selectedOutputDeviceId}
+        pitchShiftSemitones={activeVariant?.pitchShiftSemitones ?? 0}
+      />
+    </div>
   );
 };
