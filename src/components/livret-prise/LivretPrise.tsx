@@ -1,8 +1,8 @@
 /**
  * LivretPrise.tsx
- * Livret 2 : Cabine d'enregistrement avec mode pattern & prise continue sur le Conducteur (< 140 lignes).
+ * Livret 2 : Cabine d'enregistrement avec Retour Confort, Mémoire de Crête (-0.5 dBFS), Baque casque & Punch-in (< 140 lignes).
  */
-import React, { useMemo, useCallback } from 'react';
+import React, { useMemo, useCallback, useState, useEffect } from 'react';
 import { useToadaProject } from '../../context/ToadaProjectContext';
 import { useAudioHardware } from '../../context/AudioHardwareContext';
 import { useLanguage } from '../../i18n/LanguageContext';
@@ -11,6 +11,9 @@ import { confirmAsync } from '../../stores/useCordelDialogStore';
 import { PatternCompassBar } from '../common/PatternCompassBar';
 import { LatencyReminderBanner } from '../common/LatencyReminderBanner';
 import { StudioSettingsStatusBar } from './StudioSettingsStatusBar';
+import { CabineMonitoringAndPunchBar } from './CabineMonitoringAndPunchBar';
+import type { ComfortMonitoringPreset } from '../../audio/ComfortMonitoringNode';
+import { getActiveBackingTrack, subscribeBackingTrack } from '../../utils/backingTrackStorage';
 import { PatternLyricsBanner } from './PatternLyricsBanner';
 import { ChordGridBar } from '../common/ChordGridBar';
 import { PendulumVisualizer } from '../PendulumVisualizer';
@@ -39,6 +42,19 @@ export const LivretPrise: React.FC = () => {
   const activeLivret = useVocalTransportStore((s) => s.activeLivret);
   const setActiveLivret = useVocalTransportStore((s) => s.setActiveLivret);
 
+  const [comfortPreset, setComfortPreset] = useState<ComfortMonitoringPreset>('off');
+  const [comfortMix, setComfortMix] = useState<number>(0.35);
+  const [backingInHeadphones, setBackingInHeadphones] = useState<boolean>(true);
+  const [punchMeasureIndex, setPunchMeasureIndex] = useState<number | null>(null);
+  const [hasBackingTrack, setHasBackingTrack] = useState<boolean>(() => Boolean(getActiveBackingTrack(project.id)?.enabled));
+
+  useEffect(() => {
+    setHasBackingTrack(Boolean(getActiveBackingTrack(project.id)?.enabled));
+    return subscribeBackingTrack(() => setHasBackingTrack(Boolean(getActiveBackingTrack(project.id)?.enabled)));
+  }, [project.id]);
+
+  useEffect(() => { setPunchMeasureIndex(null); }, [activePattern.id]);
+
   const bpm = activePattern.bpm ?? activePattern.baseBpm ?? project.bpm ?? 88;
   const referencePitch = activePattern.referencePitch ?? 'C4';
   const timeSignature = project.timeSignature;
@@ -49,19 +65,17 @@ export const LivretPrise: React.FC = () => {
   const effectivePitch = useMemo(() => transposePitchNote(referencePitch, activeVariant.pitchShiftSemitones), [referencePitch, activeVariant.pitchShiftSemitones]);
   const beatDuration = 60 / effectiveBpm;
 
-  const { isCycleActive, handleToggleRecord } = usePriseRecorder({
+  const { isCycleActive, handleToggleRecord, peakDb, hasClipped, resetClipIndicator } = usePriseRecorder({
     engine, recorder, activePattern, activeVariant, cueMode, getPreviousConductorPattern,
     projectPatterns: project.patterns, timeSignature, measuresCount, hasAnacrusis,
     beatsPerMeasure, beatDuration, effectiveBpm, effectivePitch, listeningMode,
     selectedDeviceId, selectedOutputDeviceId, updateVariant, updatePattern, updatePatternAndVariant, recordedSampleRate,
     setRecordedSampleRate, activeLivret, harmonyConfig: project.harmonyConfig,
+    comfortPreset, comfortMix, backingInHeadphones, punchMeasureIndex,
   });
 
-  const {
-    takeMode, setTakeMode, isContinuousActive, prompterInfo, handleToggleContinuous,
-  } = useContinuousTakeController({
-    project, loadProject, engine, recorder, listeningMode,
-    selectedDeviceId, selectedOutputDeviceId, activeLivret,
+  const { takeMode, setTakeMode, isContinuousActive, prompterInfo, handleToggleContinuous } = useContinuousTakeController({
+    project, loadProject, engine, recorder, listeningMode, selectedDeviceId, selectedOutputDeviceId, activeLivret,
   });
 
   const isRecordingAny = isCycleActive || isContinuousActive;
@@ -84,51 +98,37 @@ export const LivretPrise: React.FC = () => {
       {takeMode !== 'pattern' && <ContinuousPrompterBanner info={prompterInfo} isActive={isContinuousActive} />}
       <PatternCompassBar />
       <StudioSettingsStatusBar />
+      <CabineMonitoringAndPunchBar
+        listeningMode={listeningMode} comfortPreset={comfortPreset} comfortMix={comfortMix}
+        onChangeComfortPreset={setComfortPreset} onChangeComfortMix={setComfortMix}
+        hasBackingTrack={hasBackingTrack} backingInHeadphones={backingInHeadphones} onToggleBackingInHeadphones={() => setBackingInHeadphones((v) => !v)}
+        measuresCount={measuresCount} hasRecording={hasRecording} punchMeasureIndex={punchMeasureIndex} onChangePunchMeasureIndex={setPunchMeasureIndex}
+        peakDb={peakDb} hasClipped={hasClipped} onResetClipIndicator={resetClipIndicator} disabled={isRecordingAny}
+      />
 
       <div className="flex flex-col gap-2">
         <PatternLyricsBanner />
         <div className="cordel-card p-1.5 rounded">
-          <ChordGridBar
-            harmonyGrid={activePattern.harmonyGrid}
-            measuresCount={measuresCount}
-            beatsPerMeasure={beatsPerMeasure}
-            hasAnacrusis={hasAnacrusis}
-            onUpdateGrid={(g) => updatePattern(activePattern.id, { harmonyGrid: g })}
-          />
+          <ChordGridBar harmonyGrid={activePattern.harmonyGrid} measuresCount={measuresCount} beatsPerMeasure={beatsPerMeasure} hasAnacrusis={hasAnacrusis} onUpdateGrid={(g) => updatePattern(activePattern.id, { harmonyGrid: g })} />
         </div>
       </div>
 
       <PendulumVisualizer engine={engine} isActive={isRecordingAny} measuresCount={measuresCount} beatsPerMeasure={beatsPerMeasure}>
-        <RecordActionButton
-          isCycleActive={takeMode === 'pattern' ? isCycleActive : isContinuousActive}
-          measuresCount={measuresCount}
-          onToggleRecord={takeMode === 'pattern' ? handleToggleRecord : handleToggleContinuous}
-        />
+        <RecordActionButton isCycleActive={takeMode === 'pattern' ? isCycleActive : isContinuousActive} measuresCount={measuresCount} onToggleRecord={takeMode === 'pattern' ? handleToggleRecord : handleToggleContinuous} />
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 pt-1 border-t border-[var(--cordel-border-sub)]">
           <div className="flex-1 min-w-[200px]"><CuePatternSelector disabled={isRecordingAny} /></div>
           <div className="shrink-0"><HarmonyProfileSelector config={project.harmonyConfig ?? { enabled: true, profile: 'maracatu', volume: 0.7 }} onChange={updateHarmonyConfig} disabled={isRecordingAny} /></div>
         </div>
         {hasRecording && (
           <div className="flex flex-wrap items-center justify-center gap-2 pt-2 border-t border-[var(--cordel-border-sub)]">
-            <button type="button" onClick={() => setActiveLivret('calage')} className="cordel-btn-primary px-3 py-1.5 text-xs font-mono font-bold flex items-center gap-1.5 cursor-pointer">
-              <Scissors className="w-3.5 h-3.5" /><span>{t('goToCalageBtn')}</span>
-            </button>
-            <button type="button" onClick={() => setActiveLivret('melodia')} className="cordel-btn px-3 py-1.5 text-xs font-mono font-bold flex items-center gap-1.5 cursor-pointer">
-              <Music className="w-3.5 h-3.5 text-theme-accent" /><span>{t('goToMelodiaBtn')}</span>
-            </button>
-            <button type="button" onClick={handleReset} className="cordel-card-sm px-2.5 py-1.5 text-[11px] font-mono text-red-500 hover:text-red-400 flex items-center gap-1 cursor-pointer">
-              <RotateCcw className="w-3 h-3" /><span>{t('resetRecordingTitle')}</span>
-            </button>
+            <button type="button" onClick={() => setActiveLivret('calage')} className="cordel-btn-primary px-3 py-1.5 text-xs font-mono font-bold flex items-center gap-1.5 cursor-pointer"><Scissors className="w-3.5 h-3.5" /><span>{t('goToCalageBtn')}</span></button>
+            <button type="button" onClick={() => setActiveLivret('melodia')} className="cordel-btn px-3 py-1.5 text-xs font-mono font-bold flex items-center gap-1.5 cursor-pointer"><Music className="w-3.5 h-3.5 text-theme-accent" /><span>{t('goToMelodiaBtn')}</span></button>
+            <button type="button" onClick={handleReset} className="cordel-card-sm px-2.5 py-1.5 text-[11px] font-mono text-red-500 hover:text-red-400 flex items-center gap-1 cursor-pointer"><RotateCcw className="w-3 h-3" /><span>{t('resetRecordingTitle')}</span></button>
           </div>
         )}
       </PendulumVisualizer>
 
-      <CordelAccordion
-        title={t('grainPlayerAccordionTitle')}
-        summaryBadge={t('grainPlayerAccordionSummary', { recorded: recordedCount, active: isMainVariant ? t('variantMainLabel') : `${Math.round(activeVariant.speedRatio * 100)}% / ${activeVariant.pitchShiftSemitones}st` })}
-        storageKey={`variants_${activePattern.id}`}
-        defaultOpen={false}
-      >
+      <CordelAccordion title={t('grainPlayerAccordionTitle')} summaryBadge={t('grainPlayerAccordionSummary', { recorded: recordedCount, active: isMainVariant ? t('variantMainLabel') : `${Math.round(activeVariant.speedRatio * 100)}% / ${activeVariant.pitchShiftSemitones}st` })} storageKey={`variants_${activePattern.id}`} defaultOpen={false}>
         <PatternVariantSelector baseBpm={bpm} referencePitch={referencePitch} disabled={isRecordingAny} onPlayPitchPreview={(p) => engine.playReferencePitchPreview(p, 1.5, selectedOutputDeviceId)} />
       </CordelAccordion>
     </div>

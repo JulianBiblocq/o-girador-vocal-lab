@@ -6,7 +6,7 @@ import React from 'react';
 import type { PianoRollTool } from './pianoRollInteractions';
 import { SCALE_DEFINITIONS, type ScaleType } from '../../audio/scaleQuantizer';
 import { NOTE_NAMES } from '../../utils/noteUtils';
-import { MousePointer, Link2, Scissors, Eraser, Type, ZoomIn, Undo2, Redo2, RefreshCw, Wand2 } from 'lucide-react';
+import { MousePointer, Link2, Scissors, Eraser, Type, ZoomIn, Undo2, Redo2, RefreshCw, Wand2, Ruler } from 'lucide-react';
 import { useLanguage } from '../../i18n/LanguageContext';
 import type { TranslationKey } from '../../i18n/i18n.types';
 import { confirmAsync } from '../../stores/useCordelDialogStore';
@@ -19,6 +19,7 @@ interface PianoRollToolbarProps {
   smoothingLevel: number; onSetSmoothingLevel: (lvl: number) => void;
   canUndo?: boolean; canRedo?: boolean; historyCount?: number;
   onUndo?: () => void; onRedo?: () => void; onReExtractNotes?: () => void;
+  onSimplifyMelody?: () => void; onWeldSelected?: () => void;
 }
 
 const SCALE_I18N_KEYS: Record<ScaleType, TranslationKey> = {
@@ -30,7 +31,7 @@ export const PianoRollToolbar: React.FC<PianoRollToolbarProps> = (props) => {
   const {
     activeTool, onSelectTool, zoomLevel, onSetZoom, tonic, onSetTonic,
     scaleType, onSetScaleType, smoothingLevel, onSetSmoothingLevel,
-    canUndo, canRedo, historyCount, onUndo, onRedo, onReExtractNotes,
+    canUndo, canRedo, historyCount, onUndo, onRedo, onReExtractNotes, onSimplifyMelody, onWeldSelected,
   } = props;
   const { t } = useLanguage();
 
@@ -45,57 +46,45 @@ export const PianoRollToolbar: React.FC<PianoRollToolbarProps> = (props) => {
       <div className="flex items-center gap-2">
         <div className="flex items-center border border-[var(--cordel-border-sub)] rounded overflow-hidden">
           {tools.map((item) => {
-            const Icon = item.icon;
-            const isActive = activeTool === item.id;
+            const Icon = item.icon, isActive = activeTool === item.id;
             return (
-              <button
-                key={item.id} type="button" onClick={() => onSelectTool(item.id)} title={item.label}
-                className={`px-2 py-1 text-xs font-mono flex items-center gap-1 border-r last:border-r-0 border-[var(--cordel-border-sub)] transition-all cursor-pointer ${
-                  isActive ? 'bg-theme-wood text-[#f4ecd8] font-bold' : 'text-theme-ink/75 hover:bg-white/10 hover:text-theme-ink'
-                }`}
-              >
-                <Icon className="w-3.5 h-3.5" />
-                <span className="hidden xl:inline">{item.label}</span>
+              <button key={item.id} type="button" onClick={() => onSelectTool(item.id)} title={item.label} className={`px-2 py-1 text-xs font-mono flex items-center gap-1 border-r last:border-r-0 border-[var(--cordel-border-sub)] transition-all cursor-pointer ${isActive ? 'bg-theme-wood text-[#f4ecd8] font-bold' : 'text-theme-ink/75 hover:bg-white/10 hover:text-theme-ink'}`}>
+                <Icon className="w-3.5 h-3.5" /><span className="hidden xl:inline">{item.label}</span>
               </button>
             );
           })}
         </div>
 
         <div className="flex items-center border border-[var(--cordel-border-sub)] rounded overflow-hidden">
-          <button
-            type="button" onClick={onUndo} disabled={!canUndo} title={t('undo')}
-            className={`px-2 py-1 text-xs font-mono flex items-center gap-1 border-r border-[var(--cordel-border-sub)] transition-all cursor-pointer ${
-              canUndo ? 'text-theme-ink hover:bg-white/10' : 'text-stone-600 cursor-not-allowed opacity-40'
-            }`}
-          >
-            <Undo2 className="w-3.5 h-3.5" />
-            {historyCount !== undefined && historyCount > 0 && <span className="text-[10px] text-theme-accent font-bold">({historyCount})</span>}
+          <button type="button" onClick={onUndo} disabled={!canUndo} title={t('undo')} className={`px-2 py-1 text-xs font-mono flex items-center gap-1 border-r border-[var(--cordel-border-sub)] transition-all cursor-pointer ${canUndo ? 'text-theme-ink hover:bg-white/10' : 'text-stone-600 cursor-not-allowed opacity-40'}`}>
+            <Undo2 className="w-3.5 h-3.5" />{historyCount !== undefined && historyCount > 0 && <span className="text-[10px] text-theme-accent font-bold">({historyCount})</span>}
           </button>
-          <button
-            type="button" onClick={onRedo} disabled={!canRedo} title={t('redo')}
-            className={`px-2 py-1 text-xs font-mono flex items-center gap-1 transition-all cursor-pointer ${
-              canRedo ? 'text-theme-ink hover:bg-white/10' : 'text-stone-600 cursor-not-allowed opacity-40'
-            }`}
-          >
+          <button type="button" onClick={onRedo} disabled={!canRedo} title={t('redo')} className={`px-2 py-1 text-xs font-mono flex items-center gap-1 transition-all cursor-pointer ${canRedo ? 'text-theme-ink hover:bg-white/10' : 'text-stone-600 cursor-not-allowed opacity-40'}`}>
             <Redo2 className="w-3.5 h-3.5" />
           </button>
         </div>
 
+        {onSimplifyMelody && (
+          <button type="button" onClick={onSimplifyMelody} title={t('simplifyMelodyTooltip')} className="px-2 py-1 text-xs font-mono font-bold flex items-center gap-1 border border-emerald-600/50 bg-emerald-600/15 text-emerald-900 dark:text-emerald-300 hover:bg-emerald-600/25 transition-all rounded cursor-pointer">
+            <Ruler className="w-3.5 h-3.5" /><span>{t('simplifyMelodyBtn')}</span>
+          </button>
+        )}
+        {onWeldSelected && (
+          <button type="button" onClick={onWeldSelected} title={t('weldBricksTooltip')} className="px-2 py-1 text-xs font-mono font-bold flex items-center gap-1 cordel-card-sm rounded cursor-pointer">
+            <Link2 className="w-3.5 h-3.5 text-theme-accent" /><span className="hidden lg:inline">{t('weldBricksBtn')}</span>
+          </button>
+        )}
         {onReExtractNotes && (
           <button
             type="button"
             onClick={async () => {
-              const ok = await confirmAsync({
-                title: t('reExtractNotes'), message: t('reExtractNotesConfirm'),
-                confirmLabel: t('dialogConfirm'), cancelLabel: t('dialogCancel'), variant: 'warning',
-              });
+              const ok = await confirmAsync({ title: t('reExtractNotes'), message: t('reExtractNotesConfirm'), confirmLabel: t('dialogConfirm'), cancelLabel: t('dialogCancel'), variant: 'warning' });
               if (ok) onReExtractNotes();
             }}
             title={t('reExtractNotesTooltip')}
             className="px-2 py-1 text-xs font-mono flex items-center gap-1 border border-amber-500/50 bg-amber-500/15 dark:bg-amber-950/30 text-amber-900 dark:text-amber-300 hover:bg-amber-500/25 dark:hover:bg-amber-900/50 transition-all rounded cursor-pointer"
           >
-            <RefreshCw className="w-3.5 h-3.5" />
-            <span className="hidden xl:inline">{t('reExtractNotes')}</span>
+            <RefreshCw className="w-3.5 h-3.5" /><span className="hidden xl:inline">{t('reExtractNotes')}</span>
           </button>
         )}
       </div>

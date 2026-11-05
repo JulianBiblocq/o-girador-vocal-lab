@@ -3,6 +3,8 @@
  * Moteur de lecture audio haute précision avec métronome temps réel lookahead (< 145 lignes).
  */
 import { getSharedAudioContext, registerAudioKillSwitch, stopAllActiveAudioEngines } from './sharedAudioContext';
+import { getActiveBackingTrack } from '../utils/backingTrackStorage';
+import { scheduleBackingTrackOnContext, type BackingTrackPlaybackHandle } from './BackingTrackEngine';
 
 export interface SlicerPlayOptions {
   pcm: Float32Array; sampleRate: number; loop: boolean; witnessClick: boolean;
@@ -13,6 +15,7 @@ export interface SlicerPlayOptions {
 export class SlicerAudioEngine {
   private ctx: AudioContext | null = null;
   private sourceNode: AudioBufferSourceNode | null = null;
+  private backingHandle: BackingTrackPlaybackHandle | null = null;
   private clickTimer: number | null = null;
   private isPlaying = false;
   private startTime = 0;
@@ -49,6 +52,8 @@ export class SlicerAudioEngine {
     src.start(0, this.startOffsetSec);
     this.sourceNode = src;
     this.isPlaying = true;
+    const t1InAudio = opts.gridOffsetSec ?? 0.8;
+    this.backingHandle = scheduleBackingTrackOnContext(this.ctx, getActiveBackingTrack(), this.startTime + (t1InAudio - this.startOffsetSec), opts.bpm || 88);
 
     if ((opts.witnessClick && opts.targetPegsRelativeSec.length > 0) || opts.metronomeClick) {
       this.startClickScheduler();
@@ -57,6 +62,7 @@ export class SlicerAudioEngine {
 
   public stop(): void {
     if (this.clickTimer) { clearInterval(this.clickTimer); this.clickTimer = null; }
+    this.backingHandle?.stop(); this.backingHandle = null;
     if (this.sourceNode) {
       try { this.sourceNode.stop(); this.sourceNode.disconnect(); } catch {}
       this.sourceNode = null;

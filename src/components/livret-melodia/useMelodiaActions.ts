@@ -7,7 +7,9 @@ import type { PitchCurvePoint, VocalPackExport, VocalStepData, MelodyneRegion } 
 import type { ScaleType } from '../../audio/scaleQuantizer';
 import { applyOctaveShiftToMelodia, alignPitchCurveOctaveToBricks } from '../../audio/pitchOctaveGuider';
 import { resetLivret1MelodicData } from '../../audio/livretResetHelper';
+import { simplifyStepsToMainMelody } from '../../audio/melodicSimplifier';
 import { eraseBrick } from './pianoRollInteractions';
+import { weldAdjacentBricks } from './pianoRollBrickInteractions';
 
 interface UseMelodiaActionsParams {
   rawPCM: Float32Array; sampleRate: number; totalDurationSec: number;
@@ -68,5 +70,21 @@ export function useMelodiaActions(p: UseMelodiaActionsParams) {
     }
   }, [p]);
 
-  return { handleReset, handleShiftOctave, handleAlignOctaveToBricks, handleDeleteSelected };
+  const handleSimplifyMelody = useCallback(() => {
+    const subdiv = p.initialPack.metadata.beatResolutions?.[0] || 4;
+    const simplified = simplifyStepsToMainMelody(p.allSteps, p.activePattern.timeAnchors, subdiv, p.beatsPerMeasure, p.hasAnac);
+    p.commitCurrentSnapshot({ steps: simplified });
+    p.handleUpdateSteps(simplified, true);
+    window.dispatchEvent(new CustomEvent('app-toast', { detail: { message: p.t('simplifyMelodyToast'), type: 'success' } }));
+  }, [p]);
+
+  const handleWeldSelected = useCallback(() => {
+    const targetIdx = p.selectedStepIdx ?? p.allSteps.findIndex((s) => s.active && s.note !== '───');
+    if (targetIdx === null || targetIdx < 0) return;
+    const welded = weldAdjacentBricks(p.allSteps, targetIdx, 12);
+    p.commitCurrentSnapshot({ steps: welded });
+    p.handleUpdateSteps(welded, true);
+  }, [p]);
+
+  return { handleReset, handleShiftOctave, handleAlignOctaveToBricks, handleDeleteSelected, handleSimplifyMelody, handleWeldSelected };
 }

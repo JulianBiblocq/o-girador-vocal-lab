@@ -1,4 +1,7 @@
 import { register } from 'node:module';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import ts from 'typescript';
 
 export async function resolve(specifier, context, nextResolve) {
   try {
@@ -13,6 +16,25 @@ export async function resolve(specifier, context, nextResolve) {
     }
     throw err;
   }
+}
+
+export async function load(url, context, nextLoad) {
+  if (url.endsWith('.tsx')) {
+    const raw = readFileSync(fileURLToPath(url), 'utf8');
+    const transpiled = ts.transpileModule(raw, {
+      compilerOptions: {
+        module: ts.ModuleKind.ESNext,
+        target: ts.ScriptTarget.ESNext,
+        jsx: ts.JsxEmit.React,
+      },
+    });
+    return {
+      format: 'module',
+      shortCircuit: true,
+      source: transpiled.outputText,
+    };
+  }
+  return nextLoad(url, context);
 }
 
 try {

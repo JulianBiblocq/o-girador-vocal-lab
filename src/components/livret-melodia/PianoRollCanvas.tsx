@@ -4,7 +4,8 @@ import type { PatternHarmonyGrid } from '../../types/harmony.types';
 import { drawPianoRollGrid } from './pianoRollDrawer';
 import { drawMelodyneRegions } from './melodyneRegionDrawer';
 import { findRegionHandleAt } from './melodyneRegionInteractions';
-import { findBrickRange, moveBrick, resizeBrick, glueBrickToPrevious, splitTieAtStep, eraseBrick, createSingleNote, type PianoRollTool } from './pianoRollInteractions';
+import { findBrickRange, moveBrick, glueBrickToPrevious, splitTieAtStep, eraseBrick, createSingleNote, type PianoRollTool } from './pianoRollInteractions';
+import { isOnBrickRightResizeHandle, resizeBrickRightEdge, findBrickJunctionAtX, weldAdjacentBricks } from './pianoRollBrickInteractions';
 import { getToolCursorStyle } from '../../utils/toolCursors';
 
 export interface PianoRollCanvasProps {
@@ -30,19 +31,16 @@ export const PianoRollCanvas: React.FC<PianoRollCanvasProps> = (p) => {
   }, []);
 
   const draw = useCallback(() => {
-    const canvas = canvasRef.current;
-    if (!canvas || p.width <= 0 || p.height <= 0) return;
+    const canvas = canvasRef.current; if (!canvas || p.width <= 0 || p.height <= 0) return;
     const dpr = window.devicePixelRatio || 1;
     if (canvas.width !== p.width * dpr || canvas.height !== p.height * dpr) { canvas.width = p.width * dpr; canvas.height = p.height * dpr; }
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
+    const ctx = canvas.getContext('2d'); if (!ctx) return;
     drawPianoRollGrid(ctx, { ...p, dpr, playheadSec: p.isPlaying && p.getPlayheadSec ? p.getPlayheadSec() : -1 });
     drawMelodyneRegions(ctx, { ...p, regions: p.regions || [], selectedRegionId: p.selectedRegionId ?? null });
   }, [p, themeTick]);
 
   useEffect(() => {
-    draw();
-    if (!p.isPlaying) return;
+    draw(); if (!p.isPlaying) return;
     let animId = requestAnimationFrame(function tick() { draw(); animId = requestAnimationFrame(tick); });
     return () => cancelAnimationFrame(animId);
   }, [p.isPlaying, draw]);
@@ -51,8 +49,7 @@ export const PianoRollCanvas: React.FC<PianoRollCanvasProps> = (p) => {
     const rect = e.currentTarget.getBoundingClientRect();
     const x = Math.max(0, Math.min(p.width - 1, e.clientX - rect.left)), y = Math.max(0, Math.min(p.height - 1, e.clientY - rect.top));
     const stepIdx = p.allSteps.length > 0 ? Math.min(p.allSteps.length - 1, Math.floor((x / p.width) * p.allSteps.length)) : 0;
-    const rowIdx = Math.max(0, Math.floor(y / p.rowHeight));
-    const sec = Math.max(0, Math.min(p.totalDurationSec, tGridStart + (x / p.width) * gridDur));
+    const rowIdx = Math.max(0, Math.floor(y / p.rowHeight)), sec = Math.max(0, Math.min(p.totalDurationSec, tGridStart + (x / p.width) * gridDur));
     return { stepIdx, midi: p.maxMidi - Math.min(p.maxMidi - p.minMidi, rowIdx), x, y, sec };
   };
 
@@ -64,25 +61,20 @@ export const PianoRollCanvas: React.FC<PianoRollCanvasProps> = (p) => {
     if (p.activeTool === 'glue' || p.activeTool === 'paste') return p.onUpdateSteps(glueBrickToPrevious(p.allSteps, stepIdx));
     if (p.activeTool === 'cut' || p.activeTool === 'split') return p.onUpdateSteps(splitTieAtStep(p.allSteps, stepIdx));
     if (p.activeTool === 'text' || p.activeTool === 'lyric') return triggerTextInput(stepIdx);
-
     if (p.activeTool === 'melodyne_cut') {
       const hit = findRegionHandleAt(x, p.width, gridDur, p.regions || [], 8, tGridStart);
       e.currentTarget.setPointerCapture(e.pointerId);
-      if (hit) {
-        p.onSelectRegion?.(hit.regionId);
-        dragRef.current = { mode: hit.handle === 'body' ? 'region_body' : hit.handle === 'in' ? 'region_in' : 'region_out', regionId: hit.regionId, startSec: sec };
-      } else {
-        p.onSelectRegion?.(null);
-        dragRef.current = { mode: 'region_create', startSec: sec, currentSec: sec };
-      }
+      if (hit) { p.onSelectRegion?.(hit.regionId); dragRef.current = { mode: hit.handle === 'body' ? 'region_body' : hit.handle === 'in' ? 'region_in' : 'region_out', regionId: hit.regionId, startSec: sec }; }
+      else { p.onSelectRegion?.(null); dragRef.current = { mode: 'region_create', startSec: sec, currentSec: sec }; }
       return;
     }
     const step = p.allSteps[stepIdx];
     if (!step?.active) { p.onSelectStep?.(stepIdx); p.onUpdateSteps(createSingleNote(p.allSteps, stepIdx, midi)); p.onPlayNotePreview(midi); return; }
+    if (e.shiftKey) { const welded = weldAdjacentBricks(p.allSteps, stepIdx, 12); p.onUpdateSteps(welded, true); p.onBrickMoved?.(stepIdx, welded); return; }
     const range = findBrickRange(p.allSteps, stepIdx);
     if (range) {
       p.onSelectStep?.(range.rootIndex);
-      const isNearRight = Math.abs(x - (range.endIndex + 1) * (p.width / p.allSteps.length)) <= 8;
+      const isNearRight = isOnBrickRightResizeHandle(x, p.width, p.allSteps.length, range.endIndex, 8);
       e.currentTarget.setPointerCapture(e.pointerId);
       dragRef.current = { mode: isNearRight ? 'resize' : 'move', rootIdx: range.rootIndex, lastMidi: step.midiNumber, changed: false };
       if (!isNearRight) p.onPlayNotePreview(midi);
@@ -100,7 +92,7 @@ export const PianoRollCanvas: React.FC<PianoRollCanvasProps> = (p) => {
       if (reg) p.onUpdateRegionBounds?.(d.regionId, reg.startSec, Math.max(sec, reg.startSec + 0.05));
     } else if (d.mode === 'region_create') { d.currentSec = sec; }
     else if (d.mode === 'move' && midi !== d.lastMidi) { d.lastMidi = midi; d.changed = true; p.onUpdateSteps(moveBrick(p.allSteps, d.rootIdx, midi), false); p.onPlayNotePreview(midi); }
-    else if (d.mode === 'resize') { d.changed = true; p.onUpdateSteps(resizeBrick(p.allSteps, d.rootIdx, stepIdx), false); }
+    else if (d.mode === 'resize') { d.changed = true; p.onUpdateSteps(resizeBrickRightEdge(p.allSteps, d.rootIdx, stepIdx), false); }
   };
 
   const handlePointerUp = (e: React.PointerEvent<HTMLCanvasElement>) => {
@@ -111,7 +103,7 @@ export const PianoRollCanvas: React.FC<PianoRollCanvasProps> = (p) => {
       if (Math.abs(s1 - s0) >= 0.05) p.onAddRegion?.(Math.min(s0, s1), Math.max(s0, s1));
     } else if (dragRef.current.changed) {
       p.onUpdateSteps(p.allSteps, true);
-      if (dragRef.current.mode === 'move') p.onBrickMoved?.(dragRef.current.rootIdx, p.allSteps);
+      if (dragRef.current.mode === 'move' || dragRef.current.mode === 'resize') p.onBrickMoved?.(dragRef.current.rootIdx, p.allSteps);
     }
     dragRef.current = null;
   };
@@ -127,7 +119,16 @@ export const PianoRollCanvas: React.FC<PianoRollCanvasProps> = (p) => {
       ref={canvasRef}
       onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); if (!p.readOnly) p.onOpenContextMenu(e.clientX, e.clientY); }}
       onPointerDown={handlePointerDown} onPointerMove={handlePointerMove} onPointerUp={handlePointerUp}
-      onDoubleClick={(e) => { if (!p.readOnly) triggerTextInput(getCoords(e).stepIdx); }}
+      onDoubleClick={(e) => {
+        if (p.readOnly) return;
+        const { stepIdx, x } = getCoords(e);
+        const junctionIdx = findBrickJunctionAtX(p.allSteps, x, p.width, 8);
+        if (junctionIdx !== null) {
+          const welded = weldAdjacentBricks(p.allSteps, junctionIdx, 12);
+          p.onUpdateSteps(welded, true); p.onBrickMoved?.(junctionIdx, welded); return;
+        }
+        triggerTextInput(stepIdx);
+      }}
       style={{ width: `${p.width}px`, height: `${p.height}px`, cursor: p.readOnly ? 'default' : getToolCursorStyle(p.activeTool) }} className="block select-none"
     />
   );

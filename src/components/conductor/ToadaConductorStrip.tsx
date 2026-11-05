@@ -10,6 +10,7 @@ import { Play, Square, Plus, X, Layers, GripVertical, VolumeX } from 'lucide-rea
 import { ToadaPlayerEngine } from './ToadaPlayerEngine';
 import { ConductorLiveTempoControl } from './ConductorLiveTempoControl';
 import { ConductorWaveformTimeline } from './ConductorWaveformTimeline';
+import { ConductorBackingAndLoopBar, type ConductorLoopRange } from './ConductorBackingAndLoopBar';
 
 export const ToadaConductorStrip: React.FC<{ outputDeviceId?: string }> = ({ outputDeviceId }) => {
   const { project, addSlot, removeSlot, updateSlot, reorderSlots, loadProject } = useToadaProject();
@@ -17,6 +18,7 @@ export const ToadaConductorStrip: React.FC<{ outputDeviceId?: string }> = ({ out
   const [isPlaying, setIsPlaying] = useState(false), [currentSlotIdx, setCurrentSlotIdx] = useState<number | null>(null);
   const [liveBpm, setLiveBpm] = useState(project.bpm || 88);
   const [draggedIdx, setDraggedIdx] = useState<number | null>(null), [dropTargetIdx, setDropTargetIdx] = useState<number | null>(null);
+  const [loopRange, setLoopRange] = useState<ConductorLoopRange>({ enabled: false, startSlot: 0, endSlot: Math.max(0, project.slots.length - 1) });
 
   const player = useMemo(() => new ToadaPlayerEngine(), []);
   const puxPatterns = useMemo(() => project.patterns.filter((p) => p.role === 'puxador'), [project.patterns]);
@@ -33,7 +35,8 @@ export const ToadaConductorStrip: React.FC<{ outputDeviceId?: string }> = ({ out
       await player.play(
         { ...project, bpm: liveBpm }, outputDeviceId,
         (slotIdx) => setCurrentSlotIdx(slotIdx),
-        () => { setIsPlaying(false); setCurrentSlotIdx(null); }
+        () => { setIsPlaying(false); setCurrentSlotIdx(null); },
+        loopRange
       );
     }
   };
@@ -62,6 +65,10 @@ export const ToadaConductorStrip: React.FC<{ outputDeviceId?: string }> = ({ out
         </div>
       </div>
 
+      <ConductorBackingAndLoopBar
+        projectId={project.id} projectBpm={liveBpm} slotsCount={project.slots.length}
+        loopRange={loopRange} onChangeLoopRange={setLoopRange} onBackingVolumeChange={(v) => player.setBackingVolume(v)}
+      />
       <div className="flex items-stretch gap-2.5 overflow-x-auto pb-1 cordel-scrollbar mt-1">
         <div className="flex flex-col justify-end gap-1 shrink-0 w-20 text-[10px] font-mono font-bold">
           <div className="h-6 flex items-center justify-end pr-1 text-role-puxador truncate">{t('railPuxador')}</div>
@@ -98,35 +105,25 @@ export const ToadaConductorStrip: React.FC<{ outputDeviceId?: string }> = ({ out
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
                   {isSilenceSlot && (
-                    <select
-                      value={pauseMeasures}
-                      onChange={(e) => updateSlot(slot.slotId, null, null, Number(e.target.value))}
-                      className="text-[10px] font-mono font-bold px-1 py-0 rounded bg-amber-600/20 text-amber-900 dark:text-amber-200 border border-amber-600/40 cursor-pointer"
-                    >
+                    <select value={pauseMeasures} onChange={(e) => updateSlot(slot.slotId, null, null, Number(e.target.value))} className="text-[10px] font-mono font-bold px-1 py-0 rounded bg-amber-600/20 text-amber-900 dark:text-amber-200 border border-amber-600/40 cursor-pointer">
                       {[1, 2, 3, 4, 5, 6, 7, 8].map((m) => <option key={m} value={m} className="bg-[var(--cordel-surface)] text-[var(--cordel-text)]">{m}M</option>)}
                     </select>
                   )}
                   {project.slots.length > 1 && (
-                    <button type="button" onClick={() => removeSlot(slot.slotId)} className="p-0.5 text-[var(--cordel-text)]/50 hover:text-red-500 cursor-pointer">
-                      <X className="w-2.5 h-2.5" />
-                    </button>
+                    <button type="button" onClick={() => removeSlot(slot.slotId)} className="p-0.5 text-[var(--cordel-text)]/50 hover:text-red-500 cursor-pointer"><X className="w-2.5 h-2.5" /></button>
                   )}
                 </div>
               </div>
               <select
                 value={slot.puxadorPatternId ?? ''} onChange={(e) => updateSlot(slot.slotId, e.target.value || null, slot.coroPatternId, e.target.value ? undefined : pauseMeasures)}
-                className={`h-6 text-[10px] font-mono font-bold px-1 outline-none border cursor-pointer rounded ${
-                  slot.puxadorPatternId ? 'bg-role-puxador !text-white font-bold border-role-puxador' : 'bg-[var(--cordel-surface)] text-[var(--cordel-text)] border border-[var(--cordel-border-sub)] font-semibold'
-                }`}
+                className={`h-6 text-[10px] font-mono font-bold px-1 outline-none border cursor-pointer rounded ${slot.puxadorPatternId ? 'bg-role-puxador !text-white font-bold border-role-puxador' : 'bg-[var(--cordel-surface)] text-[var(--cordel-text)] border border-[var(--cordel-border-sub)] font-semibold'}`}
               >
                 <option value="" className="bg-[var(--cordel-surface)] text-[var(--cordel-text)]">{isSilenceSlot ? `🔇 (${pauseMeasures}M)` : t('emptySlot')}</option>
                 {puxPatterns.map((p) => <option key={p.id} value={p.id} className="bg-[var(--cordel-surface)] text-[var(--cordel-text)]">{p.name}</option>)}
               </select>
               <select
                 value={slot.coroPatternId ?? ''} onChange={(e) => updateSlot(slot.slotId, slot.puxadorPatternId, e.target.value || null, e.target.value ? undefined : pauseMeasures)}
-                className={`h-6 text-[10px] font-mono font-bold px-1 outline-none border cursor-pointer rounded ${
-                  slot.coroPatternId ? 'bg-role-coro !text-white font-bold border-role-coro' : 'bg-[var(--cordel-surface)] text-[var(--cordel-text)] border border-[var(--cordel-border-sub)] font-semibold'
-                }`}
+                className={`h-6 text-[10px] font-mono font-bold px-1 outline-none border cursor-pointer rounded ${slot.coroPatternId ? 'bg-role-coro !text-white font-bold border-role-coro' : 'bg-[var(--cordel-surface)] text-[var(--cordel-text)] border border-[var(--cordel-border-sub)] font-semibold'}`}
               >
                 <option value="" className="bg-[var(--cordel-surface)] text-[var(--cordel-text)]">{isSilenceSlot ? `🔇 (${pauseMeasures}M)` : t('emptySlot')}</option>
                 {coroPatterns.map((p) => <option key={p.id} value={p.id} className="bg-[var(--cordel-surface)] text-[var(--cordel-text)]">{p.name}</option>)}

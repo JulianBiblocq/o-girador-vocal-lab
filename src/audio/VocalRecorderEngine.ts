@@ -16,6 +16,17 @@ export class VocalRecorderEngine {
   private totalDurationSec = 0;
   private sampleRate = 44100;
   private chunks: Float32Array[] = [];
+  private maxPeakAbs = 0;
+  private hasClipped = false;
+  private onPeakCb: ((peakDb: number, hasClipped: boolean) => void) | null = null;
+
+  public setOnPeakUpdate(cb: ((peakDb: number, hasClipped: boolean) => void) | null): void { this.onPeakCb = cb; }
+  public resetPeakHold(): void { this.maxPeakAbs = 0; this.hasClipped = false; }
+  public getSourceNode(): MediaStreamAudioSourceNode | null { return this.sourceNode; }
+  public getPeakStats(): { maxPeakAbs: number; peakDb: number; hasClipped: boolean } {
+    const peakDb = this.maxPeakAbs <= 0.00001 ? -96.0 : Math.round(20 * Math.log10(this.maxPeakAbs) * 10) / 10;
+    return { maxPeakAbs: this.maxPeakAbs, peakDb, hasClipped: this.hasClipped };
+  }
 
   private buildAudioConstraints(deviceId?: string): MediaStreamConstraints {
     return {
@@ -60,8 +71,21 @@ export class VocalRecorderEngine {
     this.muteGain.connect(ctx.destination);
 
     this.chunks = [];
+    this.maxPeakAbs = 0;
     this.workletNode.port.onmessage = (e: MessageEvent<Float32Array>) => {
-      if (e.data && e.data.length > 0) this.chunks.push(e.data);
+      if (e.data && e.data.length > 0) {
+        this.chunks.push(e.data);
+        let chunkMax = 0;
+        for (let i = 0; i < e.data.length; i++) { const a = Math.abs(e.data[i]); if (a > chunkMax) chunkMax = a; }
+        if (chunkMax > this.maxPeakAbs) {
+          this.maxPeakAbs = chunkMax;
+          if (chunkMax >= 0.944) this.hasClipped = true;
+          if (this.onPeakCb) {
+            const db = this.maxPeakAbs <= 0.00001 ? -96.0 : Math.round(20 * Math.log10(this.maxPeakAbs) * 10) / 10;
+            this.onPeakCb(db, this.hasClipped);
+          }
+        }
+      }
     };
 
     return this.sampleRate;

@@ -103,3 +103,4 @@ export const StudentDiagnosticCard: React.FC<StudentDiagnosticCardProps> = ({
     </div>
   );
 };
+

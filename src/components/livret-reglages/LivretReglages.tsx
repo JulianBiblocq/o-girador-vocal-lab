@@ -13,6 +13,7 @@ import { CalibrationBanner } from '../livret-prise/CalibrationBanner';
 import { LatencyNudgeBar } from '../livret-prise/LatencyNudgeBar';
 import { TessituraBoundsPanel } from '../livret-prise/TessituraBoundsPanel';
 import { VariantConfigBar } from '../livret-prise/VariantConfigBar';
+import { MicGainAssistantCard } from './MicGainAssistantCard';
 import { getSavedLatencyOffsetMs, saveLatencyOffsetMs } from '../../utils/latencyStorage';
 import { buildDeviceSignature } from '../../utils/deviceSignature';
 import { DEFAULT_TESSITURA, type TessituraRange } from '../../types/tessitura.types';
@@ -70,6 +71,7 @@ export const LivretReglages: React.FC = () => {
             selectedDeviceId={selectedDeviceId} onDeviceChange={setSelectedDeviceId}
             selectedOutputDeviceId={selectedOutputDeviceId} onOutputDeviceChange={setSelectedOutputDeviceId}
           />
+          <MicGainAssistantCard selectedDeviceId={selectedDeviceId} />
           <CalibrationBanner
             inputDeviceId={selectedDeviceId} outputDeviceId={selectedOutputDeviceId} sampleRate={recordedSampleRate}
             onCalibrationComplete={(ms) => { setLatencyOffsetMs(ms); saveLatencyOffsetMs(ms, sig); }}

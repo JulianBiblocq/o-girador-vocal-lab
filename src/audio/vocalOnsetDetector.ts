@@ -120,3 +120,4 @@ export function autoSnapT1ToVocalOnset(params: AutoSnapT1Params): number {
 
   return Math.max(0, expectedT1Sec);
 }
+

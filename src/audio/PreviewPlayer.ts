@@ -4,26 +4,16 @@ import { getSharedAudioContext, setSharedSinkId, registerAudioKillSwitch, stopAl
 import { schedulePreviewClick } from './previewClickHelper';
 import { getPatternT1OffsetSec } from '../utils/anacrusisTimingHelper';
 import { HarmonyPlayerEngine } from './harmony/HarmonyPlayerEngine';
+import { getActiveBackingTrack } from '../utils/backingTrackStorage';
+import { scheduleBackingTrackOnContext, type BackingTrackPlaybackHandle } from './BackingTrackEngine';
 
 export interface PreviewOptions {
-  trimStartSec: number;
-  trimEndSec: number;
-  latencyOffsetMs: number;
-  bpm: number;
-  beatsPerMeasure: number;
-  totalDurationSec: number;
-  clickEnabled: boolean;
-  hasAnacrusis?: boolean;
-  t1OffsetSec?: number;
-  highPassFilterEnabled?: boolean;
-  enableTonePolish?: boolean;
-  normalizeRMS?: boolean;
-  outputDeviceId?: string;
-  harmonyGrid?: PatternHarmonyGrid;
-  harmonyConfig?: HarmonyConfig;
-  measuresCount?: number;
-  pitchShiftSemitones?: number;
-  onEnded?: () => void;
+  trimStartSec: number; trimEndSec: number; latencyOffsetMs: number; bpm: number;
+  beatsPerMeasure: number; totalDurationSec: number; clickEnabled: boolean;
+  hasAnacrusis?: boolean; t1OffsetSec?: number; highPassFilterEnabled?: boolean;
+  enableTonePolish?: boolean; normalizeRMS?: boolean; outputDeviceId?: string;
+  harmonyGrid?: PatternHarmonyGrid; harmonyConfig?: HarmonyConfig; measuresCount?: number;
+  pitchShiftSemitones?: number; onEnded?: () => void;
 }
 
 export class PreviewPlayer {
@@ -31,6 +21,7 @@ export class PreviewPlayer {
   private sourcePolished: AudioBufferSourceNode | null = null; private sourceDry: AudioBufferSourceNode | null = null;
   private polishGain: GainNode | null = null; private dryGain: GainNode | null = null; private clickGainNode: GainNode | null = null;
   private activeNodes: AudioNode[] = []; private harmonyEngine = new HarmonyPlayerEngine();
+  private backingHandle: BackingTrackPlaybackHandle | null = null;
   private isPlaying = false; private playbackContextStartTime = 0; private playDuration = 0; private stopTimerId: number | null = null;
 
   public async play(rawPCM: Float32Array, sampleRate: number, options: PreviewOptions): Promise<void> {
@@ -80,6 +71,7 @@ export class PreviewPlayer {
 
     const beatDuration = 60 / bpm;
     const t1 = options.t1OffsetSec ?? getPatternT1OffsetSec(options.hasAnacrusis, beatsPerMeasure * beatDuration);
+    this.backingHandle = scheduleBackingTrackOnContext(this.ctx, getActiveBackingTrack(), now + t1, bpm, Math.max(0.1, totalDurationSec - t1));
 
     if (options.harmonyConfig?.enabled && options.harmonyGrid) {
       this.harmonyEngine.schedule(this.ctx, this.ctx.destination, {
@@ -129,6 +121,7 @@ export class PreviewPlayer {
     this.activeNodes = [];
     this.sourcePolished = null; this.sourceDry = null; this.polishGain = null; this.dryGain = null; this.clickGainNode = null;
     this.harmonyEngine.stop();
+    this.backingHandle?.stop(); this.backingHandle = null;
     this.isPlaying = false;
   }
 

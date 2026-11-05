@@ -23,7 +23,7 @@ export interface PianoRollEditorProps {
   allSteps: VocalStepData[]; pitchCurve: PitchCurvePoint[]; rawPitchCurve?: PitchCurvePoint[]; totalDurationSec: number; anacrusisDurationSec: number; beatsPerMeasure: number; beatResolutions: number[]; seekStartSec: number; isPlaying: boolean;
   tonic: string; scaleType: ScaleType; smoothingLevel: number; canUndo?: boolean; canRedo?: boolean; historyCount?: number; regions?: MelodyneRegion[]; selectedRegionId?: string | null; activeTool?: PianoRollTool; onSelectTool?: (tool: PianoRollTool) => void;
   hasAnacrusis?: boolean; bpm?: number; t1OffsetSec?: number; measuresCount?: number; getPlayheadSec?: () => number; onSeek: (sec: number) => void; onUndo?: () => void; onRedo?: () => void; onSetTonic: (t: string) => void; onSetScaleType: (st: ScaleType) => void;
-  onSetSmoothingLevel: (lvl: number) => void; onUpdateSteps: (newSteps: VocalStepData[], commit?: boolean) => void; onPlayNotePreview: (midi: number) => void; onReExtractNotes?: () => void; onSelectRegion?: (id: string | null) => void; onAddRegion?: (start: number, end: number) => void;
+  onSetSmoothingLevel: (lvl: number) => void; onUpdateSteps: (newSteps: VocalStepData[], commit?: boolean) => void; onPlayNotePreview: (midi: number) => void; onReExtractNotes?: () => void; onSimplifyMelody?: () => void; onWeldSelected?: () => void; onSelectRegion?: (id: string | null) => void; onAddRegion?: (start: number, end: number) => void;
   onUpdateRegionBounds?: (id: string, start: number, end: number) => void; onDeleteSelectedRegion?: () => void; selectedStepIdx?: number | null; onSelectStep?: (idx: number | null) => void; onBrickMoved?: (rootIdx: number, newSteps: VocalStepData[]) => void;
   harmonyGrid?: PatternHarmonyGrid; onUpdateHarmonyGrid?: (grid: PatternHarmonyGrid) => void; pitchShiftSemitones?: number; readOnly?: boolean;
 }
@@ -89,7 +89,7 @@ export const PianoRollEditor: React.FC<PianoRollEditorProps> = (p) => {
           activeTool={activeTool} onSelectTool={setActiveTool} zoomLevel={zoomLevel} onSetZoom={setZoomLevel}
           tonic={p.tonic} onSetTonic={p.onSetTonic} scaleType={p.scaleType} onSetScaleType={p.onSetScaleType}
           smoothingLevel={p.smoothingLevel} onSetSmoothingLevel={p.onSetSmoothingLevel}
-          canUndo={p.canUndo} canRedo={p.canRedo} historyCount={p.historyCount} onUndo={p.onUndo} onRedo={p.onRedo} onReExtractNotes={p.onReExtractNotes}
+          canUndo={p.canUndo} canRedo={p.canRedo} historyCount={p.historyCount} onUndo={p.onUndo} onRedo={p.onRedo} onReExtractNotes={p.onReExtractNotes} onSimplifyMelody={p.onSimplifyMelody} onWeldSelected={p.onWeldSelected}
         />
       )}
       <div className="flex items-center justify-between text-[11px] font-mono px-1">
