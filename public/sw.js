@@ -1,26 +1,53 @@
-// Service Worker léger O Girador — Cantador (Cache-Buster & Network-First)
-const CACHE_NAME = 'cantador-cache-v1';
+// Service Worker léger O Girador — Cantador (Cache-Buster, Same-Origin Strict & Network-First)
+const CACHE_NAME = 'cantador-cache-v2';
 
 self.addEventListener('install', () => {
   self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {
-  event.waitUntil(self.clients.claim());
+  event.waitUntil(
+    caches
+      .keys()
+      .then((keys) =>
+        Promise.all(
+          keys
+            .filter((key) => key !== CACHE_NAME)
+            .map((oldKey) => caches.delete(oldKey))
+        )
+      )
+      .then(() => self.clients.claim())
+  );
 });
 
 self.addEventListener('fetch', (event) => {
   const { request } = event;
+
+  // 1. Ignorer toute requête non-GET
   if (request.method !== 'GET') return;
 
-  const url = new URL(request.url);
+  let url;
+  try {
+    url = new URL(request.url);
+  } catch {
+    return;
+  }
 
-  // 1. version.json : no-store strict pour détecter immédiatement les mises à jour
+  // 2. Ignorer les protocoles non HTTP/HTTPS (ex: chrome-extension://)
+  if (url.protocol !== 'http:' && url.protocol !== 'https:') return;
+
+  // 3. Ignorer strictement toute requête Cross-Origin (Firestore, Storage .wav, Auth, Fonts)
+  if (url.origin !== self.location.origin) return;
+
+  // 4. Ignorer les requêtes Range (flux audio / streaming partiel HTTP 206)
+  if (request.headers.has('range')) return;
+
+  // 5. version.json : no-store strict pour détecter immédiatement les mises à jour
   if (url.pathname.endsWith('/version.json')) {
     event.respondWith(
       fetch(request.url, { cache: 'no-store' })
         .then((response) => {
-          if (response && response.ok) {
+          if (response && response.status === 200 && response.type === 'basic') {
             const clone = response.clone();
             caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
           }
@@ -40,12 +67,12 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // 2. Navigation HTML (navigate) : network-first standard
+  // 6. Navigation HTML (navigate) : network-first avec repli SPA /index.html
   if (request.mode === 'navigate') {
     event.respondWith(
       fetch(request)
         .then((response) => {
-          if (response && response.ok) {
+          if (response && response.status === 200 && response.type === 'basic') {
             const clone = response.clone();
             caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
           }
@@ -65,11 +92,11 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // 3. Autres requêtes statiques (assets hachés, polices, manifest, sw, etc.)
+  // 7. Assets statiques same-origin (JS/CSS hachés, icônes, manifest)
   event.respondWith(
     fetch(request)
       .then((response) => {
-        if (response && response.ok) {
+        if (response && response.status === 200 && response.type === 'basic') {
           const clone = response.clone();
           caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
         }

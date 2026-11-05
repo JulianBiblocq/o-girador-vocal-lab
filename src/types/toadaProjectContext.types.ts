@@ -12,6 +12,12 @@ export interface ToadaProjectContextValue {
   setActivePatternId: (id: string) => void;
   setActiveVariantKey: (patternId: string, variantKey: string) => void;
   updateVariant: (patternId: string, variantKey: string, partial: Partial<VocalAudioVariant>) => void;
+  updatePatternAndVariant: (
+    patternId: string,
+    variantKey: string,
+    patternPartial: Partial<VocalPatternItem>,
+    variantPartial: Partial<VocalAudioVariant>
+  ) => void;
   ensureVariantExists: (patternId: string, speedRatio: number, pitchShiftSemitones: number) => string;
   addPattern: (role: VocalRole, name?: string) => string;
   updatePattern: (id: string, partial: Partial<VocalPatternItem>) => void;
@@ -28,7 +34,6 @@ export interface ToadaProjectContextValue {
   getPreviousConductorPattern: () => VocalPatternItem | null;
   swapAllRoles: () => void;
   duplicateVariation: (patternId: string) => string;
-  // Gestion de la portée métrique & sélection de patterns
   applyScope: MetricApplyScope;
   setApplyScope: (scope: MetricApplyScope) => void;
   selectedPatternIds: string[];

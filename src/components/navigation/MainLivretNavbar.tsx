@@ -24,7 +24,9 @@ const TABS: TabItem[] = [
 ];
 
 export const MainLivretNavbar: React.FC = () => {
-  const { activeLivret, setActiveLivret, viewRoleMode } = useVocalTransportStore();
+  const activeLivret = useVocalTransportStore((s) => s.activeLivret);
+  const setActiveLivret = useVocalTransportStore((s) => s.setActiveLivret);
+  const viewRoleMode = useVocalTransportStore((s) => s.viewRoleMode);
   const { activePattern } = useToadaProject();
   const { t } = useLanguage();
 

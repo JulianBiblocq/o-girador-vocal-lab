@@ -9,7 +9,7 @@ import { useVocalTransportStore } from '../../stores/useVocalTransportStore';
 
 export const MelodiaEmptyNotice: React.FC = () => {
   const { t } = useLanguage();
-  const { setActiveLivret } = useVocalTransportStore();
+  const setActiveLivret = useVocalTransportStore((s) => s.setActiveLivret);
 
   return (
     <div className="cordel-card p-6 sm:p-8 flex flex-col items-center justify-center text-center gap-4 rounded">

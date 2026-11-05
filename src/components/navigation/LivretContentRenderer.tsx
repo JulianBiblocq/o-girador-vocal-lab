@@ -12,7 +12,7 @@ import { LivretTreino } from '../livret-treino/LivretTreino';
 import { LivretReglages } from '../livret-reglages/LivretReglages';
 
 export const LivretContentRenderer: React.FC = () => {
-  const { activeLivret } = useVocalTransportStore();
+  const activeLivret = useVocalTransportStore((s) => s.activeLivret);
 
   switch (activeLivret) {
     case 'structure':

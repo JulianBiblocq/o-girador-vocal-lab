@@ -16,7 +16,7 @@ import { Clock, Settings, Check, X } from 'lucide-react';
 
 export const LatencyReminderBanner: React.FC = () => {
   const { selectedDeviceId } = useAudioHardware();
-  const { setActiveLivret } = useVocalTransportStore();
+  const setActiveLivret = useVocalTransportStore((s) => s.setActiveLivret);
   const [hidden, setHidden] = useState<boolean>(() => (
     isLatencyCalibrated(selectedDeviceId) || isLatencyReminderDismissedSession()
   ));

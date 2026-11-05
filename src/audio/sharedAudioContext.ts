@@ -1,4 +1,4 @@
-﻿/**
+/**
  * sharedAudioContext.ts
  * Instance unique globale d AudioContext pour l ensemble de Vocal Lab.
  * Empeche le decrochage du pilote WASAPI de la carte son externe.
@@ -7,6 +7,27 @@
 
 let sharedCtx: AudioContext | null = null;
 let currentSinkId = '';
+const activeEngineKillers = new Map<string, () => void>();
+
+export function registerAudioKillSwitch(id: string, stopFn: () => void): () => void {
+  activeEngineKillers.set(id, stopFn);
+  return () => {
+    if (activeEngineKillers.get(id) === stopFn) {
+      activeEngineKillers.delete(id);
+    }
+  };
+}
+
+export function stopAllActiveAudioEngines(exceptId?: string): void {
+  activeEngineKillers.forEach((stopFn, id) => {
+    if (id !== exceptId) {
+      try { stopFn(); } catch { /* ignore */ }
+    }
+  });
+  if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+    try { window.speechSynthesis.cancel(); } catch { /* ignore */ }
+  }
+}
 
 export async function getSharedAudioContext(): Promise<AudioContext> {
   if (!sharedCtx || sharedCtx.state === 'closed') {

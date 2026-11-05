@@ -12,7 +12,7 @@ import { useLanguage } from '../../i18n/LanguageContext';
 export const StudioSettingsStatusBar: React.FC = () => {
   const { listeningMode, selectedDeviceLabel } = useAudioHardware();
   const { activePattern } = useToadaProject();
-  const { setActiveLivret } = useVocalTransportStore();
+  const setActiveLivret = useVocalTransportStore((s) => s.setActiveLivret);
   const { t } = useLanguage();
 
   const tessituraLabel = activePattern.tessitura?.presetId

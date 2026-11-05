@@ -36,7 +36,8 @@ export const LivretPrise: React.FC = () => {
     listeningMode, recordedSampleRate, setRecordedSampleRate,
   } = useAudioHardware();
   const { t } = useLanguage();
-  const { activeLivret, setActiveLivret } = useVocalTransportStore();
+  const activeLivret = useVocalTransportStore((s) => s.activeLivret);
+  const setActiveLivret = useVocalTransportStore((s) => s.setActiveLivret);
 
   const bpm = activePattern.bpm ?? activePattern.baseBpm ?? project.bpm ?? 88;
   const referencePitch = activePattern.referencePitch ?? 'C4';

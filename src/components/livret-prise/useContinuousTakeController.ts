@@ -10,6 +10,7 @@ import { ContinuousTakeSession, type ContinuousPrompterSlotInfo } from '../../au
 import { sliceContinuousTake } from '../../utils/continuousTakeSlicer';
 import type { TakeRecordingMode } from './TakeModeSelector';
 import { useVocalTransportStore } from '../../stores/useVocalTransportStore';
+import { registerAudioKillSwitch, stopAllActiveAudioEngines } from '../../audio/sharedAudioContext';
 
 export interface UseContinuousTakeControllerParams {
   project: ToadaProject;
@@ -29,7 +30,14 @@ export function useContinuousTakeController(params: UseContinuousTakeControllerP
   const [prompterInfo, setPrompterInfo] = useState<ContinuousPrompterSlotInfo | null>(null);
 
   const sessionRef = useRef<ContinuousTakeSession>(new ContinuousTakeSession());
-  const { setIsRecording } = useVocalTransportStore();
+  const setIsRecording = useVocalTransportStore((s) => s.setIsRecording);
+
+  const abortContinuous = useCallback(() => {
+    sessionRef.current.stop(recorder, engine);
+    setIsContinuousActive(false);
+    setPrompterInfo(null);
+    setIsRecording(false);
+  }, [recorder, engine, setIsRecording]);
 
   const handleFinishContinuous = useCallback((pcm: Float32Array, sampleRate: number, marginBeforeM0Sec: number) => {
     if (takeMode === 'pattern') return;
@@ -49,9 +57,10 @@ export function useContinuousTakeController(params: UseContinuousTakeControllerP
   const handleToggleContinuous = useCallback(async () => {
     if (takeMode === 'pattern') return;
     if (isContinuousActive) {
+      const actualSampleRate = recorder.getSampleRate() || engine.getContext()?.sampleRate || 48000;
       const pcm = sessionRef.current.stop(recorder, engine);
       if (pcm && pcm.length > 0) {
-        handleFinishContinuous(pcm, recorder ? 44100 : 44100, 0.6);
+        handleFinishContinuous(pcm, actualSampleRate, 0.6);
       } else {
         setIsContinuousActive(false);
         setPrompterInfo(null);
@@ -59,6 +68,8 @@ export function useContinuousTakeController(params: UseContinuousTakeControllerP
       return;
     }
 
+    stopAllActiveAudioEngines('continuous-recorder');
+    registerAudioKillSwitch('continuous-recorder', abortContinuous);
     setIsContinuousActive(true);
     await sessionRef.current.start({
       project,
@@ -71,16 +82,16 @@ export function useContinuousTakeController(params: UseContinuousTakeControllerP
       onPrompterUpdate: (info) => setPrompterInfo(info),
       onComplete: (pcm, sr, margin) => handleFinishContinuous(pcm, sr, margin),
     });
-  }, [takeMode, isContinuousActive, project, engine, recorder, listeningMode, selectedDeviceId, selectedOutputDeviceId, handleFinishContinuous]);
+  }, [takeMode, isContinuousActive, abortContinuous, project, engine, recorder, listeningMode, selectedDeviceId, selectedOutputDeviceId, handleFinishContinuous]);
 
   useEffect(() => {
     if (isContinuousActive) setIsRecording(true);
     if (activeLivret !== 'prise' && isContinuousActive) {
-      sessionRef.current.stop(recorder, engine);
-      setIsContinuousActive(false);
-      setPrompterInfo(null);
+      abortContinuous();
     }
-  }, [activeLivret, isContinuousActive, engine, recorder, setIsRecording]);
+  }, [activeLivret, isContinuousActive, abortContinuous, setIsRecording]);
+
+  useEffect(() => () => { abortContinuous(); }, [abortContinuous]);
 
   return {
     takeMode,

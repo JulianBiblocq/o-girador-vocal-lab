@@ -2,8 +2,8 @@
  * ToadaPlayerEngine.ts
  * Moteur Web Audio temps réel avec Ordonnanceur Lookahead et Varispeed live BPM (< 125 lignes).
  */
-import type { ToadaProject } from '../../types/toadaProject.types';
-import { getSharedAudioContext, setSharedSinkId } from '../../audio/sharedAudioContext';
+import { type ToadaProject, DEFAULT_TOADA_BPM } from '../../types/toadaProject.types';
+import { getSharedAudioContext, setSharedSinkId, registerAudioKillSwitch, stopAllActiveAudioEngines } from '../../audio/sharedAudioContext';
 import { getBeatsPerMeasure } from '../../utils/musicalMath';
 import { HarmonyPlayerEngine } from '../../audio/harmony/HarmonyPlayerEngine';
 import { ToadaTimelineClock, computeSlotsMeasureLayout, type SlotMeasureLayout } from './toadaTimingScheduler';
@@ -19,6 +19,8 @@ export class ToadaPlayerEngine {
   private layouts: SlotMeasureLayout[] = [];
   private scheduledSlots = new Set<number>();
   private reportedSlotIdx = -1;
+  private onCompleteCb: (() => void) | null = null;
+  private unregisterKillSwitch: (() => void) | null = null;
 
   public getIsPlaying(): boolean { return this.isRunning; }
   public getLiveBpm(): number { return this.clock.getLiveBpm(); }
@@ -34,7 +36,7 @@ export class ToadaPlayerEngine {
       try {
         const ratio = this.clock.getSpeedRatio(v.recordedBpm);
         v.source.playbackRate.setValueAtTime(ratio, now);
-      } catch {}
+      } catch { /* ignore */ }
     });
   }
 
@@ -45,13 +47,21 @@ export class ToadaPlayerEngine {
     onComplete?: () => void
   ): Promise<void> {
     this.stop();
+    stopAllActiveAudioEngines('conductor-player');
+    this.onCompleteCb = onComplete ?? null;
+    this.unregisterKillSwitch = registerAudioKillSwitch('conductor-player', () => {
+      const cb = this.onCompleteCb;
+      this.stop();
+      cb?.();
+    });
+
     const ctx = await getSharedAudioContext();
     this.ctx = ctx;
     if (outputDeviceId && outputDeviceId !== 'default') await setSharedSinkId(outputDeviceId);
 
     const beatsPerMeasure = getBeatsPerMeasure(project.timeSignature);
     const audioCtxStart = ctx.currentTime + 0.08;
-    this.clock.init(audioCtxStart, project.bpm || 88, beatsPerMeasure, 1);
+    this.clock.init(audioCtxStart, project.bpm || DEFAULT_TOADA_BPM, beatsPerMeasure, 1);
     this.layouts = computeSlotsMeasureLayout(project.slots, project.patterns);
     this.scheduledSlots.clear();
     this.reportedSlotIdx = -1;
@@ -59,11 +69,11 @@ export class ToadaPlayerEngine {
 
     this.schedulerTimer = window.setInterval(() => {
       if (!this.isRunning) return;
-      this.tickScheduler(project, onProgress, onComplete);
+      this.tickScheduler(project, beatsPerMeasure, onProgress, onComplete);
     }, 35);
   }
 
-  private tickScheduler(project: ToadaProject, onProgress?: (idx: number) => void, onComplete?: () => void): void {
+  private tickScheduler(project: ToadaProject, beatsPerMeasure: number, onProgress?: (idx: number) => void, onComplete?: () => void): void {
     if (!this.ctx || !this.isRunning) return;
     const now = this.ctx.currentTime;
     const lookaheadSec = 0.16;
@@ -86,8 +96,9 @@ export class ToadaPlayerEngine {
         if (project.harmonyConfig?.enabled && patHarmony) {
           const bpm = this.clock.getLiveBpm();
           this.harmonyEngine.schedule(this.ctx, this.ctx.destination, {
-            grid: patHarmony, bpm, beatsPerMeasure: 4, measuresCount: layout.measuresInSlot,
-            startTime: slotT1Time, totalDurationSec: layout.measuresInSlot * 4 * (60 / bpm),
+            grid: patHarmony, bpm, beatsPerMeasure, measuresCount: layout.measuresInSlot,
+            startTime: slotT1Time, totalDurationSec: layout.measuresInSlot * beatsPerMeasure * (60 / bpm),
+            hasAnacrusis: false, t1OffsetSec: 0, append: true,
             profile: project.harmonyConfig.profile, volume: project.harmonyConfig.volume, muteBass: project.harmonyConfig.muteBass,
           });
         }
@@ -106,9 +117,12 @@ export class ToadaPlayerEngine {
 
   public stop(): void {
     this.isRunning = false;
+    this.onCompleteCb = null;
+    this.unregisterKillSwitch?.();
+    this.unregisterKillSwitch = null;
     if (this.schedulerTimer) { window.clearInterval(this.schedulerTimer); this.schedulerTimer = null; }
     this.harmonyEngine.stop();
-    this.activeVoices.forEach((v) => { try { v.source.stop(); v.source.disconnect(); } catch {} });
+    this.activeVoices.forEach((v) => { try { v.source.stop(); v.source.disconnect(); } catch { /* ignore */ } });
     this.activeVoices = [];
     this.scheduledSlots.clear();
   }

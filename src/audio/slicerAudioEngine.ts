@@ -2,7 +2,7 @@
  * slicerAudioEngine.ts
  * Moteur de lecture audio haute précision avec métronome temps réel lookahead (< 145 lignes).
  */
-import { getSharedAudioContext } from './sharedAudioContext';
+import { getSharedAudioContext, registerAudioKillSwitch, stopAllActiveAudioEngines } from './sharedAudioContext';
 
 export interface SlicerPlayOptions {
   pcm: Float32Array; sampleRate: number; loop: boolean; witnessClick: boolean;
@@ -23,6 +23,8 @@ export class SlicerAudioEngine {
 
   public async play(opts: SlicerPlayOptions): Promise<void> {
     this.stop();
+    stopAllActiveAudioEngines('slicer-player');
+    registerAudioKillSwitch('slicer-player', () => { this.stop(); opts.onEnded?.(); });
     this.ctx = await getSharedAudioContext();
     if (this.ctx.state === 'suspended') await this.ctx.resume();
 

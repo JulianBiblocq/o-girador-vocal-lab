@@ -131,4 +131,8 @@ export class VocalRecorderEngine {
   public getActiveTrackLabel(): string {
     return this.stream?.getAudioTracks()[0]?.label || '';
   }
+
+  public getSampleRate(): number {
+    return this.sampleRate;
+  }
 }

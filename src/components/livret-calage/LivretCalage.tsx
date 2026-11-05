@@ -20,9 +20,9 @@ import { Upload, Scissors } from 'lucide-react';
 import { useLanguage } from '../../i18n/LanguageContext';
 
 export const LivretCalage: React.FC = () => {
-  const { project, activePattern, activeVariant, updatePattern, updateVariant, updateHarmonyConfig } = useToadaProject();
+  const { project, activePattern, activeVariant, updatePattern, updateVariant, updatePatternAndVariant, updateHarmonyConfig } = useToadaProject();
   const { selectedOutputDeviceId, recordedSampleRate, setRecordedSampleRate } = useAudioHardware();
-  const { setActiveLivret } = useVocalTransportStore();
+  const setActiveLivret = useVocalTransportStore((s) => s.setActiveLivret);
   const { t } = useLanguage();
 
   const [isSlicerOpen, setIsSlicerOpen] = useState(false);
@@ -121,11 +121,8 @@ export const LivretCalage: React.FC = () => {
           onUpdateGrid={(g) => updatePattern(activePattern.id, { harmonyGrid: g })}
           onUpdateHarmonyConfig={updateHarmonyConfig}
           onReset={() => updateVariant(activePattern.id, activeVariant.variantKey, { recordingResult: null })}
-          onTrimChange={(s, e) => updateVariant(activePattern.id, activeVariant.variantKey, { trimStartSec: s, trimEndSec: e })}
-          onT1OffsetChange={(t1) => {
-            updateVariant(activePattern.id, activeVariant.variantKey, { t1OffsetSec: t1 });
-            updatePattern(activePattern.id, { t1OffsetSec: t1 });
-          }}
+          onTrimChange={(s, e) => updatePatternAndVariant(activePattern.id, activeVariant.variantKey, { trimStartSec: s, trimEndSec: e }, { trimStartSec: s, trimEndSec: e })}
+          onT1OffsetChange={(t1) => updatePatternAndVariant(activePattern.id, activeVariant.variantKey, { t1OffsetSec: t1 }, { t1OffsetSec: t1 })}
           onPackReady={handlePackReady}
         />
       ) : (

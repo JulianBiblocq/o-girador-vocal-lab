@@ -24,6 +24,7 @@ export const ToadaConductorStrip: React.FC<{ outputDeviceId?: string }> = ({ out
   const coroPatterns = useMemo(() => project.patterns.filter((p) => p.role === 'coro'), [project.patterns]);
 
   useEffect(() => { setLiveBpm(project.bpm || 88); }, [project.bpm]);
+  useEffect(() => () => { player.stop(); }, [player]);
 
   const handleTogglePlay = async () => {
     if (isPlaying) {
@@ -38,10 +39,7 @@ export const ToadaConductorStrip: React.FC<{ outputDeviceId?: string }> = ({ out
     }
   };
 
-  const handleLiveBpmChange = (nb: number) => {
-    setLiveBpm(nb);
-    player.setLiveBpm(nb);
-  };
+  const handleLiveBpmChange = (nb: number) => { setLiveBpm(nb); player.setLiveBpm(nb); };
 
   return (
     <div className="cordel-card p-2 w-full h-full flex flex-col select-none">
@@ -52,12 +50,8 @@ export const ToadaConductorStrip: React.FC<{ outputDeviceId?: string }> = ({ out
         </span>
         <div className="flex items-center gap-2">
           <ConductorLiveTempoControl liveBpm={liveBpm} onBpmChange={handleLiveBpmChange} />
-          <button
-            type="button" onClick={addSlot}
-            className="px-2 py-0.5 text-[11px] font-bold font-mono cordel-card-sm rounded flex items-center gap-1 cursor-pointer"
-          >
-            <Plus className="w-3 h-3 text-theme-accent" />
-            <span>{t('addConductorBlock')}</span>
+          <button type="button" onClick={addSlot} className="px-2 py-0.5 text-[11px] font-bold font-mono cordel-card-sm rounded flex items-center gap-1 cursor-pointer">
+            <Plus className="w-3 h-3 text-theme-accent" /><span>{t('addConductorBlock')}</span>
           </button>
           <button
             type="button" onClick={handleTogglePlay}
@@ -71,7 +65,6 @@ export const ToadaConductorStrip: React.FC<{ outputDeviceId?: string }> = ({ out
         </div>
       </div>
 
-      {/* Grille des blocs sequentiels avec defilement */}
       <div className="flex items-stretch gap-2.5 overflow-x-auto pb-1 cordel-scrollbar mt-1">
         <div className="flex flex-col justify-end gap-1 shrink-0 w-20 text-[10px] font-mono font-bold">
           <div className="h-6 flex items-center justify-end pr-1 text-role-puxador truncate">{t('railPuxador')}</div>
@@ -83,8 +76,7 @@ export const ToadaConductorStrip: React.FC<{ outputDeviceId?: string }> = ({ out
           const isDropTarget = dropTargetIdx === idx && draggedIdx !== idx;
           return (
             <div
-              key={slot.slotId}
-              draggable
+              key={slot.slotId} draggable
               onDragStart={(e) => { e.dataTransfer.setData('text/plain', String(idx)); setDraggedIdx(idx); }}
               onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; }}
               onDragEnter={() => setDropTargetIdx(idx)}
@@ -138,7 +130,6 @@ export const ToadaConductorStrip: React.FC<{ outputDeviceId?: string }> = ({ out
         })}
       </div>
 
-      {/* Timeline Audio Visuelle continue de reconstruction */}
       <ConductorWaveformTimeline project={project} isPlaying={isPlaying} playerEngine={player} />
     </div>
   );

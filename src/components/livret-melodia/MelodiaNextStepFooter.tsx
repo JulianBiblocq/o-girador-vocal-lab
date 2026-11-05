@@ -10,7 +10,7 @@ import { CheckCircle2, Save, Mic, Music2 } from 'lucide-react';
 
 export const MelodiaNextStepFooter: React.FC = () => {
   const { project, activePattern, setActivePatternId } = useToadaProject();
-  const { setActiveLivret } = useVocalTransportStore();
+  const setActiveLivret = useVocalTransportStore((s) => s.setActiveLivret);
 
   const activeNotesCount = [
     ...(activePattern.anacrusisSteps || []),

@@ -5,24 +5,30 @@ import fs from 'node:fs'
 import path from 'node:path'
 
 function versionBusterPlugin(): Plugin {
+  let serializedVersion = ''
+
   return {
     name: 'version-buster-plugin',
     buildStart() {
       const versionData = {
-        version: '1.0.3',
+        version: '1.0.4',
         buildTime: new Date().toISOString(),
       }
+      serializedVersion = JSON.stringify(versionData, null, 2) + '\n'
       const publicPath = path.resolve(process.cwd(), 'public/version.json')
-      fs.writeFileSync(publicPath, JSON.stringify(versionData, null, 2) + '\n')
+      fs.writeFileSync(publicPath, serializedVersion)
     },
     generateBundle() {
+      if (!serializedVersion) {
+        serializedVersion = JSON.stringify({
+          version: '1.0.4',
+          buildTime: new Date().toISOString(),
+        }, null, 2) + '\n'
+      }
       this.emitFile({
         type: 'asset',
         fileName: 'version.json',
-        source: JSON.stringify({
-          version: '1.0.3',
-          buildTime: new Date().toISOString(),
-        }, null, 2) + '\n',
+        source: serializedVersion,
       })
     },
   }

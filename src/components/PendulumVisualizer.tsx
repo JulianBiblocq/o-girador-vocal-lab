@@ -26,52 +26,41 @@ export const PendulumVisualizer: React.FC<PendulumVisualizerProps> = ({
   const padRefs = useRef<(HTMLSpanElement | null)[]>([]), railWidthRef = useRef<number>(500);
 
   useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
+    const el = containerRef.current; if (!el) return;
     const obs = new ResizeObserver(([entry]) => { railWidthRef.current = Math.max(100, entry.contentRect.width - 44); });
     obs.observe(el);
     return () => obs.disconnect();
   }, []);
 
-  const resetIdle = (label: HTMLSpanElement | null, badge: HTMLSpanElement | null) => {
-    if (label) label.textContent = tRef.current('pendulumIdleTitle');
-    if (badge) { badge.textContent = tRef.current('pendulumStatusIdle'); badge.style.color = 'var(--cordel-secondary-text)'; }
+  const resetIdleDOM = () => {
+    if (shuttleRef.current) shuttleRef.current.style.transform = 'translate3d(0px, 0, 0)';
+    if (phaseLabelRef.current) phaseLabelRef.current.textContent = tRef.current('pendulumIdleTitle');
+    if (recBadgeRef.current) { recBadgeRef.current.textContent = tRef.current('pendulumStatusIdle'); recBadgeRef.current.style.color = 'var(--cordel-secondary-text)'; }
+    if (cardRef.current) { cardRef.current.style.borderColor = ''; cardRef.current.style.backgroundColor = ''; cardRef.current.style.boxShadow = ''; }
+    if (progressBarRef.current) progressBarRef.current.style.transform = 'scaleX(0)';
+    if (leftBumperRef.current) { leftBumperRef.current.style.opacity = '0.9'; leftBumperRef.current.style.transform = 'scale(1)'; }
+    if (rightBumperRef.current) rightBumperRef.current.style.opacity = '0.9';
+    padRefs.current.forEach((p) => { if (p) { p.style.backgroundColor = 'transparent'; p.style.color = ''; } });
   };
 
   useEffect(() => {
     if (leftBumperRef.current) leftBumperRef.current.textContent = beatsPerMeasure === 4 ? '◄ T1/T3' : '◄ T1';
     if (rightBumperRef.current) rightBumperRef.current.textContent = beatsPerMeasure === 4 ? 'T2/T4 ►' : 'T2 ►';
-    if (!isActive) resetIdle(phaseLabelRef.current, recBadgeRef.current);
+    if (!isActive) resetIdleDOM();
   }, [beatsPerMeasure, isActive, t]);
 
   useEffect(() => {
-    let animId: number;
-    let lastBeatIndex = -1;
+    if (!isActive) { resetIdleDOM(); return; }
+    let animId: number, lastBeatIndex = -1;
 
     const updateFrame = () => {
-      const shuttle = shuttleRef.current;
-      const phaseLabel = phaseLabelRef.current;
-      const leftBumper = leftBumperRef.current;
-      const rightBumper = rightBumperRef.current;
-      const progressBar = progressBarRef.current;
-      const recBadge = recBadgeRef.current;
-      const card = cardRef.current;
-
-      if (!shuttle || !phaseLabel) { animId = requestAnimationFrame(updateFrame); return; }
+      const shuttle = shuttleRef.current, phaseLabel = phaseLabelRef.current;
+      const leftBumper = leftBumperRef.current, rightBumper = rightBumperRef.current;
+      const progressBar = progressBarRef.current, recBadge = recBadgeRef.current, card = cardRef.current;
+      if (!shuttle || !phaseLabel) return;
 
       const status = engine.getCycleStatus();
-
-      if (!isActive || status.phase === 'idle') {
-        shuttle.style.transform = 'translate3d(0px, 0, 0)';
-        resetIdle(phaseLabel, recBadge);
-        if (card) { card.style.borderColor = ''; card.style.backgroundColor = ''; card.style.boxShadow = ''; }
-        if (progressBar) progressBar.style.transform = 'scaleX(0)';
-        if (leftBumper) { leftBumper.style.opacity = '0.9'; leftBumper.style.transform = 'scale(1)'; }
-        if (rightBumper) rightBumper.style.opacity = '0.9';
-        padRefs.current.forEach((p) => { if (p) { p.style.backgroundColor = 'transparent'; p.style.color = ''; } });
-        animId = requestAnimationFrame(updateFrame);
-        return;
-      }
+      if (status.phase === 'idle') { resetIdleDOM(); animId = requestAnimationFrame(updateFrame); return; }
 
       if (progressBar) {
         progressBar.style.transformOrigin = (status.currentBeat % 2 === 0) ? 'left center' : 'right center';
@@ -81,11 +70,9 @@ export const PendulumVisualizer: React.FC<PendulumVisualizerProps> = ({
       const h = 0.5 * (1 - Math.cos(Math.PI * status.beatProgress));
       const currentX = (status.currentBeat % 2 === 0) ? h * railWidthRef.current : (1 - h) * railWidthRef.current;
       shuttle.style.transform = `translate3d(${currentX.toFixed(2)}px, 0, 0)`;
-
       applyPhaseStyles(card, recBadge, phaseLabel, status, measuresCount, tRef.current);
 
-      const isImpact = status.beatProgress < 0.18;
-      const isRec = status.phase === 'anacrusis' || status.phase === 'singing';
+      const isImpact = status.beatProgress < 0.18, isRec = status.phase === 'anacrusis' || status.phase === 'singing';
       padRefs.current.forEach((pad, idx) => {
         if (!pad) return;
         const isActivePad = idx === status.currentBeat;
@@ -101,13 +88,9 @@ export const PendulumVisualizer: React.FC<PendulumVisualizerProps> = ({
       if (status.beatIndexInCycle !== lastBeatIndex) {
         lastBeatIndex = status.beatIndexInCycle;
         const isT1 = status.currentBeat === 0;
-        if (leftBumper) {
-          leftBumper.style.opacity = isT1 ? '1' : status.currentBeat === 2 ? '0.75' : '0.4';
-          leftBumper.style.transform = isT1 ? 'scale(1.15)' : 'scale(1)';
-        }
+        if (leftBumper) { leftBumper.style.opacity = isT1 ? '1' : status.currentBeat === 2 ? '0.75' : '0.4'; leftBumper.style.transform = isT1 ? 'scale(1.15)' : 'scale(1)'; }
         if (rightBumper) rightBumper.style.opacity = (status.currentBeat === 1 || status.currentBeat === 3) ? '0.9' : '0.4';
       }
-
       animId = requestAnimationFrame(updateFrame);
     };
 
@@ -122,21 +105,12 @@ export const PendulumVisualizer: React.FC<PendulumVisualizerProps> = ({
         <span ref={phaseLabelRef} className="font-bold text-center text-sm tracking-wide text-theme-ink uppercase min-h-[20px]" />
         <span ref={rightBumperRef} className="px-2 py-0.5 bg-[var(--cordel-subcard-bg)] text-[var(--cordel-text)] border border-[var(--cordel-border-sub)] font-bold opacity-90 transition-all duration-75 rounded" />
       </div>
-
       <div ref={containerRef} className="w-full h-11 bg-[var(--cordel-subcard-bg)] border border-[var(--cordel-border-sub)] relative flex items-center px-1 overflow-hidden rounded">
         <div className="absolute left-1/2 top-0 bottom-0 w-0.5 bg-theme-border/20 -translate-x-1/2 pointer-events-none" />
-        <div ref={shuttleRef} style={{ willChange: 'transform' }} className="w-9 h-8 cordel-card-sm flex items-center justify-center font-bold text-xs bg-theme-wood text-[#efe6d2] shadow-md cursor-default pointer-events-none rounded">
-          ▲
-        </div>
+        <div ref={shuttleRef} style={{ willChange: 'transform' }} className="w-9 h-8 cordel-card-sm flex items-center justify-center font-bold text-xs bg-theme-wood text-[#efe6d2] shadow-md cursor-default pointer-events-none rounded">▲</div>
       </div>
-
       <BeatImpactBar beatsPerMeasure={beatsPerMeasure} progressBarRef={progressBarRef} padRefs={padRefs} recBadgeRef={recBadgeRef} />
-
-      {children && (
-        <div className="pt-2 border-t border-[var(--cordel-border-sub)] flex flex-col gap-2.5">
-          {children}
-        </div>
-      )}
+      {children && <div className="pt-2 border-t border-[var(--cordel-border-sub)] flex flex-col gap-2.5">{children}</div>}
     </div>
   );
 };

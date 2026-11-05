@@ -49,6 +49,11 @@ export const WaveformTrimEditor: React.FC<WaveformTrimEditorProps> = (props) => 
 
   const [trimStartSec, setTrimStartSec] = useState<number>(() => initialTrimStartSec ?? 0);
   const [trimEndSec, setTrimEndSec] = useState<number>(() => (initialTrimEndSec && initialTrimEndSec > 0 ? initialTrimEndSec : totalDurationSec));
+  useEffect(() => {
+    setTrimStartSec(initialTrimStartSec ?? 0);
+    setTrimEndSec(initialTrimEndSec && initialTrimEndSec > 0 ? initialTrimEndSec : totalDurationSec);
+  }, [rawPCM, initialTrimStartSec, initialTrimEndSec, totalDurationSec]);
+
   const [latencyOffsetMs, setLatencyOffsetMs] = useState<number>(getSavedLatencyOffsetMs);
   const [isPlaying, setIsPlaying] = useState<boolean>(false), [clickEnabled, setClickEnabled] = useState<boolean>(true);
   const [highPassEnabled, setHighPassEnabled] = useState<boolean>(true), [tonePolishEnabled, setTonePolishEnabled] = useState<boolean>(true);
@@ -104,7 +109,13 @@ export const WaveformTrimEditor: React.FC<WaveformTrimEditorProps> = (props) => 
         <div ref={scrollContainerRef} className="w-full h-36 overflow-x-auto overflow-y-hidden relative cordel-scrollbar">
           <div style={{ width: `${zoomedWidth}px`, height: '144px', position: 'relative' }}>
             <WaveformGridCanvas width={zoomedWidth} height={144} totalDurationSec={totalDurationSec} t1OffsetSec={t1OffsetSec} hasAnacrusis={hasAnacrusis} bpm={bpm} measuresCount={measuresCount} beatsPerMeasure={beatsPerMeasure} beatResolutions={beatResolutions} />
-            <WaveformOverlayCanvas rawPCM={rawPCM} sampleRate={sampleRate} width={zoomedWidth} height={144} totalDurationSec={totalDurationSec} trimStartSec={trimStartSec} trimEndSec={trimEndSec} latencyOffsetMs={latencyOffsetMs} playheadSec={playheadSec} isPlaying={isPlaying} onTrimChange={(s, e) => { setTrimStartSec(s); setTrimEndSec(e); onTrimChange?.(s, e); }} onLatencyOffsetChange={setLatencyOffsetMs} />
+            <WaveformOverlayCanvas
+              rawPCM={rawPCM} sampleRate={sampleRate} width={zoomedWidth} height={144} totalDurationSec={totalDurationSec}
+              trimStartSec={trimStartSec} trimEndSec={trimEndSec} latencyOffsetMs={latencyOffsetMs} playheadSec={playheadSec} isPlaying={isPlaying}
+              onTrimChange={(s, e) => { setTrimStartSec(s); setTrimEndSec(e); }}
+              onTrimCommit={(s, e) => onTrimChange?.(s, e)}
+              onLatencyOffsetChange={setLatencyOffsetMs}
+            />
           </div>
         </div>
       </div>

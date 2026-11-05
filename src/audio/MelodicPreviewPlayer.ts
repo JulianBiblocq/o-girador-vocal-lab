@@ -1,11 +1,10 @@
 /**
  * MelodicPreviewPlayer.ts
- * Lecteur d'écoute comparative 3-états ('voice', 'synth', 'duo')
- * avec support du Seek, playhead synchrone 60 FPS et transposition de déclinaison.
+ * Lecteur d'écoute comparative 3-états ('voice', 'synth', 'duo') (< 130 lignes).
  */
 import type { VocalStepData } from '../types/vocalPack.types';
 import type { PatternHarmonyGrid, HarmonyConfig } from '../types/harmony.types';
-import { getSharedAudioContext, setSharedSinkId } from './sharedAudioContext';
+import { getSharedAudioContext, setSharedSinkId, registerAudioKillSwitch, stopAllActiveAudioEngines } from './sharedAudioContext';
 import { playSingleSynthNote, scheduleMelodySteps, type SynthScheduledNode } from './synthVoiceHelper';
 import { getPatternT1OffsetSec } from '../utils/anacrusisTimingHelper';
 import { schedulePreviewClick } from './previewClickHelper';
@@ -13,23 +12,13 @@ import { HarmonyPlayerEngine } from './harmony/HarmonyPlayerEngine';
 
 export type MelodicPlayMode = 'voice' | 'synth' | 'duo';
 export interface MelodicPlayOptions {
-  cleanPCM: Float32Array;
-  sampleRate: number;
-  totalDurationSec: number;
-  allSteps: VocalStepData[];
-  bpm: number;
-  beatsPerMeasure: number;
-  playMode: MelodicPlayMode;
-  clickEnabled: boolean;
-  hasAnacrusis?: boolean;
-  t1OffsetSec?: number;
-  pitchShiftSemitones?: number;
-  seekStartSec?: number;
-  outputDeviceId?: string;
-  harmonyGrid?: PatternHarmonyGrid;
-  harmonyConfig?: HarmonyConfig;
-  measuresCount?: number;
-  onEnded?: () => void;
+  cleanPCM: Float32Array; sampleRate: number; totalDurationSec: number;
+  allSteps: VocalStepData[]; bpm: number; beatsPerMeasure: number;
+  playMode: MelodicPlayMode; clickEnabled: boolean;
+  hasAnacrusis?: boolean; t1OffsetSec?: number; pitchShiftSemitones?: number;
+  seekStartSec?: number; outputDeviceId?: string;
+  harmonyGrid?: PatternHarmonyGrid; harmonyConfig?: HarmonyConfig;
+  measuresCount?: number; onEnded?: () => void;
 }
 
 export class MelodicPreviewPlayer {
@@ -42,6 +31,8 @@ export class MelodicPreviewPlayer {
 
   public async play(options: MelodicPlayOptions): Promise<void> {
     this.stop();
+    stopAllActiveAudioEngines('melodic-preview');
+    registerAudioKillSwitch('melodic-preview', () => { this.stop(); options.onEnded?.(); });
     this.ctx = await getSharedAudioContext();
     if (options.outputDeviceId) await setSharedSinkId(options.outputDeviceId);
 
@@ -52,7 +43,6 @@ export class MelodicPreviewPlayer {
 
     this.voiceGainNode = this.ctx.createGain(); this.synthGainNode = this.ctx.createGain(); this.clickGainNode = this.ctx.createGain();
     this.applyGains(playMode, clickEnabled);
-
     this.voiceGainNode.connect(this.ctx.destination); this.synthGainNode.connect(this.ctx.destination); this.clickGainNode.connect(this.ctx.destination);
 
     const audioBuffer = this.ctx.createBuffer(1, cleanPCM.length, sampleRate);
@@ -115,7 +105,7 @@ export class MelodicPreviewPlayer {
       newSource.start(now, curPlayhead, remainingSec);
       this.sourceNode.stop(now); this.sourceNode.disconnect();
       this.sourceNode = newSource;
-    } catch {}
+    } catch { /* ignore */ }
   }
 
   private applyGains(mode: MelodicPlayMode, clickEnabled: boolean): void {
@@ -128,10 +118,10 @@ export class MelodicPreviewPlayer {
 
   public stop(): void {
     if (this.stopTimerId !== null) { window.clearTimeout(this.stopTimerId); this.stopTimerId = null; }
-    if (this.sourceNode) { try { this.sourceNode.stop(); this.sourceNode.disconnect(); } catch {} this.sourceNode = null; }
+    if (this.sourceNode) { try { this.sourceNode.stop(); this.sourceNode.disconnect(); } catch { /* ignore */ } this.sourceNode = null; }
     for (const node of this.synthNodes) { node.stop(); node.disconnect(); }
     this.synthNodes = [];
-    for (const node of this.activeClickNodes) { try { (node as any).stop?.(); node.disconnect(); } catch {} }
+    for (const node of this.activeClickNodes) { try { (node as any).stop?.(); node.disconnect(); } catch { /* ignore */ } }
     this.activeClickNodes = [];
     this.harmonyEngine.stop();
     this.isPlaying = false;

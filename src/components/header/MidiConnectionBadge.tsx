@@ -7,7 +7,8 @@ import { useVocalTransportStore } from '../../stores/useVocalTransportStore';
 import { useLanguage } from '../../i18n/LanguageContext';
 
 export const MidiConnectionBadge: React.FC = () => {
-  const { isMidiConnected, activeMidiDeviceName } = useVocalTransportStore();
+  const isMidiConnected = useVocalTransportStore((s) => s.isMidiConnected);
+  const activeMidiDeviceName = useVocalTransportStore((s) => s.activeMidiDeviceName);
   const { t } = useLanguage();
 
   if (!isMidiConnected) return null;

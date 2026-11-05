@@ -14,7 +14,7 @@ interface CalageEmptyNoticeProps {
 
 export const CalageEmptyNotice: React.FC<CalageEmptyNoticeProps> = ({ onDirectImport, onOpenSlicer }) => {
   const { t } = useLanguage();
-  const { setActiveLivret } = useVocalTransportStore();
+  const setActiveLivret = useVocalTransportStore((s) => s.setActiveLivret);
 
   return (
     <div className="cordel-card p-6 sm:p-8 flex flex-col items-center justify-center text-center gap-4 rounded">

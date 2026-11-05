@@ -1,6 +1,6 @@
 import type { PatternHarmonyGrid, HarmonyConfig } from '../types/harmony.types';
 import { createPaddedPreviewBuffer } from '../utils/wavEncoder';
-import { getSharedAudioContext, setSharedSinkId } from './sharedAudioContext';
+import { getSharedAudioContext, setSharedSinkId, registerAudioKillSwitch, stopAllActiveAudioEngines } from './sharedAudioContext';
 import { schedulePreviewClick } from './previewClickHelper';
 import { getPatternT1OffsetSec } from '../utils/anacrusisTimingHelper';
 import { HarmonyPlayerEngine } from './harmony/HarmonyPlayerEngine';
@@ -35,6 +35,8 @@ export class PreviewPlayer {
 
   public async play(rawPCM: Float32Array, sampleRate: number, options: PreviewOptions): Promise<void> {
     this.stop();
+    stopAllActiveAudioEngines('preview-player');
+    registerAudioKillSwitch('preview-player', () => { this.stop(); options.onEnded?.(); });
     this.ctx = await getSharedAudioContext();
     if (options.outputDeviceId) await setSharedSinkId(options.outputDeviceId);
 
@@ -122,7 +124,7 @@ export class PreviewPlayer {
       try {
         if ('stop' in node && typeof (node as AudioScheduledSourceNode).stop === 'function') (node as AudioScheduledSourceNode).stop();
         node.disconnect();
-      } catch {}
+      } catch { /* ignore */ }
     }
     this.activeNodes = [];
     this.sourcePolished = null; this.sourceDry = null; this.polishGain = null; this.dryGain = null; this.clickGainNode = null;

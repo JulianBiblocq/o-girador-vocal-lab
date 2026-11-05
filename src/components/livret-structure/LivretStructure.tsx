@@ -1,9 +1,8 @@
 /**
  * LivretStructure.tsx
- * Livret 1 : Structure & Chant (Bibliothèque, Conducteur, Grille d'accords, Paroles & Réglages Métriques) (< 115 lignes).
+ * Livret 1 : Structure & Chant (Bibliothèque, Conducteur, Grille d'accords, Paroles & Réglages Métriques) (< 90 lignes).
  */
-import React, { useState, useEffect } from 'react';
-import type { TimeSignatureString } from '../../types/vocalPack.types';
+import React, { useState } from 'react';
 import { useToadaProject } from '../../context/ToadaProjectContext';
 import { useAudioHardware } from '../../context/AudioHardwareContext';
 import { PatternLibraryBar } from '../conductor/PatternLibraryBar';
@@ -14,6 +13,7 @@ import { StructureMusicConfigPanel } from './StructureMusicConfigPanel';
 import { LatencyReminderBanner } from '../common/LatencyReminderBanner';
 import { getDefaultBeatResolutions } from '../../utils/alignmentMath';
 import { getBeatsPerMeasure } from '../../utils/musicalMath';
+import { DEFAULT_TOADA_BPM } from '../../types/toadaProject.types';
 
 export const LivretStructure: React.FC = () => {
   const {
@@ -23,15 +23,10 @@ export const LivretStructure: React.FC = () => {
   } = useToadaProject();
   const { engine, selectedOutputDeviceId } = useAudioHardware();
 
-  const [timeSignature, setTimeSignature] = useState<TimeSignatureString>(project.timeSignature);
-  const [bpm, setBpm] = useState(activePattern.bpm ?? activePattern.baseBpm ?? project.bpm ?? 88);
-  const [referencePitch, setReferencePitch] = useState(activePattern.referencePitch ?? 'C4');
-  const [beatResolutions, setBeatResolutions] = useState<number[]>(() => getDefaultBeatResolutions(project.timeSignature));
-
-  useEffect(() => {
-    setBpm(activePattern.bpm ?? activePattern.baseBpm ?? project.bpm ?? 88);
-    setReferencePitch(activePattern.referencePitch ?? 'C4');
-  }, [activePattern.id, activePattern.bpm, activePattern.baseBpm, activePattern.referencePitch, project.bpm]);
+  const timeSignature = project.timeSignature || '4/4';
+  const bpm = activePattern.bpm ?? activePattern.baseBpm ?? project.bpm ?? DEFAULT_TOADA_BPM;
+  const referencePitch = activePattern.referencePitch ?? 'C4';
+  const [beatResolutions, setBeatResolutions] = useState<number[]>(() => getDefaultBeatResolutions(timeSignature));
 
   const measuresCount = activePattern.measuresCount;
   const hasAnacrusis = activePattern.hasAnacrusis !== false;
@@ -68,15 +63,18 @@ export const LivretStructure: React.FC = () => {
       {/* 3. Réglages musicaux (BPM, Signature, Mesures, Portée, Anacrouse, Tonalité) */}
       <StructureMusicConfigPanel
         timeSignature={timeSignature}
-        onTimeSignatureChange={(sig) => { setTimeSignature(sig); updateScopedTimeSignature(sig); }}
+        onTimeSignatureChange={(sig) => {
+          updateScopedTimeSignature(sig);
+          setBeatResolutions(getDefaultBeatResolutions(sig));
+        }}
         bpm={bpm}
-        onBpmChange={(v) => { setBpm(v); updateScopedBpm(v); }}
+        onBpmChange={(v) => updateScopedBpm(v)}
         measuresCount={measuresCount}
         onMeasuresCountChange={(c) => updateScopedMeasuresCount(c as 1 | 2 | 3 | 4)}
         hasAnacrusis={hasAnacrusis}
         onHasAnacrusisChange={(has) => updateScopedHasAnacrusis(has)}
         referencePitch={referencePitch}
-        onReferencePitchChange={(p) => { setReferencePitch(p); updateScopedReferencePitch(p); }}
+        onReferencePitchChange={(p) => updateScopedReferencePitch(p)}
         onPlayPitchPreview={() => engine.playReferencePitchPreview(referencePitch, 1.5, selectedOutputDeviceId)}
         beatResolutions={beatResolutions}
         onBeatResolutionsChange={setBeatResolutions}

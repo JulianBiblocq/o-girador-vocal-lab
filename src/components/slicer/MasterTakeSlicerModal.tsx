@@ -7,6 +7,7 @@ import { useToadaProject } from '../../context/ToadaProjectContext';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { decodeAudioFile, type DecodedAudioResult } from '../../utils/directAudioImporter';
 import { SlicerAudioEngine } from '../../audio/slicerAudioEngine';
+import { stopAllActiveAudioEngines } from '../../audio/sharedAudioContext';
 import { analyzeBeatPegs, piecewiseTimeWarp } from '../../audio/piecewiseTimeWarper';
 import { extractPatternFromMaster } from '../../utils/masterTakeExtractor';
 import { executeBatchAssign } from '../../utils/slicerBatchAssigner';
@@ -27,7 +28,7 @@ interface SlicerModalProps {
 export const MasterTakeSlicerModal: React.FC<SlicerModalProps> = ({
   isOpen, onClose, initialAudio, defaultRole = 'puxador',
 }) => {
-  const { project, addPattern, updatePattern, updateVariant, setActivePatternId, loadProject } = useToadaProject();
+  const { project, addPattern, updatePattern, loadProject } = useToadaProject();
   const { t } = useLanguage();
   const [mode, setMode] = useState<SlicerWorkMode>('multi');
   const [audio, setAudio] = useState<DecodedAudioResult | null>(null);
@@ -54,6 +55,7 @@ export const MasterTakeSlicerModal: React.FC<SlicerModalProps> = ({
   }, [defaultRole, project.patterns, project.bpm]);
 
   useEffect(() => {
+    if (isOpen) stopAllActiveAudioEngines('slicer-player');
     if (isOpen && initialAudio && (!audio || audio.pcm !== initialAudio.pcm)) loadAudioWithAutoSlices(initialAudio);
   }, [isOpen, initialAudio, audio, loadAudioWithAutoSlices]);
 
@@ -75,8 +77,7 @@ export const MasterTakeSlicerModal: React.FC<SlicerModalProps> = ({
     if (!audio || isAssigning) return;
     setIsAssigning(true);
     try {
-      const res = executeBatchAssign({ project, masterPCM: audio.pcm, sampleRate: audio.sampleRate, segments, addPattern, updatePattern, updateVariant });
-      if (res.firstAssignedId) setActivePatternId(res.firstAssignedId);
+      const res = executeBatchAssign({ project, masterPCM: audio.pcm, sampleRate: audio.sampleRate, segments, loadProject });
       window.dispatchEvent(new CustomEvent('app-toast', { detail: { message: t('slicerAssignSuccessToast', { count: res.processedCount }), type: 'success' } }));
       onClose();
     } finally { setIsAssigning(false); }
