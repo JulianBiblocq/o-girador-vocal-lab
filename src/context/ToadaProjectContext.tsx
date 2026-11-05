@@ -116,12 +116,14 @@ export const ToadaProjectProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const updateToadaMeta = useCallback((meta: Partial<import('../types/toadaDocument.types').ToadaDocument>) => setProject((prev) => ({ ...prev, toadaMeta: { ...(prev.toadaMeta || {}), ...meta } })), []);
 
   const getPreviousConductorPattern = useCallback((): VocalPatternItem | null => {
+    const hasAudio = (p?: VocalPatternItem) => Boolean(p?.recordingResult?.pcm?.length || p?.variants?.[p.activeVariantKey]?.recordingResult?.pcm?.length);
     const slotIdx = project.slots.findIndex((s) => s.puxadorPatternId === project.activePatternId || s.coroPatternId === project.activePatternId);
     if (slotIdx > 0) {
       const prevId = project.slots[slotIdx - 1].puxadorPatternId ?? project.slots[slotIdx - 1].coroPatternId;
-      if (prevId) return project.patterns.find((p) => p.id === prevId) ?? null;
+      const found = prevId ? project.patterns.find((p) => p.id === prevId) : undefined;
+      if (found && hasAudio(found)) return found;
     }
-    return project.patterns.find((p) => p.id !== project.activePatternId && p.recordingResult !== null) ?? null;
+    return project.patterns.find((p) => p.id !== project.activePatternId && hasAudio(p)) ?? null;
   }, [project.slots, project.activePatternId, project.patterns]);
 
   const value = useMemo(() => ({

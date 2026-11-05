@@ -60,7 +60,7 @@ export function useContinuousTakeController(params: UseContinuousTakeControllerP
       const actualSampleRate = recorder.getSampleRate() || engine.getContext()?.sampleRate || 48000;
       const pcm = sessionRef.current.stop(recorder, engine);
       if (pcm && pcm.length > 0) {
-        handleFinishContinuous(pcm, actualSampleRate, 0.6);
+        handleFinishContinuous(pcm, actualSampleRate, 0);
       } else {
         setIsContinuousActive(false);
         setPrompterInfo(null);

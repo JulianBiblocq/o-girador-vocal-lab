@@ -1,6 +1,6 @@
 /**
  * ToadaPlayerEngine.ts
- * Moteur Web Audio temps réel avec Ordonnanceur Lookahead et Varispeed live BPM (< 125 lignes).
+ * Moteur Web Audio temps réel avec Ordonnanceur Lookahead et Varispeed live BPM (< 145 lignes).
  */
 import { type ToadaProject, DEFAULT_TOADA_BPM } from '../../types/toadaProject.types';
 import { getSharedAudioContext, setSharedSinkId, registerAudioKillSwitch, stopAllActiveAudioEngines } from '../../audio/sharedAudioContext';
@@ -8,6 +8,21 @@ import { getBeatsPerMeasure } from '../../utils/musicalMath';
 import { HarmonyPlayerEngine } from '../../audio/harmony/HarmonyPlayerEngine';
 import { ToadaTimelineClock, computeSlotsMeasureLayout, type SlotMeasureLayout } from './toadaTimingScheduler';
 import { schedulePatternVoice, type ScheduledVoiceResult } from './toadaVoiceScheduler';
+
+export function hasSlot0AnacrusisLeadIn(project: ToadaProject): boolean {
+  const slot0 = project.slots[0];
+  if (!slot0) return false;
+  const pux0 = project.patterns.find((p) => p.id === slot0.puxadorPatternId);
+  const coro0 = project.patterns.find((p) => p.id === slot0.coroPatternId);
+  return [pux0, coro0].some((p) => {
+    if (!p) return false;
+    const v = p.variants?.[p.activeVariantKey];
+    const rec = v?.recordingResult ?? p.recordingResult;
+    const tStart = v?.trimStartSec || p.trimStartSec || 0;
+    const t1 = v?.t1OffsetSec ?? p.t1OffsetSec ?? rec?.t1OffsetSec;
+    return typeof t1 === 'number' ? tStart < t1 - 0.01 : p.hasAnacrusis !== false;
+  });
+}
 
 export class ToadaPlayerEngine {
   private isRunning = false;
@@ -61,12 +76,14 @@ export class ToadaPlayerEngine {
 
     const beatsPerMeasure = getBeatsPerMeasure(project.timeSignature);
     const audioCtxStart = ctx.currentTime + 0.08;
-    this.clock.init(audioCtxStart, project.bpm || DEFAULT_TOADA_BPM, beatsPerMeasure, 1);
+    const initialMeasure = hasSlot0AnacrusisLeadIn(project) ? 0 : 1;
+    this.clock.init(audioCtxStart, project.bpm || DEFAULT_TOADA_BPM, beatsPerMeasure, initialMeasure);
     this.layouts = computeSlotsMeasureLayout(project.slots, project.patterns);
     this.scheduledSlots.clear();
     this.reportedSlotIdx = -1;
     this.isRunning = true;
 
+    this.tickScheduler(project, beatsPerMeasure, onProgress, onComplete);
     this.schedulerTimer = window.setInterval(() => {
       if (!this.isRunning) return;
       this.tickScheduler(project, beatsPerMeasure, onProgress, onComplete);
@@ -77,14 +94,15 @@ export class ToadaPlayerEngine {
     if (!this.ctx || !this.isRunning) return;
     const now = this.ctx.currentTime;
     const lookaheadSec = 0.16;
+    const scheduleHorizonSec = this.clock.getMeasureDurationSec() + lookaheadSec;
 
     for (const layout of this.layouts) {
       const slotT1Time = this.clock.getTimeAtMeasure(layout.startMeasure);
-      if (now >= slotT1Time - 0.05 && this.reportedSlotIdx !== layout.slotIndex) {
+      if ((now >= slotT1Time - 0.05 || (layout.slotIndex === 0 && this.reportedSlotIdx === -1)) && this.reportedSlotIdx !== layout.slotIndex) {
         this.reportedSlotIdx = layout.slotIndex;
         onProgress?.(layout.slotIndex);
       }
-      if (!this.scheduledSlots.has(layout.slotIndex) && slotT1Time <= now + lookaheadSec) {
+      if (!this.scheduledSlots.has(layout.slotIndex) && slotT1Time <= now + scheduleHorizonSec) {
         this.scheduledSlots.add(layout.slotIndex);
         const slot = project.slots[layout.slotIndex];
         const pux = project.patterns.find((p) => p.id === slot.puxadorPatternId);

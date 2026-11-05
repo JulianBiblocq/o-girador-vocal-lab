@@ -1,8 +1,7 @@
 /**
  * VocalRecorderEngine.ts
- * Moteur de capture audio PCM synchrone cale sur l horloge Web Audio a T0.
- * Utilise un AudioWorkletNode dedie (blocs de 128 samples, zero buzz, zero blocage UI).
- * Filtrage strict sur captureStartTime & micro-fade in de 15 ms.
+ * Moteur de capture audio PCM synchrone calé sur l'horloge Web Audio à T0 (< 142 lignes).
+ * Utilise un AudioWorkletNode dédié (blocs de 128 samples, zéro buzz, latence 0 et fallback périphérique).
  */
 import { VOCAL_CAPTURE_WORKLET_CODE } from './vocalCaptureWorkletCode';
 
@@ -18,6 +17,26 @@ export class VocalRecorderEngine {
   private totalDurationSec = 0;
   private sampleRate = 44100;
   private chunks: Float32Array[] = [];
+
+  private buildAudioConstraints(deviceId?: string): MediaStreamConstraints {
+    return {
+      audio: {
+        ...(deviceId && deviceId !== 'default' ? { deviceId: { exact: deviceId } } : {}),
+        echoCancellation: false,
+        noiseSuppression: false,
+        autoGainControl: false,
+        channelCount: 1,
+        sampleRate: 48000,
+        // @ts-expect-error Web Audio low-latency & Chromium raw capture hints
+        latency: 0,
+        googEchoCancellation: false,
+        googAutoGainControl: false,
+        googNoiseSuppression: false,
+        googHighpassFilter: false,
+        googAudioMirroring: false,
+      },
+    };
+  }
 
   public async prepare(ctx: AudioContext, deviceId?: string): Promise<number> {
     this.cleanup();
@@ -35,24 +54,12 @@ export class VocalRecorderEngine {
       VocalRecorderEngine.registeredContexts.add(ctx);
     }
 
-    const constraints: MediaStreamConstraints = {
-      audio: {
-        ...(deviceId ? { deviceId: { exact: deviceId } } : {}),
-        echoCancellation: false,
-        noiseSuppression: false,
-        autoGainControl: false,
-        channelCount: 1,
-        sampleRate: 48000,
-        // @ts-expect-error Chromium audio processing bypass
-        googEchoCancellation: false,
-        googAutoGainControl: false,
-        googNoiseSuppression: false,
-        googHighpassFilter: false,
-        googAudioMirroring: false,
-      },
-    };
+    try {
+      this.stream = await navigator.mediaDevices.getUserMedia(this.buildAudioConstraints(deviceId));
+    } catch {
+      this.stream = await navigator.mediaDevices.getUserMedia(this.buildAudioConstraints(undefined));
+    }
 
-    this.stream = await navigator.mediaDevices.getUserMedia(constraints);
     this.sourceNode = ctx.createMediaStreamSource(this.stream);
     this.workletNode = new AudioWorkletNode(ctx, 'vocal-capture-processor');
 

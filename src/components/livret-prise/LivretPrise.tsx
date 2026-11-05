@@ -28,7 +28,7 @@ import { RotateCcw, Scissors, Music } from 'lucide-react';
 
 export const LivretPrise: React.FC = () => {
   const {
-    project, activePattern, activeVariant, updatePattern, updateVariant,
+    project, activePattern, activeVariant, updatePattern, updateVariant, updatePatternAndVariant,
     cueMode, getPreviousConductorPattern, updateHarmonyConfig, loadProject,
   } = useToadaProject();
   const {
@@ -53,7 +53,7 @@ export const LivretPrise: React.FC = () => {
     engine, recorder, activePattern, activeVariant, cueMode, getPreviousConductorPattern,
     projectPatterns: project.patterns, timeSignature, measuresCount, hasAnacrusis,
     beatsPerMeasure, beatDuration, effectiveBpm, effectivePitch, listeningMode,
-    selectedDeviceId, selectedOutputDeviceId, updateVariant, updatePattern, recordedSampleRate,
+    selectedDeviceId, selectedOutputDeviceId, updateVariant, updatePattern, updatePatternAndVariant, recordedSampleRate,
     setRecordedSampleRate, activeLivret, harmonyConfig: project.harmonyConfig,
   });
 

@@ -10,7 +10,6 @@ import { usePlayheadTracker } from '../../hooks/usePlayheadTracker';
 import { computeAlignmentMeta } from '../../utils/alignmentMath';
 import { getPatternT1OffsetSec, getPatternTotalDurationSec } from '../../utils/anacrusisTimingHelper';
 import { generateVocalPack } from '../../utils/packGenerator';
-import { getSavedLatencyOffsetMs } from '../../utils/latencyStorage';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { ChordGridBar } from '../common/ChordGridBar';
 import { HarmonyProfileSelector } from '../common/HarmonyProfileSelector';
@@ -54,7 +53,7 @@ export const WaveformTrimEditor: React.FC<WaveformTrimEditorProps> = (props) => 
     setTrimEndSec(initialTrimEndSec && initialTrimEndSec > 0 ? initialTrimEndSec : totalDurationSec);
   }, [rawPCM, initialTrimStartSec, initialTrimEndSec, totalDurationSec]);
 
-  const [latencyOffsetMs, setLatencyOffsetMs] = useState<number>(getSavedLatencyOffsetMs);
+  const [latencyOffsetMs, setLatencyOffsetMs] = useState<number>(0);
   const [isPlaying, setIsPlaying] = useState<boolean>(false), [clickEnabled, setClickEnabled] = useState<boolean>(true);
   const [highPassEnabled, setHighPassEnabled] = useState<boolean>(true), [tonePolishEnabled, setTonePolishEnabled] = useState<boolean>(true);
 

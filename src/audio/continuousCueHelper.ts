@@ -6,6 +6,9 @@ import type { ToadaProject, VocalRole, VocalPatternItem } from '../types/toadaPr
 import { getBeatsPerMeasure } from '../utils/musicalMath';
 import { getPatternT1OffsetSec } from '../utils/anacrusisTimingHelper';
 import { selectBestAudioVariant } from '../utils/variantMatcher';
+import { computeSlotsMeasureLayout } from '../components/conductor/toadaTimingScheduler';
+
+export const CONTINUOUS_LEAD_IN_MEASURES = 2;
 
 export interface ContinuousCueHandle {
   stop: () => void;
@@ -19,59 +22,62 @@ export function scheduleContinuousCounterRole(
   marginBeforeM0Sec: number
 ): ContinuousCueHandle {
   const counterRole: VocalRole = targetRole === 'puxador' ? 'coro' : 'puxador';
+  const projectBpm = project.bpm || 88;
   const beatsPerMeasure = getBeatsPerMeasure(project.timeSignature);
-  const beatDuration = 60 / (project.bpm || 88);
+  const beatDuration = 60 / projectBpm;
   const measureDurationSec = beatsPerMeasure * beatDuration;
   const sources: AudioBufferSourceNode[] = [];
+  const layouts = computeSlotsMeasureLayout(project.slots, project.patterns);
 
-  let currentMeasure = 1;
-
-  project.slots.forEach((slot) => {
+  layouts.forEach((layout) => {
+    const slot = project.slots[layout.slotIndex];
     const puxPat = project.patterns.find((p) => p.id === slot.puxadorPatternId);
     const coroPat = project.patterns.find((p) => p.id === slot.coroPatternId);
-    const measuresInSlot = Math.max(puxPat?.measuresCount ?? 2, coroPat?.measuresCount ?? 2, 2);
 
     const patToPlay: VocalPatternItem | undefined = counterRole === 'puxador' ? puxPat : coroPat;
-    if (patToPlay) {
-      const match = selectBestAudioVariant(patToPlay.variants, 1.0, 0, patToPlay.baseBpm ?? patToPlay.bpm ?? 88);
-      const variant = match?.variant ?? patToPlay.variants?.[patToPlay.activeVariantKey];
-      const rec = variant?.recordingResult ?? patToPlay.recordingResult;
+    if (!patToPlay) return;
 
-      if (rec && rec.pcm && rec.pcm.length > 0) {
-        const { pcm, sampleRate } = rec;
-        const trimStartSec = variant?.trimStartSec || patToPlay.trimStartSec || 0;
-        const trimEndSec = (variant?.trimEndSec || patToPlay.trimEndSec || 0) > 0
-          ? (variant?.trimEndSec || patToPlay.trimEndSec || 0)
-          : pcm.length / sampleRate;
+    const match = selectBestAudioVariant(patToPlay.variants, 1.0, 0, patToPlay.baseBpm ?? patToPlay.bpm ?? projectBpm);
+    const variant = match?.variant ?? patToPlay.variants?.[patToPlay.activeVariantKey];
+    const rec = variant?.recordingResult ?? patToPlay.recordingResult;
 
-        const sStart = Math.max(0, Math.floor(trimStartSec * sampleRate));
-        const sEnd = Math.min(pcm.length, Math.floor(trimEndSec * sampleRate));
-        const len = Math.max(0, sEnd - sStart);
+    if (rec && rec.pcm && rec.pcm.length > 0) {
+      const { pcm, sampleRate } = rec;
+      const trimStartSec = variant?.trimStartSec || patToPlay.trimStartSec || 0;
+      const rawTrimEnd = variant?.trimEndSec || patToPlay.trimEndSec || 0;
+      const trimEndSec = rawTrimEnd > trimStartSec ? rawTrimEnd : pcm.length / sampleRate;
 
-        if (len > 0) {
-          const buffer = ctx.createBuffer(1, len, sampleRate);
-          buffer.getChannelData(0).set(pcm.subarray(sStart, sEnd));
+      const sStart = Math.max(0, Math.floor(trimStartSec * sampleRate));
+      const sEnd = Math.min(pcm.length, Math.floor(trimEndSec * sampleRate));
+      const len = Math.max(0, sEnd - sStart);
 
-          const source = ctx.createBufferSource();
-          source.buffer = buffer;
-          source.connect(ctx.destination);
+      if (len > 0) {
+        const buffer = ctx.createBuffer(1, len, sampleRate);
+        buffer.getChannelData(0).set(pcm.subarray(sStart, sEnd));
 
-          const explicitT1 = match?.variant?.t1OffsetSec ?? patToPlay.t1OffsetSec ?? rec?.t1OffsetSec;
-          const t1OffsetSec = getPatternT1OffsetSec(patToPlay.hasAnacrusis, measureDurationSec, explicitT1);
-          const blockT1Sec = marginBeforeM0Sec + currentMeasure * measureDurationSec;
-          const startTime = audioCtxStart + blockT1Sec + (trimStartSec - t1OffsetSec);
+        const source = ctx.createBufferSource();
+        source.buffer = buffer;
+        source.connect(ctx.destination);
 
-          if (match && match.residualSemitones !== 0) {
-            try { source.detune.setValueAtTime(match.residualSemitones * 100, startTime); } catch {}
-          }
-          try {
-            source.start(startTime);
-            sources.push(source);
-          } catch {}
+        const explicitT1 = variant?.t1OffsetSec ?? patToPlay.t1OffsetSec ?? rec.t1OffsetSec;
+        const t1OffsetSec = getPatternT1OffsetSec(patToPlay.hasAnacrusis, measureDurationSec, explicitT1);
+        const recordedBpm = rec.recordedBpm || patToPlay.bpm || patToPlay.baseBpm || projectBpm;
+        const speedRatio = Math.max(0.25, Math.min(4.0, projectBpm / recordedBpm));
+        source.playbackRate.value = speedRatio;
+
+        const slotMeasureFromM0 = (CONTINUOUS_LEAD_IN_MEASURES - 1) + layout.startMeasure;
+        const blockT1Sec = marginBeforeM0Sec + slotMeasureFromM0 * measureDurationSec;
+        const startTime = audioCtxStart + blockT1Sec + (trimStartSec - t1OffsetSec) / speedRatio;
+
+        if (match && match.residualSemitones !== 0) {
+          try { source.detune.setValueAtTime(match.residualSemitones * 100, Math.max(ctx.currentTime, startTime)); } catch {}
         }
+        try {
+          source.start(Math.max(ctx.currentTime, startTime));
+          sources.push(source);
+        } catch {}
       }
     }
-    currentMeasure += (slot.advanceMeasures ?? measuresInSlot);
   });
 
   return {

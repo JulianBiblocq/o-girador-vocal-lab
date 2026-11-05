@@ -30,6 +30,11 @@ export const ContinuousPrompterBanner: React.FC<ContinuousPrompterBannerProps> =
           <span className="text-xs font-mono font-bold text-amber-200">
             Bloc {info.slotIndex} / {info.totalSlots} — Mesure M{info.conductorMeasure}
           </span>
+          <span className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-bold ${
+            info.hasAnacrusis ? 'bg-amber-500/30 text-amber-200 border border-amber-400/50' : 'bg-stone-700 text-stone-300'
+          }`}>
+            {info.hasAnacrusis ? `+Ana (${info.anacrusisBeats || 2}T)` : 'T1 franc'}
+          </span>
         </div>
         <span className="text-[10px] font-mono text-red-400 font-bold flex items-center gap-1 animate-pulse">
           ● {t('continuousPrompterLive') || 'PRISE CONTINUE EN COURS'}
