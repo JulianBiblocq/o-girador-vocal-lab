@@ -72,6 +72,7 @@ export const SlicerMultiSection: React.FC<SlicerMultiSectionProps> = ({
   };
 
   const handlePlaySegment = async (seg: SliceSegment) => {
+    setSelectedSegmentId(seg.id);
     if (playingSegmentId === seg.id) { engine.stop(); setPlayingSegmentId(null); setPlayheadSec(-1); return; }
     engine.stop(); setPlayingSegmentId(seg.id);
     const sStart = Math.floor(seg.startSec * audio.sampleRate), sEnd = Math.floor(seg.endSec * audio.sampleRate);
