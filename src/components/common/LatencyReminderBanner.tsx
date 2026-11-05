@@ -1,0 +1,93 @@
+/**
+ * LatencyReminderBanner.tsx
+ * Bandeau de rappel bienveillant pour le calage de latence (< 95 lignes).
+ * Vérifie si le périphérique d'entrée est déjà calibré dans localStorage.
+ */
+import React, { useState, useEffect } from 'react';
+import { useAudioHardware } from '../../context/AudioHardwareContext';
+import { useVocalTransportStore } from '../../stores/useVocalTransportStore';
+import { useLanguage } from '../../i18n/LanguageContext';
+import {
+  isLatencyCalibrated,
+  markLatencyCalibrated,
+  isLatencyReminderDismissedSession,
+  dismissLatencyReminderSession,
+} from '../../utils/latencyStorage';
+import { Clock, Settings, Check, X } from 'lucide-react';
+
+export const LatencyReminderBanner: React.FC = () => {
+  const { t } = useLanguage();
+  const { selectedDeviceId } = useAudioHardware();
+  const setActiveLivret = useVocalTransportStore((s) => s.setActiveLivret);
+  const [hidden, setHidden] = useState<boolean>(() => (
+    isLatencyCalibrated(selectedDeviceId) || isLatencyReminderDismissedSession()
+  ));
+
+  useEffect(() => {
+    const isCalibrated = isLatencyCalibrated(selectedDeviceId);
+    const isDismissed = isLatencyReminderDismissedSession();
+    setHidden(isCalibrated || isDismissed);
+
+    const onCalibrated = () => setHidden(true);
+    const onDismissed = () => setHidden(true);
+    window.addEventListener('ogirador-latency-calibrated', onCalibrated);
+    window.addEventListener('ogirador-latency-dismissed', onDismissed);
+    return () => {
+      window.removeEventListener('ogirador-latency-calibrated', onCalibrated);
+      window.removeEventListener('ogirador-latency-dismissed', onDismissed);
+    };
+  }, [selectedDeviceId]);
+
+  if (hidden) return null;
+
+  const handleMarkCalibrated = () => {
+    markLatencyCalibrated(selectedDeviceId);
+    setHidden(true);
+  };
+
+  const handleDismiss = () => {
+    dismissLatencyReminderSession();
+    setHidden(true);
+  };
+
+  return (
+    <div className="flex items-center justify-between gap-2 px-3 py-1.5 bg-amber-500/15 border border-amber-500/40 text-[#1a1a1a] dark:text-[#efe6d2] text-xs font-mono rounded shadow-sm">
+      <div className="flex items-center gap-2 min-w-0">
+        <Clock className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
+        <span className="truncate font-medium">
+          {t('latencyReminderNotice')}
+        </span>
+      </div>
+
+      <div className="flex items-center gap-2 shrink-0">
+        <button
+          type="button"
+          onClick={() => setActiveLivret('reglages')}
+          className="px-2 py-0.5 bg-amber-600 hover:bg-amber-500 text-white rounded flex items-center gap-1 font-bold text-[11px] cursor-pointer"
+        >
+          <Settings className="w-3 h-3" />
+          <span>{t('latencyReminderGoSettings')}</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={handleMarkCalibrated}
+          className="px-2 py-0.5 bg-[#0f766e] hover:bg-[#115e59] text-[#f4ecd8] rounded flex items-center gap-1 text-[11px] font-bold cursor-pointer shadow-sm"
+          title={t('latencyReminderMarkDoneTitle')}
+        >
+          <Check className="w-3 h-3" />
+          <span>{t('latencyReminderAlreadyDone')}</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={handleDismiss}
+          className="p-1 hover:text-white text-stone-500 dark:text-amber-400 cursor-pointer"
+          title={t('appUpdateCloseAria')}
+        >
+          <X className="w-3.5 h-3.5" />
+        </button>
+      </div>
+    </div>
+  );
+};

@@ -13,6 +13,7 @@ interface WaveformOverlayCanvasProps {
   trimEndSec: number;
   latencyOffsetMs: number;
   onTrimChange: (start: number, end: number) => void;
+  onTrimCommit?: (start: number, end: number) => void;
   onLatencyOffsetChange?: (offsetMs: number) => void;
   playheadSec: number;
   isPlaying: boolean;
@@ -20,15 +21,20 @@ interface WaveformOverlayCanvasProps {
 
 export const WaveformOverlayCanvas: React.FC<WaveformOverlayCanvasProps> = ({
   rawPCM, width, height, totalDurationSec, trimStartSec, trimEndSec,
-  latencyOffsetMs, onTrimChange, onLatencyOffsetChange, playheadSec, isPlaying,
+  latencyOffsetMs, onTrimChange, onTrimCommit, onLatencyOffsetChange, playheadSec, isPlaying,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const peaksCacheRef = useRef<Float32Array | null>(null);
   const dragModeRef = useRef<'start' | 'end' | 'wave' | null>(null);
   const dragStartXRef = useRef<number>(0);
   const initialOffsetMsRef = useRef<number>(0);
+  const latestTrimRef = useRef<{ start: number; end: number }>({ start: trimStartSec, end: trimEndSec });
   const { t } = useLanguage();
   const [themeTick, setThemeTick] = React.useState(0);
+
+  useEffect(() => {
+    latestTrimRef.current = { start: trimStartSec, end: trimEndSec };
+  }, [trimStartSec, trimEndSec]);
 
   useEffect(() => {
     const obs = new MutationObserver(() => setThemeTick((v) => v + 1));
@@ -85,21 +91,28 @@ export const WaveformOverlayCanvas: React.FC<WaveformOverlayCanvasProps> = ({
     const timeAtX = (x / width) * totalDurationSec;
 
     if (dragModeRef.current === 'start') {
-      onTrimChange(Math.min(trimEndSec - 0.05, Math.max(0, timeAtX)), trimEndSec);
+      const nextStart = Math.min(trimEndSec - 0.05, Math.max(0, timeAtX));
+      latestTrimRef.current = { start: nextStart, end: trimEndSec };
+      onTrimChange(nextStart, trimEndSec);
     } else if (dragModeRef.current === 'end') {
-      onTrimChange(trimStartSec, Math.max(trimStartSec + 0.05, Math.min(totalDurationSec, timeAtX)));
+      const nextEnd = Math.max(trimStartSec + 0.05, Math.min(totalDurationSec, timeAtX));
+      latestTrimRef.current = { start: trimStartSec, end: nextEnd };
+      onTrimChange(trimStartSec, nextEnd);
     } else if (dragModeRef.current === 'wave' && onLatencyOffsetChange) {
       const deltaPx = e.clientX - dragStartXRef.current;
       const deltaSec = (deltaPx / width) * totalDurationSec;
-      const deltaMs = Math.round(deltaSec * 1000);
-      onLatencyOffsetChange(initialOffsetMsRef.current + deltaMs);
+      onLatencyOffsetChange(initialOffsetMsRef.current + Math.round(deltaSec * 1000));
     }
   };
 
-  const handlePointerUp = (e: React.PointerEvent<HTMLCanvasElement>) => {
+  const handlePointerEnd = (e: React.PointerEvent<HTMLCanvasElement>) => {
     if (dragModeRef.current) {
+      const mode = dragModeRef.current;
       dragModeRef.current = null;
       try { e.currentTarget.releasePointerCapture(e.pointerId); } catch { /* ignore */ }
+      if (mode === 'start' || mode === 'end') {
+        onTrimCommit?.(latestTrimRef.current.start, latestTrimRef.current.end);
+      }
     }
   };
 
@@ -108,7 +121,8 @@ export const WaveformOverlayCanvas: React.FC<WaveformOverlayCanvasProps> = ({
       ref={canvasRef}
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
-      onPointerUp={handlePointerUp}
+      onPointerUp={handlePointerEnd}
+      onPointerCancel={handlePointerEnd}
       style={{ width: `${width}px`, height: `${height}px` }}
       className="absolute inset-0 cursor-ew-resize touch-none select-none"
     />

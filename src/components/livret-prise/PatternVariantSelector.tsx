@@ -64,15 +64,15 @@ export const PatternVariantSelector: React.FC<PatternVariantSelectorProps> = ({
     <div className="cordel-card p-2.5 flex flex-col gap-2">
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--cordel-border-sub)] pb-1.5">
         <div className="flex flex-wrap items-center gap-2">
-          <div className={`px-2 py-0.5 ${roleBg} text-[var(--cordel-text)] font-mono font-bold text-xs flex items-center gap-1.5 shadow-sm border border-amber-400/80 rounded`}>
-            <span className="uppercase tracking-wider">{roleLabel} :</span>
-            <span className="truncate max-w-[150px] sm:max-w-none">{activePattern.name}</span>
+          <div className={`px-2 py-0.5 ${roleBg} !text-white font-mono font-bold text-xs flex items-center gap-1.5 shadow-sm border border-amber-400/80 rounded`}>
+            <span className="uppercase tracking-wider text-amber-200">{roleLabel} :</span>
+            <span className="truncate max-w-[150px] sm:max-w-none text-white font-bold">{activePattern.name}</span>
             <span className="text-amber-200">•</span>
-            <span>{t('measureUnitShort', { n: activePattern.measuresCount })}</span>
+            <span className="text-white font-bold">{t('measureUnitShort', { n: activePattern.measuresCount })}</span>
             <span className="text-amber-200">•</span>
-            <span>{activeNoteLabel}</span>
+            <span className="text-white font-bold">{activeNoteLabel}</span>
             <span className="text-amber-200">•</span>
-            <span>{effectiveBaseBpm} BPM</span>
+            <span className="text-white font-bold">{effectiveBaseBpm} BPM</span>
           </div>
           <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--cordel-text)] hidden md:inline">
             {t('pattern_variants_title')}

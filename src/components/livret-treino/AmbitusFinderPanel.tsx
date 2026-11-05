@@ -1,7 +1,6 @@
 /**
  * AmbitusFinderPanel.tsx
- * Parcours d'Ambitus Intelligent en 4 Étapes (Balayage, Grave, Aigu, Escalier).
- * Orchestration modulaire via composants spécialisés (< 95 lignes).
+ * Parcours d'Ambitus Intelligent en 4 Étapes (Balayage, Grave, Aigu, Escalier) (< 90 lignes).
  */
 import React from 'react';
 import { useLanguage } from '../../i18n/LanguageContext';
@@ -28,9 +27,12 @@ export const AmbitusFinderPanel: React.FC = () => {
         <AmbitusStageBar currentStage={j.stage} isStageDone={(s) => j.completedStages.includes(s)} onSelectStage={j.setStage} t={t} />
 
         {j.stage === 'sweep' && (
-          <div className="space-y-3 py-1">
-            <p className="text-xs text-[var(--cordel-text)]">{t('ambitusSweepInstruction')}</p>
-            <button type="button" disabled={j.isTesting} onClick={j.runSweep} className="w-full py-3 cordel-btn-primary font-bold text-xs flex items-center justify-center gap-2 cursor-pointer shadow-md">
+          <div className="flex flex-col items-center space-y-3 py-1">
+            <p className="text-xs text-[var(--cordel-text)] w-full">{t('ambitusSweepInstruction')}</p>
+            <button
+              type="button" disabled={j.isTesting} onClick={j.runSweep}
+              className="w-full sm:w-auto sm:min-w-[260px] px-6 py-3 cordel-btn-primary font-bold text-xs flex items-center justify-center gap-2 cursor-pointer shadow-md"
+            >
               <Play className="w-4 h-4 fill-current" /><span>{j.isTesting ? t('ambitusHoldProgress', { percent: 50 }) : t('ambitusSweepBtn')}</span>
             </button>
           </div>
@@ -38,19 +40,12 @@ export const AmbitusFinderPanel: React.FC = () => {
 
         {(j.stage === 'low_test' || j.stage === 'high_test') && (
           <AmbitusWizardStepToneCheck
-            stage={j.stage}
-            currentMidi={j.currentMidi}
-            onSetCurrentMidi={j.setCurrentMidi}
-            engine={j.engine}
-            isTesting={j.isTesting}
-            setIsTesting={j.setIsTesting}
-            samples={j.samples}
-            setSamples={j.setSamples}
-            setFeedback={j.setFeedback}
+            stage={j.stage} currentMidi={j.currentMidi} onSetCurrentMidi={j.setCurrentMidi}
+            engine={j.engine} isTesting={j.isTesting} setIsTesting={j.setIsTesting}
+            samples={j.samples} setSamples={j.setSamples} setFeedback={j.setFeedback}
             onValidateAndNext={() => {
               if (j.stage === 'low_test') {
-                j.setLowestMidi(j.currentMidi);
-                j.setCurrentMidi(j.highestMidi);
+                j.setLowestMidi(j.currentMidi); j.setCurrentMidi(j.highestMidi);
                 j.setCompletedStages((p) => (p.includes('low_test') ? p : [...p, 'low_test']));
                 j.setStage('high_test');
               } else {
@@ -65,16 +60,10 @@ export const AmbitusFinderPanel: React.FC = () => {
 
         {j.stage === 'staircase' && (
           <AmbitusWizardStepStaircase
-            lowestMidi={j.lowestMidi}
-            highestMidi={j.highestMidi}
-            engine={j.engine}
-            isTesting={j.isTesting}
-            setIsTesting={j.setIsTesting}
-            samples={j.samples}
-            setSamples={j.setSamples}
-            setFeedback={j.setFeedback}
-            onCompleteStaircase={j.onCompleteStaircase}
-            t={t}
+            lowestMidi={j.lowestMidi} highestMidi={j.highestMidi} engine={j.engine}
+            isTesting={j.isTesting} setIsTesting={j.setIsTesting}
+            samples={j.samples} setSamples={j.setSamples} setFeedback={j.setFeedback}
+            onCompleteStaircase={j.onCompleteStaircase} t={t}
           />
         )}
 

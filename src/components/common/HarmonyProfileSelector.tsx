@@ -16,6 +16,8 @@ interface HarmonyProfileSelectorProps {
 export const HarmonyProfileSelector: React.FC<HarmonyProfileSelectorProps> = ({ config, onChange, disabled }) => {
   const { t } = useLanguage();
   const [isOpen, setIsOpen] = useState(false);
+  const [openUpward, setOpenUpward] = useState(false);
+  const [alignRight, setAlignRight] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -27,6 +29,19 @@ export const HarmonyProfileSelector: React.FC<HarmonyProfileSelectorProps> = ({ 
     if (isOpen) window.addEventListener('mousedown', handleClickOutside);
     return () => window.removeEventListener('mousedown', handleClickOutside);
   }, [isOpen]);
+
+  const handleToggle = () => {
+    if (disabled) return;
+    if (!isOpen && containerRef.current) {
+      const rect = containerRef.current.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const spaceAbove = rect.top;
+      setOpenUpward(spaceBelow < 310 && spaceAbove > spaceBelow);
+      const spaceRight = window.innerWidth - rect.right;
+      setAlignRight(spaceRight < 270 && rect.left > spaceRight);
+    }
+    setIsOpen((prev) => !prev);
+  };
 
   const profiles: { id: HarmonyProfileId; label: string }[] = [
     { id: 'maracatu', label: t('harmonyProfileMaracatu') },
@@ -42,7 +57,7 @@ export const HarmonyProfileSelector: React.FC<HarmonyProfileSelectorProps> = ({ 
       <button
         type="button"
         disabled={disabled}
-        onClick={() => setIsOpen((prev) => !prev)}
+        onClick={handleToggle}
         className={`px-2.5 py-1 font-mono font-bold flex items-center gap-1.5 border rounded cursor-pointer transition-colors ${
           config.enabled
             ? 'border-amber-600 bg-amber-500/20 text-amber-800 dark:text-amber-200'
@@ -57,7 +72,11 @@ export const HarmonyProfileSelector: React.FC<HarmonyProfileSelectorProps> = ({ 
       </button>
 
       {isOpen && (
-        <div className="absolute left-0 mt-1.5 w-64 p-3 cordel-card shadow-lg z-50 flex flex-col gap-2.5 rounded animate-in fade-in zoom-in-95">
+        <div
+          className={`absolute ${alignRight ? 'right-0' : 'left-0'} ${
+            openUpward ? 'bottom-full mb-2 origin-bottom' : 'top-full mt-1.5 origin-top'
+          } w-64 p-3 pb-4 cordel-card shadow-2xl z-50 flex flex-col gap-2.5 rounded max-h-[calc(100vh-160px)] overflow-y-auto cordel-scrollbar animate-in fade-in zoom-in-95`}
+        >
           <div className="flex items-center justify-between pb-1.5 border-b border-[var(--cordel-border-sub)]">
             <span className="font-bold text-[11px] text-amber-700 dark:text-amber-400 tracking-wider uppercase">{t('harmonyTitle')}</span>
             <label className="flex items-center gap-1.5 cursor-pointer text-[11px]">
@@ -67,7 +86,7 @@ export const HarmonyProfileSelector: React.FC<HarmonyProfileSelectorProps> = ({ 
                 onChange={(e) => onChange({ ...config, enabled: e.target.checked })}
                 className="accent-amber-500 cursor-pointer"
               />
-              <span className="font-bold">{config.enabled ? 'ON' : 'OFF'}</span>
+              <span className="font-bold text-theme-ink">{config.enabled ? 'ON' : 'OFF'}</span>
             </label>
           </div>
 
@@ -78,14 +97,14 @@ export const HarmonyProfileSelector: React.FC<HarmonyProfileSelectorProps> = ({ 
                 key={id}
                 type="button"
                 onClick={() => onChange({ ...config, profile: id })}
-                className={`px-2 py-1 text-left text-[11px] font-mono flex items-center justify-between border rounded cursor-pointer ${
+                className={`px-2 py-1 text-left text-[11px] font-mono flex items-center justify-between border rounded cursor-pointer transition-colors ${
                   config.profile === id
-                    ? 'border-amber-500/70 bg-amber-500/20 text-amber-800 dark:text-amber-200 font-bold'
-                    : 'cordel-btn'
+                    ? 'border-amber-500 bg-[#9a3412] !text-white font-bold shadow-sm'
+                    : 'cordel-btn hover:border-amber-500/50'
                 }`}
               >
                 <span>{label}</span>
-                {config.profile === id && <Check className="w-3 h-3 text-amber-600 dark:text-amber-400" />}
+                {config.profile === id && <Check className="w-3 h-3 text-amber-200 stroke-[3]" />}
               </button>
             ))}
           </div>
@@ -106,7 +125,7 @@ export const HarmonyProfileSelector: React.FC<HarmonyProfileSelectorProps> = ({ 
             />
           </div>
 
-          <label className="flex items-center gap-2 cursor-pointer text-[10.5px] font-mono text-[var(--cordel-secondary-text)] pt-1">
+          <label className="flex items-center gap-2 cursor-pointer text-[10.5px] font-mono text-theme-ink font-bold pt-1 select-none">
             <input
               type="checkbox"
               checked={Boolean(config.muteBass)}

@@ -1,7 +1,6 @@
 /**
  * AmbitusWizardStepStaircase.tsx
- * Étape 4 de l'Ambitus : Visualisation 5 marches, écoute en cascade (0.6s/note)
- * et chant guidé note par note (1.8s/marche avec synthé continu). Strictement < 145 lignes.
+ * Étape 4 de l'Ambitus : Visualisation 5 marches, écoute en cascade et chant guidé (< 135 lignes).
  */
 import React, { useState, useMemo, useEffect } from 'react';
 import { Volume2, Play, Check } from 'lucide-react';
@@ -83,7 +82,7 @@ export const AmbitusWizardStepStaircase: React.FC<AmbitusWizardStepStaircaseProp
   };
 
   return (
-    <div className="space-y-3">
+    <div className="flex flex-col space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
         <p className="text-[var(--cordel-text)]">{t('ambitusStaircaseDesc')}</p>
         <button
@@ -94,7 +93,6 @@ export const AmbitusWizardStepStaircase: React.FC<AmbitusWizardStepStaircaseProp
         </button>
       </div>
 
-      {/* 5 Marches d'escalier interactives */}
       <div className="grid grid-cols-5 gap-1.5 p-2 bg-[var(--cordel-subcard-bg)] border border-[var(--cordel-border-sub)] rounded">
         {plan.steps.map((st, idx) => {
           const isActive = activeStepIdx === idx;
@@ -118,13 +116,11 @@ export const AmbitusWizardStepStaircase: React.FC<AmbitusWizardStepStaircaseProp
         })}
       </div>
 
-      {/* Graphe de hauteur */}
       <AmbitusPitchGraph mode="staircase" targetMidi={lowestMidi} samples={samples} staircaseSteps={plan.steps} />
 
-      {/* Bouton de lancement de l'escalier */}
       <button
         type="button" disabled={isTesting} onClick={handleSingStaircase}
-        className="w-full py-2.5 cordel-btn-primary font-bold text-xs flex items-center justify-center gap-2 cursor-pointer shadow-md select-none rounded"
+        className="w-full sm:w-auto sm:min-w-[260px] px-6 py-2.5 self-center cordel-btn-primary font-bold text-xs flex items-center justify-center gap-2 cursor-pointer shadow-md select-none rounded"
       >
         <Play className="w-4 h-4 fill-current" />
         <span>

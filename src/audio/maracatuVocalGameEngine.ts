@@ -5,7 +5,7 @@
  * Strictement < 135 lignes.
  */
 
-import { getSharedAudioContext } from './sharedAudioContext';
+import { getSharedAudioContext, registerAudioKillSwitch, stopAllActiveAudioEngines } from './sharedAudioContext';
 import { playSingleSynthNote, type SynthScheduledNode } from './synthVoiceHelper';
 import { scheduleWoodClick } from './metronomeAudioNodes';
 import { detectRealtimePitch } from './realtimePitchDetector';
@@ -60,6 +60,8 @@ export class MaracatuVocalGameEngine {
     onTick: (tick: GameLiveTick) => void, onComplete: (res: VocalGameEvaluation) => void
   ): Promise<void> {
     this.stop();
+    stopAllActiveAudioEngines('maracatu-game');
+    registerAudioKillSwitch('maracatu-game', () => this.stop());
     const ctx = await getSharedAudioContext();
     this.micStream = await navigator.mediaDevices.getUserMedia({
       audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false },

@@ -1,12 +1,13 @@
 /**
  * useVocalTransportStore.ts
- * Centralisation de l'état de transport studio, raccourcis DAW et permissions rôle (< 120 lignes).
- * Implémenté via un micro-store pub/sub et useSyncExternalStore (0 dépendance externe).
+ * Centralisation de l'état de transport studio, raccourcis DAW et permissions rôle (< 125 lignes).
+ * Implémenté via un micro-store pub/sub et useSyncExternalStore avec sélecteur atomique.
  */
 import { useSyncExternalStore } from 'react';
 import { getInitialRoleMode } from '../utils/vocalPermissions';
+import { stopAllActiveAudioEngines } from '../audio/sharedAudioContext';
 
-export type LivretType = 'prise' | 'melodia' | 'treino';
+export type LivretType = 'structure' | 'prise' | 'calage' | 'melodia' | 'treino' | 'reglages';
 export type ViewRoleMode = 'studio' | 'eleve';
 export type TreinoSubTab = 'ambitus' | 'warmup' | 'posture_diction' | 'chanter_toada';
 
@@ -53,11 +54,11 @@ export interface VocalTransportState {
 
 const listeners = new Set<() => void>();
 const notify = () => listeners.forEach((fn) => fn());
-
+const subscribe = (cb: () => void) => { listeners.add(cb); return () => listeners.delete(cb); };
 const initialMode = getInitialRoleMode();
 
 let state: VocalTransportState = {
-  activeLivret: initialMode === 'eleve' ? 'treino' : 'prise',
+  activeLivret: initialMode === 'eleve' ? 'treino' : 'structure',
   viewRoleMode: initialMode,
   treinoSubTab: 'ambitus',
   isRecording: false,
@@ -66,49 +67,64 @@ let state: VocalTransportState = {
   activeMidiDeviceName: null,
   handlers: {},
 
-  setTreinoSubTab: (tab: TreinoSubTab) => { state = { ...state, treinoSubTab: tab }; notify(); },
-
+  setTreinoSubTab: (tab: TreinoSubTab) => {
+    if (state.treinoSubTab === tab) return;
+    state = { ...state, treinoSubTab: tab };
+    notify();
+  },
   setActiveLivret: (livret: LivretType) => {
+    if (state.activeLivret === livret) return;
     if (state.viewRoleMode === 'eleve' && livret !== 'treino') return;
-    state = { ...state, activeLivret: livret };
+    stopAllActiveAudioEngines();
+    state = { ...state, activeLivret: livret, isPlaying: false, isRecording: false };
     notify();
   },
   setViewRoleMode: (mode: ViewRoleMode) => {
+    const nextLivret = mode === 'eleve' ? 'treino' : state.activeLivret;
+    if (state.viewRoleMode === mode && state.activeLivret === nextLivret) return;
+    const livretChanged = state.activeLivret !== nextLivret;
+    if (livretChanged) stopAllActiveAudioEngines();
     state = {
-      ...state,
-      viewRoleMode: mode,
-      activeLivret: mode === 'eleve' ? 'treino' : state.activeLivret,
+      ...state, viewRoleMode: mode, activeLivret: nextLivret,
+      isPlaying: livretChanged ? false : state.isPlaying,
+      isRecording: livretChanged ? false : state.isRecording,
     };
     notify();
   },
-  setIsRecording: (rec: boolean) => { state = { ...state, isRecording: rec }; notify(); },
-  setIsPlaying: (playing: boolean) => { state = { ...state, isPlaying: playing }; notify(); },
+  setIsRecording: (rec: boolean) => {
+    if (state.isRecording === rec) return;
+    state = { ...state, isRecording: rec };
+    notify();
+  },
+  setIsPlaying: (playing: boolean) => {
+    if (state.isPlaying === playing) return;
+    state = { ...state, isPlaying: playing };
+    notify();
+  },
   setMidiConnection: (connected: boolean, deviceName: string | null = null) => {
+    if (state.isMidiConnected === connected && state.activeMidiDeviceName === deviceName) return;
     state = { ...state, isMidiConnected: connected, activeMidiDeviceName: deviceName };
     notify();
   },
-
   registerHandlers: (newHandlers: Partial<LivretTransportHandlers>) => {
-    state = { ...state, handlers: { ...state.handlers, ...newHandlers } };
-    notify();
+    state.handlers = { ...state.handlers, ...newHandlers };
     return () => {
       const next = { ...state.handlers };
       for (const k of Object.keys(newHandlers) as (keyof LivretTransportHandlers)[]) {
         if (next[k] === newHandlers[k]) delete next[k];
       }
-      state = { ...state, handlers: next };
-      notify();
+      state.handlers = next;
     };
   },
-
   triggerPlayPause: () => {
     if (state.isRecording) state.handlers.toggleRecord?.();
     else state.handlers.togglePlay?.();
   },
-  triggerStop: () => state.handlers.stop?.(),
+  triggerStop: () => { stopAllActiveAudioEngines(); state.handlers.stop?.(); },
   triggerRecord: () => {
-    if (state.activeLivret !== 'prise') state.setActiveLivret('prise');
-    setTimeout(() => state.handlers.toggleRecord?.(), state.activeLivret !== 'prise' ? 50 : 0);
+    const needsSwitch = state.activeLivret !== 'prise';
+    if (needsSwitch) state.setActiveLivret('prise');
+    setTimeout(() => state.handlers.toggleRecord?.(), needsSwitch ? 60 : 0);
   },
   triggerSeek: (deltaSec: number) => state.handlers.seekRelative?.(deltaSec),
   triggerLoop: () => state.handlers.toggleLoop?.(),
@@ -120,11 +136,7 @@ let state: VocalTransportState = {
 };
 
 export function useVocalTransportStore<T = VocalTransportState>(selector?: (s: VocalTransportState) => T): T {
-  const cur = useSyncExternalStore(
-    (cb) => { listeners.add(cb); return () => listeners.delete(cb); },
-    () => state
-  );
-  return selector ? selector(cur) : (cur as unknown as T);
+  return useSyncExternalStore(subscribe, () => (selector ? selector(state) : (state as unknown as T)));
 }
 
 useVocalTransportStore.getState = () => state;

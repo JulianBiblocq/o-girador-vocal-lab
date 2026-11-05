@@ -1,7 +1,7 @@
 /**
  * toadaTxtReconstitutor.ts
- * Reconstitution fidèle du format .txt depuis la Frise Conducteur (< 120 lignes).
- * Gère la soudure syllabique des pas MIDI, tenues ───, anacrouses (+), liaisons (/) et Puxador (*gras*).
+ * Reconstitution 100% fidèle du format .txt (POSER LES TEMPS) depuis la Frise Conducteur (< 130 lignes).
+ * Format canonique : 1 ligne = 1 carte (#1..#N), zéro "/ (suite ...)", préservation intégrale de rawLineCode.
  */
 import type { ToadaProject, VocalPatternItem } from '../types/toadaProject.types';
 import type { VocalStepData } from '../types/vocalPack.types';
@@ -30,10 +30,10 @@ export function extractPatternLyrics(pattern: VocalPatternItem): { text: string;
 
   let text = '';
   const midiLyrics = stitchSyllablesFromSteps([...(pattern.anacrusisSteps || []), ...(pattern.mainSteps || [])]);
-  if (midiLyrics.trim()) {
-    text = midiLyrics;
-  } else if (pattern.assignedLyricsText?.trim()) {
+  if (pattern.assignedLyricsText?.trim()) {
     text = pattern.assignedLyricsText.trim();
+  } else if (midiLyrics.trim()) {
+    text = midiLyrics;
   } else {
     text = pattern.name || 'Mesure';
   }
@@ -43,12 +43,18 @@ export function extractPatternLyrics(pattern: VocalPatternItem): { text: string;
 
 export function toadaToCleanHtml(rawTxtCode: string): string {
   if (!rawTxtCode || typeof rawTxtCode !== 'string') return '';
-  const paras = rawTxtCode.split(/\r?\n\s*\r?\n/).map(p => p.trim()).filter(Boolean);
+  const paras = rawTxtCode.split(/\r?\n\s*\r?\n/).map((p) => p.trim()).filter(Boolean);
   const htmlParas: string[] = [];
 
   for (const p of paras) {
-    const lines = p.split(/\r?\n/).map(l => {
-      let clean = l.replace(/^\s*[+/]\s*/, '').replace(/\[[^\]]+\]/g, '').trim();
+    const lines = p.split(/\r?\n/).map((l) => {
+      let clean = l
+        .replace(/^\s*[+/]\s*/, '')
+        .replace(/\[[^\]]+\]/g, '')
+        .replace(/(^|\s|\*)\+\s+/g, '$1')
+        .replace(/_/g, ' ')
+        .replace(/\s{2,}/g, ' ')
+        .trim();
       clean = clean.replace(/\*([^*]+)\*/g, '<strong>$1</strong>');
       return clean;
     }).filter(Boolean);
@@ -59,45 +65,72 @@ export function toadaToCleanHtml(rawTxtCode: string): string {
   return htmlParas.join('\n');
 }
 
+function normalizeWordsOnly(str: string): string {
+  return str
+    .replace(/\[[^\]]+\]/g, '')
+    .replace(/<(?!(\/?u\b))[^>]*>/gi, '')
+    .replace(/[\*_]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
+}
+
+function applyRoleAsterisks(line: string, role: 'puxador' | 'coro'): string {
+  let sigPrefix = '';
+  let body = line.trim();
+  const sigMatch = body.match(/^(\[sig:[^\]]+\]\s*)/i);
+  if (sigMatch) {
+    sigPrefix = sigMatch[1];
+    body = body.slice(sigMatch[0].length).trim();
+  }
+  const stripped = body.replace(/^\*+|\*+$/g, '').trim();
+  return role === 'puxador' ? `${sigPrefix}*${stripped}*` : `${sigPrefix}${stripped}`;
+}
+
+function reconstituteSinglePatternLine(pat: VocalPatternItem): string {
+  const { text, hasAnacrusis } = extractPatternLyrics(pat);
+
+  // 1. Si rawLineCode existe et que le texte n'a pas été réécrit, on préserve 100% des ancres d'Organizador
+  if (pat.rawLineCode && normalizeWordsOnly(pat.rawLineCode) === normalizeWordsOnly(text)) {
+    return applyRoleAsterisks(pat.rawLineCode, pat.role);
+  }
+
+  // 2. Si timeAnchors existe, on reconstruit la ligne avec ses pastilles [1]..[12] et _
+  if (pat.timeAnchors && pat.timeAnchors.length > 0) {
+    const built = pat.timeAnchors
+      .map((a) => (a.isRest || a.isInitialRest || a.isSustainedHold || !a.textSlice ? `[${a.beat}]_ ` : `[${a.beat}]${a.textSlice} `))
+      .join('')
+      .trim();
+    if (built) return applyRoleAsterisks(built, pat.role);
+  }
+
+  // 3. Repli : construction d'une ligne structurée avec le compte exact de mesures [1]
+  const chordsStr = formatMeasureChordsString(pat.harmonyGrid?.measures?.[0]);
+  const chordsPrefix = chordsStr ? `${chordsStr} ` : '';
+  const startAnchor = hasAnacrusis ? `[3]${text} [1]_` : `[1]${text}`;
+  const extraMeasures = Array.from({ length: Math.max(0, (pat.measuresCount || 1) - 1) }, () => '[1]_ [2]_ [3]_ [4]_').join(' ');
+  const fullLine = `${chordsPrefix}${startAnchor}${extraMeasures ? ' ' + extraMeasures : ''}`.trim();
+  return applyRoleAsterisks(fullLine, pat.role);
+}
+
 export function reconstituteToadaTxt(project: ToadaProject): { rawTxtCode: string; cleanHtml: string } {
-  const measuresBlocks: string[] = [];
+  const lines: string[] = [];
   const patMap = new Map<string, VocalPatternItem>(project.patterns.map((p) => [p.id, p]));
 
-  for (const slot of project.slots) {
-    const patPux = slot.puxadorPatternId ? patMap.get(slot.puxadorPatternId) : null;
-    const patCoro = slot.coroPatternId ? patMap.get(slot.coroPatternId) : null;
-
-    if (patPux && patCoro) {
-      // Mesure mixte tuilée
-      const puxInfo = extractPatternLyrics(patPux);
-      const coroInfo = extractPatternLyrics(patCoro);
-      const anaPrefix = puxInfo.hasAnacrusis ? '+ ' : '';
-      const puxChords = formatMeasureChordsString(patPux.harmonyGrid?.measures?.[0]);
-      const coroChords = formatMeasureChordsString(patCoro.harmonyGrid?.measures?.[0]);
-      const chordsPrefix = puxChords ? `${puxChords} ` : (coroChords ? `${coroChords} ` : '');
-      measuresBlocks.push(`${anaPrefix}${chordsPrefix}*${puxInfo.text}* ${coroInfo.text}`);
-    } else {
-      const activePat = patPux || patCoro;
-      if (!activePat) continue;
-      const { text, hasAnacrusis } = extractPatternLyrics(activePat);
-      const prefix = hasAnacrusis ? '+ ' : '';
-      const formattedText = activePat.role === 'puxador' ? `*${text}*` : text;
-      const chordsStr = formatMeasureChordsString(activePat.harmonyGrid?.measures?.[0]);
-      const chordsPrefix = chordsStr ? `${chordsStr} ` : '';
-
-      measuresBlocks.push(`${prefix}${chordsPrefix}${formattedText}`);
-
-      // Si le pattern s'étend sur plusieurs mesures, émettre les mesures liées (/)
-      const mCount = activePat.measuresCount || 1;
-      for (let m = 2; m <= mCount; m++) {
-        const mChords = formatMeasureChordsString(activePat.harmonyGrid?.measures?.[m - 1]);
-        const mChordsPrefix = mChords ? `${mChords} ` : '';
-        measuresBlocks.push(`${mChordsPrefix}/ (suite ${activePat.name})`);
-      }
+  if (project.slots && project.slots.length > 0) {
+    for (const slot of project.slots) {
+      const patPux = slot.puxadorPatternId ? patMap.get(slot.puxadorPatternId) : null;
+      const patCoro = slot.coroPatternId ? patMap.get(slot.coroPatternId) : null;
+      if (patPux) lines.push(reconstituteSinglePatternLine(patPux));
+      if (patCoro) lines.push(reconstituteSinglePatternLine(patCoro));
+    }
+  } else {
+    for (const pat of project.patterns) {
+      lines.push(reconstituteSinglePatternLine(pat));
     }
   }
 
-  const rawTxtCode = measuresBlocks.join('\n\n');
+  const rawTxtCode = lines.join('\n');
   const cleanHtml = toadaToCleanHtml(rawTxtCode);
   return { rawTxtCode, cleanHtml };
 }

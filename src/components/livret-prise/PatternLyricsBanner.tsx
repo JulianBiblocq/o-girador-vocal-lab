@@ -49,7 +49,7 @@ export const PatternLyricsBanner: React.FC = () => {
     <div className="cordel-card p-2 sm:p-2.5 flex flex-col gap-1.5 rounded">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-1.5 min-w-0">
-          <span className={`px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider rounded ${isPuxador ? 'bg-role-puxador text-[var(--cordel-text)]' : 'bg-role-coro text-[var(--cordel-text)]'}`}>
+          <span className={`px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider rounded ${isPuxador ? 'bg-role-puxador text-white' : 'bg-role-coro text-white'}`}>
             {isPuxador ? t('rolePuxador') : t('roleCoro')}
           </span>
           <span className="text-[11px] font-mono font-bold text-[var(--cordel-secondary-text)] truncate">

@@ -28,13 +28,13 @@ export function drawMelodyneRegions(
   } = opts;
   if (!regions || regions.length === 0 || totalDurationSec <= 0) return;
 
+  const tGridStart = hasAnacrusis ? 0 : (t1OffsetSec ?? 0.15);
   const beatDur = bpm ? 60 / bpm : (hasAnacrusis && beatsPerMeasure > 0 ? anacrusisDurationSec / beatsPerMeasure : 0.6);
-  const totalBeats = Math.max(1, Math.round(totalDurationSec / beatDur));
+  const totalBeats = Math.max(1, Math.round((totalDurationSec - tGridStart - 0.25) / beatDur));
   const gridDur = totalBeats * beatDur;
-  const t1Offset = t1OffsetSec ?? (hasAnacrusis ? 0 : 0.15);
 
   const secToX = (sec: number) => {
-    const rel = hasAnacrusis ? sec : (sec - t1Offset);
+    const rel = sec - tGridStart;
     return Math.max(0, Math.min(width, (rel / gridDur) * width));
   };
 
@@ -78,9 +78,9 @@ export function drawMelodyneRegions(
     ctx.fill();
 
     // 4. Badge récapitulatif si zone sélectionnée
-    if (isSelected && w > 85) {
-      const badgeText = `🎯 ${r.pitchCenterPct}%  📏 ${r.flattenPct}%`;
-      const badgeW = 92, badgeX = xIn + (w - badgeW) / 2;
+    if (isSelected && w > 105) {
+      const badgeText = `🎯${r.pitchCenterPct}% ⚓${r.driftCorrectionPct ?? 80}% 📏${r.flattenPct}%`;
+      const badgeW = 122, badgeX = xIn + (w - badgeW) / 2;
       ctx.fillStyle = 'rgba(0, 0, 0, 0.80)';
       ctx.fillRect(badgeX, 2, badgeW, 14);
       ctx.strokeStyle = '#f59e0b';

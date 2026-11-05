@@ -1,10 +1,11 @@
 /**
  * ActiveToadaLexiconStrip.tsx
- * Bandeau interactif du vocabulaire de la Toada active avec écoute et liaison aux cartes sonores (< 110 lignes).
+ * Bandeau interactif du vocabulaire de la Toada active avec écoute et liaison aux cartes sonores (< 90 lignes).
  */
 import React, { useCallback } from 'react';
 import type { ToadaLexiconEntry } from '../../types/toadaLexicon.types';
 import type { SoundCardId } from '../../data/portugueseSoundCards';
+import { useLanguage } from '../../i18n/LanguageContext';
 import { Volume2, BookOpen } from 'lucide-react';
 
 interface Props {
@@ -20,6 +21,8 @@ export const ActiveToadaLexiconStrip: React.FC<Props> = ({
   onSelectCard,
   onOpenLexiconModal,
 }) => {
+  const { t } = useLanguage();
+
   const handleSpeak = useCallback((mot: string, e: React.MouseEvent) => {
     e.stopPropagation();
     if (!('speechSynthesis' in window)) return;
@@ -36,7 +39,7 @@ export const ActiveToadaLexiconStrip: React.FC<Props> = ({
     <div className="cordel-card p-3 text-xs font-mono space-y-2">
       <div className="flex items-center justify-between gap-2 border-b border-[var(--cordel-border-sub)] pb-1.5">
         <span className="font-bold text-[11px] uppercase tracking-wider text-[#9a3412] dark:text-[#f4a261] flex items-center gap-1.5">
-          ⭐ Vocabulaire & Diction du Chant ({entries.length})
+          {t('activeLexiconTitle', { count: entries.length })}
         </span>
         <button
           type="button"
@@ -44,7 +47,7 @@ export const ActiveToadaLexiconStrip: React.FC<Props> = ({
           className="cordel-btn px-2 py-0.5 text-[10px] rounded flex items-center gap-1 cursor-pointer"
         >
           <BookOpen className="w-3 h-3" />
-          <span>Fiche & Quiz</span>
+          <span>{t('activeLexiconSheetQuizBtn')}</span>
         </button>
       </div>
 
@@ -70,7 +73,7 @@ export const ActiveToadaLexiconStrip: React.FC<Props> = ({
               <button
                 type="button"
                 onClick={(e) => handleSpeak(item.mot, e)}
-                title="Écouter le mot"
+                title={t('activeLexiconListenTitle')}
                 className="cordel-btn p-1 rounded shrink-0"
               >
                 <Volume2 className="w-2.5 h-2.5" />

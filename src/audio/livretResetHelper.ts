@@ -1,6 +1,6 @@
 /**
  * livretResetHelper.ts
- * Réinitialisation complète du Livret 2 depuis le son brut sanctuarisé du Livret 1 (< 70 lignes) :
+ * Réinitialisation complète du Livret 4 depuis le son brut sanctuarisé (< 95 lignes) :
  * Recalcul neuf de la courbe YIN filtrée, purge Melodyne et ré-extraction totale des briques MIDI.
  */
 import type { VocalStepData, PitchCurvePoint, VocalPackExport } from '../types/vocalPack.types';
@@ -33,38 +33,24 @@ export interface ResetLivret1Result {
 }
 
 export function resetLivret1MelodicData(params: ResetLivret1Params): ResetLivret1Result {
-  const { rawAudio, sampleRate, totalDurationSec, activePattern, initialPack, beatsPerMeasure, measuresCount, hasAnacrusis, t1OffsetSec, smoothingLevel, tonic, scaleType } = params;
+  const { rawAudio, sampleRate, totalDurationSec, activePattern, initialPack, beatsPerMeasure, measuresCount, hasAnacrusis, smoothingLevel, tonic, scaleType } = params;
 
-  // 1. Extraction neuve depuis le son brut sanctuarisé (YIN filtré + sanitizer anti-stalactites)
   const freshCurve = extractContinuousPitchCurve(rawAudio, {
-    sampleRate,
-    totalDurationSec,
-    trimStartSec: 0,
-    trimEndSec: totalDurationSec,
-    tessitura: activePattern.tessitura,
+    sampleRate, totalDurationSec, trimStartSec: 0, trimEndSec: totalDurationSec, tessitura: activePattern.tessitura,
   });
 
-  // 2. Quantification totale MIDI avec forçage de déverrouillage
+  const cleanT1 = hasAnacrusis ? beatsPerMeasure * (60 / (initialPack.metadata.bpm || 88)) : 0.15;
   const q = quantizePitchToSteps({
-    pitchCurve: freshCurve,
-    bpm: initialPack.metadata.bpm,
-    beatsPerMeasure,
-    measuresCount,
-    beatResolutions: initialPack.metadata.beatResolutions,
-    trimStartSec: 0,
-    trimEndSec: totalDurationSec,
-    hasAnacrusis,
-    t1OffsetSec,
-    smoothingLevel,
-    tonic,
-    scaleType,
-    pcm: rawAudio,
-    sampleRate,
+    pitchCurve: freshCurve, bpm: initialPack.metadata.bpm, beatsPerMeasure, measuresCount,
+    beatResolutions: initialPack.metadata.beatResolutions, trimStartSec: 0, trimEndSec: totalDurationSec,
+    hasAnacrusis, t1OffsetSec: cleanT1, smoothingLevel, tonic, scaleType,
+    timeAnchors: activePattern.timeAnchors, pcm: rawAudio, sampleRate,
   });
 
   const rawSteps = hasAnacrusis ? [...q.anacrusisSteps, ...q.gridSteps] : q.gridSteps;
-  const newSteps = activePattern.assignedLyricsText
-    ? applyLyricsSyllablesToSteps(rawSteps, activePattern.assignedLyricsText)
+  const stepsPerBeat = initialPack.metadata.beatResolutions?.[0] || 4;
+  const newSteps = (activePattern.assignedLyricsText || activePattern.timeAnchors?.length)
+    ? applyLyricsSyllablesToSteps(rawSteps, activePattern.assignedLyricsText, activePattern.timeAnchors, beatsPerMeasure, stepsPerBeat)
     : rawSteps;
   const anacLen = hasAnacrusis ? q.anacrusisSteps.length : 0;
 

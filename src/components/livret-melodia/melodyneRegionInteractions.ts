@@ -15,17 +15,18 @@ export interface RegionHitResult {
 export function findRegionHandleAt(
   x: number,
   width: number,
-  totalDurationSec: number,
+  gridDur: number,
   regions: MelodyneRegion[],
-  handleTolerancePx = 8
+  handleTolerancePx = 8,
+  tGridStart = 0
 ): RegionHitResult | null {
-  if (!regions || regions.length === 0 || totalDurationSec <= 0 || width <= 0) return null;
+  if (!regions || regions.length === 0 || gridDur <= 0 || width <= 0) return null;
 
   // Priorité aux poignées IN et OUT des régions
   for (let i = regions.length - 1; i >= 0; i--) {
     const r = regions[i];
-    const xIn = (r.startSec / totalDurationSec) * width;
-    const xOut = (r.endSec / totalDurationSec) * width;
+    const xIn = ((r.startSec - tGridStart) / gridDur) * width;
+    const xOut = ((r.endSec - tGridStart) / gridDur) * width;
 
     if (Math.abs(x - xIn) <= handleTolerancePx) return { regionId: r.id, handle: 'in' };
     if (Math.abs(x - xOut) <= handleTolerancePx) return { regionId: r.id, handle: 'out' };
@@ -38,8 +39,9 @@ export function createNewMelodyneRegion(
   startSec: number,
   endSec: number,
   totalDurationSec: number,
-  initialPitchCenter = 50,
-  initialFlatten = 50
+  initialPitchCenter = 65,
+  initialFlatten = 20,
+  initialDriftCorrection = 80
 ): MelodyneRegion {
   const safeStart = Math.max(0, Math.min(startSec, endSec));
   const safeEnd = Math.min(totalDurationSec, Math.max(startSec, endSec));
@@ -51,6 +53,7 @@ export function createNewMelodyneRegion(
     startSec: Math.round(safeStart * 1000) / 1000,
     endSec: Math.round(clampedEnd * 1000) / 1000,
     pitchCenterPct: initialPitchCenter,
+    driftCorrectionPct: initialDriftCorrection,
     flattenPct: initialFlatten,
   };
 }

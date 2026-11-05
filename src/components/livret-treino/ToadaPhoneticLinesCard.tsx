@@ -68,7 +68,7 @@ export const ToadaPhoneticLinesCard: React.FC<Props> = ({ phrases, activeCardId 
     setPlayingKey(key);
 
     const pat = phrase.pattern;
-    const match = pat?.variants ? selectBestAudioVariant(pat.variants, speed / 100, 0, pat.baseBpm ?? 100) : null;
+    const match = pat?.variants ? selectBestAudioVariant(pat.variants, speed / 100, 0, pat.baseBpm ?? pat.bpm ?? 88) : null;
     const rec = match?.variant?.recordingResult ?? pat?.recordingResult ?? null;
 
     if (rec && rec.pcm.length > 0) {

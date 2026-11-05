@@ -1,47 +1,29 @@
 /**
  * pianoRollDrawer.ts
  * Rendu Canvas 2D de la grille des notes (C2..C5, subdivisions, briques, pitch, playhead).
- * Supporte le repliage de l'Élan M-1 en mode hasAnacrusis === false (< 145 lignes).
+ * Unité géométrique commune stricte : 1 pas MIDI = 1 case de la grille (< 138 lignes).
  */
 import type { PitchCurvePoint, VocalStepData } from '../../types/vocalPack.types';
 import type { PatternHarmonyGrid } from '../../types/harmony.types';
 import { drawPianoRollRows } from './pianoRollRowsDrawer';
 
 export interface DrawGridOptions {
-  width: number;
-  height: number;
-  dpr: number;
-  minMidi: number;
-  maxMidi: number;
-  rowHeight: number;
-  beatsPerMeasure: number;
-  beatResolutions: number[];
-  allSteps: VocalStepData[];
-  pitchCurve: PitchCurvePoint[];
-  totalDurationSec: number;
-  anacrusisDurationSec: number;
-  seekStartSec: number;
-  playheadSec: number;
-  isPlaying: boolean;
-  hasAnacrusis?: boolean;
-  t1OffsetSec?: number;
-  bpm?: number;
-  selectedStepIdx?: number | null;
-  harmonyGrid?: PatternHarmonyGrid;
-  pitchShiftSemitones?: number;
+  width: number; height: number; dpr: number; minMidi: number; maxMidi: number; rowHeight: number;
+  beatsPerMeasure: number; beatResolutions: number[]; allSteps: VocalStepData[]; pitchCurve: PitchCurvePoint[];
+  rawPitchCurve?: PitchCurvePoint[]; totalDurationSec: number; anacrusisDurationSec: number; seekStartSec: number;
+  playheadSec: number; isPlaying: boolean; hasAnacrusis?: boolean; t1OffsetSec?: number; bpm?: number;
+  selectedStepIdx?: number | null; harmonyGrid?: PatternHarmonyGrid; pitchShiftSemitones?: number;
 }
 
 export function drawPianoRollGrid(ctx: CanvasRenderingContext2D, opts: DrawGridOptions): void {
   const { width, height, dpr, minMidi, maxMidi, rowHeight, beatsPerMeasure, beatResolutions, allSteps, pitchCurve, totalDurationSec, anacrusisDurationSec, seekStartSec, playheadSec, isPlaying, hasAnacrusis = true, bpm, selectedStepIdx, harmonyGrid, pitchShiftSemitones } = opts;
-  ctx.save();
-  ctx.scale(dpr, dpr);
-  ctx.clearRect(0, 0, width, height);
+  ctx.save(); ctx.scale(dpr, dpr); ctx.clearRect(0, 0, width, height);
 
   const beatDur = bpm ? 60 / bpm : (hasAnacrusis && beatsPerMeasure > 0 ? anacrusisDurationSec / beatsPerMeasure : 0.6);
-  const totalBeats = Math.max(1, Math.round(totalDurationSec / beatDur));
-  const gridDur = totalBeats * beatDur;
+  const subdivPerBeat = beatResolutions[0] || 4, stepDurSec = beatDur / subdivPerBeat;
+  const totalSteps = Math.max(1, allSteps.length > 0 ? allSteps.length : Math.round(totalDurationSec / stepDurSec));
+  const stepW = width / totalSteps, gridDur = totalSteps * stepDurSec;
   const t1Offset = opts.t1OffsetSec ?? (hasAnacrusis ? 0 : 0.15);
-
   const isLight = typeof document !== 'undefined' && document.documentElement.getAttribute('data-theme') === 'light';
 
   // 1. Rangées de demi-tons et surbrillance harmonique dynamique
@@ -50,31 +32,28 @@ export function drawPianoRollGrid(ctx: CanvasRenderingContext2D, opts: DrawGridO
     isPlaying, beatsPerMeasure, beatDurationSec: beatDur, hasAnacrusis, pitchShiftSemitones,
   });
 
-  // 2. Grille temporelle & subdivisions
-  for (let b = 0; b < totalBeats; b++) {
-    const xStart = (b / totalBeats) * width, xEnd = ((b + 1) / totalBeats) * width;
-    ctx.fillStyle = b % 2 === 0
-      ? (isLight ? 'rgba(0, 0, 0, 0.015)' : 'rgba(255, 255, 255, 0.015)')
-      : (isLight ? 'rgba(0, 0, 0, 0.05)' : 'rgba(0, 0, 0, 0.12)');
-    ctx.fillRect(xStart, 0, xEnd - xStart, height);
+  // 2. Grille temporelle discrète 1:1 avec les pas MIDI
+  for (let i = 0; i < totalSteps; i++) {
+    const x = i * stepW, b = Math.floor(i / subdivPerBeat), s = i % subdivPerBeat;
+    if (s === 0) {
+      const nextBeatX = Math.min(width, (i + subdivPerBeat) * stepW);
+      ctx.fillStyle = b % 2 === 0
+        ? (isLight ? 'rgba(0, 0, 0, 0.015)' : 'rgba(255, 255, 255, 0.015)')
+        : (isLight ? 'rgba(0, 0, 0, 0.05)' : 'rgba(0, 0, 0, 0.12)');
+      ctx.fillRect(x, 0, nextBeatX - x, height);
 
-    const res = beatResolutions[b % beatsPerMeasure] || 4;
-    ctx.strokeStyle = isLight ? 'rgba(26, 26, 26, 0.10)' : 'rgba(245, 240, 230, 0.12)';
-    ctx.setLineDash([2, 3]);
-    for (let s = 1; s < res; s++) {
-      const xs = ((b + s / res) / totalBeats) * width;
-      ctx.beginPath(); ctx.moveTo(xs, 0); ctx.lineTo(xs, height); ctx.stroke();
+      const isT1 = hasAnacrusis ? (b === beatsPerMeasure) : (b === 0);
+      const isExtraEnd = (b > 0 && b % beatsPerMeasure === 0 && (i + subdivPerBeat >= totalSteps));
+      ctx.lineWidth = isT1 ? 2.5 : isExtraEnd ? 2 : b % beatsPerMeasure === 0 ? 1.5 : 1;
+      ctx.strokeStyle = isT1 ? '#d4af37' : isExtraEnd ? '#f59e0b' : b % beatsPerMeasure === 0 ? (isLight ? 'rgba(26, 26, 26, 0.35)' : 'rgba(245, 240, 230, 0.45)') : (isLight ? 'rgba(26, 26, 26, 0.15)' : 'rgba(245, 240, 230, 0.22)');
+      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, height); ctx.stroke();
+    } else {
+      ctx.strokeStyle = isLight ? 'rgba(26, 26, 26, 0.10)' : 'rgba(245, 240, 230, 0.12)';
+      ctx.setLineDash([2, 3]); ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, height); ctx.stroke(); ctx.setLineDash([]);
     }
-    ctx.setLineDash([]);
-
-    const isT1 = hasAnacrusis ? (b === beatsPerMeasure) : (b === 0);
-    ctx.lineWidth = isT1 ? 2.5 : b % beatsPerMeasure === 0 ? 1.5 : 1;
-    ctx.strokeStyle = isT1 ? '#d4af37' : b % beatsPerMeasure === 0 ? (isLight ? 'rgba(26, 26, 26, 0.35)' : 'rgba(245, 240, 230, 0.45)') : (isLight ? 'rgba(26, 26, 26, 0.15)' : 'rgba(245, 240, 230, 0.22)');
-    ctx.beginPath(); ctx.moveTo(xStart, 0); ctx.lineTo(xStart, height); ctx.stroke();
   }
 
-  // 3. Briques MIDI
-  const stepW = allSteps.length > 0 ? width / allSteps.length : 0;
+  // 3. Briques MIDI indexées sur l'unité géométrique commune stepW
   for (let i = 0; i < allSteps.length; i++) {
     const step = allSteps[i];
     if (step.active && step.note !== '───' && step.midiNumber >= minMidi && step.midiNumber <= maxMidi) {
@@ -85,23 +64,17 @@ export function drawPianoRollGrid(ctx: CanvasRenderingContext2D, opts: DrawGridO
       const cutRatio = step.melodyneStartRatio !== undefined ? step.melodyneStartRatio : 0.25;
       const cutW = Math.max(0, Math.min(w, w * cutRatio));
       const isSel = selectedStepIdx !== undefined && selectedStepIdx !== null && selectedStepIdx >= i && selectedStepIdx <= i + ties;
-      ctx.fillStyle = isSel ? '#d97706' : '#b45309';
-      ctx.strokeStyle = isSel ? '#fde047' : '#f59e0b';
-      ctx.lineWidth = isSel ? 2.5 : 1.5;
+      ctx.fillStyle = isSel ? '#d97706' : '#b45309'; ctx.strokeStyle = isSel ? '#fde047' : '#f59e0b'; ctx.lineWidth = isSel ? 2.5 : 1.5;
       ctx.beginPath(); ctx.roundRect(x, y, w, h, 3); ctx.fill(); ctx.stroke();
 
       if (cutW > 2) {
-        ctx.save();
-        ctx.beginPath(); ctx.rect(x, y, cutW, h); ctx.clip();
+        ctx.save(); ctx.beginPath(); ctx.rect(x, y, cutW, h); ctx.clip();
         ctx.fillStyle = 'rgba(0, 0, 0, 0.35)'; ctx.fillRect(x, y, cutW, h);
         ctx.strokeStyle = 'rgba(255, 255, 255, 0.16)'; ctx.lineWidth = 1;
-        for (let hx = x - h; hx < x + cutW + h; hx += 5) {
-          ctx.beginPath(); ctx.moveTo(hx, y + h); ctx.lineTo(hx + h, y); ctx.stroke();
-        }
+        for (let hx = x - h; hx < x + cutW + h; hx += 5) { ctx.beginPath(); ctx.moveTo(hx, y + h); ctx.lineTo(hx + h, y); ctx.stroke(); }
         ctx.restore();
         ctx.strokeStyle = '#38bdf8'; ctx.lineWidth = 1.5; ctx.setLineDash([2, 2]);
-        ctx.beginPath(); ctx.moveTo(x + cutW, y); ctx.lineTo(x + cutW, y + h); ctx.stroke();
-        ctx.setLineDash([]);
+        ctx.beginPath(); ctx.moveTo(x + cutW, y); ctx.lineTo(x + cutW, y + h); ctx.stroke(); ctx.setLineDash([]);
       }
 
       if (w > 12) { ctx.fillStyle = '#fde68a'; ctx.fillRect(x + w - 3, y + 2, 1.5, h - 4); }
@@ -111,16 +84,26 @@ export function drawPianoRollGrid(ctx: CanvasRenderingContext2D, opts: DrawGridO
     }
   }
 
-  // 4. Courbe de pitch
+  // 4. Filigrane rawPitchCurve (si Melodyne actif) + Courbe de pitch corrigée alignée sur gridDur
+  if (opts.rawPitchCurve && opts.rawPitchCurve !== pitchCurve && opts.rawPitchCurve.length > 1) {
+    ctx.lineWidth = 1.5; ctx.setLineDash([3, 3]);
+    ctx.strokeStyle = isLight ? 'rgba(100, 116, 139, 0.45)' : 'rgba(148, 163, 184, 0.45)';
+    for (let p = 0; p < opts.rawPitchCurve.length - 1; p++) {
+      const p1 = opts.rawPitchCurve[p], p2 = opts.rawPitchCurve[p + 1];
+      if (Math.abs(p2.timeSec - p1.timeSec) > 0.04) continue;
+      const x1 = ((hasAnacrusis ? p1.timeSec : p1.timeSec - t1Offset) / gridDur) * width, y1 = (maxMidi - p1.midiFloat) * rowHeight + rowHeight / 2;
+      const x2 = ((hasAnacrusis ? p2.timeSec : p2.timeSec - t1Offset) / gridDur) * width, y2 = (maxMidi - p2.midiFloat) * rowHeight + rowHeight / 2;
+      ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+    }
+    ctx.setLineDash([]);
+  }
   if (pitchCurve.length > 1) {
     ctx.lineWidth = 2.5;
     for (let p = 0; p < pitchCurve.length - 1; p++) {
       const p1 = pitchCurve[p], p2 = pitchCurve[p + 1];
       if (Math.abs(p2.timeSec - p1.timeSec) > 0.04) continue;
-      const t1Rel = hasAnacrusis ? p1.timeSec : (p1.timeSec - t1Offset);
-      const t2Rel = hasAnacrusis ? p2.timeSec : (p2.timeSec - t1Offset);
-      const x1 = (t1Rel / gridDur) * width, y1 = (maxMidi - p1.midiFloat) * rowHeight + rowHeight / 2;
-      const x2 = (t2Rel / gridDur) * width, y2 = (maxMidi - p2.midiFloat) * rowHeight + rowHeight / 2;
+      const x1 = ((hasAnacrusis ? p1.timeSec : p1.timeSec - t1Offset) / gridDur) * width, y1 = (maxMidi - p1.midiFloat) * rowHeight + rowHeight / 2;
+      const x2 = ((hasAnacrusis ? p2.timeSec : p2.timeSec - t1Offset) / gridDur) * width, y2 = (maxMidi - p2.midiFloat) * rowHeight + rowHeight / 2;
       ctx.strokeStyle = Math.abs(p1.midiFloat - Math.round(p1.midiFloat)) <= 0.45 ? '#10b981' : '#f59e0b';
       ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
     }
@@ -128,16 +111,12 @@ export function drawPianoRollGrid(ctx: CanvasRenderingContext2D, opts: DrawGridO
 
   // 5. Lignes de Playhead & Seek
   if (seekStartSec > 0 && (!isPlaying || playheadSec < 0)) {
-    const sRel = hasAnacrusis ? seekStartSec : (seekStartSec - t1Offset);
-    const xs = (sRel / gridDur) * width;
-    ctx.strokeStyle = '#38bdf8'; ctx.lineWidth = 1.5;
-    ctx.beginPath(); ctx.moveTo(xs, 0); ctx.lineTo(xs, height); ctx.stroke();
+    const xs = ((hasAnacrusis ? seekStartSec : seekStartSec - t1Offset) / gridDur) * width;
+    ctx.strokeStyle = '#38bdf8'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(xs, 0); ctx.lineTo(xs, height); ctx.stroke();
   }
   if (isPlaying && playheadSec >= 0) {
-    const pRel = hasAnacrusis ? playheadSec : (playheadSec - t1Offset);
-    const xp = (pRel / gridDur) * width;
-    ctx.strokeStyle = isLight ? '#1a1a1a' : '#ffffff'; ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.moveTo(xp, 0); ctx.lineTo(xp, height); ctx.stroke();
+    const xp = ((hasAnacrusis ? playheadSec : playheadSec - t1Offset) / gridDur) * width;
+    ctx.strokeStyle = isLight ? '#1a1a1a' : '#ffffff'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(xp, 0); ctx.lineTo(xp, height); ctx.stroke();
   }
   ctx.restore();
 }

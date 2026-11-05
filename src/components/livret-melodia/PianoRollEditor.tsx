@@ -1,3 +1,7 @@
+/**
+ * PianoRollEditor.tsx
+ * Éditeur Piano Roll complet avec grille d'accords synchronisée au scroll/zoom (< 140 lignes).
+ */
 import React, { useRef, useState, useEffect, useMemo, useCallback } from 'react';
 import type { PitchCurvePoint, VocalStepData, MelodyneRegion } from '../../types/vocalPack.types';
 import type { ScaleType } from '../../audio/scaleQuantizer'; import type { PatternHarmonyGrid } from '../../types/harmony.types';
@@ -9,20 +13,19 @@ import { PianoRollKeyboard } from './PianoRollKeyboard';
 import { PianoRollCanvas } from './PianoRollCanvas';
 import { PianoRollStickyHeader } from './PianoRollStickyHeader';
 import { FloatingSyllableInput } from './FloatingSyllableInput';
+import { PianoRollSyllablesRow } from './PianoRollSyllablesRow';
 import { PianoRollToolPopover } from './PianoRollToolPopover';
+import { ChordGridBar } from '../common/ChordGridBar';
 import { CordelPiano } from '../common/CordelIcons';
 import type { PianoRollTool } from './pianoRollInteractions';
 
 export interface PianoRollEditorProps {
-  allSteps: VocalStepData[]; pitchCurve: PitchCurvePoint[]; totalDurationSec: number;
-  anacrusisDurationSec: number; beatsPerMeasure: number; beatResolutions: number[]; seekStartSec: number; isPlaying: boolean;
-  tonic: string; scaleType: ScaleType; smoothingLevel: number; canUndo?: boolean; canRedo?: boolean; historyCount?: number;
-  regions?: MelodyneRegion[]; selectedRegionId?: string | null; activeTool?: PianoRollTool; onSelectTool?: (tool: PianoRollTool) => void;
-  hasAnacrusis?: boolean; bpm?: number; t1OffsetSec?: number; getPlayheadSec?: () => number; onSeek: (sec: number) => void;
-  onUndo?: () => void; onRedo?: () => void; onSetTonic: (t: string) => void; onSetScaleType: (st: ScaleType) => void;
-  onSetSmoothingLevel: (lvl: number) => void; onUpdateSteps: (newSteps: VocalStepData[], commit?: boolean) => void; onPlayNotePreview: (midi: number) => void;
-  onReExtractNotes?: () => void; onSelectRegion?: (id: string | null) => void; onAddRegion?: (start: number, end: number) => void;
-  onUpdateRegionBounds?: (id: string, start: number, end: number) => void; onDeleteSelectedRegion?: () => void; selectedStepIdx?: number | null; onSelectStep?: (idx: number | null) => void; harmonyGrid?: PatternHarmonyGrid; pitchShiftSemitones?: number; readOnly?: boolean;
+  allSteps: VocalStepData[]; pitchCurve: PitchCurvePoint[]; rawPitchCurve?: PitchCurvePoint[]; totalDurationSec: number; anacrusisDurationSec: number; beatsPerMeasure: number; beatResolutions: number[]; seekStartSec: number; isPlaying: boolean;
+  tonic: string; scaleType: ScaleType; smoothingLevel: number; canUndo?: boolean; canRedo?: boolean; historyCount?: number; regions?: MelodyneRegion[]; selectedRegionId?: string | null; activeTool?: PianoRollTool; onSelectTool?: (tool: PianoRollTool) => void;
+  hasAnacrusis?: boolean; bpm?: number; t1OffsetSec?: number; measuresCount?: number; getPlayheadSec?: () => number; onSeek: (sec: number) => void; onUndo?: () => void; onRedo?: () => void; onSetTonic: (t: string) => void; onSetScaleType: (st: ScaleType) => void;
+  onSetSmoothingLevel: (lvl: number) => void; onUpdateSteps: (newSteps: VocalStepData[], commit?: boolean) => void; onPlayNotePreview: (midi: number) => void; onReExtractNotes?: () => void; onSelectRegion?: (id: string | null) => void; onAddRegion?: (start: number, end: number) => void;
+  onUpdateRegionBounds?: (id: string, start: number, end: number) => void; onDeleteSelectedRegion?: () => void; selectedStepIdx?: number | null; onSelectStep?: (idx: number | null) => void; onBrickMoved?: (rootIdx: number, newSteps: VocalStepData[]) => void;
+  harmonyGrid?: PatternHarmonyGrid; onUpdateHarmonyGrid?: (grid: PatternHarmonyGrid) => void; pitchShiftSemitones?: number; readOnly?: boolean;
 }
 
 const ROW_HEIGHT = 20;
@@ -48,7 +51,7 @@ export const PianoRollEditor: React.FC<PianoRollEditorProps> = (p) => {
   const activeMidis = useMemo(() => p.allSteps.filter((s) => s.active && s.midiNumber > 0).map((s) => s.midiNumber), [p.allSteps]);
   const { minMidi, maxMidi } = useMemo(() => calculateTessitura(activeMidis), [activeMidis]);
   const canvasHeight = Math.max(1, maxMidi - minMidi + 1) * ROW_HEIGHT, gridWidth = Math.round(baseWidth * zoomLevel);
-  const t1OffsetSec = p.t1OffsetSec ?? getPatternT1OffsetSec(p.hasAnacrusis, p.beatsPerMeasure * (60 / (p.bpm || 60)));
+  const t1OffsetSec = p.t1OffsetSec ?? getPatternT1OffsetSec(p.hasAnacrusis, p.beatsPerMeasure * (60 / (p.bpm || 88)));
 
   useEffect(() => {
     const el = scrollRef.current; if (!el || hasAutoCentered.current) return;
@@ -59,12 +62,9 @@ export const PianoRollEditor: React.FC<PianoRollEditorProps> = (p) => {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const isInput = ['INPUT', 'TEXTAREA'].includes((document.activeElement?.tagName || '').toUpperCase());
-      if ((e.key === 'Delete' || e.key === 'Backspace') && p.selectedRegionId && !isInput) {
-        e.preventDefault(); p.onDeleteSelectedRegion?.();
-      }
+      if ((e.key === 'Delete' || e.key === 'Backspace') && p.selectedRegionId && !isInput) { e.preventDefault(); p.onDeleteSelectedRegion?.(); }
     };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+    window.addEventListener('keydown', onKey); return () => window.removeEventListener('keydown', onKey);
   }, [p.selectedRegionId, p.onDeleteSelectedRegion]);
 
   const handleConfirmText = useCallback((text: string, jumpNext: boolean) => {
@@ -89,8 +89,7 @@ export const PianoRollEditor: React.FC<PianoRollEditorProps> = (p) => {
           activeTool={activeTool} onSelectTool={setActiveTool} zoomLevel={zoomLevel} onSetZoom={setZoomLevel}
           tonic={p.tonic} onSetTonic={p.onSetTonic} scaleType={p.scaleType} onSetScaleType={p.onSetScaleType}
           smoothingLevel={p.smoothingLevel} onSetSmoothingLevel={p.onSetSmoothingLevel}
-          canUndo={p.canUndo} canRedo={p.canRedo} historyCount={p.historyCount} onUndo={p.onUndo} onRedo={p.onRedo}
-          onReExtractNotes={p.onReExtractNotes}
+          canUndo={p.canUndo} canRedo={p.canRedo} historyCount={p.historyCount} onUndo={p.onUndo} onRedo={p.onRedo} onReExtractNotes={p.onReExtractNotes}
         />
       )}
       <div className="flex items-center justify-between text-[11px] font-mono px-1">
@@ -108,36 +107,26 @@ export const PianoRollEditor: React.FC<PianoRollEditorProps> = (p) => {
               ))}
             </div>
           </div>
-        ) : (
-          <span className="text-[10px] text-theme-ink/70 hidden sm:inline">{t('pianoRollHint')}</span>
-        )}
+        ) : (<span className="text-[10px] text-theme-ink/70 hidden sm:inline">{t('pianoRollHint')}</span>)}
       </div>
-      <div ref={scrollRef} className="w-full cordel-card overflow-x-auto overflow-y-auto cordel-scrollbar max-h-[380px] rounded">
-        <div style={{ width: `${64 + gridWidth}px`, height: `${66 + canvasHeight}px` }}>
+      <div ref={scrollRef} className="w-full cordel-card overflow-x-auto overflow-y-auto cordel-scrollbar max-h-[450px] rounded">
+        <div style={{ width: `${64 + gridWidth}px`, minHeight: `${66 + canvasHeight}px` }}>
+          {p.onUpdateHarmonyGrid && (
+            <ChordGridBar harmonyGrid={p.harmonyGrid} measuresCount={p.measuresCount ?? 2} beatsPerMeasure={p.beatsPerMeasure} hasAnacrusis={p.hasAnacrusis} onUpdateGrid={p.onUpdateHarmonyGrid} alignedGridWidth={gridWidth} keyboardOffsetPx={64} />
+          )}
           <PianoRollStickyHeader
-            gridWidth={gridWidth} beatsPerMeasure={p.beatsPerMeasure} totalDurationSec={p.totalDurationSec}
-            anacrusisDurationSec={p.anacrusisDurationSec} seekStartSec={p.seekStartSec} isPlaying={p.isPlaying}
-            hasAnacrusis={p.hasAnacrusis} bpm={p.bpm} t1OffsetSec={t1OffsetSec} getPlayheadSec={p.getPlayheadSec} onSeek={p.onSeek}
-            regions={p.regions} selectedRegionId={p.selectedRegionId} onSelectRegion={p.onSelectRegion}
+            gridWidth={gridWidth} beatsPerMeasure={p.beatsPerMeasure} totalDurationSec={p.totalDurationSec} anacrusisDurationSec={p.anacrusisDurationSec} seekStartSec={p.seekStartSec} isPlaying={p.isPlaying}
+            hasAnacrusis={p.hasAnacrusis} bpm={p.bpm} t1OffsetSec={t1OffsetSec} getPlayheadSec={p.getPlayheadSec} onSeek={p.onSeek} regions={p.regions} selectedRegionId={p.selectedRegionId} onSelectRegion={p.onSelectRegion}
             onUpdateRegionBounds={p.onUpdateRegionBounds} onAddRegion={p.onAddRegion}
           />
           <div className="flex relative" style={{ width: `${64 + gridWidth}px`, height: `${canvasHeight}px` }}>
             <PianoRollKeyboard minMidi={minMidi} maxMidi={maxMidi} rowHeight={ROW_HEIGHT} onPlayNote={p.onPlayNotePreview} />
             <div className="relative" style={{ width: `${gridWidth}px`, height: `${canvasHeight}px` }}>
-              <PianoRollCanvas
-                {...p} t1OffsetSec={t1OffsetSec} readOnly={p.readOnly} width={gridWidth} height={canvasHeight} minMidi={minMidi} maxMidi={maxMidi} rowHeight={ROW_HEIGHT}
-                activeTool={activeTool} onOpenContextMenu={(x, y) => setPalettePos({ x, y })}
-                onOpenTextInput={(idx, rect) => setTextInput({ stepIndex: idx, rect })}
-              />
-              {textInput && (
-                <FloatingSyllableInput
-                  initialText={p.allSteps[textInput.stepIndex]?.syllable ?? ''}
-                  x={textInput.rect.x} y={textInput.rect.y} width={textInput.rect.w} height={textInput.rect.h}
-                  onConfirm={handleConfirmText} onCancel={() => setTextInput(null)}
-                />
-              )}
+              <PianoRollCanvas {...p} t1OffsetSec={t1OffsetSec} readOnly={p.readOnly} width={gridWidth} height={canvasHeight} minMidi={minMidi} maxMidi={maxMidi} rowHeight={ROW_HEIGHT} activeTool={activeTool} onOpenContextMenu={(x, y) => setPalettePos({ x, y })} onOpenTextInput={(idx, rect) => setTextInput({ stepIndex: idx, rect })} />
+              {textInput && (<FloatingSyllableInput initialText={p.allSteps[textInput.stepIndex]?.syllable ?? ''} x={textInput.rect.x} y={textInput.rect.y} width={textInput.rect.w} height={textInput.rect.h} onConfirm={handleConfirmText} onCancel={() => setTextInput(null)} />)}
             </div>
           </div>
+          <PianoRollSyllablesRow allSteps={p.allSteps} gridWidth={gridWidth} readOnly={p.readOnly} onUpdateSteps={p.onUpdateSteps} />
         </div>
       </div>
       {palettePos && <PianoRollToolPopover x={palettePos.x} y={palettePos.y} activeTool={activeTool} onSelectTool={setActiveTool} onClose={() => setPalettePos(null)} />}

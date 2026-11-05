@@ -19,8 +19,8 @@ export const RecordActionButton: React.FC<RecordActionButtonProps> = ({
     <button
       type="button"
       onClick={onToggleRecord}
-      className={`w-full py-3.5 px-6 cordel-btn-primary text-sm tracking-widest uppercase cursor-pointer transition-colors ${
-        isCycleActive ? 'bg-red-900 hover:bg-red-800' : ''
+      className={`w-full sm:max-w-xs min-w-[240px] mx-auto py-3 px-6 cordel-btn-primary text-xs sm:text-sm tracking-wider uppercase cursor-pointer rounded-xl shadow-md transition-all active:scale-95 flex items-center justify-center ${
+        isCycleActive ? 'bg-red-800 hover:bg-red-700 ring-2 ring-red-400 animate-pulse' : ''
       }`}
     >
       <div className="flex items-center justify-center gap-2">

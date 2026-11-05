@@ -33,26 +33,18 @@ export class MetronomeEngine {
   private ctx: AudioContext | null = null; private isRunning = false;
   private harmonyEngine = new HarmonyPlayerEngine();
   private startTime = 0; private totalDurationSec = 0; private beatDurationSec = 0;
-  private beatsPerMeasure = 4; private measuresCount = 2; private preRollMeasures = 2;
+  private beatsPerMeasure = 4; private measuresCount = 2; private preRollMeasures = 2; private hasAnacrusis = true;
   private totalBeats = 16; private completionTimerId: number | null = null;
   private onCompleteCallback: (() => void) | null = null;
   private activeNodes: (AudioNode | AudioScheduledSourceNode)[] = [];
 
-  public async setOutputDevice(deviceId: string): Promise<void> {
-    await setSharedSinkId(deviceId);
-  }
-
+  public async setOutputDevice(deviceId: string): Promise<void> { await setSharedSinkId(deviceId); }
   public async initContext(outputDeviceId?: string): Promise<AudioContext> {
     this.ctx = await getSharedAudioContext();
-    if (outputDeviceId && outputDeviceId !== 'default') {
-      await this.setOutputDevice(outputDeviceId);
-    }
+    if (outputDeviceId && outputDeviceId !== 'default') await this.setOutputDevice(outputDeviceId);
     return this.ctx;
   }
-
-  public getContext(): AudioContext | null {
-    return this.ctx;
-  }
+  public getContext(): AudioContext | null { return this.ctx; }
 
   public async startCycle(
     config: MetronomeConfig,
@@ -67,9 +59,10 @@ export class MetronomeEngine {
     this.beatsPerMeasure = getBeatsPerMeasure(config.timeSignature);
     this.beatDurationSec = 60 / config.bpm;
     this.preRollMeasures = config.preRollMeasures ?? 2;
+    this.hasAnacrusis = config.hasAnacrusis !== false;
 
-    // Décompte/écoute (preRollMeasures) + N mesures de chant
-    this.totalBeats = (this.preRollMeasures + this.measuresCount) * this.beatsPerMeasure;
+    // Décompte/écoute (preRollMeasures) + N mesures de chant + 1 temps (Temps 1 mesure suivante)
+    this.totalBeats = (this.preRollMeasures + this.measuresCount) * this.beatsPerMeasure + 1;
     this.totalDurationSec = this.totalBeats * this.beatDurationSec;
     this.startTime = externalStartTime ?? (ctx.currentTime + 0.08);
 
@@ -109,7 +102,7 @@ export class MetronomeEngine {
       isRunning: this.isRunning, ctx: this.ctx, startTime: this.startTime,
       totalDurationSec: this.totalDurationSec, beatDurationSec: this.beatDurationSec,
       beatsPerMeasure: this.beatsPerMeasure, measuresCount: this.measuresCount,
-      totalBeats: this.totalBeats, preRollMeasures: this.preRollMeasures,
+      totalBeats: this.totalBeats, preRollMeasures: this.preRollMeasures, hasAnacrusis: this.hasAnacrusis,
     });
   }
 

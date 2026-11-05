@@ -1,15 +1,15 @@
 /**
  * firebaseClient.ts
- * Initialisation Firebase SSO, Google Auth, Firestore & Storage partagé (< 130 lignes).
+ * Initialisation Firebase SSO, Google Auth, Firestore & Storage partagé (< 140 lignes).
  */
 import { signInWithCustomToken, GoogleAuthProvider, signInWithPopup, signOut, type User } from 'firebase/auth';
-import { collection, doc, getDoc, getDocs, query, limit } from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs, query, where, limit } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 import app, { auth, db } from '../firebase/config';
 import type { ToadaDocument } from '../types/toadaDocument.types';
-import type { ToadaProject } from '../types/toadaProject.types';
-import { isVaralSong, normalizeToadaDoc, mergeAndDeduplicateToadas } from '../utils/varalSongFilter';
-import { mergeWithLocalSamambaiaToadas, resolveLocalSamambaiaToada } from '../utils/samambaiaToadaResolver';
+import { type ToadaProject, DEFAULT_TOADA_BPM } from '../types/toadaProject.types';
+import { isVaralSong, normalizeToadaDoc, mergeAndDeduplicateToadas, findDocByIdOrNormalizedTitle } from '../utils/varalSongFilter';
+import { normalizeHarmonyGrid, normalizeLexiconList, normalizeQuizList } from '../utils/toadaDocNormalizer';
 
 export type { ToadaDocument };
 export const storage = getStorage(app);
@@ -20,7 +20,6 @@ export async function handleSsoUrlToken(): Promise<boolean> {
     const params = new URLSearchParams(window.location.search);
     const token = params.get('ssoToken') || params.get('token');
     if (!token) return false;
-
     await signInWithCustomToken(auth, token);
     const url = new URL(window.location.href);
     url.searchParams.delete('ssoToken');
@@ -33,15 +32,8 @@ export async function handleSsoUrlToken(): Promise<boolean> {
   }
 }
 
-export async function signInWithGoogle(): Promise<User | null> {
-  const provider = new GoogleAuthProvider();
-  const res = await signInWithPopup(auth, provider);
-  return res.user;
-}
-
-export async function logoutUser(): Promise<void> {
-  await signOut(auth);
-}
+export const signInWithGoogle = async (): Promise<User | null> => (await signInWithPopup(auth, new GoogleAuthProvider())).user;
+export const logoutUser = (): Promise<void> => signOut(auth);
 
 export async function getUserGroupId(uid: string): Promise<string | null> {
   try {
@@ -52,15 +44,19 @@ export async function getUserGroupId(uid: string): Promise<string | null> {
 }
 
 export async function fetchOrganizadorToadas(groupId?: string | null): Promise<ToadaDocument[]> {
-  const primaryDocs: ToadaDocument[] = [];
+  const primaryDocs: ToadaDocument[] = [], seenIds = new Set<string>();
+  const addSnap = (snap: any) => snap?.forEach((d: any) => {
+    if (!seenIds.has(d.id) && isVaralSong(d.data())) { seenIds.add(d.id); primaryDocs.push(normalizeToadaDoc(d.id, d.data())); }
+  });
+
   try {
-    const snap = await getDocs(query(collection(db, 'documents'), limit(150)));
-    snap.forEach((d) => {
-      const data = d.data();
-      if (isVaralSong(data)) {
-        primaryDocs.push(normalizeToadaDoc(d.id, data));
-      }
-    });
+    const docsRef = collection(db, 'documents');
+    const [s1, s2, s3] = await Promise.all([
+      getDocs(query(docsRef, where('type', '==', 'song'))).catch(() => null),
+      getDocs(query(docsRef, where('categoryId', '==', 'Toadas'))).catch(() => null),
+      getDocs(query(docsRef, limit(300))).catch(() => null),
+    ]);
+    addSnap(s1); addSnap(s2); addSnap(s3);
   } catch (err) {
     console.warn('[firebaseClient] Erreur documents :', err);
   }
@@ -69,21 +65,17 @@ export async function fetchOrganizadorToadas(groupId?: string | null): Promise<T
   const groupCandidates = Array.from(new Set([groupId, groupId?.toLowerCase(), 'Samambaia', 'samambaia'].filter(Boolean) as string[]));
   for (const gId of groupCandidates) {
     try {
-      const repSnap = await getDocs(query(collection(db, 'associations', gId, 'repertoire'), limit(100)));
+      const repSnap = await getDocs(query(collection(db, 'associations', gId, 'repertoire'), limit(150)));
       repSnap.forEach((d) => repertoireDocs.push({ id: d.id, data: d.data() }));
     } catch {}
   }
-  return mergeWithLocalSamambaiaToadas(mergeAndDeduplicateToadas(primaryDocs, repertoireDocs));
+  return mergeAndDeduplicateToadas(primaryDocs, repertoireDocs);
 }
 
-export async function fetchOrganizadorToadaById(songId: string, groupId?: string | null): Promise<ToadaDocument | null> {
-  const local = resolveLocalSamambaiaToada(songId);
+export async function fetchOrganizadorToadaById(songId: string, groupId?: string | null, songTitle?: string | null): Promise<ToadaDocument | null> {
   try {
     const docSnap = await getDoc(doc(db, 'documents', songId));
-    if (docSnap.exists() && isVaralSong(docSnap.data())) {
-      const norm = normalizeToadaDoc(docSnap.id, docSnap.data());
-      return local ? { ...norm, ...local, id: norm.id } : norm;
-    }
+    if (docSnap.exists() && isVaralSong(docSnap.data())) return normalizeToadaDoc(docSnap.id, docSnap.data());
   } catch {}
 
   const groupCandidates = Array.from(new Set([groupId, groupId?.toLowerCase(), 'Samambaia', 'samambaia'].filter(Boolean) as string[]));
@@ -91,23 +83,22 @@ export async function fetchOrganizadorToadaById(songId: string, groupId?: string
     try {
       const pSnap = await getDoc(doc(db, 'associations', gId, 'repertoire', songId));
       if (pSnap.exists()) {
-        const pData = pSnap.data();
-        const toadaDocId = pData.toadaDocId || pData.toadaId;
-        if (toadaDocId) {
-          const linked = await fetchOrganizadorToadaById(toadaDocId, groupId);
-          if (linked) {
-            linked.repertoireId = pSnap.id;
-            return linked;
-          }
+        const pData = pSnap.data(), toadaDocId = pData.toadaDocId || pData.toadaId;
+        if (toadaDocId && toadaDocId !== songId) {
+          const linked = await fetchOrganizadorToadaById(toadaDocId, groupId, songTitle);
+          if (linked) { linked.repertoireId = pSnap.id; return linked; }
         }
-        if (isVaralSong(pData)) {
-          const norm = normalizeToadaDoc(pSnap.id, pData, pSnap.id);
-          return local ? { ...norm, ...local, id: norm.id } : norm;
-        }
+        if (isVaralSong(pData)) return normalizeToadaDoc(pSnap.id, pData, pSnap.id);
       }
     } catch {}
   }
-  return local || null;
+
+  try {
+    const all = await fetchOrganizadorToadas(groupId);
+    const matched = findDocByIdOrNormalizedTitle(all, songId) || findDocByIdOrNormalizedTitle(all, songTitle);
+    if (matched) return matched;
+  } catch {}
+  return null;
 }
 
 export async function fetchToadaPackById(toadaId: string): Promise<ToadaProject | null> {
@@ -115,15 +106,23 @@ export async function fetchToadaPackById(toadaId: string): Promise<ToadaProject 
     const snap = await getDoc(doc(db, 'toada_packs', toadaId));
     if (!snap.exists()) return null;
     const d = snap.data();
+    const globalHarmonyGrid = normalizeHarmonyGrid(d.globalHarmonyGrid || d.harmonyGrid || d.metadata?.globalHarmonyGrid);
+    const resolvedBpm = Number(d.bpm || d.metadata?.bpm || d.project?.bpm || DEFAULT_TOADA_BPM);
+    const toadaMeta = d.toadaMeta || {
+      id: d.id || snap.id, titre: d.title || d.metadata?.title || 'Toada Cloud', bpmDefaut: resolvedBpm,
+      notesLexique: normalizeLexiconList(d.notesLexique || d.metadata?.notesLexique),
+      questionsQcm: normalizeQuizList(d.questionsQcm || d.metadata?.questionsQcm),
+    };
+    if (!toadaMeta.notesLexique?.length && (d.notesLexique || d.metadata?.notesLexique)) toadaMeta.notesLexique = normalizeLexiconList(d.notesLexique || d.metadata?.notesLexique);
+    if (!toadaMeta.questionsQcm?.length && (d.questionsQcm || d.metadata?.questionsQcm)) toadaMeta.questionsQcm = normalizeQuizList(d.questionsQcm || d.metadata?.questionsQcm);
+    if (globalHarmonyGrid && !toadaMeta.harmonyGrid) toadaMeta.harmonyGrid = globalHarmonyGrid;
+
     return {
-      id: d.id || snap.id,
-      title: d.title || d.metadata?.title || 'Toada Cloud',
-      bpm: d.bpm || d.metadata?.bpm || d.project?.bpm || 55,
+      id: d.id || snap.id, title: d.title || d.metadata?.title || 'Toada Cloud', bpm: resolvedBpm,
       timeSignature: d.timeSignature || d.metadata?.timeSignature || d.project?.timeSignature || '4/4',
-      patterns: d.patterns || [],
-      slots: d.slots || d.arrangementSlots || [],
-      activePatternId: (d.patterns && d.patterns[0]?.id) || 'pattern_puxador_1',
-      toadaMeta: d.toadaMeta || { id: d.id, titre: d.title, bpmDefaut: d.bpm },
+      patterns: (d.patterns || []).map((p: any, idx: number) => ({ ...p, cardIndex: p.cardIndex ?? idx, bpm: p.bpm ?? p.baseBpm ?? resolvedBpm, baseBpm: p.baseBpm ?? p.bpm ?? resolvedBpm })),
+      slots: d.slots || d.arrangementSlots || [], activePatternId: (d.patterns && d.patterns[0]?.id) || 'pattern_puxador_1',
+      toadaMeta, globalHarmonyGrid, harmonyConfig: d.harmonyConfig,
     };
   } catch (err) {
     console.error(`[firebaseClient] Erreur toada pack ${toadaId} :`, err);

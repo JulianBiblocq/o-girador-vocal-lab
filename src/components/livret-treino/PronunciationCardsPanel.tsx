@@ -1,6 +1,6 @@
 /**
  * PronunciationCardsPanel.tsx
- * Atelier 3 : Les 6 Cartes Sonores du Portugais Chanté, Vocabulaire Actif & Lexique (< 135 lignes).
+ * Atelier 3 : Les 6 Cartes Sonores du Portugais Chanté, Vocabulaire Actif & Lexique (< 125 lignes).
  */
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { useLanguage } from '../../i18n/LanguageContext';
@@ -15,8 +15,8 @@ import { detectToadaLexicon } from '../../utils/toadaLexiconDetector';
 import { registerTreinoKillSwitch } from '../../audio/maracatuVocalGameEngine';
 
 const DEFAULT_DEMO_PHRASES: ToadaPhraseEntry[] = [
-  { id: 'demo-pux', roleLabel: 'PUXADOR — Appel', originalText: 'Nagô chegou na terra com fé e axé de Xangô e Oxum', phoneticText: 'Na-gô che-gôou na tèr-ra côm fé i a-ché dji Chan-gô i O-choun' },
-  { id: 'demo-coro', roleLabel: 'CORO — Réponse', originalText: 'A Rainha da Nação e o Puxador chegaram no baque virado com o coro', phoneticText: 'A Ra-i-gna da Na-ssa-oun i ou Pou-cha-dôr che-ga-ra-oun nou ba-qui vi-ra-dou côm ou cô-rou' },
+  { id: 'demo-pux', roleLabel: 'PUXADOR', originalText: 'Nagô chegou na terra com fé e axé de Xangô e Oxum', phoneticText: 'Na-gô che-gôou na tèr-ra côm fé i a-ché dji Chan-gô i O-choun' },
+  { id: 'demo-coro', roleLabel: 'CORO', originalText: 'A Rainha da Nação e o Puxador chegaram no baque virado com o coro', phoneticText: 'A Ra-i-gna da Na-ssa-oun i ou Pou-cha-dôr che-ga-ra-oun nou ba-qui vi-ra-dou côm ou cô-rou' },
 ];
 
 export const PronunciationCardsPanel: React.FC = () => {
@@ -90,7 +90,7 @@ export const PronunciationCardsPanel: React.FC = () => {
               onClick={() => setShowOnlySongCards((prev) => !prev)}
               className={`cordel-btn px-2.5 py-1 text-xs rounded cursor-pointer ${showOnlySongCards ? 'bg-[var(--cordel-coro)] text-[#f4ecd8] border-[var(--cordel-coro)]' : ''}`}
             >
-              {showOnlySongCards ? '⭐ Dans ce chant' : '📚 Toutes les cartes (6)'}
+              {showOnlySongCards ? t('pronCardsInThisSong') : t('pronCardsAllSix')}
             </button>
             {activeCardId && (
               <button
@@ -98,7 +98,7 @@ export const PronunciationCardsPanel: React.FC = () => {
                 onClick={() => setActiveCardId(null)}
                 className="cordel-btn px-2 py-1 text-xs rounded bg-[#9a3412] text-[#f4ecd8] border-[#9a3412] cursor-pointer"
               >
-                ✕ Retirer filtre
+                {t('pronCardsClearFilter')}
               </button>
             )}
           </div>

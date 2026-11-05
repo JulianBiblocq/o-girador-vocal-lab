@@ -17,6 +17,7 @@ export interface VocalStepData {
   midiNumber: number; // Ex: 60 pour C4
   syllable?: string; // Syllabe de la Letra chantée
   syllableAttack?: boolean; // Attaque franche ou plosive détectée
+  isTie?: boolean; // Note tenue liée au pas précédent
   velocity: number; // 0..127 ou 0..1
   decay: number; // Durée relative ou millisecondes
   microtiming?: number; // Décalage fin (nudge en ms ou fraction de pas)
@@ -85,10 +86,11 @@ export interface VocalPackExport {
 /** Zone de retouche continue Melodyne libre [ In ── Out ] */
 export interface MelodyneRegion {
   id: string;
-  startSec: number;       // Point IN (en secondes sur la timeline du pattern)
-  endSec: number;         // Point OUT (en secondes sur la timeline du pattern)
-  pitchCenterPct: number; // 0 à 100 % : force de calage de la hauteur moyenne vers la note MIDI
-  flattenPct: number;     // 0 à 100 % : force d'aplatissement/stabilisation des fluctuations
-  targetMidiOverride?: number; // Optionnel : note MIDI cible forcée
+  startSec: number;             // Point IN (en secondes sur la timeline du pattern)
+  endSec: number;               // Point OUT (en secondes sur la timeline du pattern)
+  pitchCenterPct: number;       // 0 à 100 % : force de calage de la hauteur moyenne vers la note MIDI
+  driftCorrectionPct?: number;  // 0 à 100 % : force de tenue / anti-dérive lente (< 2.5 Hz), défaut 80
+  flattenPct: number;           // 0 à 100 % : force d'aplatissement/calme du vibrato rapide (4..8 Hz)
+  targetMidiOverride?: number;  // Optionnel : note MIDI cible forcée
 }
 

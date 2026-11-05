@@ -1,11 +1,17 @@
 /**
  * CuePatternSelector.tsx
- * Sélecteur compact de l'appel précédent (M-2 & M-1) pendant l'enregistrement.
+ * Sélecteur compact de l'appel précédent (M-2 & M-1) pendant l'enregistrement (< 70 lignes).
  */
 import React from 'react';
 import { useToadaProject } from '../../context/ToadaProjectContext';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { Headphones, CheckCircle2 } from 'lucide-react';
+import type { VocalPatternItem } from '../../types/toadaProject.types';
+
+function hasRecordedAudio(p?: VocalPatternItem | null): boolean {
+  if (!p) return false;
+  return Boolean(p.recordingResult?.pcm?.length || p.variants?.[p.activeVariantKey]?.recordingResult?.pcm?.length);
+}
 
 export const CuePatternSelector: React.FC<{ disabled?: boolean }> = ({ disabled = false }) => {
   const { project, activePattern, cueMode, setCueMode, getPreviousConductorPattern } = useToadaProject();
@@ -13,7 +19,7 @@ export const CuePatternSelector: React.FC<{ disabled?: boolean }> = ({ disabled 
 
   const previousPattern = getPreviousConductorPattern();
   const otherRecordedPatterns = project.patterns.filter(
-    (p) => p.id !== activePattern.id && p.recordingResult !== null && p.recordingResult.pcm.length > 0
+    (p) => p.id !== activePattern.id && hasRecordedAudio(p)
   );
 
   const effectiveCuePattern =
@@ -23,7 +29,7 @@ export const CuePatternSelector: React.FC<{ disabled?: boolean }> = ({ disabled 
       ? previousPattern
       : project.patterns.find((p) => p.id === cueMode) ?? null;
 
-  const isCueReady = effectiveCuePattern && effectiveCuePattern.recordingResult !== null;
+  const isCueReady = hasRecordedAudio(effectiveCuePattern);
 
   return (
     <div className="p-2 w-full flex flex-wrap items-center justify-between gap-2 bg-[var(--cordel-subcard-bg)] border border-[var(--cordel-border-sub)] rounded text-xs font-mono select-none">
@@ -52,7 +58,7 @@ export const CuePatternSelector: React.FC<{ disabled?: boolean }> = ({ disabled 
           ))}
         </select>
 
-        {isCueReady && (
+        {isCueReady && effectiveCuePattern && (
           <span className="flex items-center gap-1 text-[10px] font-bold text-cyan-400 bg-cyan-950/40 border border-cyan-500/40 px-1.5 py-0.5 rounded">
             <CheckCircle2 className="w-3 h-3 text-cyan-400" />
             <span>{t('cueReadyBadge', { measures: effectiveCuePattern.measuresCount })}</span>

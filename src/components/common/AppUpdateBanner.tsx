@@ -1,6 +1,6 @@
 /**
  * AppUpdateBanner.tsx
- * Bandeau non-bloquant d'actualisation de version en style Cordel (< 60 lignes).
+ * Bandeau non-bloquant d'actualisation de version en style Cordel (< 55 lignes).
  */
 import React from 'react';
 import { RefreshCw, X } from 'lucide-react';
@@ -9,7 +9,7 @@ import { useLanguage } from '../../i18n/LanguageContext';
 
 export const AppUpdateBanner: React.FC = () => {
   const { updateAvailable, reloadApp, dismissUpdate } = useAppUpdate();
-  const { locale } = useLanguage();
+  const { locale, t } = useLanguage();
 
   if (!updateAvailable) return null;
 
@@ -38,7 +38,7 @@ export const AppUpdateBanner: React.FC = () => {
         <button
           type="button"
           onClick={dismissUpdate}
-          aria-label="Fermer"
+          aria-label={t('appUpdateCloseAria')}
           className="p-1 text-[#1a1a1a] opacity-60 hover:opacity-100 transition-opacity cursor-pointer"
         >
           <X className="w-4 h-4" />

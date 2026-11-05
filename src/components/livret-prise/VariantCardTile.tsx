@@ -34,19 +34,19 @@ export const VariantCardTile: React.FC<VariantCardTileProps> = ({
       onClick={() => { if (!disabled) onSelect(); }}
       className={`p-2 text-left flex flex-col justify-between gap-1 transition-all rounded cursor-pointer select-none ${
         isActive
-          ? 'bg-[var(--cordel-terracotta-dark,#9a3412)] text-[var(--cordel-text)] border-2 border-[var(--cordel-terracotta,#c25e38)] shadow-md font-bold'
+          ? 'bg-[var(--cordel-terracotta-dark,#9a3412)] !text-white border-2 border-[var(--cordel-terracotta,#c25e38)] shadow-md font-bold'
           : 'bg-[var(--cordel-subcard-bg)] border border-[var(--cordel-border-sub)] text-[var(--cordel-text)] hover:border-[var(--cordel-accent)]/50'
       }`}
     >
       <div className="flex items-center justify-between text-[11px] leading-tight">
-        <span className={`font-bold ${isActive ? 'text-[var(--cordel-text)]' : 'text-[var(--cordel-text)]'}`}>
+        <span className={`font-bold ${isActive ? '!text-white' : 'text-[var(--cordel-text)]'}`}>
           {speedPercent} % ({bpmDisplay} BPM)
         </span>
         {onPlayPitchPreview && (
           <button
             type="button" title={`${t('listenPitch')} ${noteDisplay.noteCode}`}
             onClick={(e) => { e.stopPropagation(); onPlayPitchPreview(noteDisplay.noteCode); }}
-            className={`p-0.5 cursor-pointer ${isActive ? 'text-[var(--cordel-text)] hover:text-amber-200' : 'text-[var(--cordel-text)] hover:text-amber-500'}`}
+            className={`p-0.5 cursor-pointer ${isActive ? '!text-white hover:text-amber-200' : 'text-[var(--cordel-text)] hover:text-amber-500'}`}
           >
             <Volume2 className="w-3.5 h-3.5" />
           </button>
@@ -54,7 +54,7 @@ export const VariantCardTile: React.FC<VariantCardTileProps> = ({
       </div>
       <div
         className={`text-[10px] font-mono truncate ${
-          isActive ? 'text-amber-200 font-bold' : 'text-[var(--cordel-accent-text)] font-bold'
+          isActive ? '!text-amber-200 font-bold' : 'text-[var(--cordel-accent-text)] font-bold'
         }`}
         title={noteDisplay.label}
       >
@@ -62,11 +62,11 @@ export const VariantCardTile: React.FC<VariantCardTileProps> = ({
       </div>
       <div className="flex items-center gap-1 text-[10px] pt-0.5">
         {isRecorded ? (
-          <span className={isActive ? 'text-[var(--cordel-text)] font-bold' : 'text-[#15803d] dark:text-emerald-400 font-bold'}>
+          <span className={isActive ? '!text-white font-bold' : 'text-[#15803d] dark:text-emerald-400 font-bold'}>
             {t('variant_status_recorded')}
           </span>
         ) : (
-          <span className={isActive ? 'text-[var(--cordel-text)]/90 font-semibold' : 'text-[var(--cordel-secondary-text)] font-semibold'}>
+          <span className={isActive ? '!text-[#f4ecd8] font-bold' : 'text-[var(--cordel-secondary-text)] font-semibold'}>
             {t('variant_status_pending')}
           </span>
         )}

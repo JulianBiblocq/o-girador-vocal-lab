@@ -58,7 +58,9 @@ export function createPaddedPreviewBuffer(
   latencyOffsetMs: number,
   highPassFilterEnabled = true,
   normalizeRMS = true,
-  enableTonePolish = true
+  enableTonePolish = true,
+  rawT1OffsetSec?: number,
+  cleanT1OffsetSec?: number
 ): Float32Array {
   const totalSamples = Math.floor(totalDurationSec * sampleRate);
   const fullBuffer = new Float32Array(totalSamples);
@@ -66,9 +68,14 @@ export function createPaddedPreviewBuffer(
     rawPCM, sampleRate, trimStartSec, trimEndSec,
     latencyOffsetMs, highPassFilterEnabled, normalizeRMS, enableTonePolish
   );
-  const startSample = Math.max(0, Math.floor(trimStartSec * sampleRate));
-  const copyLen = Math.min(activeSlice.length, Math.max(0, totalSamples - startSample));
-  if (copyLen > 0) fullBuffer.set(activeSlice.subarray(0, copyLen), startSample);
+  let destStartSec = trimStartSec;
+  if (rawT1OffsetSec !== undefined && cleanT1OffsetSec !== undefined) {
+    destStartSec = cleanT1OffsetSec + (trimStartSec - rawT1OffsetSec);
+  }
+  const srcSkipSamples = destStartSec < 0 ? Math.min(activeSlice.length, Math.round(-destStartSec * sampleRate)) : 0;
+  const startSample = destStartSec < 0 ? 0 : Math.round(destStartSec * sampleRate);
+  const copyLen = Math.min(activeSlice.length - srcSkipSamples, Math.max(0, totalSamples - startSample));
+  if (copyLen > 0) fullBuffer.set(activeSlice.subarray(srcSkipSamples, srcSkipSamples + copyLen), startSample);
   return fullBuffer;
 }
 

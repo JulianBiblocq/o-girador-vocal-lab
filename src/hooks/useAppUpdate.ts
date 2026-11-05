@@ -1,6 +1,6 @@
 /**
  * useAppUpdate.ts
- * Détection de mise à jour de l'application via version.json (< 80 lignes).
+ * Détection de mise à jour de l'application via version.json (< 85 lignes).
  */
 import { useState, useEffect, useCallback } from 'react';
 
@@ -36,12 +36,22 @@ export function useAppUpdate() {
     }
   }, []);
 
-  const reloadApp = useCallback(() => {
+  const reloadApp = useCallback(async () => {
     if (remoteBuildTime) {
       try {
         localStorage.setItem(STORAGE_KEY, remoteBuildTime);
-      } catch {}
+      } catch { /* ignore */ }
     }
+    try {
+      if ('caches' in window) {
+        const keys = await caches.keys();
+        await Promise.all(keys.map((k) => caches.delete(k)));
+      }
+      if ('serviceWorker' in navigator) {
+        const regs = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(regs.map((r) => r.update()));
+      }
+    } catch { /* ignore */ }
     window.location.reload();
   }, [remoteBuildTime]);
 

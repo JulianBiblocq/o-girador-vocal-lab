@@ -10,7 +10,8 @@ import { canAccessVocalStudio } from '../../utils/vocalPermissions';
 import { useLanguage } from '../../i18n/LanguageContext';
 
 export const RoleModeSwitcher: React.FC = () => {
-  const { viewRoleMode, setViewRoleMode } = useVocalTransportStore();
+  const viewRoleMode = useVocalTransportStore((s) => s.viewRoleMode);
+  const setViewRoleMode = useVocalTransportStore((s) => s.setViewRoleMode);
   const { t } = useLanguage();
 
   if (!canAccessVocalStudio()) return null;

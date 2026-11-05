@@ -1,21 +1,16 @@
 /**
  * translationsFr.ts
- * Dictionnaire de traduction Francais pour O Girador - Atelier Vocal (sans emojis systeme).
+ * Dictionnaire de traduction Français pour O Girador — Cantador (< 130 lignes).
  */
 import type { VocalLabTranslations } from './i18n.types';
-import { slicerTranslationsFr } from './slicerTranslationsFr';
-import { toadaSheetTranslationsFr } from './toadaSheetTranslationsFr'; import { treinoSubTranslationsFr } from './treinoSubTranslationsFr'; import { variantTranslationsFr } from './variantTranslationsFr';
+import { slicerTranslationsFr } from './slicerTranslationsFr'; import { toadaSheetTranslationsFr } from './toadaSheetTranslationsFr';
+import { treinoSubTranslationsFr } from './treinoSubTranslationsFr'; import { variantTranslationsFr } from './variantTranslationsFr';
 import { tessituraTranslationsFr } from './tessituraTranslationsFr'; import { harmonyTranslationsFr } from './harmonyTranslationsFr';
-import { cloudToadaTranslationsFr } from './cloudToadaTranslationsFr';
-import { lexiconTranslationsFr } from './lexiconTranslationsFr';
+import { cloudToadaTranslationsFr } from './cloudToadaTranslationsFr'; import { lexiconTranslationsFr } from './lexiconTranslationsFr';
+import { livretNavTranslationsFr } from './livretNavTranslationsFr'; import { uiPolishTranslationsFr } from './uiPolishTranslationsFr';
 
 export const translationsFr: VocalLabTranslations = {
-  // En-tete
-  appTitle: 'O Girador — Cantador', appSubtitle: 'Atelier Vocal - Prosodie & Chant Maracatu',
-  themeToggle: 'Changer de theme (Clair / Sombre)',
-  tabLivret1: 'Livret 1 : Prise', tabLivret2: 'Livret 2 : Melodia & Letra', tabLivret3: 'Livret 3 : Entrainement',
-
-  // Jalon 4.A : Bibliotheque & Conducteur de Toada
+  appTitle: 'O Girador — Cantador', appSubtitle: 'Atelier Vocal - Prosodie & Chant Maracatu', themeToggle: 'Changer de theme (Clair / Sombre)',
   patternLibraryTitle: 'BIBLIOTHEQUE DES PATTERNS (TOADA)',
   addPuxadorPattern: 'Pattern Puxador', addCoroPattern: 'Pattern Coro', rolePuxador: 'PUXADOR', roleCoro: 'CORO', patternAudioRecorded: 'Audio', patternAudioMissing: 'Vide',
   editPatternNameTooltip: 'Renommer le pattern', deletePatternTooltip: 'Supprimer le pattern',
@@ -27,10 +22,8 @@ export const translationsFr: VocalLabTranslations = {
   scopeAll: '🌍 Tout le chant', scopeActive: '🎯 Ce bloc seul', scopeSelected: '☑ Blocs cochés ({n})', selectAll: 'Tout cocher', deselectAll: 'Tout décocher', selectPatternCheckbox: 'Sélectionner ce bloc',
   importPreconfigTitle: 'RÉGLAGES PAR DÉFAUT DU CHANT', importDefaultBpm: 'BPM :', importMeasuresPerLine: 'Mesures / ligne :', importAnacrusisDefault: 'Anacrouse :',
   btnSaveToada: 'Sauvegarder', btnSavedSuccess: 'Sauvegardé !', saveToadaTooltip: 'Sauvegarder la Toada (Ctrl+S)', toadaSavedToast: 'Toada sauvegardée avec succès !', saveAndExportMenu: 'Sauvegarder & Exporter', exportFullSongWav: 'Exporter l\'audio du chant (.wav)', wavExportSuccess: 'Chant complet exporté en .wav avec succès !',
+  export_toada_pack: 'Telecharger Pack Toada JSON', export_toada_pack_success: 'Pack Toada multi-déclinaisons prêt pour Sequenciador !',
 
-  export_toada_pack: 'Telecharger Pack Toada JSON', export_toada_pack_success: 'Pack Toada multi-declinaisons pret pour Sequenciad\'Or !',
-
-  // Jalon 4.C : Livret 3 - Entrainement Vocal & Karaoke
   trainer_scope_pattern: 'Motif actif', trainer_scope_toada: 'Toada complete (Regie)',
   trainer_role_coro: 'Je chante : CORO', trainer_role_puxador: 'Je chante : PUXADOR', trainer_role_all: 'Je chante : TOUT',
   trainer_guide_accompanied: 'Accompagne (Voix + Synthe)', trainer_guide_voice_only: 'Voix originale seule', trainer_guide_autonomous: 'Autonome (Appel-Reponse pur)',
@@ -41,24 +34,20 @@ export const translationsFr: VocalLabTranslations = {
   trainer_accuracy_badge: 'Justesse : {score} % ({ok}/{total} notes dans la cible)',
   export_student_report: 'Exporter Bilan Eleve (.json)', student_report_filename: 'bilan_entrainement_vocal',
 
-  // Balancier & Cycle de Prise
   pendulumIdleTitle: 'EN ATTENTE DU CYCLE DE PRISE', pendulumStatusIdle: 'VEILLE',
   pendulumStatusPrecount: 'PRECOMPTE : ECOUTEZ LE TEMPO (MICRO EN ATTENTE)', pendulumStatusRec: 'REC ACTIF - CHANTEZ !', pendulumSyncImpact: 'Impact synchrone',
   phasePrecount: 'DECOMPTE & TONALITE (Ecoutez : {beat} / {beats})', phaseAnacrusis: 'ANACROUSE / ELAN (Chantez si depart en levee : {beat} / {beats})',
   phaseSinging: 'CHANT : MESURE {current} / {total} (TEMPS {beat} / {beats})', phaseCompletedTitle: 'CYCLE TERMINE (PUNCH-OUT)',
 
-  // Livret 1 - Metrique & Enregistrement
   metricTitle: 'Metrique & Tempo', timeSignature: 'Signature Rythmique', tempoBpm: 'Tempo (BPM)', measuresCount: 'Mesures Chant', subdivisions: 'Subdivisions',
   elanAnacrusis: 'Elan (M-1)', measure1: 'M1 (T1)', measureAbbr: 'M', btnStartRecording: 'ENREGISTRER LA VOIX (1 M ELAN + {measures} M CHANT)',
   btnStopRecording: "ARRETER L'ENREGISTREMENT", recordBtnStop: "ARRETER L'ENREGISTREMENT", measureUnitShort: '{n} M',
 
-  // Livret 1 - Ecoute & Repere
   listeningModeTitle: "Mode d'ecoute & Repere", modeHeadphones: 'Avec Casque (Clic + Guide)', modeVisual: 'Sans Casque (Silencieux)',
   referencePitch: 'Note de repere (Diapason)', octave: 'Octave', octaveShort: 'Oct {oct}', testPitch: 'Tester', clickVolumeLabel: 'VOLUME (CLIC)',
   note_C: 'Do (C)', note_Cs: 'Do# (C#)', note_D: 'Re (D)', note_Ds: 'Re# (D#)', note_E: 'Mi (E)', note_F: 'Fa (F)', note_Fs: 'Fa# (Fs)', note_G: 'Sol (G)', note_Gs: 'Sol# (Gs)', note_A: 'La (A)', note_As: 'La# (As)', note_B: 'Si (B)',
   solfege_C: 'Do', solfege_Cs: 'Do#', solfege_D: 'Ré', solfege_Ds: 'Ré#', solfege_E: 'Mi', solfege_F: 'Fa', solfege_Fs: 'Fa#', solfege_G: 'Sol', solfege_Gs: 'Sol#', solfege_A: 'La', solfege_As: 'La#', solfege_B: 'Si',
 
-  // Livret 1 - Materiel & Calibration
   audioDevices: 'Peripheriques Audio', soundCardDevices: 'CARTE SON & PERIPHERIQUES', devicePanelTitle: 'CARTE SON & PERIPHERIQUES',
   connected: 'CONNECTE', deviceConnectedBadge: 'CONNECTE', refresh: 'Actualiser', deviceRefreshBtn: 'Actualiser', authorizeAudio: 'Autoriser Audio',
   micInputPureDirect: 'Entree Micro (Pure Direct)', deviceMicInputLabel: 'Entree Micro (Pure Direct)', headphonesOutputDirect: 'Sortie Casque / Ecoute (Routing direct)', deviceOutputLabel: 'Sortie Casque / Ecoute (Routing direct)',
@@ -70,9 +59,9 @@ export const translationsFr: VocalLabTranslations = {
   calibRetryPing: 'Reessayer Auto-Ping', calibCancelTooltip: 'Annuler', calibStepListen: 'Ecoutez le tempo (4 bips)...', calibStepClap: 'Tapez dans vos mains sur chaque bip ({n}/8)!',
   calibStepCompute: 'Calcul de la latence...', calibClapBadge: 'CLAP {n}/8', calibAutoTestBadge: 'AUTO-TEST',
 
-  // Livret 1 - Onde & Trim
   waveformTitle: "Editeur de Forme d'Onde & Normalisation", trimStartFlag: 'DEBUT', trimEndFlag: 'FIN',
   trimHelpNotice: 'Glissez les poignées Début et Fin pour couper les respirations : calage rythmique 100 % verrouillé.',
+  calageAnchorT1Label: 'Ancre T1',
   zoomSeeStart: 'Voir Debut', zoomSeeEnd: 'Voir Fin', zoomComplete: '1x (Complet)',
   zoomInTitle: 'Zoomer (Ctrl + Molette avant)', zoomOutTitle: 'Dezoomer (Ctrl + Molette arriere)',
   zoomSeeStartTitle: 'Centrer la vue sur la poignee Debut', zoomSeeEndTitle: 'Centrer la vue sur la poignee Fin',
@@ -81,7 +70,6 @@ export const translationsFr: VocalLabTranslations = {
   anacrusisLabel: 'Anacrouse', anacrusisBeats: '{beats} tps', cleanDurationLabel: 'Duree utile :',
   stopTake: 'Stop', rerecordTake: 'Refaire', normalizedVolume: 'Volume normalise (-16 LUFS)',
 
-  // Livret 2 - Outils Piano Roll & Gammes
   toolPointer: 'Deplacer / Ecrire', toolGlue: 'Coller', toolCut: 'Couper', toolErase: 'Gomme', toolText: 'Texte',
   undo: 'Annuler (Ctrl+Z)', redo: 'Retablir (Ctrl+Y)', scaleLabel: 'Gamme', smoothingLabel: 'Lissage',
   smoothingFine: 'Fin', smoothingWide: 'Large',
@@ -89,9 +77,8 @@ export const translationsFr: VocalLabTranslations = {
   rulerMeasures: 'MESURES', rulerBeats: 'TEMPS', rulerElan: 'ELAN (M-1)', rulerMeasure1: 'M1',
   pianoRollHint: "Clic Droit = Palette d'outils - Regle cliquable = Seek",
 
-  // Livret 2 - Transport & Letra
   modeIsolatedVoice: 'Voix seule', modeSynthesizer: 'Synthe seul', modeDuo: 'Duo (Voix + Synthe)',
-  metronomeClick: 'Clic metronome', backToRecording: 'Retour a la Prise', downloadPack: 'Pack JSON',
+  metronomeClick: 'Clic metronome', backToRecording: 'Retour a la Prise', downloadPack: 'Pack JSON', stopPlayback: '■ ARRÊTER LA LECTURE',
   letraTitle: 'LETRA DA TOADA (Paroles & Alignement)', alignBtn: 'Aligner', syllableCount: 'syllabes detectees',
   syntaxGuide: 'Syntaxe : tiret (-) ou (--) pour melisme, apostrophe (\') ou (_) pour elision.',
   letraNoActiveNotes: 'Aucune note active detectee.', letraSpaceBadge: 'Espace', letraTiedBadge: '- Lie',
@@ -101,30 +88,25 @@ export const translationsFr: VocalLabTranslations = {
   footerPack: 'Standard VocalPackExport v1.0 - Puxador / Coro',
   listenPitch: "Écouter", doubleClickRename: "Double-clic pour renommer", puxadorSectionTitle: "Puxador", coroSectionTitle: "Coro", midiLockedTake1Notice: "Notes MIDI verrouillées sur la Prise 1",
 
-  // Livret 2 - Correction Vocale (Melodyne)
   melodyneTitle: 'CORRECTION VOCALE (MELODYNE)', melodyneSliderLabel: 'Ajuster la voix aux briques MIDI : {percent} %',
   melodynePresetRaw: '0 % Brute', melodynePresetNatural: '50 % Naturel', melodynePresetLocked: '100 % Calé', melodyneLinkedHint: 'Liaison active : déplacer une brique ajuste la voix', melodyneProcessing: 'Recalcul audio en cours...',
 
-  // Conducteur - Miroir & Synchronisation
   mirrorToCoro: '⇄ Coro', mirrorToPuxador: '⇄ Puxador', mirrorToCoroTooltip: 'Copier et synchroniser ce pattern vers le Coro', mirrorToPuxadorTooltip: 'Copier et synchroniser ce pattern vers le Puxador',
   syncBadge: '🔗 Sync : {source}', unlinkTooltip: 'Dissocier pour éditer séparément',
 
-  // Jalon 4.H - Découpe Melodyne & Gestion de Pack
   toolMelodyneCut: 'Découpe Melodyne', toolMelodyneCutTooltip: "Découper l'attaque (voix naturelle) sans scinder la note MIDI",
-  melodyneAttackSlider: "Préserver l'attaque : {percent} %", reExtractNotes: '↺ Repartir du Livret 1 (Son & Notes)',
-  reExtractNotesTooltip: "Annule les retouches Melodyne et MIDI pour retrouver le son d'origine du Livret 1 et ré-extraire les notes à neuf",
-  reExtractNotesConfirm: "Voulez-vous repartir du Livret 1 ? Les retouches Melodyne seront annulées et les briques MIDI ré-extraites depuis le son brut d'origine (les paroles saisies seront conservées).",
+  melodyneAttackSlider: "Préserver l'attaque : {percent} %", reExtractNotes: "🥁 Recalquer Rythme & Tenues sur l'Onde",
+  reExtractNotesTooltip: "Recalcule fidèlement les briques MIDI et les tenues de notes (isTie) calées sur la courbe verte pour Sequenciador",
+  reExtractNotesConfirm: "Recalquer les briques MIDI et les tenues de notes fidèlement sur la courbe verte de l'onde ?",
   reExtractSuccessToast: "Son et notes réinitialisés d'après le Livret 1",
   openPack: 'Ouvrir Pack (.json)', openPackTooltip: 'Charger et modifier un projet ou pack vocal JSON',
   exportPack: 'Exporter Pack (.json)', exportPackTooltip: 'Télécharger la Toada complète et toutes les déclinaisons audio',
   packLoadSuccess: 'Pack chargé avec succès !', packLoadError: 'Erreur lors de la lecture du fichier JSON',
 
-  // Dialogues Cordel Asynchrones
   dialogConfirm: 'Confirmer', dialogCancel: 'Annuler', dialogOk: 'OK', dialogAlertTitle: 'Information', dialogConfirmTitle: 'Confirmation',
   deletePatternConfirm: 'Voulez-vous vraiment supprimer le pattern', deletePatternTitle: 'Supprimer le pattern',
   resetRecordingConfirm: 'Voulez-vous ré-enregistrer cette prise ? L\'enregistrement actuel sera perdu.', resetRecordingTitle: 'Ré-enregistrer la prise',
 
-  // Jalon 4.J - Zones Melodyne Libres [ In ── Out ]
   melodynePitchCenter: '🎯 Justesse (Centrer) : {percent} %', melodyneFlatten: '📏 Stabilité (Aplatir) : {percent} %',
   melodyneCreateZoneBtn: 'Créer Zone In/Out', melodyneWholePhraseBtn: '+ Zone sur toute la phrase',
   melodyneDeleteZoneBtn: '✕ Supprimer Zone', melodyneResetZoneBtn: '↺ Réinitialiser (0 %)',
@@ -137,7 +119,6 @@ export const translationsFr: VocalLabTranslations = {
   melodynePurgeToast: 'Son brut du Livret 1 rétabli (zones Melodyne purgées)',
   pwaInstallBtn: 'Installer',
 
-  ...cloudToadaTranslationsFr,
-  ...lexiconTranslationsFr,
+  ...cloudToadaTranslationsFr, ...lexiconTranslationsFr, ...livretNavTranslationsFr, ...uiPolishTranslationsFr,
   ...slicerTranslationsFr, ...toadaSheetTranslationsFr, ...treinoSubTranslationsFr, ...variantTranslationsFr, ...tessituraTranslationsFr, ...harmonyTranslationsFr,
 };

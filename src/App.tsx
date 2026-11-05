@@ -1,12 +1,11 @@
 /**
  * App.tsx
- * Point d'entrée de O Girador - Atelier Vocal (Oficina Vocal) avec i18n bilingue [ FR | BR ],
- * Bibliothèque de Patterns nommables (Puxador/Coro) et Frise Conducteur sur 1 seule ligne Desktop.
+ * Point d'entrée de O Girador — Cantador avec navigation 5 livrets + ⚙️ Réglages (< 135 lignes).
  */
 import React, { useState, useEffect } from 'react';
 import { LanguageProvider, useLanguage } from './i18n/LanguageContext';
 import { ToadaProjectProvider } from './context/ToadaProjectContext';
-import { LivretPrise } from './components/livret-prise/LivretPrise';
+import { AudioHardwareProvider } from './context/AudioHardwareContext';
 import { BrandHeaderLogo } from './components/header/BrandHeaderLogo';
 import { ProjectSelectorBar } from './components/header/ProjectSelectorBar';
 import { RoleModeSwitcher } from './components/header/RoleModeSwitcher';
@@ -14,6 +13,8 @@ import { UserAvatarMenu } from './components/header/UserAvatarMenu';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { CordelDialogModal } from './components/ui/CordelDialogModal';
 import { AppUpdateBanner } from './components/common/AppUpdateBanner';
+import { MainLivretNavbar } from './components/navigation/MainLivretNavbar';
+import { LivretContentRenderer } from './components/navigation/LivretContentRenderer';
 import { useGlobalTransportShortcuts } from './hooks/useGlobalTransportShortcuts';
 import { useVocalLabMidi } from './hooks/useVocalLabMidi';
 import { usePwaInstall } from './hooks/usePwaInstall';
@@ -40,7 +41,7 @@ const AppContent: React.FC = () => {
   }, [theme]);
 
   useEffect(() => {
-    let pattern = 'damas';
+    let pattern = 'gravure';
     try {
       const saved = localStorage.getItem('ogirador-wallpaper');
       if (saved === 'none' || saved === 'rosace' || saved === 'damas' || saved === 'gravure') {
@@ -58,20 +59,14 @@ const AppContent: React.FC = () => {
     return () => window.removeEventListener('contextmenu', blockContextMenu);
   }, []);
 
-  const toggleTheme = () => {
-    setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
-  };
+  const toggleTheme = () => setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
 
   return (
     <div className="relative min-h-screen bg-theme-bg text-theme-ink flex flex-col p-2.5 sm:p-4 md:p-6 transition-colors duration-200 overflow-x-hidden">
-      <div
-        className="fixed inset-0 pointer-events-none z-0 wallpaper-surface-bg"
-        aria-hidden="true"
-      />
+      <div className="fixed inset-0 pointer-events-none z-0 wallpaper-surface-bg" aria-hidden="true" />
       <header className="relative z-40 w-full max-w-none mb-3 cordel-card p-3 sm:p-4 flex flex-wrap items-center justify-between gap-3">
         <BrandHeaderLogo />
 
-        {/* Controles a droite : Barre Projet Cloud, Rôle Studio/Élève, Binome [ FR | BR ] & Theme */}
         <div className="flex items-center gap-2.5 flex-wrap">
           <ProjectSelectorBar />
           <RoleModeSwitcher />
@@ -120,7 +115,8 @@ const AppContent: React.FC = () => {
       </header>
 
       <main className="relative z-10 flex-1 flex flex-col items-center justify-start w-full max-w-none">
-        <LivretPrise />
+        <MainLivretNavbar />
+        <LivretContentRenderer />
       </main>
     </div>
   );
@@ -130,9 +126,11 @@ export const App: React.FC = () => (
   <ErrorBoundary>
     <LanguageProvider>
       <ToadaProjectProvider>
-        <AppContent />
-        <CordelDialogModal />
-        <AppUpdateBanner />
+        <AudioHardwareProvider>
+          <AppContent />
+          <CordelDialogModal />
+          <AppUpdateBanner />
+        </AudioHardwareProvider>
       </ToadaProjectProvider>
     </LanguageProvider>
   </ErrorBoundary>

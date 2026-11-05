@@ -1,0 +1,84 @@
+/**
+ * LivretStructure.tsx
+ * Livret 1 : Structure & Chant (Bibliothèque, Conducteur, Grille d'accords, Paroles & Réglages Métriques) (< 90 lignes).
+ */
+import React, { useState } from 'react';
+import { useToadaProject } from '../../context/ToadaProjectContext';
+import { useAudioHardware } from '../../context/AudioHardwareContext';
+import { PatternLibraryBar } from '../conductor/PatternLibraryBar';
+import { ToadaConductorStrip } from '../conductor/ToadaConductorStrip';
+import { ChordGridBar } from '../common/ChordGridBar';
+import { PatternLyricsBanner } from '../livret-prise/PatternLyricsBanner';
+import { StructureMusicConfigPanel } from './StructureMusicConfigPanel';
+import { LatencyReminderBanner } from '../common/LatencyReminderBanner';
+import { getDefaultBeatResolutions } from '../../utils/alignmentMath';
+import { getBeatsPerMeasure } from '../../utils/musicalMath';
+import { DEFAULT_TOADA_BPM } from '../../types/toadaProject.types';
+
+export const LivretStructure: React.FC = () => {
+  const {
+    project, activePattern, updatePattern,
+    updateScopedBpm, updateScopedMeasuresCount, updateScopedHasAnacrusis,
+    updateScopedReferencePitch, updateScopedTimeSignature,
+  } = useToadaProject();
+  const { engine, selectedOutputDeviceId } = useAudioHardware();
+
+  const timeSignature = project.timeSignature || '4/4';
+  const bpm = activePattern.bpm ?? activePattern.baseBpm ?? project.bpm ?? DEFAULT_TOADA_BPM;
+  const referencePitch = activePattern.referencePitch ?? 'C4';
+  const [beatResolutions, setBeatResolutions] = useState<number[]>(() => getDefaultBeatResolutions(timeSignature));
+
+  const measuresCount = activePattern.measuresCount;
+  const hasAnacrusis = activePattern.hasAnacrusis !== false;
+  const beatsPerMeasure = getBeatsPerMeasure(timeSignature);
+
+  return (
+    <div className="flex flex-col gap-4 w-full">
+      <LatencyReminderBanner />
+
+      {/* 1. Bibliothèque de Patterns et Conducteur 2 rails */}
+      <div className="w-full grid grid-cols-1 xl:grid-cols-12 gap-4 items-stretch">
+        <div className="xl:col-span-5 h-full">
+          <PatternLibraryBar />
+        </div>
+        <div className="xl:col-span-7 h-full">
+          <ToadaConductorStrip outputDeviceId={selectedOutputDeviceId} />
+        </div>
+      </div>
+
+      {/* 2. Paroles & Grille Harmonique d'accords du pattern actif */}
+      <div className="flex flex-col gap-2">
+        <PatternLyricsBanner />
+        <div className="cordel-card p-2 rounded">
+          <ChordGridBar
+            harmonyGrid={activePattern.harmonyGrid}
+            measuresCount={measuresCount}
+            beatsPerMeasure={beatsPerMeasure}
+            hasAnacrusis={hasAnacrusis}
+            onUpdateGrid={(newGrid) => updatePattern(activePattern.id, { harmonyGrid: newGrid })}
+          />
+        </div>
+      </div>
+
+      {/* 3. Réglages musicaux (BPM, Signature, Mesures, Portée, Anacrouse, Tonalité) */}
+      <StructureMusicConfigPanel
+        timeSignature={timeSignature}
+        onTimeSignatureChange={(sig) => {
+          updateScopedTimeSignature(sig);
+          setBeatResolutions(getDefaultBeatResolutions(sig));
+        }}
+        bpm={bpm}
+        onBpmChange={(v) => updateScopedBpm(v)}
+        measuresCount={measuresCount}
+        onMeasuresCountChange={(c) => updateScopedMeasuresCount(c as 1 | 2 | 3 | 4)}
+        hasAnacrusis={hasAnacrusis}
+        onHasAnacrusisChange={(has) => updateScopedHasAnacrusis(has)}
+        referencePitch={referencePitch}
+        onReferencePitchChange={(p) => updateScopedReferencePitch(p)}
+        onPlayPitchPreview={() => engine.playReferencePitchPreview(referencePitch, 1.5, selectedOutputDeviceId)}
+        beatResolutions={beatResolutions}
+        onBeatResolutionsChange={setBeatResolutions}
+      />
+    </div>
+  );
+};

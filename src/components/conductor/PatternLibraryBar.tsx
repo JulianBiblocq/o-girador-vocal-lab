@@ -7,13 +7,14 @@ import React from 'react';
 import { useToadaProject } from '../../context/ToadaProjectContext';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { PatternCardItem } from './PatternCardItem';
+import { PatternInjectionBar } from './PatternInjectionBar';
 import { confirmAsync } from '../../stores/useCordelDialogStore';
 import { ArrowLeftRight } from 'lucide-react';
 
 export const PatternLibraryBar: React.FC = () => {
   const {
     project, activePattern, setActivePatternId, addPattern, updatePattern,
-    removePattern, mirrorPatternToRole, unlinkPattern, swapAllRoles, duplicateVariation,
+    removePattern, mirrorPatternToRole, injectPatternIntoTarget, unlinkPattern, swapAllRoles, duplicateVariation,
     selectedPatternIds, toggleSelectPattern, selectAllPatterns,
   } = useToadaProject();
   const { t } = useLanguage();
@@ -21,6 +22,9 @@ export const PatternLibraryBar: React.FC = () => {
   const puxPatterns = project.patterns.filter((p) => p.role === 'puxador');
   const coroPatterns = project.patterns.filter((p) => p.role === 'coro');
   const allSelected = project.patterns.length > 0 && selectedPatternIds.length === project.patterns.length;
+  const activePuxador = activePattern.role === 'puxador'
+    ? activePattern
+    : (puxPatterns.find((p) => p.recordingResult !== null && p.recordingResult.pcm.length > 0) ?? puxPatterns[0] ?? null);
 
   const handleDeletePattern = async (id: string, name: string) => {
     const ok = await confirmAsync({
@@ -28,6 +32,16 @@ export const PatternLibraryBar: React.FC = () => {
       confirmLabel: t('dialogConfirm'), cancelLabel: t('dialogCancel'), variant: 'danger',
     });
     if (ok) removePattern(id);
+  };
+
+  const handleCardMirror = (pat: typeof project.patterns[0], targetRole: typeof project.patterns[0]['role']) => {
+    if (pat.role === 'puxador' && targetRole === 'coro' && coroPatterns.length > 0) {
+      const firstWord = (pat.name || '').trim().split(/\s+/)[0]?.toLowerCase();
+      const existingCoro = coroPatterns.find((c) => (c.name || '').trim().split(/\s+/)[0]?.toLowerCase() === firstWord) ?? coroPatterns[0];
+      injectPatternIntoTarget(pat.id, existingCoro.id);
+      return;
+    }
+    mirrorPatternToRole(pat.id, targetRole);
   };
 
   const renderCard = (pat: typeof project.patterns[0]) => {
@@ -42,7 +56,7 @@ export const PatternLibraryBar: React.FC = () => {
         onToggleSelect={() => toggleSelectPattern(pat.id)}
         onRename={(name) => updatePattern(pat.id, { name })}
         onDelete={() => handleDeletePattern(pat.id, pat.name)}
-        onMirrorToRole={(targetRole) => mirrorPatternToRole(pat.id, targetRole)}
+        onMirrorToRole={(targetRole) => handleCardMirror(pat, targetRole)}
         onDuplicateVariation={() => duplicateVariation(pat.id)}
         onUnlink={() => unlinkPattern(pat.id)} canDelete={project.patterns.length > 1}
       />
@@ -61,7 +75,7 @@ export const PatternLibraryBar: React.FC = () => {
             type="button" onClick={() => selectAllPatterns(!allSelected)}
             title={allSelected ? t('deselectAll') : t('selectAll')}
             className={`px-1.5 py-0.5 text-[9px] font-bold font-mono border cursor-pointer rounded ${
-              selectedPatternIds.length > 0 ? 'bg-amber-500/20 text-amber-300 border-amber-500/50' : 'cordel-card-sm text-[var(--cordel-text)]/70'
+              selectedPatternIds.length > 0 ? 'bg-[#b45309] text-[#f4ecd8] border-[#92400e]' : 'cordel-card-sm text-[var(--cordel-text)]/70'
             }`}
           >
             {allSelected ? t('deselectAll') : selectedPatternIds.length > 0 ? `${t('selectAll')} (${selectedPatternIds.length})` : t('selectAll')}
@@ -76,16 +90,27 @@ export const PatternLibraryBar: React.FC = () => {
         </div>
       </div>
 
+      {activePuxador && (
+        <div className="mb-1.5">
+          <PatternInjectionBar
+            sourcePattern={activePuxador}
+            coroPatterns={coroPatterns}
+            onInject={injectPatternIntoTarget}
+            onCreateMirror={(srcId) => mirrorPatternToRole(srcId, 'coro')}
+          />
+        </div>
+      )}
+
       <div className="grid grid-cols-2 gap-3 h-full">
         {/* Colonne Gauche : Puxador */}
         <div className="flex flex-col gap-1.5 min-w-0">
           <div className="flex items-center justify-between pb-1 border-b border-[var(--cordel-border-sub)]">
-            <span className="px-1.5 py-0.5 text-[9px] font-black tracking-wider uppercase bg-role-puxador text-[var(--cordel-text)] rounded">
+            <span className="px-1.5 py-0.5 text-[9px] font-black tracking-wider uppercase bg-role-puxador text-white rounded">
               {t('rolePuxador')}
             </span>
             <button
               type="button" onClick={() => addPattern('puxador')} title={`+ ${t('rolePuxador')}`}
-              className="px-2 py-0.5 text-xs font-bold font-mono bg-[#9a3412] hover:bg-[#7c2d12] text-[var(--cordel-text)] rounded flex items-center justify-center cursor-pointer"
+              className="px-2 py-0.5 text-xs font-bold font-mono bg-[#9a3412] hover:bg-[#7c2d12] text-white rounded flex items-center justify-center cursor-pointer"
             >
               +
             </button>
@@ -98,12 +123,12 @@ export const PatternLibraryBar: React.FC = () => {
         {/* Colonne Droite : Coro */}
         <div className="flex flex-col gap-1.5 min-w-0">
           <div className="flex items-center justify-between pb-1 border-b border-[var(--cordel-border-sub)]">
-            <span className="px-1.5 py-0.5 text-[9px] font-black tracking-wider uppercase bg-role-coro text-[var(--cordel-text)] rounded">
+            <span className="px-1.5 py-0.5 text-[9px] font-black tracking-wider uppercase bg-role-coro text-white rounded">
               {t('roleCoro')}
             </span>
             <button
               type="button" onClick={() => addPattern('coro')} title={`+ ${t('roleCoro')}`}
-              className="px-2 py-0.5 text-xs font-bold font-mono bg-[#0f766e] hover:bg-[#115e59] text-[var(--cordel-text)] rounded flex items-center justify-center cursor-pointer"
+              className="px-2 py-0.5 text-xs font-bold font-mono bg-[#0f766e] hover:bg-[#115e59] text-white rounded flex items-center justify-center cursor-pointer"
             >
               +
             </button>

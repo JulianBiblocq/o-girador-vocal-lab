@@ -1,15 +1,16 @@
 /**
  * toadaProject.types.ts
- * Modèle de données de la Toada : Multi-patterns, Déclinaisons Audio, Tessiture & Frise Conducteur (< 90 lignes).
+ * Modèle de données de la Toada : Multi-patterns, Déclinaisons Audio, Tessiture & Frise Conducteur (< 115 lignes).
  */
 import type { TimeSignatureString, VocalStepData, PitchCurvePoint, VocalPackExport, MelodyneRegion } from './vocalPack.types';
-import type { ToadaDocument } from './toadaDocument.types';
+import type { ToadaDocument, TimeAnchor } from './toadaDocument.types';
 import type { TessituraRange } from './tessitura.types';
 import type { PatternHarmonyGrid, HarmonyConfig } from './harmony.types';
 
 export * from './tessitura.types';
 export * from './harmony.types';
 export {
+  DEFAULT_TOADA_BPM,
   computeVariantCoverage,
   makeVariantKey,
   createDefaultVariant,
@@ -26,25 +27,36 @@ export interface VocalAudioVariantCoverage {
   maxSemitones: number;
 }
 
+export interface AudioRecordingResult {
+  pcm: Float32Array;
+  sampleRate: number;
+  t1OffsetSec?: number;
+  recordedBpm?: number;
+}
+
 export interface VocalAudioVariant {
   variantKey: string;
   speedRatio: number;
   pitchShiftSemitones: number;
   coverage: VocalAudioVariantCoverage;
-  recordingResult: { pcm: Float32Array; sampleRate: number } | null;
+  recordingResult: AudioRecordingResult | null;
   trimStartSec: number;
   trimEndSec: number;
+  t1OffsetSec?: number;
   lowCutEnabled: boolean;
   enableTonePolish?: boolean;
 }
 
 export interface VocalPatternItem {
   id: string;
+  cardIndex?: number;
+  rawLineCode?: string;
   name: string;
   role: VocalRole;
   measuresCount: 1 | 2 | 3 | 4;
   linkedSourcePatternId?: string | null;
   baseBpm?: number;
+  bpm?: number;
   referencePitch?: string;
   pitchCorrectionAmount?: number;
   rawAudioSamples?: Float32Array | null;
@@ -53,13 +65,16 @@ export interface VocalPatternItem {
   tessitura?: TessituraRange;
   variants: Record<string, VocalAudioVariant>;
   activeVariantKey: string;
-  recordingResult: { pcm: Float32Array; sampleRate: number } | null;
-  trimStartSec: number; trimEndSec: number; lowCutEnabled: boolean; enableTonePolish?: boolean;
+  recordingResult: AudioRecordingResult | null;
+  trimStartSec: number; trimEndSec: number; t1OffsetSec?: number; lowCutEnabled: boolean; enableTonePolish?: boolean;
   anacrusisSteps: VocalStepData[]; mainSteps: VocalStepData[]; pitchCurve: PitchCurvePoint[];
   pack?: VocalPackExport | null; midiLocked?: boolean; isMidiInitialized?: boolean; hasAnacrusis?: boolean;
+  hasCanonicalAlignment?: boolean;
+  anacrusisBeats?: number;
   melodyneRegions?: MelodyneRegion[]; assignedLyricsText?: string; assignedPhoneticText?: string;
   variantPitchesConfig?: VariantPitchesConfig; variantSpeedsConfig?: VariantSpeedsConfig;
   harmonyGrid?: PatternHarmonyGrid;
+  timeAnchors?: TimeAnchor[]; exitBeat?: number;
 }
 
 export interface VariantPitchesConfig {
@@ -74,6 +89,7 @@ export interface ToadaArrangementSlot {
   slotId: string;
   puxadorPatternId: string | null;
   coroPatternId: string | null;
+  advanceMeasures?: number;
 }
 
 export interface ToadaProject {

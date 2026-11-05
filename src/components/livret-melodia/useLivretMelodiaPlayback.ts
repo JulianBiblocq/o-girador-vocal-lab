@@ -38,6 +38,12 @@ export function useLivretMelodiaPlayback(props: UseLivretMelodiaPlaybackProps) {
     harmonyGrid, harmonyConfig,
   } = props;
 
+  useEffect(() => {
+    if (isPlaying && cleanPCM && cleanPCM.length > 0) {
+      player.updateVoiceBuffer(cleanPCM, sampleRate);
+    }
+  }, [cleanPCM, sampleRate, isPlaying, player]);
+
   const handleTogglePlay = useCallback(async () => {
     if (isPlaying) { player.stop(); setIsPlaying(false); return; }
     setIsPlaying(true);
