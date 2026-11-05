@@ -1,9 +1,11 @@
 /**
  * pitchStepSegmentation.ts
- * Découpage de la courbe de pitch verte en segments mélodiques continus (source unique de vérité).
- * Sauts francs > 1.2 demi-ton, seuil assoupli 50-60 ms, médiane MIDI exacte (< 90 lignes).
+ * Découpage de la courbe de pitch verte en segments mélodiques continus et médiane tronquée locale (< 135 lignes).
+ * Médiane tronquée à 20 % par brique (1:1 avec pitchCurve) et coupure dès >= 0.7 demi-ton.
  */
-import type { PitchCurvePoint } from '../types/vocalPack.types';
+import type { PitchCurvePoint, VocalStepData } from '../types/vocalPack.types';
+import { midiToNoteName } from '../utils/noteUtils';
+import { snapMidiToScale, type ScaleType } from './scaleQuantizer';
 
 export interface PitchSegment {
   id: number;
@@ -20,68 +22,101 @@ export interface SegmentationOptions {
   maxTimeGapSec?: number;
 }
 
-export function segmentPitchCurve(
+export function computeTrimmedMedianMidi(
   pitchCurve: PitchCurvePoint[],
-  options?: SegmentationOptions
-): PitchSegment[] {
+  startSec: number,
+  endSec: number,
+  trimRatio = 0.2
+): { midi: number; midiFloat: number } | null {
+  if (!pitchCurve || pitchCurve.length === 0 || endSec <= startSec) return null;
+  let pts = pitchCurve.filter((p) => p.timeSec >= startSec && p.timeSec <= endSec && p.midiFloat >= 36 && p.midiFloat <= 96);
+  if (pts.length === 0) {
+    pts = pitchCurve.filter((p) => p.timeSec >= startSec - 0.018 && p.timeSec <= endSec + 0.018 && p.midiFloat >= 36 && p.midiFloat <= 96);
+  }
+  if (pts.length === 0) return null;
+
+  const sorted = pts.map((p) => p.midiFloat).sort((a, b) => a - b);
+  const n = sorted.length;
+  const trimCount = n >= 5 ? Math.floor(n * trimRatio) : (n >= 3 ? 1 : 0);
+  const central = sorted.slice(trimCount, n - trimCount);
+  const mid = Math.floor(central.length / 2);
+  const midiFloat = central.length % 2 === 0 ? (central[mid - 1] + central[mid]) / 2 : central[mid];
+  return { midi: Math.round(midiFloat), midiFloat };
+}
+
+export function recalibrateBricksToLocalPitchCurve(
+  steps: VocalStepData[],
+  pitchCurve: PitchCurvePoint[],
+  gridStartSec: number,
+  stepDurationSec: number,
+  tonic = 'C',
+  scaleType: ScaleType = 'chromatic'
+): VocalStepData[] {
+  if (!pitchCurve || pitchCurve.length === 0 || !steps.length || stepDurationSec <= 0) return steps;
+  const result = steps.map((s) => ({ ...s }));
+
+  for (let i = 0; i < result.length; i++) {
+    if (!result[i].active || result[i].note === '───') continue;
+    let endIdx = i;
+    while (endIdx + 1 < result.length && result[endIdx + 1].active && result[endIdx + 1].note === '───') endIdx++;
+
+    const startSec = gridStartSec + i * stepDurationSec;
+    const endSec = gridStartSec + (endIdx + 1) * stepDurationSec;
+    const local = computeTrimmedMedianMidi(pitchCurve, startSec, endSec, 0.2);
+    if (local) {
+      let targetMidi = local.midi;
+      if (scaleType !== 'chromatic') targetMidi = snapMidiToScale(targetMidi, tonic, scaleType);
+      result[i] = { ...result[i], midiNumber: targetMidi, note: midiToNoteName(targetMidi), isTie: false };
+      for (let k = i + 1; k <= endIdx; k++) {
+        result[k] = { ...result[k], midiNumber: targetMidi, note: '───', isTie: true };
+      }
+    }
+    i = endIdx;
+  }
+  return result;
+}
+
+export function segmentPitchCurve(pitchCurve: PitchCurvePoint[], options?: SegmentationOptions): PitchSegment[] {
   if (!pitchCurve || pitchCurve.length < 2) return [];
+  const minDurationSec = options?.minDurationSec ?? 0.04;
+  const pitchJumpThreshold = options?.pitchJumpThreshold ?? 0.7;
+  const maxTimeGapSec = options?.maxTimeGapSec ?? 0.065;
 
-  const minDurationSec = options?.minDurationSec ?? 0.045; // ~50 ms
-  const pitchJumpThreshold = options?.pitchJumpThreshold ?? 1.2; // coupure franche > 1.2 demi-tons
-  const maxTimeGapSec = options?.maxTimeGapSec ?? 0.065; // coupure silence / non voisé
-
-  const validPoints = pitchCurve
-    .filter((p) => p.midiFloat >= 36 && p.midiFloat <= 96)
-    .sort((a, b) => a.timeSec - b.timeSec);
-
+  const validPoints = pitchCurve.filter((p) => p.midiFloat >= 36 && p.midiFloat <= 96).sort((a, b) => a.timeSec - b.timeSec);
   if (validPoints.length < 2) return [];
 
   const rawSegments: PitchCurvePoint[][] = [];
-  let currentGroup: PitchCurvePoint[] = [validPoints[0]];
+  let currentGroup: PitchCurvePoint[] = [validPoints[0]], groupSum = validPoints[0].midiFloat;
 
   for (let i = 1; i < validPoints.length; i++) {
-    const prev = validPoints[i - 1];
-    const curr = validPoints[i];
-
+    const prev = validPoints[i - 1], curr = validPoints[i];
     const timeGap = curr.timeSec - prev.timeSec;
-    const pitchGap = Math.abs(curr.midiFloat - prev.midiFloat);
+    const frameJump = Math.abs(curr.midiFloat - prev.midiFloat);
+    const groupMean = groupSum / currentGroup.length;
+    const driftFromGroup = Math.abs(curr.midiFloat - groupMean);
 
-    // Découpage dès saut franc > 1.2 demi-ton ou trou temporel
-    if (timeGap > maxTimeGapSec || pitchGap > pitchJumpThreshold) {
+    if (timeGap > maxTimeGapSec || frameJump > pitchJumpThreshold || driftFromGroup >= Math.max(0.68, pitchJumpThreshold)) {
       if (currentGroup.length > 0) rawSegments.push(currentGroup);
-      currentGroup = [curr];
+      currentGroup = [curr]; groupSum = curr.midiFloat;
     } else {
-      currentGroup.push(curr);
+      currentGroup.push(curr); groupSum += curr.midiFloat;
     }
   }
   if (currentGroup.length > 0) rawSegments.push(currentGroup);
 
   const segments: PitchSegment[] = [];
   let segId = 0;
-
   for (const group of rawSegments) {
-    const first = group[0];
-    const last = group[group.length - 1];
-    const duration = last.timeSec - first.timeSec + 0.01;
-
-    // Filtre des micro-bruits < 50ms tout en préservant toutes les notes courtes
-    if (duration < minDurationSec && group.length < 3) continue;
-
-    // Médiane MIDI exacte des points verts du segment
+    const first = group[0], last = group[group.length - 1];
+    if (last.timeSec - first.timeSec + 0.01 < minDurationSec && group.length < 2) continue;
     const sorted = group.map((p) => p.midiFloat).sort((a, b) => a - b);
-    const mid = Math.floor(sorted.length / 2);
-    const medianFloat = sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid];
-    const medianMidi = Math.round(medianFloat);
-
+    const n = sorted.length, trim = n >= 5 ? Math.floor(n * 0.2) : 0, central = sorted.slice(trim, n - trim);
+    const mid = Math.floor(central.length / 2);
+    const medianFloat = central.length % 2 === 0 ? (central[mid - 1] + central[mid]) / 2 : central[mid];
     segments.push({
-      id: ++segId,
-      startSec: first.timeSec,
-      endSec: last.timeSec + 0.015,
-      points: group,
-      medianMidiFloat: Math.round(medianFloat * 100) / 100,
-      medianMidi,
+      id: ++segId, startSec: first.timeSec, endSec: last.timeSec + 0.015, points: group,
+      medianMidiFloat: Math.round(medianFloat * 100) / 100, medianMidi: Math.round(medianFloat),
     });
   }
-
   return segments;
 }

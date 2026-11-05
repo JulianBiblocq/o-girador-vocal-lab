@@ -98,7 +98,7 @@ function reconstituteSinglePatternLine(pat: VocalPatternItem): string {
   // 2. Si timeAnchors existe, on reconstruit la ligne avec ses pastilles [1]..[12] et _
   if (pat.timeAnchors && pat.timeAnchors.length > 0) {
     const built = pat.timeAnchors
-      .map((a) => (a.isRest || a.isInitialRest || a.isSustainedHold || !a.textSlice ? `[${a.beat}]_ ` : `[${a.beat}]${a.textSlice} `))
+      .map((a) => (a.isRest || a.isInitialRest || a.isSustainedHold || !a.textSlice ? `[${a.beat}]_ ` : `[${a.beat}]${a.hasLeadingRest ? '_ ' : ''}${a.textSlice} `))
       .join('')
       .trim();
     if (built) return applyRoleAsterisks(built, pat.role);

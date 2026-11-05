@@ -5,6 +5,7 @@
  */
 import type { ToadaProject, VocalPatternItem, VocalAudioVariant } from '../types/toadaProject.types';
 import { createDefaultToadaProject, DEFAULT_TOADA_BPM } from '../types/toadaProject.types';
+import { resolveFreshTimeAnchors } from './timeAnchorParser';
 
 export function decodeBase64Wav(rawB64: string): { pcm: Float32Array; sampleRate: number } | null {
   try {
@@ -75,7 +76,7 @@ export function parseToadaPack(jsonText: string): ToadaProject {
         melodyneRegions: p.melodyneRegions || [],
         assignedLyricsText: p.assignedLyricsText,
         assignedPhoneticText: p.assignedPhoneticText,
-        timeAnchors: p.timeAnchors,
+        timeAnchors: resolveFreshTimeAnchors(p.rawLineCode, p.timeAnchors, 4, p.hasAnacrusis === false, p.assignedLyricsText, data.project?.toadaMeta?.rawTxtCode || data.toadaMeta?.rawTxtCode),
         harmonyGrid: p.harmonyGrid,
         pack: null, midiLocked: true, isMidiInitialized: (p.mainSteps && p.mainSteps.length > 0),
       };

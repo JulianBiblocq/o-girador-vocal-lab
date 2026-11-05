@@ -9,6 +9,7 @@ import type { TimeAnchor } from '../types/toadaDocument.types';
 import { createPaddedPreviewBuffer, audioBufferToWavBase64 } from '../utils/wavEncoder';
 import { extractContinuousPitchCurve } from './pitchExtractor';
 import { quantizePitchToSteps } from './pitchToStepsQuantizer';
+import { recalibrateBricksToLocalPitchCurve } from './pitchStepSegmentation';
 import { applyLyricsSyllablesToSteps } from '../utils/syllableAligner';
 import { getPatternT1OffsetSec, getPatternTotalDurationSec } from '../utils/anacrusisTimingHelper';
 import { computeAlignmentMeta } from '../utils/alignmentMath';
@@ -80,9 +81,12 @@ export function extractPatternMelodicData(params: ExtractMelodicParams): Extract
 
   const rawSteps = hasAnacrusis ? [...q.anacrusisSteps, ...q.gridSteps] : q.gridSteps;
   const stepsPerBeat = beatResolutions[0] || 4;
-  const allSteps = (assignedLyricsText || (timeAnchors && timeAnchors.length > 0))
+  const alignedSteps = (assignedLyricsText || (timeAnchors && timeAnchors.length > 0))
     ? applyLyricsSyllablesToSteps(rawSteps, assignedLyricsText, timeAnchors, beatsPerMeasure, stepsPerBeat)
     : rawSteps;
+  const allSteps = recalibrateBricksToLocalPitchCurve(
+    alignedSteps, pitchCurve, hasAnacrusis ? 0 : cleanT1OffsetSec, beatDuration / stepsPerBeat, referencePitch.replace(/\d+$/, '') || 'C', 'chromatic'
+  );
   const anacCount = hasAnacrusis ? q.anacrusisSteps.length : 0;
   const anacrusisSteps = hasAnacrusis ? allSteps.slice(0, anacCount) : [];
   const mainSteps = (hasAnacrusis ? allSteps.slice(anacCount) : allSteps).map((s, idx) => ({ ...s, stepIndex: idx }));

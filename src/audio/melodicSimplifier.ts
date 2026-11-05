@@ -46,13 +46,18 @@ export function simplifyStepsToMainMelody(
     for (const a of timeAnchors) {
       if (a.beat < prevBeat && prevBeat > 0) measureOffset += beatsPerMeasure;
       prevBeat = a.beat;
-      const absBeatIdx = (typeof a.measureOffset === 'number' ? a.measureOffset * beatsPerMeasure : measureOffset) + (a.beat - 1);
-      const stepStart = m1StartStep + Math.round(absBeatIdx * subdiv);
-      if (a.isInitialRest) {
+      const stepStart = typeof a.measureOffset === 'number'
+        ? Math.round((a.measureOffset * beatsPerMeasure + (a.beat - 1)) * subdiv)
+        : (m1StartStep + Math.round((measureOffset + (a.beat - 1)) * subdiv));
+      if (a.isInitialRest || a.isRest) {
         for (let s = 0; s < subdiv; s++) forcedSilentSteps.add(stepStart + s);
       } else if (a.isSustainedHold) {
         sustainedHoldBeats.add(stepStart);
-      } else if (!a.isRest) {
+      } else if (a.hasLeadingRest) {
+        if (stepStart === 0 || !steps[stepStart - 1]?.active) forcedSilentSteps.add(stepStart);
+        else sustainedHoldBeats.add(stepStart);
+        anchorStartSteps.add(stepStart + 1);
+      } else {
         anchorStartSteps.add(stepStart);
       }
     }

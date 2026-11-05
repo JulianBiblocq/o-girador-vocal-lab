@@ -47,6 +47,7 @@ export interface TimeAnchor {
   isRest: boolean;
   isInitialRest?: boolean;
   isSustainedHold?: boolean;
+  hasLeadingRest?: boolean;
   charOffset?: number;
   textSlice?: string;
   syllables?: string[];

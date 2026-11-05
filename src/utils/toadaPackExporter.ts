@@ -25,22 +25,12 @@ export interface ExportedVariantData {
 }
 
 export interface ExportedPatternData {
-  id: string;
-  name: string;
-  role: VocalRole;
-  measuresCount: number;
-  hasAnacrusis?: boolean;
-  baseBpm?: number;
-  referencePitch?: string;
-  pitchCorrectionAmount?: number;
-  linkedSourcePatternId?: string | null;
-  activeVariantKey?: string;
-  anacrusisSteps: VocalStepData[];
-  mainSteps: VocalStepData[];
-  pitchCurve?: PitchCurvePoint[];
-  melodyneRegions?: MelodyneRegion[];
-  assignedLyricsText?: string;
-  assignedPhoneticText?: string;
+  id: string; cardIndex?: number; rawLineCode?: string; name: string; role: VocalRole;
+  measuresCount: number; hasAnacrusis?: boolean; anacrusisBeats?: number; baseBpm?: number;
+  referencePitch?: string; pitchCorrectionAmount?: number; linkedSourcePatternId?: string | null;
+  activeVariantKey?: string; anacrusisSteps: VocalStepData[]; mainSteps: VocalStepData[];
+  pitchCurve?: PitchCurvePoint[]; melodyneRegions?: MelodyneRegion[]; assignedLyricsText?: string;
+  assignedPhoneticText?: string; timeAnchors?: import('../types/toadaDocument.types').TimeAnchor[];
   harmonyGrid?: import('../types/harmony.types').PatternHarmonyGrid;
   variants: Record<string, ExportedVariantData>;
 }
@@ -95,22 +85,18 @@ export function buildToadaPack(project: ToadaProject, currentPack?: VocalPackExp
       anacSteps = mainSteps.slice(0, anacCount); mainSteps = mainSteps.slice(anacCount);
     }
     return {
-      id: p.id,
-      name: p.name,
-      role: p.role,
-      measuresCount: p.measuresCount,
-      hasAnacrusis: hasAnac,
-      baseBpm: p.baseBpm,
-      referencePitch: p.referencePitch,
+      id: p.id, cardIndex: p.cardIndex, rawLineCode: p.rawLineCode,
+      name: p.name, role: p.role, measuresCount: p.measuresCount,
+      hasAnacrusis: hasAnac, anacrusisBeats: p.anacrusisBeats,
+      baseBpm: p.baseBpm, referencePitch: p.referencePitch,
       pitchCorrectionAmount: p.pitchCorrectionAmount,
       linkedSourcePatternId: p.linkedSourcePatternId,
       activeVariantKey: p.activeVariantKey,
-      anacrusisSteps: anacSteps,
-      mainSteps,
-      pitchCurve: p.pitchCurve,
+      anacrusisSteps: anacSteps, mainSteps, pitchCurve: p.pitchCurve,
       melodyneRegions: p.melodyneRegions || [],
       assignedLyricsText: p.assignedLyricsText,
       assignedPhoneticText: p.assignedPhoneticText,
+      timeAnchors: p.timeAnchors,
       harmonyGrid: p.harmonyGrid,
       variants: exportedVariants,
     };

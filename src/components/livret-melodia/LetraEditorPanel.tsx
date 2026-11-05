@@ -5,6 +5,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import type { VocalStepData } from '../../types/vocalPack.types';
 import { applyLyricsSyllablesToSteps, reconstructWordsFromSteps } from '../../utils/syllableAligner';
+import { resolveFreshTimeAnchors } from '../../utils/timeAnchorParser';
+import { recalibrateBricksToLocalPitchCurve } from '../../audio/pitchStepSegmentation';
+import { getBeatsPerMeasure } from '../../utils/musicalMath';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { CordelScroll, CordelBulb, CordelSpark } from '../common/CordelIcons';
 import { useLanguage } from '../../i18n/LanguageContext';
@@ -36,8 +39,19 @@ export const LetraEditorPanel: React.FC<LetraEditorPanelProps> = ({ allSteps, on
     onCommitHistory?.();
   };
   const handleAlign = () => {
-    const anchors = rawText.trim() === (activePattern.assignedLyricsText || '').trim() ? activePattern.timeAnchors : undefined;
-    onUpdateSteps(applyLyricsSyllablesToSteps(allSteps, rawText, anchors), true);
+    const beatsPerM = getBeatsPerMeasure(project.timeSignature);
+    const hasAnac = activePattern.hasAnacrusis !== false;
+    const isSameText = rawText.trim() === (activePattern.assignedLyricsText || '').trim();
+    const anchors = resolveFreshTimeAnchors(
+      isSameText ? activePattern.rawLineCode : rawText,
+      isSameText ? activePattern.timeAnchors : undefined,
+      beatsPerM, !hasAnac, rawText, project.toadaMeta?.rawTxtCode
+    );
+    const aligned = applyLyricsSyllablesToSteps(allSteps, rawText, anchors, beatsPerM, 4);
+    const stepDur = (60 / (activePattern.bpm ?? project.bpm ?? 88)) / 4;
+    const calibrated = recalibrateBricksToLocalPitchCurve(aligned, activePattern.pitchCurve || [], hasAnac ? 0 : 0.15, stepDur);
+    if (anchors && anchors !== activePattern.timeAnchors) updatePattern(activePattern.id, { timeAnchors: anchors });
+    onUpdateSteps(calibrated, true);
   };
   const handleSyllableChange = (stepIndex: number, text: string) => onUpdateSteps(allSteps.map((st, i) => (i === stepIndex ? { ...st, syllable: text } : st)), false);
   const handleToggleTrailingSpace = (stepIndex: number) => {

@@ -1,6 +1,5 @@
 /**
- * LivretMelodiaWorkspace.tsx
- * Espace de travail principal du Livret 4 (Melodia, Piano Roll synchronisé, Melodyne & Syllabes) (< 135 lignes).
+ * LivretMelodiaWorkspace.tsx — Espace de travail du Livret 4 (Piano Roll, Melodyne & Syllabes) (< 144 lignes).
  */
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import type { PitchCurvePoint, VocalPackExport, VocalStepData } from '../../types/vocalPack.types';
@@ -9,8 +8,10 @@ import { useStepsHistory, type LivretMelodiaSnapshot } from '../../hooks/useStep
 import { useMelodyneAudioProcessor } from '../../hooks/useMelodyneAudioProcessor';
 import { useLivretMelodiaPlayback } from './useLivretMelodiaPlayback';
 import { quantizePitchToSteps } from '../../audio/pitchToStepsQuantizer';
+import { recalibrateBricksToLocalPitchCurve } from '../../audio/pitchStepSegmentation';
 import type { ScaleType } from '../../audio/scaleQuantizer';
 import { applyLyricsSyllablesToSteps } from '../../utils/syllableAligner';
+import { resolveFreshTimeAnchors } from '../../utils/timeAnchorParser';
 import { downloadToadaPackJson } from '../../utils/toadaPackExporter';
 import { useVocalTransportStore } from '../../stores/useVocalTransportStore';
 import { PianoRollEditor } from './PianoRollEditor';
@@ -21,7 +22,7 @@ import { MelodiaNextStepFooter } from './MelodiaNextStepFooter';
 import { HarmonyProfileSelector } from '../common/HarmonyProfileSelector';
 import { DEFAULT_HARMONY_CONFIG } from '../../types/harmony.types';
 import { moveBrick, type PianoRollTool } from './pianoRollInteractions';
-import { buildUpdatedVocalPackExport } from '../../audio/livretResetHelper';
+import { buildUpdatedVocalPackExport, upgradeStalePatternStepsIfNeeded } from '../../audio/livretResetHelper';
 import { useMelodiaActions } from './useMelodiaActions';
 import { useLanguage } from '../../i18n/LanguageContext';
 
@@ -39,7 +40,7 @@ export const LivretMelodiaWorkspace: React.FC<LivretMelodiaWorkspaceProps> = ({
   const { t } = useLanguage(), { activePattern, updatePattern, project, updateHarmonyConfig } = useToadaProject();
   const [activeTool, setActiveTool] = useState<PianoRollTool>('pointer'), [selectedStepIdx, setSelectedStepIdx] = useState<number | null>(null);
   const [tonic, setTonic] = useState(() => initialPack.metadata.referencePitch?.replace(/\d+$/, '') || 'C');
-  const [scaleType, setScaleType] = useState<ScaleType>('chromatic'), [smoothingLevel, setSmoothingLevel] = useState(0.5);
+  const [scaleType, setScaleType] = useState<ScaleType>('chromatic'), [smoothingLevel, setSmoothingLevel] = useState(0.15);
 
   const rawPCM = useMemo(() => activePattern.rawAudioSamples ?? cleanPCM ?? new Float32Array(0), [activePattern.rawAudioSamples, cleanPCM]);
   const rawPitchCurve = useMemo(() => activePattern.rawPitchCurve ?? pitchCurve, [activePattern.rawPitchCurve, pitchCurve]);
@@ -48,11 +49,10 @@ export const LivretMelodiaWorkspace: React.FC<LivretMelodiaWorkspaceProps> = ({
   const activePCM = activePattern.correctedAudioSamples ?? rawPCM, harmonyConfig = project.harmonyConfig ?? DEFAULT_HARMONY_CONFIG;
   const rawDefaultSteps = initialSteps ?? [...(activePattern.anacrusisSteps || []), ...(activePattern.mainSteps || [])];
   const expectedStepsCount = ((hasAnac ? beatsPerMeasure : 0) + measuresCount * beatsPerMeasure + 1) * resPerBeat;
-  const defaultSteps = useMemo(() => {
-    if (rawDefaultSteps.length >= expectedStepsCount || rawDefaultSteps.length === 0) return rawDefaultSteps;
-    const missing = expectedStepsCount - rawDefaultSteps.length, stepDur = (60 / (initialPack.metadata.bpm || 88)) / resPerBeat;
-    return [...rawDefaultSteps, ...Array.from({ length: missing }, (_, k) => ({ stepIndex: rawDefaultSteps.length + k, active: false, note: '', midiNumber: 0, velocity: 0, decay: stepDur }))];
-  }, [rawDefaultSteps, expectedStepsCount, initialPack.metadata.bpm, resPerBeat]);
+  const defaultSteps = useMemo(() => upgradeStalePatternStepsIfNeeded({
+    rawDefaultSteps, expectedStepsCount, rawPitchCurve, activePattern, initialPack, beatsPerMeasure, measuresCount,
+    hasAnac, t1OffsetSec, resPerBeat, totalDurationSec, tonic, scaleType, rawPCM, sampleRate, rawTxtCode: project.toadaMeta?.rawTxtCode,
+  }), [rawDefaultSteps, expectedStepsCount, rawPitchCurve, activePattern, initialPack, beatsPerMeasure, measuresCount, hasAnac, t1OffsetSec, resPerBeat, totalDurationSec, tonic, scaleType, rawPCM, sampleRate, project.toadaMeta?.rawTxtCode]);
 
   const { regions, selectedRegionId, selectedRegion, displayedCurve, isProcessing, setSelectedRegionId, addRegion, addWholePhraseRegion, applyAutoSweetSpot, syncMovedBrickRegion, updateSelectedRegion, updateBounds, deleteSelected, clearAllRegions, restoreRegions } = useMelodyneAudioProcessor({
     initialRegions: activePattern.melodyneRegions || [], rawAudio: rawPCM, sampleRate, totalDurationSec, rawPitchCurve, allSteps: defaultSteps,
@@ -83,11 +83,13 @@ export const LivretMelodiaWorkspace: React.FC<LivretMelodiaWorkspaceProps> = ({
   }, [setAllSteps, initialPack, hasAnac, beatsPerMeasure, displayedCurve, anacLen, activePattern.id, updatePattern]);
 
   const recompute = useCallback((smooth: number, ton: string, sc: ScaleType) => {
-    const q = quantizePitchToSteps({ pitchCurve: rawPitchCurve, bpm: initialPack.metadata.bpm, beatsPerMeasure, measuresCount, beatResolutions: initialPack.metadata.beatResolutions, trimStartSec: 0, trimEndSec: totalDurationSec, hasAnacrusis: hasAnac, t1OffsetSec, smoothingLevel: smooth, tonic: ton, scaleType: sc, pcm: rawPCM, sampleRate, timeAnchors: activePattern.timeAnchors });
+    const anchors = resolveFreshTimeAnchors(activePattern.rawLineCode, activePattern.timeAnchors, beatsPerMeasure, !hasAnac, activePattern.assignedLyricsText, project.toadaMeta?.rawTxtCode);
+    const q = quantizePitchToSteps({ pitchCurve: rawPitchCurve, bpm: initialPack.metadata.bpm, beatsPerMeasure, measuresCount, beatResolutions: initialPack.metadata.beatResolutions, trimStartSec: 0, trimEndSec: totalDurationSec, hasAnacrusis: hasAnac, t1OffsetSec, smoothingLevel: smooth, tonic: ton, scaleType: sc, pcm: rawPCM, sampleRate, timeAnchors: anchors });
     const rawSteps = hasAnac ? [...q.anacrusisSteps, ...q.gridSteps] : q.gridSteps;
-    const steps = (activePattern.assignedLyricsText || activePattern.timeAnchors?.length) ? applyLyricsSyllablesToSteps(rawSteps, activePattern.assignedLyricsText, activePattern.timeAnchors, beatsPerMeasure, resPerBeat) : rawSteps;
+    const aligned = (activePattern.assignedLyricsText || anchors?.length) ? applyLyricsSyllablesToSteps(rawSteps, activePattern.assignedLyricsText, anchors, beatsPerMeasure, resPerBeat) : rawSteps;
+    const steps = recalibrateBricksToLocalPitchCurve(aligned, rawPitchCurve, hasAnac ? 0 : t1OffsetSec, (60 / (initialPack.metadata.bpm || 88)) / resPerBeat, ton, sc);
     commitCurrentSnapshot({ steps }); handleUpdateSteps(steps, false);
-  }, [rawPitchCurve, initialPack, beatsPerMeasure, measuresCount, totalDurationSec, hasAnac, t1OffsetSec, rawPCM, sampleRate, activePattern.assignedLyricsText, activePattern.timeAnchors, resPerBeat, commitCurrentSnapshot, handleUpdateSteps]);
+  }, [rawPitchCurve, initialPack, beatsPerMeasure, measuresCount, totalDurationSec, hasAnac, t1OffsetSec, rawPCM, sampleRate, activePattern.rawLineCode, activePattern.assignedLyricsText, activePattern.timeAnchors, project.toadaMeta?.rawTxtCode, resPerBeat, commitCurrentSnapshot, handleUpdateSteps]);
 
   const { handleReset, handleShiftOctave, handleAlignOctaveToBricks, handleDeleteSelected, handleSimplifyMelody, handleWeldSelected } = useMelodiaActions({
     rawPCM, sampleRate, totalDurationSec, activePattern, initialPack, beatsPerMeasure, measuresCount, hasAnac, t1OffsetSec, smoothingLevel, tonic, scaleType, rawPitchCurve, allSteps, selectedRegion, selectedRegionId, selectedStepIdx, regions, clearAllRegions, deleteSelected, commitCurrentSnapshot, setAllSteps, updatePattern, handleUpdateSteps, t,
@@ -99,8 +101,7 @@ export const LivretMelodiaWorkspace: React.FC<LivretMelodiaWorkspaceProps> = ({
     onMidiNote: (m: number) => {
       if (selectedStepIdx !== null) {
         const nextSteps = moveBrick(allSteps, selectedStepIdx, m);
-        handleUpdateSteps(nextSteps);
-        syncMovedBrickRegion(selectedStepIdx, nextSteps);
+        handleUpdateSteps(nextSteps); syncMovedBrickRegion(selectedStepIdx, nextSteps);
       }
     },
   }), [handleTogglePlay, player, undo, redo, handleDeleteSelected, handleSeek, totalDurationSec, seekStartSec, selectedStepIdx, allSteps, handleUpdateSteps, syncMovedBrickRegion, setIsPlaying]);
