@@ -48,6 +48,9 @@ export interface TimeAnchor {
   isInitialRest?: boolean;
   isSustainedHold?: boolean;
   hasLeadingRest?: boolean;
+  isDownbeatLocked?: boolean;
+  hasTrailingPickup?: boolean;
+  syllableSubdivs?: number[];
   charOffset?: number;
   textSlice?: string;
   syllables?: string[];

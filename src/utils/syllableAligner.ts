@@ -1,10 +1,11 @@
 /**
  * syllableAligner.ts
- * Alignement des syllabes sur les briques MIDI (assignSyllablesStrictlyToExistingBricks & alignAudioStepsWithTimeAnchors < 144 lignes).
+ * Alignement des syllabes et briques MIDI guidé par la micro-grille sub-temps (syllableSubdivs) d'Organizador (< 142 lignes).
  */
 import type { VocalStepData } from '../types/vocalPack.types';
 import type { TimeAnchor } from '../types/toadaDocument.types';
 import { splitTextIntoLetraSyllables } from './syllableSplitter';
+import { computeBeatSyllableSubdivs } from './subbeatAnchorHelper';
 import { midiToNoteName } from './noteUtils';
 
 export function mapSyllablesToSteps(steps: VocalStepData[], syllables: string[]): VocalStepData[] {
@@ -30,37 +31,47 @@ export function alignSyllablesWithTimeAnchors(
   steps: VocalStepData[], timeAnchors: TimeAnchor[], beatsPerMeasure = 4, stepsPerBeat = 4
 ): VocalStepData[] {
   if (!timeAnchors || timeAnchors.length === 0) return steps;
-  const maxStepNeeded = timeAnchors.reduce((max, a) => Math.max(max, (a.measureOffset * beatsPerMeasure + (a.beat - 1)) * stepsPerBeat + (a.syllables?.length || 1) + stepsPerBeat), steps.length);
-  const result: VocalStepData[] = Array.from({ length: maxStepNeeded }, (_, i) => steps[i] ? { ...steps[i] } : { stepIndex: i, active: false, note: 'C4', midiNumber: 60, velocity: 100, decay: 200, syllable: '' });
+  const maxStepNeeded = timeAnchors.reduce((max, a) => Math.max(max, (a.measureOffset * beatsPerMeasure + (a.beat - 1)) * stepsPerBeat + stepsPerBeat), steps.length);
+  const result: VocalStepData[] = Array.from({ length: maxStepNeeded }, (_, i) => steps[i] ? { ...steps[i], syllable: '' } : { stepIndex: i, active: false, note: 'C4', midiNumber: 60, velocity: 100, decay: 200, syllable: '' });
 
+  let seenSung = false;
   for (const anchor of timeAnchors) {
     const stepStart = (anchor.measureOffset * beatsPerMeasure + (anchor.beat - 1)) * stepsPerBeat;
+    const stepEnd = Math.min(result.length, stepStart + stepsPerBeat);
     if (anchor.isRest || anchor.isInitialRest) {
-      for (let s = stepStart; s < stepStart + stepsPerBeat && s < result.length; s++) { result[s].active = false; result[s].syllable = ''; }
-    } else {
-      if (anchor.hasLeadingRest && stepStart < result.length) {
-        const tiePrev = stepStart > 0 && result[stepStart - 1].active;
-        result[stepStart] = { ...result[stepStart], active: tiePrev, note: tiePrev ? '───' : '', isTie: tiePrev, syllable: '' };
-      }
-      const syls = anchor.syllables?.length ? anchor.syllables : (anchor.textSlice ? splitTextIntoLetraSyllables(anchor.textSlice) : []);
-      const startSub = anchor.hasLeadingRest ? 1 : 0, avail = anchor.hasLeadingRest ? Math.max(1, stepsPerBeat - 1) : stepsPerBeat;
-      for (let sIdx = 0; sIdx < syls.length; sIdx++) {
-        const targetStep = stepStart + Math.min(stepsPerBeat - 1, startSub + Math.floor((sIdx * avail) / Math.max(1, syls.length)));
-        if (targetStep < result.length) { result[targetStep].active = true; result[targetStep].isTie = false; result[targetStep].syllable = syls[sIdx]; }
-      }
+      for (let s = stepStart; s < stepEnd; s++) { result[s].active = false; result[s].isTie = false; result[s].note = ''; result[s].syllable = ''; }
+      continue;
     }
+    if (anchor.isSustainedHold) continue;
+    const syls = anchor.syllables?.length ? anchor.syllables : (anchor.textSlice ? splitTextIntoLetraSyllables(anchor.textSlice) : []);
+    if (syls.length === 0) continue;
+    const subdivs = anchor.syllableSubdivs?.length === syls.length ? anchor.syllableSubdivs : computeBeatSyllableSubdivs(anchor.textSlice || '', syls, Boolean(anchor.hasLeadingRest), Boolean(anchor.hasTrailingPickup));
+    const firstSub = Math.max(0, Math.min(stepsPerBeat - 1, subdivs[0] ?? (anchor.hasLeadingRest ? 1 : 0)));
+    const tiePrev = seenSung && stepStart > 0 && result[stepStart - 1].active;
+    for (let s = stepStart; s < stepStart + firstSub && s < stepEnd; s++) {
+      result[s] = { ...result[s], active: tiePrev, note: tiePrev ? '───' : '', isTie: tiePrev, syllable: '' };
+    }
+    for (let s = stepStart + firstSub; s < stepEnd; s++) {
+      result[s] = { ...result[s], active: true, note: '───', isTie: true, syllable: '' };
+    }
+    for (let sIdx = 0; sIdx < syls.length; sIdx++) {
+      const targetStep = Math.min(stepEnd - 1, stepStart + (subdivs[sIdx] ?? Math.min(stepsPerBeat - 1, firstSub + sIdx)));
+      result[targetStep] = { ...result[targetStep], active: true, isTie: false, note: result[targetStep].note && result[targetStep].note !== '───' ? result[targetStep].note : 'C4', syllable: syls[sIdx] };
+    }
+    seenSung = true;
   }
   return result;
 }
 
-function alignAudioStepsWithTimeAnchors(
+export function alignAudioStepsWithTimeAnchors(
   steps: VocalStepData[], timeAnchors: TimeAnchor[], beatsPerMeasure = 4, stepsPerBeat = 4
 ): VocalStepData[] {
-  const origAttacks = steps.map((s) => Boolean(s.syllableAttack));
+  const origActive = steps.map((s) => Boolean(s.active && s.midiNumber > 0));
   const result = steps.map((s) => ({ ...s, syllable: '', note: s.active ? '───' : '', isTie: s.active, syllableAttack: false }));
+  let seenSung = false, lastSungBeatEnd = 0;
 
   for (let aIdx = 0; aIdx < timeAnchors.length; aIdx++) {
-    const anchor = timeAnchors[aIdx], nextAnchor = timeAnchors[aIdx + 1];
+    const anchor = timeAnchors[aIdx];
     const beatStart = (anchor.measureOffset * beatsPerMeasure + (anchor.beat - 1)) * stepsPerBeat;
     const beatEnd = Math.min(result.length, beatStart + stepsPerBeat);
     if (beatStart >= result.length) continue;
@@ -68,60 +79,43 @@ function alignAudioStepsWithTimeAnchors(
       for (let i = beatStart; i < beatEnd; i++) result[i] = { ...result[i], active: false, note: '', midiNumber: 0, isTie: false, syllable: '' };
       continue;
     }
-    if (anchor.isSustainedHold) continue;
+    if (anchor.isSustainedHold) { if (seenSung) lastSungBeatEnd = Math.max(lastSungBeatEnd, beatEnd); continue; }
     const syls = anchor.syllables?.length ? anchor.syllables : (anchor.textSlice ? splitTextIntoLetraSyllables(anchor.textSlice) : []);
     if (syls.length === 0) continue;
 
-    if (anchor.hasLeadingRest) {
-      const prevAct = beatStart > 0 && result[beatStart - 1].active && result[beatStart - 1].midiNumber > 0 && result[beatStart].active;
-      result[beatStart] = prevAct
-        ? { ...result[beatStart], active: true, note: '───', midiNumber: result[beatStart - 1].midiNumber, isTie: true, syllable: '' }
-        : { ...result[beatStart], active: false, note: '', midiNumber: 0, isTie: false, syllable: '' };
-    }
-
-    const canAnticipate = !anchor.hasLeadingRest && beatStart > 0 && result[beatStart - 1].active && !result[beatStart - 1].syllable
-      && (origAttacks[beatStart - 1] || (beatStart >= 2 && result[beatStart - 2].active && Math.abs(result[beatStart - 1].midiNumber - result[beatStart - 2].midiNumber) >= 1 && Math.abs(result[beatStart - 1].midiNumber - (result[beatStart]?.midiNumber || result[beatStart - 1].midiNumber)) <= 1));
-
-    const zoneStart = canAnticipate ? beatStart - 1 : (anchor.hasLeadingRest ? Math.min(beatEnd - 1, beatStart + 1) : beatStart);
+    const subdivs = anchor.syllableSubdivs?.length === syls.length ? anchor.syllableSubdivs : computeBeatSyllableSubdivs(anchor.textSlice || '', syls, Boolean(anchor.hasLeadingRest), Boolean(anchor.hasTrailingPickup));
+    const firstSub = Math.max(0, Math.min(stepsPerBeat - 1, subdivs[0] ?? (anchor.hasLeadingRest ? 1 : 0)));
     const nextAct = result.find((s, idx) => idx >= beatStart && s.active && s.midiNumber > 0);
     const prevAct = result.slice(0, beatStart).reverse().find((s) => s.active && s.midiNumber > 0);
     const fbMidi = nextAct?.midiNumber ?? prevAct?.midiNumber ?? 60;
-    for (let i = zoneStart; i < beatEnd; i++) {
+    const tiePrev = seenSung && beatStart > 0 && result[beatStart - 1].active;
+
+    for (let i = beatStart; i < beatStart + firstSub && i < beatEnd; i++) {
+      result[i] = tiePrev ? { ...result[i], active: true, note: '───', midiNumber: result[beatStart - 1].midiNumber || fbMidi, isTie: true, syllable: '' } : { ...result[i], active: false, note: '', midiNumber: 0, isTie: false, syllable: '' };
+    }
+    for (let i = beatStart + firstSub; i < beatEnd; i++) {
       if (!result[i].active || result[i].midiNumber <= 0) result[i] = { ...result[i], active: true, midiNumber: fbMidi, note: '───', isTie: true };
     }
-
-    const availSpan = Math.max(1, beatEnd - zoneStart), targetHeads = Math.min(syls.length, availSpan);
-    const heads: number[] = [zoneStart];
-    if (targetHeads === 2) {
-      let bestIdx = nextAnchor?.hasLeadingRest ? Math.max(zoneStart + 1, beatEnd - 1) : zoneStart + Math.max(1, Math.floor(availSpan / 2));
-      let bestScore = -1;
-      for (let i = zoneStart + 1; i < beatEnd; i++) {
-        const jump = Math.abs(result[i].midiNumber - result[i - 1].midiNumber) + (origAttacks[i] ? 1.5 : 0) + (nextAnchor?.hasLeadingRest && i === beatEnd - 1 ? 0.8 : 0);
-        if (jump > bestScore) { bestScore = jump; bestIdx = i; }
-      }
-      heads.push(bestIdx);
-    } else if (targetHeads >= 3) {
-      for (let k = 1; k < targetHeads; k++) heads.push(zoneStart + Math.min(availSpan - 1, Math.floor((k * availSpan) / targetHeads)));
+    const maxHeads = Math.min(syls.length, stepsPerBeat - firstSub), heads: number[] = [];
+    for (let k = 0; k < maxHeads; k++) {
+      const prevHead = heads.length > 0 ? heads[heads.length - 1] - beatStart : firstSub - 1;
+      heads.push(Math.min(beatEnd - 1, beatStart + Math.max(prevHead + 1, Math.min(stepsPerBeat - (maxHeads - k), subdivs[k] ?? (firstSub + k)))));
     }
-
-    for (let k = 0; k < heads.length - 1; k++) result[heads[k]].syllable = syls[k];
-    result[heads[heads.length - 1]].syllable = syls.slice(heads.length - 1).join('');
+    if (heads.length > 0) {
+      for (let k = 0; k < heads.length - 1; k++) result[heads[k]].syllable = syls[k];
+      result[heads[heads.length - 1]].syllable = syls.slice(heads.length - 1).join('');
+    }
+    seenSung = true; lastSungBeatEnd = Math.max(lastSungBeatEnd, beatEnd);
   }
 
-  // Passe finale 1:1 : seules les étapes porteuses d'une syllabe sont des têtes de brique (0 brique '-' parasite)
   let seenFirstBrick = false;
   for (let i = 0; i < result.length; i++) {
-    const hasSyl = Boolean(result[i].syllable && result[i].syllable.trim() !== '');
-    if (hasSyl) {
-      seenFirstBrick = true;
-      const m = result[i].midiNumber > 0 ? result[i].midiNumber : 60;
+    if (Boolean(result[i].syllable && result[i].syllable.trim() !== '')) {
+      seenFirstBrick = true; const m = result[i].midiNumber > 0 ? result[i].midiNumber : 60;
       result[i] = { ...result[i], active: true, midiNumber: m, note: midiToNoteName(m), isTie: false, syllableAttack: true };
     } else if (result[i].active) {
-      if (seenFirstBrick && i > 0 && result[i - 1].active && result[i - 1].midiNumber > 0) {
-        result[i] = { ...result[i], active: true, midiNumber: result[i - 1].midiNumber, note: '───', isTie: true, syllable: '', syllableAttack: false };
-      } else {
-        result[i] = { ...result[i], active: false, midiNumber: 0, note: '', isTie: false, syllable: '', syllableAttack: false };
-      }
+      const keepTie = seenFirstBrick && i > 0 && result[i - 1].active && result[i - 1].midiNumber > 0 && (i < lastSungBeatEnd || origActive[i]);
+      result[i] = keepTie ? { ...result[i], active: true, midiNumber: result[i - 1].midiNumber, note: '───', isTie: true, syllable: '', syllableAttack: false } : { ...result[i], active: false, midiNumber: 0, note: '', isTie: false, syllable: '', syllableAttack: false };
     }
   }
   return result;

@@ -1,9 +1,11 @@
 /**
  * slicerAlignmentHelper.ts
- * Helper pur de génération et calquage des tranches sur les motifs Organizador et pauses Baque (< 140 lignes).
+ * Helper pur de génération et calquage des tranches sur les motifs Organizador et pauses Baque (< 142 lignes).
  */
 import type { VocalPatternItem, VocalRole, ToadaArrangementSlot } from '../types/toadaProject.types';
 import type { SliceSegment } from '../types/slicerSegments.types';
+import { resolveFreshTimeAnchors } from './timeAnchorParser';
+import { computePatternVocalOffsetsBeats, findTransitionRmsDipSec } from './subbeatAnchorHelper';
 
 export function calculateSliceMetricT1Sec(
   startSec: number, bpm: number, gridOffsetSec = 0.8, hasAnacrusis = false, anacrusisBeats = 2, existingMetricT1Sec?: number
@@ -53,20 +55,14 @@ function computePauseMeasuresBetweenPatterns(
   if (i1 < 0 || i2 < 0) return 0;
   let pauseMeasures = 0;
   for (let k = i1 + 1; k < i2; k++) {
-    if (!slots[k].puxadorPatternId && !slots[k].coroPatternId) {
-      pauseMeasures += Math.max(1, Math.min(8, slots[k].advanceMeasures ?? 1));
-    }
+    if (!slots[k].puxadorPatternId && !slots[k].coroPatternId) pauseMeasures += Math.max(1, Math.min(8, slots[k].advanceMeasures ?? 1));
   }
   return pauseMeasures;
 }
 
 export function buildOrganizadorSlices(
-  patterns: VocalPatternItem[],
-  defaultRole: VocalRole,
-  bpm: number,
-  detected: SliceSegment[],
-  gridOffsetSec = 0.8,
-  slots?: ToadaArrangementSlot[]
+  patterns: VocalPatternItem[], defaultRole: VocalRole, bpm: number, detected: SliceSegment[],
+  gridOffsetSec = 0.8, slots?: ToadaArrangementSlot[], pcm?: Float32Array | null, sampleRate = 44100
 ): SliceSegment[] {
   const beatDur = 60 / (bpm || 88), measureDur = beatDur * 4;
   const targetRole = defaultRole === 'coro' ? 'coro' : 'puxador';
@@ -74,35 +70,36 @@ export function buildOrganizadorSlices(
   const targetList = rolePats.length > 0 ? rolePats : patterns;
   if (targetList.length === 0) return [];
 
-  const metaList: Array<{ pat: VocalPatternItem; t1: number; mCount: number; hasAna: boolean; anacDur: number; isIslandStart: boolean; pauseMeasures: number; pauseStartT1: number }> = [];
+  const metaList: Array<{
+    pat: VocalPatternItem; t1: number; mCount: number; hasAna: boolean; anacDur: number;
+    isIslandStart: boolean; pauseMeasures: number; pauseStartT1: number;
+    firstVocalOffsetBeats: number; hasBoundaryExitAnchor: boolean;
+  }> = [];
   let prevT1 = gridOffsetSec, prevMCount = targetList[0]?.measuresCount ?? 1;
 
   targetList.forEach((pat, idx) => {
     const hasAna = pat.hasAnacrusis !== false;
-    const anacBeats = pat.anacrusisBeats ?? (hasAna ? 2 : 0);
-    const anacDur = hasAna ? anacBeats * beatDur : 0;
+    const anacDur = hasAna ? (pat.anacrusisBeats ?? 2) * beatDur : 0;
     const mCount = pat.measuresCount ?? 1;
+    const anchors = resolveFreshTimeAnchors(pat.rawLineCode, pat.timeAnchors, 4, !hasAna, pat.assignedLyricsText);
+    const { firstVocalOffsetBeats, hasBoundaryExitAnchor } = computePatternVocalOffsetsBeats(anchors, hasAna, 4, mCount);
     const pauseMeasures = idx > 0 ? computePauseMeasuresBetweenPatterns(slots, targetList[idx - 1].id, pat.id) : 0;
     const pauseStartT1 = prevT1 + prevMCount * measureDur;
-
     let t1 = prevT1 + (idx === 0 ? 0 : (prevMCount + pauseMeasures) * measureDur);
     let isIslandStart = idx === 0 || pauseMeasures > 0;
 
     if (idx === 0) {
-      const d0 = detected[0];
-      const estT1 = d0 ? d0.startSec + anacDur * 0.5 : gridOffsetSec;
+      const estT1 = detected[0] ? detected[0].startSec + anacDur * 0.5 : gridOffsetSec;
       t1 = Math.max(anacDur, Math.round((estT1 - gridOffsetSec) / measureDur) * measureDur + gridOffsetSec);
     } else if (pauseMeasures === 0) {
       const prevBodyEnd = prevT1 + prevMCount * measureDur;
       const nextDet = detected.find((d) => d.startSec > prevBodyEnd + 1.8);
       if (nextDet) {
-        const estT1 = nextDet.startSec + anacDur * 0.5;
-        const snapM = Math.round((estT1 - gridOffsetSec) / measureDur) * measureDur + gridOffsetSec;
+        const snapM = Math.round((nextDet.startSec + anacDur * 0.5 - gridOffsetSec) / measureDur) * measureDur + gridOffsetSec;
         if (snapM > prevBodyEnd + measureDur) { t1 = snapM; isIslandStart = true; }
       }
     }
-
-    metaList.push({ pat, t1, mCount, hasAna, anacDur, isIslandStart, pauseMeasures, pauseStartT1 });
+    metaList.push({ pat, t1, mCount, hasAna, anacDur, isIslandStart, pauseMeasures, pauseStartT1, firstVocalOffsetBeats, hasBoundaryExitAnchor });
     prevT1 = t1; prevMCount = mCount;
   });
 
@@ -113,27 +110,15 @@ export function buildOrganizadorSlices(
       const pMeasures = Math.max(1, Math.min(4, cur.pauseMeasures)) as 1 | 2 | 3 | 4;
       const pStart = Math.round(cur.pauseStartT1 * 100) / 100;
       const pEnd = Math.round((cur.pauseStartT1 + cur.pauseMeasures * measureDur) * 100) / 100;
-      segments.push({
-        id: `seg-pause-org-${i}`, startSec: pStart, endSec: pEnd, metricT1Sec: pStart,
-        targetPatternId: 'ignore', name: `[PAUSE ${pMeasures}M]`, measuresCount: pMeasures,
-        hasAnacrusis: false, anacrusisBeats: 0, hasTailBeat: false, isPause: true,
-      });
+      segments.push({ id: `seg-pause-org-${i}`, startSec: pStart, endSec: pEnd, metricT1Sec: pStart, targetPatternId: 'ignore', name: `[PAUSE ${pMeasures}M]`, measuresCount: pMeasures, hasAnacrusis: false, anacrusisBeats: 0, hasTailBeat: false, isPause: true });
     }
-    const isNextConsecutive = Boolean(next && !next.isIslandStart);
     const prevVocalSeg = segments.length > 0 ? segments[segments.length - 1] : null;
-    const startSec = (i === 0 || cur.isIslandStart || !prevVocalSeg || prevVocalSeg.isPause)
-      ? Math.max(0, Math.round((cur.t1 - cur.anacDur) * 100) / 100)
-      : prevVocalSeg.endSec;
-    const endSec = isNextConsecutive && next
-      ? Math.round((next.t1 + 0.15) * 100) / 100
+    const isolatedStartSec = cur.hasAna ? Math.max(0, Math.round((cur.t1 + (cur.firstVocalOffsetBeats - 0.25) * beatDur) * 100) / 100) : Math.max(0, Math.round(cur.t1 * 100) / 100);
+    const startSec = (i === 0 || cur.isIslandStart || !prevVocalSeg || prevVocalSeg.isPause) ? isolatedStartSec : prevVocalSeg.endSec;
+    const endSec = Boolean(next && !next.isIslandStart) && next
+      ? findTransitionRmsDipSec(next.t1, beatDur, next.firstVocalOffsetBeats, cur.hasBoundaryExitAnchor, pcm, sampleRate)
       : Math.round((cur.t1 + cur.mCount * measureDur + beatDur * 0.75) * 100) / 100;
-
-    segments.push({
-      id: `seg-org-${cur.pat.id}-${i}`, startSec, endSec, metricT1Sec: cur.t1,
-      targetPatternId: cur.pat.id, role: cur.pat.role, name: cur.pat.name,
-      measuresCount: cur.mCount as 1 | 2 | 3 | 4, hasAnacrusis: cur.hasAna,
-      anacrusisBeats: cur.pat.anacrusisBeats ?? (cur.hasAna ? 2 : 0), hasTailBeat: true,
-    });
+    segments.push({ id: `seg-org-${cur.pat.id}-${i}`, startSec, endSec, metricT1Sec: cur.t1, targetPatternId: cur.pat.id, role: cur.pat.role, name: cur.pat.name, measuresCount: cur.mCount as 1 | 2 | 3 | 4, hasAnacrusis: cur.hasAna, anacrusisBeats: cur.pat.anacrusisBeats ?? (cur.hasAna ? 2 : 0), hasTailBeat: true });
   }
   return segments;
 }

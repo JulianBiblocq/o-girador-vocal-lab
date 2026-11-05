@@ -44,7 +44,7 @@ export const SlicerMultiSection: React.FC<SlicerMultiSectionProps> = ({
 
   const handleAlignOrganizador = useCallback(() => {
     const detected = detectVocalPhrases(audio.pcm, audio.sampleRate);
-    onSegmentsChange(buildOrganizadorSlices(patterns, defaultRole, bpm, detected, gridOffsetSec, project.slots));
+    onSegmentsChange(buildOrganizadorSlices(patterns, defaultRole, bpm, detected, gridOffsetSec, project.slots, audio.pcm, audio.sampleRate));
   }, [patterns, defaultRole, bpm, audio, gridOffsetSec, project.slots, onSegmentsChange]);
 
   const handleDetectRmsSilences = useCallback(() => {
@@ -65,7 +65,7 @@ export const SlicerMultiSection: React.FC<SlicerMultiSectionProps> = ({
         setSlicerBpm(freshBpm); if (metronomeActive) engine.setMetronome(true, freshBpm, gridOffsetSec);
         onProjectUpdate?.(res.updatedProject);
         const detected = detectVocalPhrases(audio.pcm, audio.sampleRate);
-        onSegmentsChange(buildOrganizadorSlices(res.updatedProject.patterns, defaultRole, freshBpm, detected, gridOffsetSec, res.updatedProject.slots));
+        onSegmentsChange(buildOrganizadorSlices(res.updatedProject.patterns, defaultRole, freshBpm, detected, gridOffsetSec, res.updatedProject.slots, audio.pcm, audio.sampleRate));
         window.dispatchEvent(new CustomEvent('app-toast', { detail: { type: 'success', message: res.toastMessage } }));
       }
     } finally { setIsSyncing(false); }

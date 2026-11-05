@@ -3,6 +3,7 @@
  */
 import type { TimeAnchor } from '../types/toadaDocument.types';
 import { splitTextIntoLetraSyllables } from './syllableSplitter';
+import { isIntraWordBadgeBoundary, computeBeatSyllableSubdivs } from './subbeatAnchorHelper';
 export const TIME_ANCHOR_REGEX = /\[(?:M(\d+)[•·\.:])?([1-9]|1[0-2])\]/gi;
 
 export function isAnchorOnlyLine(line: string): boolean {
@@ -34,18 +35,15 @@ export function preprocessTwoLineLyrics(text: string): string {
   }
   return resultLines.join('\n');
 }
-
 export interface ExtractedAnchorsResult {
   cleanText: string; timeAnchors: TimeAnchor[]; measuresCount?: 1 | 2 | 3 | 4;
   hasAnacrusis?: boolean; anacrusisBeats?: number; anacrusisStartBeat?: number; exitBeat?: number;
 }
-
 export function extractTimeAnchors(rawText: string, beatsPerMeasure = 4, forceThetic = false): ExtractedAnchorsResult {
   const matches: Array<{ beat: number; absMeasure?: number; index: number; fullLength: number }> = [], regex = /\[(?:M(\d+)[•·\.:])?([1-9]|1[0-2])\]/gi;
   let m: RegExpExecArray | null;
   while ((m = regex.exec(rawText)) !== null) matches.push({ absMeasure: m[1] ? parseInt(m[1], 10) : undefined, beat: parseInt(m[2], 10), index: m.index, fullLength: m[0].length });
   if (matches.length === 0) return { cleanText: rawText, timeAnchors: [] };
-
   const isExplicitM1 = matches[0].absMeasure === 1 || forceThetic, firstOneIdx = matches.findIndex((x) => x.beat === 1);
   let hasAnacrusis = false, anacrusisStartBeat: number | undefined, anacrusisBeats: number | undefined;
   const textBeforeFirst = rawText.slice(0, matches[0].index).replace(/\[[^\]]+\]/g, '').replace(/[𝄽\*_]/g, ' ').replace(/\s{2,}/g, ' ').trim();
@@ -56,7 +54,6 @@ export function extractTimeAnchors(rawText: string, beatsPerMeasure = 4, forceTh
       hasAnacrusis = true; anacrusisStartBeat = beatsPerMeasure; anacrusisBeats = 1;
     }
   }
-
   const timeAnchors: TimeAnchor[] = [];
   let measureOffset = 0, hasEncounteredSyllables = false;
   if (hasAnacrusis && firstOneIdx === 0 && textBeforeFirst.length > 0) {
@@ -76,12 +73,15 @@ export function extractTimeAnchors(rawText: string, beatsPerMeasure = 4, forceTh
       } else if (k > 0 && (cur.beat === 1 || cur.beat <= matches[k - 1].beat)) measureOffset++;
     }
     const hasLeadingRest = (!isRestSymbol && /^[_𝄽]\s*/.test(trimmedChunk)) || Boolean(isSameBeatAfterRest);
+    const isDownbeatLocked = !hasLeadingRest && isIntraWordBadgeBoundary(rawText, cur.index, cur.fullLength);
+    const hasTrailingPickup = k + 1 < matches.length && isIntraWordBadgeBoundary(rawText, matches[k + 1].index, matches[k + 1].fullLength);
     const textSlice = isRestSymbol ? '' : trimmedChunk.replace(/[_𝄽]/g, ' ').replace(/\s+/g, ' ').trim();
     const syllables = textSlice ? splitTextIntoLetraSyllables(textSlice) : [];
+    const syllableSubdivs = computeBeatSyllableSubdivs(trimmedChunk, syllables, hasLeadingRest, hasTrailingPickup);
     if (syllables.length > 0) hasEncounteredSyllables = true;
     const isInitialRest = isExplicitSilence || (isRestSymbol && !hasEncounteredSyllables), isSustainedHold = !isExplicitSilence && isRestSymbol && hasEncounteredSyllables;
     if (isSameBeatAfterRest) timeAnchors.pop();
-    timeAnchors.push({ beat: cur.beat, measureOffset, isRest: isInitialRest, isInitialRest, isSustainedHold, hasLeadingRest, charOffset: cur.index, textSlice, syllables });
+    timeAnchors.push({ beat: cur.beat, measureOffset, isRest: isInitialRest, isInitialRest, isSustainedHold, hasLeadingRest, isDownbeatLocked, hasTrailingPickup, syllableSubdivs, charOffset: cur.index, textSlice, syllables });
   }
 
   if (!hasAnacrusis) {
@@ -107,7 +107,6 @@ export function buildBeatLyricsMap(timeAnchors: TimeAnchor[], _hasAnacrusis = fa
   }
   return map;
 }
-
 export function resolveFreshTimeAnchors(rawLineCode?: string, existing?: TimeAnchor[], beatsPerMeasure = 4, forceThetic = false, fallbackText?: string, rawTxtCode?: string): TimeAnchor[] | undefined {
   const normLetters = (s: string) => s.replace(/\[[^\]]+\]/g, '').replace(/<[^>]*>/g, '').replace(/[^\p{L}\p{N}]/gu, '').toLowerCase();
   let candidate = rawLineCode && /\[(?:M\d+[•·\.:])?([1-9]|1[0-2])\]/i.test(rawLineCode) ? rawLineCode : undefined;
@@ -134,7 +133,6 @@ export function resolveFreshTimeAnchors(rawLineCode?: string, existing?: TimeAnc
   }
   return existing;
 }
-
 export function buildNormalizedPatternKey(role: string, text: string, timeAnchors?: TimeAnchor[]): string {
   const norm = text.trim().toLowerCase().replace(/\s+/g, ' ');
   if (!timeAnchors?.length) return `${role}:${norm}`;
