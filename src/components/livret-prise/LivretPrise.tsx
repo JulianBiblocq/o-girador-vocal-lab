@@ -1,6 +1,6 @@
 /**
  * LivretPrise.tsx
- * Livret 2 : Cabine d'enregistrement avec mode pattern & prise continue sur le Conducteur (< 145 lignes).
+ * Livret 2 : Cabine d'enregistrement avec mode pattern & prise continue sur le Conducteur (< 140 lignes).
  */
 import React, { useMemo, useCallback } from 'react';
 import { useToadaProject } from '../../context/ToadaProjectContext';
@@ -125,7 +125,7 @@ export const LivretPrise: React.FC = () => {
 
       <CordelAccordion
         title={t('grainPlayerAccordionTitle')}
-        summaryBadge={t('grainPlayerAccordionSummary', { recorded: recordedCount, active: isMainVariant ? 'Principale' : `${Math.round(activeVariant.speedRatio * 100)}% / ${activeVariant.pitchShiftSemitones}st` })}
+        summaryBadge={t('grainPlayerAccordionSummary', { recorded: recordedCount, active: isMainVariant ? t('variantMainLabel') : `${Math.round(activeVariant.speedRatio * 100)}% / ${activeVariant.pitchShiftSemitones}st` })}
         storageKey={`variants_${activePattern.id}`}
         defaultOpen={false}
       >

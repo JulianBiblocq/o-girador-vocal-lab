@@ -1,9 +1,9 @@
 /**
  * ConductorWaveformTimeline.tsx
- * Timeline Audio Visuelle continue de reconstruction avec calage T1 et playhead RAF (< 120 lignes).
+ * Timeline Audio Visuelle continue (Puxador + Coro simultanés & correctedAudioSamples) (< 115 lignes).
  */
 import React, { useRef, useEffect } from 'react';
-import type { ToadaProject } from '../../types/toadaProject.types';
+import type { ToadaProject, VocalPatternItem } from '../../types/toadaProject.types';
 import { computeSlotsMeasureLayout } from './toadaTimingScheduler';
 import type { ToadaPlayerEngine } from './ToadaPlayerEngine';
 
@@ -36,10 +36,9 @@ export const ConductorWaveformTimeline: React.FC<ConductorWaveformTimelineProps>
     ctx.scale(dpr, dpr);
     ctx.clearRect(0, 0, w, h);
 
-    const mToX = (m: number) => ((m - 1) / (totalMeasures - 1)) * w;
+    const mToX = (m: number) => ((m - 1) / Math.max(1, totalMeasures - 1)) * w;
     const measureDur = 4 * (60 / (project.bpm || 88));
 
-    // 1. Grille des mesures M1..MN
     for (let m = 1; m <= totalMeasures; m++) {
       const x = mToX(m);
       ctx.strokeStyle = 'rgba(239, 68, 68, 0.35)'; ctx.lineWidth = 1;
@@ -48,44 +47,50 @@ export const ConductorWaveformTimeline: React.FC<ConductorWaveformTimelineProps>
       ctx.fillText(`M${m}`, Math.min(w - 20, x + 2), 9);
     }
 
-    // 2. Tranches Audio assemblées
-    layouts.forEach((lay, idx) => {
-      const slot = project.slots[lay.slotIndex];
-      const pat = project.patterns.find((p) => p.id === (slot.puxadorPatternId || slot.coroPatternId));
-      if (!pat) return;
+    const drawPatternBlock = (pat: VocalPatternItem, startMeasure: number, yTop: number, boxH: number, showJoint: boolean) => {
       const rec = pat.variants?.[pat.activeVariantKey]?.recordingResult ?? pat.recordingResult;
-      const pcm = rec?.pcm;
+      const pcm = pat.correctedAudioSamples?.length ? pat.correctedAudioSamples : (rec?.pcm?.length ? rec.pcm : pat.rawAudioSamples);
       if (!pcm || pcm.length === 0) return;
-
+      const sr = rec?.sampleRate ?? pat.recordingResult?.sampleRate ?? 48000;
       const t1Offset = pat.variants?.[pat.activeVariantKey]?.t1OffsetSec ?? pat.t1OffsetSec ?? (pat.hasAnacrusis !== false ? measureDur : 0.15);
       const trimStart = pat.variants?.[pat.activeVariantKey]?.trimStartSec ?? pat.trimStartSec ?? 0;
-      const trimEnd = (pat.variants?.[pat.activeVariantKey]?.trimEndSec ?? pat.trimEndSec) || (pcm.length / rec.sampleRate);
+      const trimEnd = (pat.variants?.[pat.activeVariantKey]?.trimEndSec ?? pat.trimEndSec) || (pcm.length / sr);
 
-      const startM = lay.startMeasure + (trimStart - t1Offset) / measureDur;
+      const startM = startMeasure + (trimStart - t1Offset) / measureDur;
       const durM = Math.max(0.1, (trimEnd - trimStart) / measureDur);
       const xStart = mToX(startM), xEnd = mToX(startM + durM), blkW = Math.max(2, xEnd - xStart);
 
-      ctx.fillStyle = pat.role === 'coro' ? 'rgba(16, 185, 129, 0.22)' : 'rgba(217, 119, 6, 0.22)';
-      ctx.fillRect(xStart, 12, blkW, h - 12);
+      ctx.fillStyle = pat.role === 'coro' ? 'rgba(16, 185, 129, 0.25)' : 'rgba(217, 119, 6, 0.25)';
+      ctx.fillRect(xStart, yTop, blkW, boxH);
       ctx.strokeStyle = pat.role === 'coro' ? '#10b981' : '#d97706'; ctx.lineWidth = 1;
-      ctx.strokeRect(xStart, 12, blkW, h - 12);
+      ctx.strokeRect(xStart, yTop, blkW, boxH);
 
-      // Repère de jointure continue (•) avec le bloc suivant
-      if (idx < layouts.length - 1) {
-        ctx.fillStyle = '#10b981'; ctx.beginPath(); ctx.arc(xEnd, h / 2 + 4, 3.5, 0, Math.PI * 2); ctx.fill();
+      if (showJoint) {
+        ctx.fillStyle = pat.role === 'coro' ? '#10b981' : '#d97706';
+        ctx.beginPath(); ctx.arc(xEnd, yTop + boxH / 2, 3, 0, Math.PI * 2); ctx.fill();
       }
+    };
+
+    layouts.forEach((lay, idx) => {
+      const slot = project.slots[lay.slotIndex];
+      const puxPat = slot.puxadorPatternId ? project.patterns.find((p) => p.id === slot.puxadorPatternId) : undefined;
+      const coroPat = slot.coroPatternId ? project.patterns.find((p) => p.id === slot.coroPatternId) : undefined;
+      const hasBoth = Boolean(puxPat && coroPat);
+      const trackH = h - 12;
+      const showJoint = idx < layouts.length - 1;
+
+      if (puxPat) drawPatternBlock(puxPat, lay.startMeasure, 12, hasBoth ? trackH / 2 - 1 : trackH, showJoint);
+      if (coroPat) drawPatternBlock(coroPat, lay.startMeasure, hasBoth ? 12 + trackH / 2 + 1 : 12, hasBoth ? trackH / 2 - 1 : trackH, showJoint);
     });
   }, [project, totalMeasures, layouts]);
 
-  // Boucle RAF Playhead (Zero Render Thrashing)
   useEffect(() => {
     if (!isPlaying) { if (playheadRef.current) playheadRef.current.style.display = 'none'; return; }
     let id: number;
     const tick = () => {
       if (canvasRef.current && playheadRef.current) {
-        const curM = playerEngine.getCurrentMeasure();
-        const w = canvasRef.current.clientWidth;
-        const x = Math.max(0, Math.min(w, ((curM - 1) / (totalMeasures - 1)) * w));
+        const curM = playerEngine.getCurrentMeasure(), w = canvasRef.current.clientWidth;
+        const x = Math.max(0, Math.min(w, ((curM - 1) / Math.max(1, totalMeasures - 1)) * w));
         playheadRef.current.style.display = 'block';
         playheadRef.current.style.transform = `translate3d(${x}px, 0, 0)`;
       }

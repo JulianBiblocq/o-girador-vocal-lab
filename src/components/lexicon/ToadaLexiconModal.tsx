@@ -101,7 +101,7 @@ export const ToadaLexiconModal: React.FC<Props> = ({ isOpen, onClose, isReadOnly
                 <Sparkles className="w-3.5 h-3.5" /><span>{t('lexiconDetectBtn')}</span>
               </button>
               <button type="button" onClick={handleGenerateQuiz} className="cordel-btn px-2.5 py-1 text-xs rounded bg-[#c88a2b] text-white border-[#c88a2b] flex items-center gap-1 cursor-pointer">
-                <HelpCircle className="w-3.5 h-3.5" /><span>Quiz Organizador</span>
+                <HelpCircle className="w-3.5 h-3.5" /><span>{t('lexiconQuizOrganizadorBadge')}</span>
               </button>
             </div>
           )}
@@ -123,8 +123,8 @@ export const ToadaLexiconModal: React.FC<Props> = ({ isOpen, onClose, isReadOnly
 
         {!isReadOnly && activeTab === 'toada' && (
           <form onSubmit={handleAddManual} className="p-2.5 border-t-2 border-[#1a1a1a] bg-[#f5edd6] dark:bg-[#2b2722] flex flex-wrap gap-2 text-xs">
-            <input type="text" value={newTerm} onChange={(e) => setNewTerm(e.target.value)} placeholder="Terme BR (ex: Gonguê)" className="px-2 py-1 bg-white dark:bg-[#1f1d1a] border border-[#1a1a1a] flex-1 min-w-[140px]" />
-            <input type="text" value={newTrad} onChange={(e) => setNewTrad(e.target.value)} placeholder="Traduction FR (ex: Cloche de fer)" className="px-2 py-1 bg-white dark:bg-[#1f1d1a] border border-[#1a1a1a] flex-1 min-w-[140px]" />
+            <input type="text" value={newTerm} onChange={(e) => setNewTerm(e.target.value)} placeholder={t('lexiconPlaceholderTerm')} className="px-2 py-1 bg-white dark:bg-[#1f1d1a] border border-[#1a1a1a] flex-1 min-w-[140px]" />
+            <input type="text" value={newTrad} onChange={(e) => setNewTrad(e.target.value)} placeholder={t('lexiconPlaceholderTrans')} className="px-2 py-1 bg-white dark:bg-[#1f1d1a] border border-[#1a1a1a] flex-1 min-w-[140px]" />
             <button type="submit" className="px-3 py-1 bg-[#1a1a1a] text-[#f4ecd8] font-bold border border-[#1a1a1a] shadow-[2px_2px_0px_#000] flex items-center gap-1 cursor-pointer">
               <Plus className="w-3.5 h-3.5" /><span>{t('lexiconAddTermBtn')}</span>
             </button>

@@ -1,6 +1,6 @@
 /**
  * PianoRollToolbar.tsx
- * Barre d'outils du Piano Roll unifiée sur 1 seule ligne avec support i18n pur via t.
+ * Barre d'outils du Piano Roll unifiée sur 1 seule ligne avec support i18n pur via t (< 130 lignes).
  */
 import React from 'react';
 import type { PianoRollTool } from './pianoRollInteractions';
@@ -42,7 +42,6 @@ export const PianoRollToolbar: React.FC<PianoRollToolbarProps> = (props) => {
 
   return (
     <div className="cordel-card p-2 w-full flex flex-wrap items-center justify-between gap-3 select-none">
-      {/* 1. Gauche : 5 Outils + Bloc jumelé Undo/Redo */}
       <div className="flex items-center gap-2">
         <div className="flex items-center border border-[var(--cordel-border-sub)] rounded overflow-hidden">
           {tools.map((item) => {
@@ -93,7 +92,7 @@ export const PianoRollToolbar: React.FC<PianoRollToolbarProps> = (props) => {
               if (ok) onReExtractNotes();
             }}
             title={t('reExtractNotesTooltip')}
-            className="px-2 py-1 text-xs font-mono flex items-center gap-1 border border-amber-500/50 bg-amber-950/30 text-amber-300 hover:bg-amber-900/50 transition-all rounded cursor-pointer"
+            className="px-2 py-1 text-xs font-mono flex items-center gap-1 border border-amber-500/50 bg-amber-500/15 dark:bg-amber-950/30 text-amber-900 dark:text-amber-300 hover:bg-amber-500/25 dark:hover:bg-amber-900/50 transition-all rounded cursor-pointer"
           >
             <RefreshCw className="w-3.5 h-3.5" />
             <span className="hidden xl:inline">{t('reExtractNotes')}</span>
@@ -101,7 +100,6 @@ export const PianoRollToolbar: React.FC<PianoRollToolbarProps> = (props) => {
         )}
       </div>
 
-      {/* 2. Centre : Gamme & Lissage */}
       <div className="flex items-center gap-3 text-[11px] font-mono">
         <div className="flex items-center gap-1.5">
           <span className="text-theme-ink/75 font-bold">{t('scaleLabel')} :</span>
@@ -110,9 +108,7 @@ export const PianoRollToolbar: React.FC<PianoRollToolbarProps> = (props) => {
           </select>
           <select value={scaleType} onChange={(e) => onSetScaleType(e.target.value as ScaleType)} className="cordel-card-sm px-1.5 py-0.5 text-theme-accent font-bold outline-none rounded cursor-pointer">
             {Object.keys(SCALE_DEFINITIONS).map((key) => (
-              <option key={key} value={key} className="bg-theme-bg text-theme-ink">
-                {t(SCALE_I18N_KEYS[key as ScaleType])}
-              </option>
+              <option key={key} value={key} className="bg-theme-bg text-theme-ink">{t(SCALE_I18N_KEYS[key as ScaleType])}</option>
             ))}
           </select>
         </div>
@@ -125,7 +121,6 @@ export const PianoRollToolbar: React.FC<PianoRollToolbarProps> = (props) => {
         </div>
       </div>
 
-      {/* 3. Droite : Zoom */}
       <div className="flex items-center border border-theme-border/60">
         <span className="px-1.5 py-0.5 text-xs text-theme-ink/60 border-r border-theme-border/40"><ZoomIn className="w-3.5 h-3.5" /></span>
         {[1, 2, 4, 8].map((z) => (

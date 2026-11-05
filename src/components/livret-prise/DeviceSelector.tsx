@@ -1,6 +1,6 @@
 /**
  * DeviceSelector.tsx
- * Sélecteur d'entrées et de sorties audio (Carte Son / Micro / Casque) bilingue FR/BR (i18n pur via t).
+ * Sélecteur d'entrées et de sorties audio (Carte Son / Micro / Casque) bilingue FR/BR (< 135 lignes).
  */
 import React, { useState, useEffect, useCallback } from 'react';
 import { Mic, Headphones, RefreshCw, CheckCircle2 } from 'lucide-react';
@@ -44,8 +44,7 @@ export const DeviceSelector: React.FC<DeviceSelectorProps> = ({
       if (outputs.length > 0 && (!selectedOutputDeviceId || !outputs.some((d) => d.deviceId === selectedOutputDeviceId))) {
         onOutputDeviceChange(outputs[0].deviceId);
       }
-    } catch (err) {
-      console.warn('Autorisation audio non accordée :', err);
+    } catch {
       const allDevices = await navigator.mediaDevices.enumerateDevices();
       setInputDevices(allDevices.filter((d) => d.kind === 'audioinput'));
       setOutputDevices(allDevices.filter((d) => d.kind === 'audiooutput'));
@@ -77,16 +76,13 @@ export const DeviceSelector: React.FC<DeviceSelectorProps> = ({
         <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-theme-ink">
           <span>{t('devicePanelTitle')}</span>
           {hasPermission && (
-            <span className="text-[10px] text-emerald-400 font-mono tracking-normal flex items-center gap-1">
-              <CheckCircle2 className="w-3 h-3" />
-              <span>{t('deviceConnectedBadge')}</span>
+            <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-mono tracking-normal flex items-center gap-1">
+              <CheckCircle2 className="w-3 h-3" /><span>{t('deviceConnectedBadge')}</span>
             </span>
           )}
         </div>
         <button
-          type="button"
-          onClick={requestPermissionAndEnumerate}
-          disabled={disabled || isLoading}
+          type="button" onClick={requestPermissionAndEnumerate} disabled={disabled || isLoading}
           className="cordel-btn px-2 py-0.5 flex items-center gap-1.5 text-xs cursor-pointer"
         >
           <RefreshCw className={`w-3 h-3 ${isLoading ? 'animate-spin' : ''}`} />
@@ -94,18 +90,13 @@ export const DeviceSelector: React.FC<DeviceSelectorProps> = ({
         </button>
       </div>
 
-      {/* 1. Entrée Micro */}
       <div className="flex flex-col gap-1">
         <label className="text-[11px] font-mono text-theme-ink/80 flex items-center gap-1">
-          <Mic className="w-3 h-3 text-theme-accent" />
-          <span>{t('deviceMicInputLabel')}</span>
+          <Mic className="w-3 h-3 text-theme-accent" /><span>{t('deviceMicInputLabel')}</span>
         </label>
         <select
           value={selectedDeviceId}
-          onChange={(e) => {
-            const dev = inputDevices.find((d) => d.deviceId === e.target.value);
-            onDeviceChange(e.target.value, dev?.label);
-          }}
+          onChange={(e) => { const dev = inputDevices.find((d) => d.deviceId === e.target.value); onDeviceChange(e.target.value, dev?.label); }}
           onFocus={() => { if (!hasPermission) requestPermissionAndEnumerate(); }}
           disabled={disabled || inputDevices.length === 0}
           className="w-full bg-[var(--cordel-subcard-bg)] border border-[var(--cordel-border-sub)] text-theme-ink text-xs p-1.5 rounded font-mono focus:outline-none focus:border-theme-accent cursor-pointer"
@@ -119,17 +110,13 @@ export const DeviceSelector: React.FC<DeviceSelectorProps> = ({
         </select>
       </div>
 
-      {/* 2. Sortie Audio / Casque */}
       {outputDevices.length > 0 && (
         <div className="flex flex-col gap-1 pt-1 border-t border-[var(--cordel-border-sub)]">
           <label className="text-[11px] font-mono text-theme-ink/80 flex items-center gap-1">
-            <Headphones className="w-3.5 h-3.5 text-theme-accent" />
-            <span>{t('deviceOutputLabel')}</span>
+            <Headphones className="w-3.5 h-3.5 text-theme-accent" /><span>{t('deviceOutputLabel')}</span>
           </label>
           <select
-            value={selectedOutputDeviceId}
-            onChange={(e) => onOutputDeviceChange(e.target.value)}
-            disabled={disabled}
+            value={selectedOutputDeviceId} onChange={(e) => onOutputDeviceChange(e.target.value)} disabled={disabled}
             className="w-full bg-[var(--cordel-subcard-bg)] border border-[var(--cordel-border-sub)] text-theme-ink text-xs p-1.5 rounded font-mono focus:outline-none focus:border-theme-accent cursor-pointer"
           >
             {outputDevices.map((dev, idx) => (

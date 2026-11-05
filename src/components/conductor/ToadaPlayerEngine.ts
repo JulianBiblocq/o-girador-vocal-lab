@@ -1,6 +1,6 @@
 /**
  * ToadaPlayerEngine.ts
- * Moteur Web Audio temps réel avec Ordonnanceur Lookahead et Varispeed live BPM (< 145 lignes).
+ * Moteur Web Audio temps réel avec Ordonnanceur Lookahead et Varispeed live BPM (< 135 lignes).
  */
 import { type ToadaProject, DEFAULT_TOADA_BPM } from '../../types/toadaProject.types';
 import { getSharedAudioContext, setSharedSinkId, registerAudioKillSwitch, stopAllActiveAudioEngines } from '../../audio/sharedAudioContext';
@@ -39,45 +39,32 @@ export class ToadaPlayerEngine {
 
   public getIsPlaying(): boolean { return this.isRunning; }
   public getLiveBpm(): number { return this.clock.getLiveBpm(); }
-  public getCurrentMeasure(): number {
-    return this.isRunning && this.ctx ? this.clock.getMeasureAtTime(this.ctx.currentTime) : 1;
-  }
+  public getCurrentMeasure(): number { return this.isRunning && this.ctx ? this.clock.getMeasureAtTime(this.ctx.currentTime) : 1; }
 
   public setLiveBpm(newBpm: number): void {
     if (!this.isRunning || !this.ctx) return;
     this.clock.setLiveBpm(newBpm, this.ctx.currentTime);
     const now = this.ctx.currentTime;
     this.activeVoices.forEach((v) => {
-      try {
-        const ratio = this.clock.getSpeedRatio(v.recordedBpm);
-        v.source.playbackRate.setValueAtTime(ratio, now);
-      } catch { /* ignore */ }
+      try { v.source.playbackRate.setValueAtTime(this.clock.getSpeedRatio(v.recordedBpm), now); } catch {}
     });
   }
 
   public async play(
-    project: ToadaProject,
-    outputDeviceId?: string,
-    onProgress?: (slotIndex: number) => void,
-    onComplete?: () => void
+    project: ToadaProject, outputDeviceId?: string,
+    onProgress?: (slotIndex: number) => void, onComplete?: () => void
   ): Promise<void> {
     this.stop();
     stopAllActiveAudioEngines('conductor-player');
     this.onCompleteCb = onComplete ?? null;
-    this.unregisterKillSwitch = registerAudioKillSwitch('conductor-player', () => {
-      const cb = this.onCompleteCb;
-      this.stop();
-      cb?.();
-    });
+    this.unregisterKillSwitch = registerAudioKillSwitch('conductor-player', () => { const cb = this.onCompleteCb; this.stop(); cb?.(); });
 
     const ctx = await getSharedAudioContext();
     this.ctx = ctx;
     if (outputDeviceId && outputDeviceId !== 'default') await setSharedSinkId(outputDeviceId);
 
     const beatsPerMeasure = getBeatsPerMeasure(project.timeSignature);
-    const audioCtxStart = ctx.currentTime + 0.08;
-    const initialMeasure = hasSlot0AnacrusisLeadIn(project) ? 0 : 1;
-    this.clock.init(audioCtxStart, project.bpm || DEFAULT_TOADA_BPM, beatsPerMeasure, initialMeasure);
+    this.clock.init(ctx.currentTime + 0.08, project.bpm || DEFAULT_TOADA_BPM, beatsPerMeasure, hasSlot0AnacrusisLeadIn(project) ? 0 : 1);
     this.layouts = computeSlotsMeasureLayout(project.slots, project.patterns);
     this.scheduledSlots.clear();
     this.reportedSlotIdx = -1;
@@ -85,16 +72,13 @@ export class ToadaPlayerEngine {
 
     this.tickScheduler(project, beatsPerMeasure, onProgress, onComplete);
     this.schedulerTimer = window.setInterval(() => {
-      if (!this.isRunning) return;
-      this.tickScheduler(project, beatsPerMeasure, onProgress, onComplete);
+      if (this.isRunning) this.tickScheduler(project, beatsPerMeasure, onProgress, onComplete);
     }, 35);
   }
 
   private tickScheduler(project: ToadaProject, beatsPerMeasure: number, onProgress?: (idx: number) => void, onComplete?: () => void): void {
     if (!this.ctx || !this.isRunning) return;
-    const now = this.ctx.currentTime;
-    const lookaheadSec = 0.16;
-    const scheduleHorizonSec = this.clock.getMeasureDurationSec() + lookaheadSec;
+    const now = this.ctx.currentTime, scheduleHorizonSec = this.clock.getMeasureDurationSec() + 0.16;
 
     for (const layout of this.layouts) {
       const slotT1Time = this.clock.getTimeAtMeasure(layout.startMeasure);
@@ -124,12 +108,9 @@ export class ToadaPlayerEngine {
     }
 
     const last = this.layouts[this.layouts.length - 1];
-    if (last && this.scheduledSlots.has(last.slotIndex)) {
-      const endMeasure = last.startMeasure + last.advanceMeasures + 0.3;
-      if (this.clock.getMeasureAtTime(now) >= endMeasure) {
-        this.stop();
-        onComplete?.();
-      }
+    if (last && this.scheduledSlots.has(last.slotIndex) && this.clock.getMeasureAtTime(now) >= last.startMeasure + last.advanceMeasures + 0.3) {
+      this.stop();
+      onComplete?.();
     }
   }
 
@@ -140,7 +121,7 @@ export class ToadaPlayerEngine {
     this.unregisterKillSwitch = null;
     if (this.schedulerTimer) { window.clearInterval(this.schedulerTimer); this.schedulerTimer = null; }
     this.harmonyEngine.stop();
-    this.activeVoices.forEach((v) => { try { v.source.stop(); v.source.disconnect(); } catch { /* ignore */ } });
+    this.activeVoices.forEach((v) => { try { v.source.stop(); v.source.disconnect(); } catch {} });
     this.activeVoices = [];
     this.scheduledSlots.clear();
   }

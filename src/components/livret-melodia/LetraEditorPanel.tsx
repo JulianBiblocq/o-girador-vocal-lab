@@ -1,7 +1,6 @@
 /**
  * LetraEditorPanel.tsx
- * Éditeur « Letra da Toada » avec sélection de phrase, phonétique et alignement (< 145 lignes).
- * Style 100% Cordel : coins carrés (rounded-none), icônes vectorielles SVG.
+ * Éditeur « Letra da Toada » avec sélection de phrase, phonétique et alignement (< 130 lignes).
  */
 import React, { useState, useEffect, useMemo } from 'react';
 import type { VocalStepData } from '../../types/vocalPack.types';
@@ -18,14 +17,11 @@ interface LetraEditorPanelProps {
 }
 
 export const LetraEditorPanel: React.FC<LetraEditorPanelProps> = ({ allSteps, onUpdateSteps, onCommitHistory }) => {
-  const { t } = useLanguage();
-  const { activePattern, updatePattern, project } = useToadaProject();
+  const { t } = useLanguage(), { activePattern, updatePattern, project } = useToadaProject();
   const [rawText, setRawText] = useState<string>(activePattern.assignedLyricsText || '');
   const [focusPhrase, setFocusPhrase] = useState(''), [focusSyl, setFocusSyl] = useState('');
 
-  useEffect(() => {
-    setRawText(activePattern.assignedLyricsText || '');
-  }, [activePattern.id, activePattern.assignedLyricsText]);
+  useEffect(() => { setRawText(activePattern.assignedLyricsText || ''); }, [activePattern.id, activePattern.assignedLyricsText]);
 
   const availablePhrases = useMemo(() => {
     const set = new Set<string>();
@@ -43,16 +39,11 @@ export const LetraEditorPanel: React.FC<LetraEditorPanelProps> = ({ allSteps, on
     const anchors = rawText.trim() === (activePattern.assignedLyricsText || '').trim() ? activePattern.timeAnchors : undefined;
     onUpdateSteps(applyLyricsSyllablesToSteps(allSteps, rawText, anchors), true);
   };
-
-  const handleSyllableChange = (stepIndex: number, text: string) => {
-    onUpdateSteps(allSteps.map((st, i) => (i === stepIndex ? { ...st, syllable: text } : st)), false);
-  };
+  const handleSyllableChange = (stepIndex: number, text: string) => onUpdateSteps(allSteps.map((st, i) => (i === stepIndex ? { ...st, syllable: text } : st)), false);
   const handleToggleTrailingSpace = (stepIndex: number) => {
-    const cur = allSteps[stepIndex]?.syllable ?? '';
-    const next = cur.endsWith(' ') ? cur.trimEnd() : `${cur.trimEnd()} `;
+    const cur = allSteps[stepIndex]?.syllable ?? '', next = cur.endsWith(' ') ? cur.trimEnd() : `${cur.trimEnd()} `;
     onUpdateSteps(allSteps.map((st, i) => (i === stepIndex ? { ...st, syllable: next } : st)), true);
   };
-
   const handleShiftSyllable = (targetActiveIdx: number, direction: -1 | 1) => {
     const activeIndices = allSteps.map((s, idx) => (s.active && s.note !== '───' ? idx : -1)).filter((idx) => idx !== -1);
     const pos = activeIndices.indexOf(targetActiveIdx), neighborPos = pos + direction;
@@ -69,12 +60,9 @@ export const LetraEditorPanel: React.FC<LetraEditorPanelProps> = ({ allSteps, on
   return (
     <div className="cordel-card p-3 flex flex-col gap-2.5 rounded">
       <div className="flex items-center justify-between text-xs font-mono">
-        <span className="font-bold text-theme-accent flex items-center gap-1.5">
-          <CordelScroll className="w-4 h-4" /><span>{t('letraTitle')}</span>
-        </span>
+        <span className="font-bold text-theme-accent flex items-center gap-1.5"><CordelScroll className="w-4 h-4" /><span>{t('letraTitle')}</span></span>
         <span className="text-[10px] text-theme-ink/70">{activeSteps.length} {t('syllableCount')}</span>
       </div>
-
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
         {availablePhrases.length > 0 && (
           <select value={rawText} onChange={(e) => handleSelectPhrase(e.target.value)} className="letra-phrase-select px-2 py-1.5 text-xs font-mono focus:outline-none rounded max-w-full sm:max-w-[200px]">
@@ -92,18 +80,10 @@ export const LetraEditorPanel: React.FC<LetraEditorPanelProps> = ({ allSteps, on
           <CordelSpark className="w-3.5 h-3.5" /><span>{t('alignBtn')}</span>
         </button>
       </div>
-
       {activePattern.assignedPhoneticText && (
-        <div className="text-[10px] font-mono text-stone-400 italic px-1 flex items-center gap-1">
-          <span className="text-stone-500">🔤</span><span>{activePattern.assignedPhoneticText}</span>
-        </div>
+        <div className="text-[10px] font-mono text-stone-400 italic px-1 flex items-center gap-1"><span className="text-stone-500">🔤</span><span>{activePattern.assignedPhoneticText}</span></div>
       )}
-
-      <p className="text-[10px] font-mono text-theme-ink/80 leading-snug px-0.5 flex items-center gap-1">
-        <CordelBulb className="w-3.5 h-3.5 text-theme-accent shrink-0" /><span>{t('syntaxGuide')}</span>
-      </p>
-
-      {/* Ruban des pastilles syllabiques (coins carrés) */}
+      <p className="text-[10px] font-mono text-theme-ink/80 leading-snug px-0.5 flex items-center gap-1"><CordelBulb className="w-3.5 h-3.5 text-theme-accent shrink-0" /><span>{t('syntaxGuide')}</span></p>
       <div className="flex items-center gap-1.5 overflow-x-auto py-1 cordel-scrollbar">
         {activeSteps.length === 0 ? (
           <span className="text-[11px] font-mono text-theme-ink/50 italic">{t('letraNoActiveNotes')}</span>
@@ -135,12 +115,9 @@ export const LetraEditorPanel: React.FC<LetraEditorPanelProps> = ({ allSteps, on
           })
         )}
       </div>
-
       <div className="flex items-center gap-2 pt-1 border-t border-theme-border/30 text-[11px] font-mono">
         <span className="text-theme-ink/70">{t('letraWordsLabel')}</span>
-        <span className="letra-reconstructed-badge italic font-bold px-2 py-0.5 rounded-none">
-          {reconstructedWords ? `« ${reconstructedWords} »` : t('letraEmptyWords')}
-        </span>
+        <span className="letra-reconstructed-badge italic font-bold px-2 py-0.5 rounded-none">{reconstructedWords ? `« ${reconstructedWords} »` : t('letraEmptyWords')}</span>
       </div>
     </div>
   );

@@ -1,6 +1,6 @@
 /**
  * AudioImportActionsBar.tsx
- * Boutons d'import audio direct de pattern et d'ouverture du Banc de Decoupe (< 70 lignes).
+ * Boutons d'import audio direct de pattern et d'ouverture du Banc de Découpe (< 65 lignes).
  */
 import React, { useRef } from 'react';
 import { Upload, Scissors } from 'lucide-react';
@@ -13,9 +13,7 @@ interface AudioImportActionsBarProps {
 }
 
 export const AudioImportActionsBar: React.FC<AudioImportActionsBarProps> = ({
-  disabled,
-  onOpenSlicerModal,
-  onDirectImportAudio,
+  disabled, onOpenSlicerModal, onDirectImportAudio,
 }) => {
   const { t } = useLanguage();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -31,34 +29,24 @@ export const AudioImportActionsBar: React.FC<AudioImportActionsBarProps> = ({
   return (
     <div className="w-full flex flex-wrap items-center gap-2 text-[11px] font-mono select-none">
       <button
-        type="button"
-        disabled={disabled}
-        onClick={() => fileInputRef.current?.click()}
+        type="button" disabled={disabled} onClick={() => fileInputRef.current?.click()}
         className="flex-1 py-1.5 px-2.5 cordel-card-sm flex items-center justify-center gap-1.5 font-bold cursor-pointer hover:bg-white/5 text-[var(--cordel-text)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-        title="Charger un fichier audio court (.wav, .mp3) directement dans ce pattern"
+        title={t('importAudioPatternBtn')}
       >
         <Upload className="w-3.5 h-3.5 text-theme-accent" />
         <span>{t('importAudioPatternBtn')}</span>
       </button>
 
       <button
-        type="button"
-        disabled={disabled}
-        onClick={onOpenSlicerModal}
-        className="flex-1 py-1.5 px-2.5 cordel-card-sm flex items-center justify-center gap-1.5 font-bold cursor-pointer hover:bg-white/5 text-[var(--cordel-text)] hover:text-amber-300 shadow-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-        title="Ouvrir le Banc de Découpe pour extraire plusieurs phrases depuis un enregistrement complet"
+        type="button" disabled={disabled} onClick={onOpenSlicerModal}
+        className="flex-1 py-1.5 px-2.5 cordel-card-sm flex items-center justify-center gap-1.5 font-bold cursor-pointer hover:bg-white/5 text-[var(--cordel-text)] hover:text-amber-700 dark:hover:text-amber-300 shadow-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        title={t('audioImportOpenSlicerTitle')}
       >
         <Scissors className="w-3.5 h-3.5 text-theme-accent" />
         <span>{t('openSlicerModalBtn')}</span>
       </button>
 
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="audio/*"
-        onChange={handleFileChange}
-        className="hidden"
-      />
+      <input ref={fileInputRef} type="file" accept="audio/*" onChange={handleFileChange} className="hidden" />
     </div>
   );
 };

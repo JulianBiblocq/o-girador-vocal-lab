@@ -1,11 +1,11 @@
 /**
  * PianoRollSyllablesRow.tsx
- * Ligne d'édition directe des syllabes sous la grille du Piano Roll (< 115 lignes).
- * Navigation Tab/Shift-Tab entre notes et découpe rapide 1 ligne (ex: ba-que...).
+ * Ligne d'édition directe des syllabes sous la grille du Piano Roll (bilingue + contraste Jour/Nuit) (< 125 lignes).
  */
 import React, { useState, useRef, useMemo, useEffect } from 'react';
 import type { VocalStepData } from '../../types/vocalPack.types';
 import { Scissors, CornerDownLeft } from 'lucide-react';
+import { useLanguage } from '../../i18n/LanguageContext';
 
 interface PianoRollSyllablesRowProps {
   allSteps: VocalStepData[];
@@ -17,6 +17,7 @@ interface PianoRollSyllablesRowProps {
 export const PianoRollSyllablesRow: React.FC<PianoRollSyllablesRowProps> = ({
   allSteps, gridWidth, readOnly, onUpdateSteps,
 }) => {
+  const { t } = useLanguage();
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
   const activeNotes = useMemo(() => {
     const list: { stepIndex: number; note: string; syllable: string; width: number; x: number }[] = [];
@@ -44,9 +45,7 @@ export const PianoRollSyllablesRow: React.FC<PianoRollSyllablesRowProps> = ({
   }, [activeNotes]);
   const [cutterText, setCutterText] = useState(defaultPhrase);
 
-  useEffect(() => {
-    setCutterText(defaultPhrase);
-  }, [defaultPhrase]);
+  useEffect(() => { setCutterText(defaultPhrase); }, [defaultPhrase]);
 
   const handleSyllableChange = (stepIdx: number, val: string) => {
     onUpdateSteps(allSteps.map((st, i) => (i === stepIdx ? { ...st, syllable: val } : st)), false);
@@ -83,8 +82,7 @@ export const PianoRollSyllablesRow: React.FC<PianoRollSyllablesRowProps> = ({
   };
 
   return (
-    <div className="flex flex-col gap-1 border-t border-[var(--cordel-border-sub)] bg-black/20 pt-1">
-      {/* 1. Bandeau de cellules alignées sur la largeur temporelle du Piano Roll */}
+    <div className="flex flex-col gap-1 border-t border-[var(--cordel-border-sub)] bg-[var(--cordel-subcard-bg)] pt-1">
       <div className="relative h-7" style={{ width: `${gridWidth}px`, marginLeft: '64px' }}>
         {activeNotes.map((n, idx) => (
           <div
@@ -94,41 +92,35 @@ export const PianoRollSyllablesRow: React.FC<PianoRollSyllablesRowProps> = ({
           >
             <input
               ref={(el) => { inputRefs.current[idx] = el; }}
-              type="text"
-              disabled={readOnly}
-              value={n.syllable}
-              placeholder={n.note}
+              type="text" disabled={readOnly} value={n.syllable} placeholder={n.note}
               onChange={(e) => handleSyllableChange(n.stepIndex, e.target.value)}
               onBlur={() => onUpdateSteps(allSteps, true)}
               onKeyDown={(e) => handleKeyDown(e, idx)}
-              className="w-full text-center text-[10px] font-mono font-bold px-0.5 py-0.5 bg-black/40 hover:bg-black/60 focus:bg-amber-950 focus:border-amber-400 border border-[var(--cordel-border-sub)] text-amber-200 focus:outline-none transition-colors rounded-none"
-              title={`Syllabe pour ${n.note} (Touche Tab pour passer à la suivante)`}
+              className="letra-syllable-input w-full text-center text-[10px] font-mono font-bold px-0.5 py-0.5 focus:outline-none transition-colors rounded-none"
+              title={t('syllableInputTitle', { note: n.note })}
             />
           </div>
         ))}
       </div>
 
-      {/* 2. Barre d'outils de découpe rapide en 1 ligne */}
       {!readOnly && activeNotes.length > 0 && (
         <div className="flex items-center gap-2 px-2 py-1 bg-[var(--cordel-surface)] border-t border-[var(--cordel-border-sub)] text-[10px] font-mono" style={{ width: `${64 + gridWidth}px` }}>
-          <Scissors className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-          <span className="text-[var(--cordel-secondary-text)] shrink-0">Découpe rapide :</span>
+          <Scissors className="w-3.5 h-3.5 text-amber-700 dark:text-amber-400 shrink-0" />
+          <span className="text-[var(--cordel-secondary-text)] shrink-0">{t('syllableQuickSplitLabel')}</span>
           <input
-            type="text"
-            value={cutterText}
+            type="text" value={cutterText}
             onChange={(e) => setCutterText(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter') handleDistributeCut(); }}
-            placeholder="Ex: ba-que-de-ro-da (séparé par tirets ou espaces)"
-            className="flex-1 min-w-[200px] bg-black/30 border border-[var(--cordel-border-sub)] px-2 py-0.5 text-[10.5px] font-mono text-[var(--cordel-text)] rounded-none focus:outline-none focus:border-amber-400"
+            placeholder={t('syllableQuickSplitPlaceholder')}
+            className="letra-phrase-input flex-1 min-w-[200px] px-2 py-0.5 text-[10.5px] font-mono rounded-none focus:outline-none"
           />
           <button
-            type="button"
-            onClick={handleDistributeCut}
+            type="button" onClick={handleDistributeCut}
             className="px-2 py-0.5 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-none flex items-center gap-1 cursor-pointer shrink-0"
-            title="Distribuer instantanément les syllabes sur les notes actives"
+            title={t('syllableDistributeTitle')}
           >
             <CornerDownLeft className="w-3 h-3" />
-            <span>Répartir ({activeNotes.length} notes)</span>
+            <span>{t('syllableDistributeBtn', { count: activeNotes.length })}</span>
           </button>
         </div>
       )}

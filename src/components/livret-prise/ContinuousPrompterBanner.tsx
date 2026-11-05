@@ -1,6 +1,6 @@
 /**
  * ContinuousPrompterBanner.tsx
- * Prompteur dynamique pendant la prise continue avec encart doré d'anticipation (< 90 lignes).
+ * Prompteur dynamique pendant la prise continue avec encart doré d'anticipation (< 65 lignes).
  */
 import React from 'react';
 import type { ContinuousPrompterSlotInfo } from '../../audio/continuousTakeRecorder';
@@ -25,31 +25,31 @@ export const ContinuousPrompterBanner: React.FC<ContinuousPrompterBannerProps> =
           <span className={`px-2 py-0.5 rounded text-xs font-black uppercase tracking-wider ${
             isPuxador ? 'bg-amber-500 text-stone-950' : 'bg-emerald-500 text-stone-950'
           }`}>
-            {isPuxador ? 'Puxador (Solo)' : 'Coro (Chœur)'}
+            {isPuxador ? t('prompterRolePuxador') : t('prompterRoleCoro')}
           </span>
           <span className="text-xs font-mono font-bold text-amber-200">
-            Bloc {info.slotIndex} / {info.totalSlots} — Mesure M{info.conductorMeasure}
+            {t('prompterSlotMeasure', { slot: info.slotIndex, total: info.totalSlots, measure: info.conductorMeasure })}
           </span>
           <span className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-bold ${
             info.hasAnacrusis ? 'bg-amber-500/30 text-amber-200 border border-amber-400/50' : 'bg-stone-700 text-stone-300'
           }`}>
-            {info.hasAnacrusis ? `+Ana (${info.anacrusisBeats || 2}T)` : 'T1 franc'}
+            {info.hasAnacrusis ? t('prompterAnacBadge', { beats: info.anacrusisBeats || 2 }) : t('prompterT1Badge')}
           </span>
         </div>
         <span className="text-[10px] font-mono text-red-400 font-bold flex items-center gap-1 animate-pulse">
-          ● {t('continuousPrompterLive') || 'PRISE CONTINUE EN COURS'}
+          ● {t('continuousPrompterLive')}
         </span>
       </div>
 
       <div className="text-base sm:text-lg font-serif font-black tracking-wide text-amber-100 min-h-[1.8rem] flex items-center">
-        {info.lyrics ? `« ${info.lyrics} »` : <em>({t('continuousPrompterRest') || 'Écoute / Attente'})</em>}
+        {info.lyrics ? `« ${info.lyrics} »` : <em>({t('continuousPrompterRest')})</em>}
       </div>
 
       {info.nextSlotIndex && (
         <div className="flex items-center gap-2 p-1.5 rounded bg-amber-500/20 border border-amber-400/40 text-xs font-mono text-amber-200">
           <Sparkles className="w-3.5 h-3.5 text-amber-400 shrink-0" />
           <span className="truncate">
-            <strong>{t('continuousPrompterNext') || 'À suivre'} au Bloc {info.nextSlotIndex} (M{info.nextMeasure}) :</strong>{' '}
+            <strong>{t('continuousPrompterNext')} {t('prompterNextBlock', { slot: info.nextSlotIndex, measure: info.nextMeasure ?? '' })}</strong>{' '}
             <span className="italic">{info.nextLyrics ? `« ${info.nextLyrics} »` : '...'}</span>
           </span>
         </div>

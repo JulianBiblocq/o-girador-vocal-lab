@@ -1,3 +1,7 @@
+/**
+ * WaveformTrimEditor.tsx
+ * Éditeur de forme d'onde, poignées Début/Fin, Ancre T1 et micro-décalage local non destructif (< 140 lignes).
+ */
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { WaveformGridCanvas } from './WaveformGridCanvas';
 import { WaveformOverlayCanvas } from './WaveformOverlayCanvas';
@@ -57,14 +61,12 @@ export const WaveformTrimEditor: React.FC<WaveformTrimEditorProps> = (props) => 
   const [latencyOffsetMs, setLatencyOffsetMs] = useState<number>(0);
   const [isPlaying, setIsPlaying] = useState<boolean>(false), [clickEnabled, setClickEnabled] = useState<boolean>(true);
   const [highPassEnabled, setHighPassEnabled] = useState<boolean>(true), [tonePolishEnabled, setTonePolishEnabled] = useState<boolean>(true);
-
   const playheadSec = usePlayheadTracker(player, isPlaying, () => setIsPlaying(false));
 
   useEffect(() => {
     const el = containerRef.current; if (!el) return;
     const obs = new ResizeObserver(([entry]) => { if (entry) setContainerWidth(Math.max(200, Math.floor(entry.contentRect.width))); });
-    obs.observe(el);
-    return () => obs.disconnect();
+    obs.observe(el); return () => obs.disconnect();
   }, []);
 
   useEffect(() => () => player.stop(), [player]);
@@ -76,17 +78,14 @@ export const WaveformTrimEditor: React.FC<WaveformTrimEditorProps> = (props) => 
     await player.play(rawPCM, sampleRate, {
       trimStartSec, trimEndSec, latencyOffsetMs, bpm, beatsPerMeasure, totalDurationSec,
       clickEnabled, hasAnacrusis, t1OffsetSec, highPassFilterEnabled: highPassEnabled, enableTonePolish: tonePolishEnabled, normalizeRMS: true, outputDeviceId,
-      harmonyGrid, harmonyConfig, measuresCount, pitchShiftSemitones,
-      onEnded: () => setIsPlaying(false),
+      harmonyGrid, harmonyConfig, measuresCount, pitchShiftSemitones, onEnded: () => setIsPlaying(false),
     });
   }, [player, isPlaying, rawPCM, sampleRate, trimStartSec, trimEndSec, latencyOffsetMs, bpm, beatsPerMeasure, totalDurationSec, clickEnabled, hasAnacrusis, t1OffsetSec, highPassEnabled, tonePolishEnabled, outputDeviceId, harmonyGrid, harmonyConfig, measuresCount, pitchShiftSemitones]);
 
   const handleProceed = useCallback(() => {
     player.stop(); setIsPlaying(false);
-    const offsetSec = latencyOffsetMs / 1000;
-    const effTrimStart = Math.max(0, trimStartSec - offsetSec);
-    const effTrimEnd = Math.max(effTrimStart + 0.05, trimEndSec - offsetSec);
-    const effT1 = Math.max(0, t1OffsetSec - offsetSec);
+    const offsetSec = latencyOffsetMs / 1000, effTrimStart = Math.max(0, trimStartSec - offsetSec);
+    const effTrimEnd = Math.max(effTrimStart + 0.05, trimEndSec - offsetSec), effT1 = Math.max(0, t1OffsetSec - offsetSec);
     onPackReady(
       generateVocalPack({
         rawPCM, sampleRate, trimStartSec, trimEndSec, latencyOffsetMs, bpm, timeSignature,
@@ -107,11 +106,7 @@ export const WaveformTrimEditor: React.FC<WaveformTrimEditorProps> = (props) => 
           <HarmonyProfileSelector config={harmonyConfig} onChange={onUpdateHarmonyConfig} />
         </div>
       )}
-      <WaveformZoomBar
-        zoomLevel={zoomLevel} onSetZoom={setZoom} onZoomIn={zoomIn} onZoomOut={zoomOut}
-        onSeeStart={() => scrollToSec(trimStartSec, totalDurationSec, containerWidth)}
-        onSeeEnd={() => scrollToSec(trimEndSec, totalDurationSec, containerWidth)}
-      />
+      <WaveformZoomBar zoomLevel={zoomLevel} onSetZoom={setZoom} onZoomIn={zoomIn} onZoomOut={zoomOut} onSeeStart={() => scrollToSec(trimStartSec, totalDurationSec, containerWidth)} onSeeEnd={() => scrollToSec(trimEndSec, totalDurationSec, containerWidth)} />
       <div ref={containerRef} className="w-full cordel-card overflow-hidden select-none rounded">
         <div ref={scrollContainerRef} className="w-full h-36 overflow-x-auto overflow-y-hidden relative cordel-scrollbar">
           <div style={{ width: `${zoomedWidth}px`, height: '144px', position: 'relative' }}>
@@ -119,18 +114,16 @@ export const WaveformTrimEditor: React.FC<WaveformTrimEditorProps> = (props) => 
             <WaveformOverlayCanvas
               rawPCM={rawPCM} sampleRate={sampleRate} width={zoomedWidth} height={144} totalDurationSec={totalDurationSec}
               trimStartSec={trimStartSec} trimEndSec={trimEndSec} latencyOffsetMs={latencyOffsetMs} playheadSec={playheadSec} isPlaying={isPlaying}
-              onTrimChange={(s, e) => { setTrimStartSec(s); setTrimEndSec(e); }}
-              onTrimCommit={(s, e) => onTrimChange?.(s, e)}
-              onLatencyOffsetChange={setLatencyOffsetMs}
+              onTrimChange={(s, e) => { setTrimStartSec(s); setTrimEndSec(e); }} onTrimCommit={(s, e) => onTrimChange?.(s, e)} onLatencyOffsetChange={setLatencyOffsetMs}
             />
           </div>
         </div>
       </div>
       <p className="text-[11px] font-mono text-theme-ink/80 text-center leading-snug px-1">{t('trimHelpNotice')}</p>
       <div className="flex flex-col sm:flex-row items-center gap-2 w-full">
-        <div className="flex-1 w-full"><LatencyNudgeBar latencyOffsetMs={latencyOffsetMs} onChange={setLatencyOffsetMs} disabled={isPlaying} /></div>
+        <div className="flex-1 w-full"><LatencyNudgeBar latencyOffsetMs={latencyOffsetMs} onChange={setLatencyOffsetMs} disabled={isPlaying} persistToStorage={false} /></div>
         <div className="cordel-card flex items-center justify-between gap-2 p-1.5 rounded text-xs font-mono shrink-0">
-          <span className="font-bold text-theme-ink/80">{t('calageAnchorT1Label') || 'Ancre T1'}</span>
+          <span className="font-bold text-theme-ink/80">{t('calageAnchorT1Label')}</span>
           <div className="flex items-center gap-1">
             <button type="button" onClick={() => { const n = Math.max(0, Math.round((t1OffsetSec - 0.01) * 1000) / 1000); setT1OffsetSec(n); onT1OffsetChange?.(n); }} className="cordel-btn px-1.5 py-0.5 text-xs font-mono font-bold cursor-pointer">◀ -10ms</button>
             <span className="font-bold text-theme-wood px-1">{t1OffsetSec.toFixed(3)}s</span>

@@ -1,11 +1,12 @@
 /**
  * LatencyReminderBanner.tsx
- * Bandeau de rappel bienveillant pour le calage de latence (< 75 lignes).
+ * Bandeau de rappel bienveillant pour le calage de latence (< 95 lignes).
  * Vérifie si le périphérique d'entrée est déjà calibré dans localStorage.
  */
 import React, { useState, useEffect } from 'react';
 import { useAudioHardware } from '../../context/AudioHardwareContext';
 import { useVocalTransportStore } from '../../stores/useVocalTransportStore';
+import { useLanguage } from '../../i18n/LanguageContext';
 import {
   isLatencyCalibrated,
   markLatencyCalibrated,
@@ -15,6 +16,7 @@ import {
 import { Clock, Settings, Check, X } from 'lucide-react';
 
 export const LatencyReminderBanner: React.FC = () => {
+  const { t } = useLanguage();
   const { selectedDeviceId } = useAudioHardware();
   const setActiveLivret = useVocalTransportStore((s) => s.setActiveLivret);
   const [hidden, setHidden] = useState<boolean>(() => (
@@ -53,7 +55,7 @@ export const LatencyReminderBanner: React.FC = () => {
       <div className="flex items-center gap-2 min-w-0">
         <Clock className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
         <span className="truncate font-medium">
-          ⏱️ Avant d&apos;enregistrer, pensez à vérifier le calage de latence de votre micro/carte son dans les Réglages.
+          {t('latencyReminderNotice')}
         </span>
       </div>
 
@@ -64,24 +66,24 @@ export const LatencyReminderBanner: React.FC = () => {
           className="px-2 py-0.5 bg-amber-600 hover:bg-amber-500 text-white rounded flex items-center gap-1 font-bold text-[11px] cursor-pointer"
         >
           <Settings className="w-3 h-3" />
-          <span>⚙️ Aller aux Réglages</span>
+          <span>{t('latencyReminderGoSettings')}</span>
         </button>
 
         <button
           type="button"
           onClick={handleMarkCalibrated}
           className="px-2 py-0.5 bg-[#0f766e] hover:bg-[#115e59] text-[#f4ecd8] rounded flex items-center gap-1 text-[11px] font-bold cursor-pointer shadow-sm"
-          title="Marquer ce micro comme calibré"
+          title={t('latencyReminderMarkDoneTitle')}
         >
           <Check className="w-3 h-3" />
-          <span>C&apos;est déjà calé</span>
+          <span>{t('latencyReminderAlreadyDone')}</span>
         </button>
 
         <button
           type="button"
           onClick={handleDismiss}
           className="p-1 hover:text-white text-stone-500 dark:text-amber-400 cursor-pointer"
-          title="Masquer pour cette session"
+          title={t('appUpdateCloseAria')}
         >
           <X className="w-3.5 h-3.5" />
         </button>

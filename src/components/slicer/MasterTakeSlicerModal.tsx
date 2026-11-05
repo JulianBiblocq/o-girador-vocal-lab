@@ -1,6 +1,6 @@
 /**
  * MasterTakeSlicerModal.tsx
- * Modale Cordel du Banc de Decoupe Multi-Blocs & Calage Fin (< 130 lignes).
+ * Modale Cordel du Banc de Decoupe Multi-Blocs & Calage Fin (< 135 lignes).
  */
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useToadaProject } from '../../context/ToadaProjectContext';
@@ -30,10 +30,8 @@ export const MasterTakeSlicerModal: React.FC<SlicerModalProps> = ({
 }) => {
   const { project, addPattern, updatePattern, loadProject } = useToadaProject();
   const { t } = useLanguage();
-  const [mode, setMode] = useState<SlicerWorkMode>('multi');
-  const [audio, setAudio] = useState<DecodedAudioResult | null>(null);
-  const [segments, setSegments] = useState<SliceSegment[]>([]);
-  const [isAssigning, setIsAssigning] = useState(false);
+  const [mode, setMode] = useState<SlicerWorkMode>('multi'), [audio, setAudio] = useState<DecodedAudioResult | null>(null);
+  const [segments, setSegments] = useState<SliceSegment[]>([]), [isAssigning, setIsAssigning] = useState(false);
 
   const [trimIn, setTrimIn] = useState(0), [trimOut, setTrimOut] = useState(8);
   const [beatPegs, setBeatPegs] = useState<number[]>([]), [warpPct, setWarpPct] = useState(0);

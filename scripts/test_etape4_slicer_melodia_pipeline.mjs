@@ -243,3 +243,4 @@ assert.deepStrictEqual(parsedParts, ['Boi ', 'bo', 'ni', 'to '], 'La redistribut
 console.log('  ✅ 5. Aller-retour du découpeur rapide PianoRollSyllablesRow validé.');
 
 console.log('🎉 TOUS LES TESTS DE L ÉTAPE 4 SONT PASSÉS AVEC SUCCÈS !');
+

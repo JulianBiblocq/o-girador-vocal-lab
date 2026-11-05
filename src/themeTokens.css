@@ -7,8 +7,6 @@
   --cordel-secondary-text: #b5a48b;
   --cordel-muted: rgba(181, 164, 139, 0.7);
   --cordel-faint: rgba(239, 230, 210, 0.08);
-
-  /* Hiérarchie des contours en Mode Nuit */
   --cordel-border-panel: rgba(239, 230, 210, 0.14);
   --cordel-border-sub: rgba(239, 230, 210, 0.08);
   --cordel-border: var(--cordel-border-panel);
@@ -42,8 +40,6 @@
   --cordel-secondary-text: #57534e;
   --cordel-muted: rgba(26, 26, 26, 0.6);
   --cordel-faint: rgba(26, 26, 26, 0.12);
-
-  /* Hiérarchie des contours en Mode Jour (adoucie) */
   --cordel-border-panel: rgba(26, 26, 26, 0.28);
   --cordel-border-sub: rgba(26, 26, 26, 0.12);
   --cordel-border: var(--cordel-border-panel);
@@ -93,52 +89,23 @@
 
 /* Effet tampon bois patiné : coins 4px et contours hiérarchisés */
 .cordel-card {
-  background-color: var(--cordel-surface);
-  color: var(--cordel-text);
-  border: 1px solid var(--cordel-border-panel);
-  box-shadow: var(--cordel-shadow);
-  border-radius: 4px;
+  background-color: var(--cordel-surface); color: var(--cordel-text);
+  border: 1px solid var(--cordel-border-panel); box-shadow: var(--cordel-shadow); border-radius: 4px;
 }
-
 .cordel-card-sm {
-  background-color: var(--cordel-subcard-bg);
-  color: var(--cordel-text);
-  border: 1px solid var(--cordel-border-sub);
-  box-shadow: var(--cordel-shadow-sm);
-  border-radius: 4px;
+  background-color: var(--cordel-subcard-bg); color: var(--cordel-text);
+  border: 1px solid var(--cordel-border-sub); box-shadow: var(--cordel-shadow-sm); border-radius: 4px;
 }
-
 .cordel-btn {
-  background-color: var(--cordel-surface);
-  color: var(--cordel-text);
-  border: 1px solid var(--cordel-border-sub);
-  box-shadow: var(--cordel-shadow-sm);
-  font-weight: 700;
-  border-radius: 4px;
-  transition: all 0.15s ease-in-out;
+  background-color: var(--cordel-surface); color: var(--cordel-text);
+  border: 1px solid var(--cordel-border-sub); box-shadow: var(--cordel-shadow-sm);
+  font-weight: 700; border-radius: 4px; transition: all 0.15s ease-in-out;
 }
-
-.cordel-btn:hover {
-  background-color: var(--cordel-text);
-  color: var(--cordel-bg);
-}
-
+.cordel-btn:hover { background-color: var(--cordel-text); color: var(--cordel-bg); }
 .cordel-btn-primary {
-  background-color: var(--cordel-wood) !important;
-  color: var(--cordel-on-primary) !important;
-  border: 1px solid var(--cordel-terracotta);
-  box-shadow: var(--cordel-shadow);
-  font-weight: 800;
-  border-radius: 4px;
-  transition: all 0.15s ease-in-out;
+  background-color: var(--cordel-wood) !important; color: var(--cordel-on-primary) !important;
+  border: 1px solid var(--cordel-terracotta); box-shadow: var(--cordel-shadow);
+  font-weight: 800; border-radius: 4px; transition: all 0.15s ease-in-out;
 }
-
-.cordel-btn-primary:hover {
-  background-color: var(--cordel-wood-light) !important;
-  transform: translate(-1px, -1px);
-}
-
-.cordel-btn-primary:active {
-  transform: translate(1px, 1px);
-  box-shadow: 1px 1px 0px var(--cordel-shadow-color);
-}
+.cordel-btn-primary:hover { background-color: var(--cordel-wood-light) !important; transform: translate(-1px, -1px); }
+.cordel-btn-primary:active { transform: translate(1px, 1px); box-shadow: 1px 1px 0px var(--cordel-shadow-color); }

@@ -1,3 +1,7 @@
+/**
+ * ToadaProjectContext.tsx
+ * Contexte global de gestion du projet Toada, des patterns, des variantes et du conducteur (< 130 lignes).
+ */
 import React, { createContext, useContext, useState, useCallback, useMemo, useEffect } from 'react';
 import {
   type ToadaProject, type VocalPatternItem, type VocalRole, type VocalAudioVariant,
@@ -7,10 +11,7 @@ import type { TimeSignatureString } from '../types/vocalPack.types';
 import type { ToadaProjectContextValue } from '../types/toadaProjectContext.types';
 import { createMirroredPattern, injectSourceIntoTargetPattern, propagateSourceUpdatesToLinkedPatterns, unlinkPattern } from '../utils/patternMirrorHelper';
 import { swapProjectRoles, duplicatePatternAsVariation } from '../utils/projectRoleOps';
-import {
-  batchUpdateProjectBpm, batchUpdateProjectMeasures, batchUpdateProjectAnacrusis,
-  batchUpdateProjectPitch, batchUpdateProjectTimeSignature, batchUpdateProjectTessitura,
-} from '../utils/projectBatchOps';
+import { batchUpdateProjectBpm, batchUpdateProjectMeasures, batchUpdateProjectAnacrusis, batchUpdateProjectPitch, batchUpdateProjectTimeSignature, batchUpdateProjectTessitura } from '../utils/projectBatchOps';
 import { applySetActiveVariantKey, applyUpdateVariant, applyEnsureVariantExists } from '../utils/variantContextOps';
 import { usePatternSelection } from '../hooks/usePatternSelection';
 import { useProjectAutoSave } from '../hooks/useProjectAutoSave';
@@ -21,8 +22,7 @@ const FALLBACK_PATTERN = createDefaultVocalPattern('puxador', 'Puxador 1', 2, DE
 const FALLBACK_VARIANT = createDefaultVariant(1.0, 0);
 
 export const ToadaProjectProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [project, setProject] = useState<ToadaProject>(() => createDefaultToadaProject());
-  const [cueMode, setCueMode] = useState<string>('auto_previous');
+  const [project, setProject] = useState<ToadaProject>(() => createDefaultToadaProject()), [cueMode, setCueMode] = useState<string>('auto_previous');
   useProjectAutoSave(project, setProject);
   const patternIds = useMemo(() => project.patterns.map((p) => p.id), [project.patterns]);
   const { applyScope, setApplyScope, selectedPatternIds, toggleSelectPattern, selectAllPatterns, clearSelectedPatterns } = usePatternSelection(patternIds);
@@ -51,17 +51,14 @@ export const ToadaProjectProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const addPattern = useCallback((role: VocalRole, name?: string): string => {
     const newPat = createDefaultVocalPattern(role, name || '', 2, DEFAULT_TOADA_BPM, 'C4');
     setProject((prev) => {
-      const count = prev.patterns.filter((p) => p.role === role).length + 1;
-      const resolvedName = name?.trim() || (role === 'puxador' ? `Appel ${count}` : `Chœur ${count}`);
+      const count = prev.patterns.filter((p) => p.role === role).length + 1, resolvedName = name?.trim() || (role === 'puxador' ? `Appel ${count}` : `Chœur ${count}`);
       const curActive = prev.patterns.find((p) => p.id === prev.activePatternId) ?? prev.patterns[0];
       const pat: VocalPatternItem = { ...newPat, name: resolvedName, bpm: prev.bpm ?? DEFAULT_TOADA_BPM, baseBpm: prev.bpm ?? DEFAULT_TOADA_BPM, hasAnacrusis: curActive?.hasAnacrusis ?? true };
       return { ...prev, patterns: [...prev.patterns, pat], activePatternId: pat.id };
     });
     return newPat.id;
   }, []);
-  const updatePattern = useCallback((id: string, partial: Partial<VocalPatternItem>) => {
-    setProject((prev) => ({ ...prev, patterns: propagateSourceUpdatesToLinkedPatterns(prev.patterns.map((p) => (p.id === id ? { ...p, ...partial } : p)), id) }));
-  }, []);
+  const updatePattern = useCallback((id: string, partial: Partial<VocalPatternItem>) => setProject((prev) => ({ ...prev, patterns: propagateSourceUpdatesToLinkedPatterns(prev.patterns.map((p) => (p.id === id ? { ...p, ...partial } : p)), id) })), []);
   const mirrorPatternToRole = useCallback((sourcePatternId: string, targetRole: VocalRole): string => {
     let newId = '';
     setProject((prev) => {
@@ -76,7 +73,6 @@ export const ToadaProjectProvider: React.FC<{ children: React.ReactNode }> = ({ 
       const s = prev.patterns.find((p) => p.id === sourceId), t = prev.patterns.find((p) => p.id === targetId); if (!s || !t) return prev;
       return { ...prev, patterns: prev.patterns.map((p) => (p.id === targetId ? injectSourceIntoTargetPattern(s, t) : p)), activePatternId: targetId };
     });
-    window.dispatchEvent(new CustomEvent('app-toast', { detail: { message: 'Chant injecté dans le Chœur avec succès !', type: 'success' } }));
   }, []);
   const handleUnlink = useCallback((patternId: string) => setProject((prev) => ({ ...prev, patterns: prev.patterns.map((p) => (p.id === patternId ? unlinkPattern(p) : p)) })), []);
   const removePattern = useCallback((id: string) => {
@@ -91,8 +87,7 @@ export const ToadaProjectProvider: React.FC<{ children: React.ReactNode }> = ({ 
   }, []);
   const loadProject = useCallback((p: ToadaProject) => {
     stopAllActiveAudioEngines();
-    const validActiveId = p.patterns.some((pat) => pat.id === p.activePatternId) ? p.activePatternId : (p.patterns[0]?.id ?? '');
-    setProject({ ...p, activePatternId: validActiveId });
+    setProject({ ...p, activePatternId: p.patterns.some((pat) => pat.id === p.activePatternId) ? p.activePatternId : (p.patterns[0]?.id ?? '') });
   }, []);
   const addSlot = useCallback(() => setProject((prev) => ({ ...prev, slots: [...prev.slots, { slotId: `slot-${Date.now().toString(36)}`, puxadorPatternId: null, coroPatternId: null }] })), []);
   const removeSlot = useCallback((slotId: string) => setProject((prev) => (prev.slots.length <= 1 ? prev : { ...prev, slots: prev.slots.filter((s) => s.slotId !== slotId) })), []);
@@ -138,7 +133,5 @@ export const ToadaProjectProvider: React.FC<{ children: React.ReactNode }> = ({ 
 };
 
 export function useToadaProject(): ToadaProjectContextValue {
-  const ctx = useContext(ToadaContext);
-  if (!ctx) throw new Error('useToadaProject must be used within a ToadaProjectProvider');
-  return ctx;
+  const ctx = useContext(ToadaContext); if (!ctx) throw new Error('useToadaProject must be used within a ToadaProjectProvider'); return ctx;
 }

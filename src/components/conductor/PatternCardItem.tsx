@@ -1,7 +1,6 @@
 /**
  * PatternCardItem.tsx
  * Carte individuelle de pattern dans la bibliothèque (< 135 lignes).
- * Renommage, case de sélection [✓], métadonnées, suppression, miroir et variations.
  */
 import React, { useState } from 'react';
 import type { VocalPatternItem, VocalRole } from '../../types/toadaProject.types';
@@ -41,7 +40,11 @@ export const PatternCardItem: React.FC<PatternCardItemProps> = ({
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState(pat.name);
 
-  const hasAudio = pat.recordingResult !== null && pat.recordingResult.pcm.length > 0;
+  const hasAudio = Boolean(
+    pat.recordingResult?.pcm?.length ||
+    pat.rawAudioSamples?.length ||
+    pat.variants?.[pat.activeVariantKey]?.recordingResult?.pcm?.length
+  );
   const vList = Object.values(pat.variants ?? {});
   const recCount = vList.filter((v) => v.recordingResult !== null).length;
   const noteName = getSolfegeNoteName(pat.referencePitch, t);
@@ -56,7 +59,7 @@ export const PatternCardItem: React.FC<PatternCardItemProps> = ({
       onClick={onSelect}
       className={`px-2 py-1.5 cordel-card-sm flex flex-col justify-between gap-1 cursor-pointer transition-all select-none rounded ${
         isActive ? `${activeBg} !text-white border-2 border-amber-400 shadow-md font-bold`
-          : isSelected ? 'bg-amber-950/40 text-[var(--cordel-text)] border-2 border-amber-500/80'
+          : isSelected ? 'bg-amber-500/15 dark:bg-amber-950/40 text-[var(--cordel-text)] border-2 border-amber-500/80'
           : 'bg-[var(--cordel-subcard-bg)] text-[var(--cordel-text)] opacity-85 hover:opacity-100 border border-[var(--cordel-border-sub)]'
       }`}
     >
@@ -79,9 +82,9 @@ export const PatternCardItem: React.FC<PatternCardItemProps> = ({
           <span
             onDoubleClick={(e) => { e.stopPropagation(); setIsEditing(true); setEditName(pat.name); }}
             title={t('doubleClickRename')}
-            className={`text-xs font-bold font-mono truncate flex-1 flex items-center gap-1 ${isActive ? '!text-white' : 'text-theme-ink hover:text-amber-500'}`}
+            className={`text-xs font-bold font-mono truncate flex-1 flex items-center gap-1 ${isActive ? '!text-white' : 'text-theme-ink hover:text-amber-600 dark:hover:text-amber-400'}`}
           >
-            {isActive && <span className="text-amber-300 font-black">▶</span>}
+            {isActive && <span className="text-[#f4ecd8] font-black">▶</span>}
             <span className="truncate">{pat.name}</span>
           </span>
         )}
@@ -93,13 +96,12 @@ export const PatternCardItem: React.FC<PatternCardItemProps> = ({
         )}
       </div>
 
-      {/* Rangée Miroir / Synchronisation & Variation */}
       <div className="flex items-center justify-between gap-1 text-[9.5px] font-mono">
         <div className="flex items-center gap-1 min-w-0">
           {isLinked ? (
-            <div className={`flex items-center gap-1 border px-1 py-0.2 truncate rounded ${isActive ? '!bg-white/20 !text-white border-white/40 font-bold' : 'bg-emerald-950/70 text-emerald-300 border-emerald-500/40'}`}>
+            <div className={`flex items-center gap-1 border px-1 py-0.2 truncate rounded ${isActive ? '!bg-white/20 !text-white border-white/40 font-bold' : 'bg-emerald-500/15 dark:bg-emerald-950/70 text-emerald-800 dark:text-emerald-300 border-emerald-500/40'}`}>
               <span className="truncate">{t('syncBadge', { source: sourcePatternName || '...' })}</span>
-              <button type="button" title={t('unlinkTooltip')} onClick={(e) => { e.stopPropagation(); onUnlink(); }} className="hover:text-red-300 p-0.2 cursor-pointer shrink-0">
+              <button type="button" title={t('unlinkTooltip')} onClick={(e) => { e.stopPropagation(); onUnlink(); }} className="hover:text-red-500 p-0.2 cursor-pointer shrink-0">
                 <X className="w-2.5 h-2.5" />
               </button>
             </div>
@@ -123,7 +125,7 @@ export const PatternCardItem: React.FC<PatternCardItemProps> = ({
             </button>
           )}
         </div>
-        <span className={`text-[9px] font-mono font-bold shrink-0 ${isActive ? '!text-[#f4ecd8]' : 'text-[var(--cordel-secondary-text)]'}`}>{recCount}/{Math.max(vList.length, 4)} decl.</span>
+        <span className={`text-[9px] font-mono font-bold shrink-0 ${isActive ? '!text-[#f4ecd8]' : 'text-[var(--cordel-secondary-text)]'}`}>{recCount}/{Math.max(vList.length, 4)} {t('patternDeclShort')}</span>
       </div>
 
       <div className={`flex items-center justify-between text-[10px] font-mono pt-0.5 border-t ${isActive ? 'border-white/30 !text-white font-bold' : 'border-[var(--cordel-border-sub)]'}`}>

@@ -1,17 +1,18 @@
 /**
  * ToadaConductorStrip.tsx
- * Ligne 2 : Frise Conducteur avec Rails Puxador/Coro, Live Tempo Varispeed et Timeline Audio (< 135 lignes).
+ * Ligne 2 : Frise Conducteur avec Rails Puxador/Coro, Live Tempo Varispeed et Timeline Audio (< 138 lignes).
  */
 import React, { useState, useMemo, useEffect } from 'react';
 import { useToadaProject } from '../../context/ToadaProjectContext';
 import { useLanguage } from '../../i18n/LanguageContext';
+import { batchUpdateProjectBpm } from '../../utils/projectBatchOps';
 import { Play, Square, Plus, X, Layers, GripVertical } from 'lucide-react';
 import { ToadaPlayerEngine } from './ToadaPlayerEngine';
 import { ConductorLiveTempoControl } from './ConductorLiveTempoControl';
 import { ConductorWaveformTimeline } from './ConductorWaveformTimeline';
 
 export const ToadaConductorStrip: React.FC<{ outputDeviceId?: string }> = ({ outputDeviceId }) => {
-  const { project, addSlot, removeSlot, updateSlot, reorderSlots } = useToadaProject();
+  const { project, addSlot, removeSlot, updateSlot, reorderSlots, loadProject } = useToadaProject();
   const { t } = useLanguage();
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentSlotIdx, setCurrentSlotIdx] = useState<number | null>(null);
@@ -40,6 +41,7 @@ export const ToadaConductorStrip: React.FC<{ outputDeviceId?: string }> = ({ out
   };
 
   const handleLiveBpmChange = (nb: number) => { setLiveBpm(nb); player.setLiveBpm(nb); };
+  const handleApplyLiveBpm = (nb: number) => { loadProject(batchUpdateProjectBpm(project, 'all', [], nb)); };
 
   return (
     <div className="cordel-card p-2 w-full h-full flex flex-col select-none">
@@ -49,7 +51,10 @@ export const ToadaConductorStrip: React.FC<{ outputDeviceId?: string }> = ({ out
           <span>{t('conductorTitle')}</span>
         </span>
         <div className="flex items-center gap-2">
-          <ConductorLiveTempoControl liveBpm={liveBpm} onBpmChange={handleLiveBpmChange} />
+          <ConductorLiveTempoControl
+            liveBpm={liveBpm} projectBpm={project.bpm || 88}
+            onBpmChange={handleLiveBpmChange} onApplyBpmToProject={handleApplyLiveBpm}
+          />
           <button type="button" onClick={addSlot} className="px-2 py-0.5 text-[11px] font-bold font-mono cordel-card-sm rounded flex items-center gap-1 cursor-pointer">
             <Plus className="w-3 h-3 text-theme-accent" /><span>{t('addConductorBlock')}</span>
           </button>
@@ -96,7 +101,7 @@ export const ToadaConductorStrip: React.FC<{ outputDeviceId?: string }> = ({ out
             >
               <div className="flex items-center justify-between text-[10px] font-mono px-0.5 text-[var(--cordel-text)] font-bold">
                 <div className="flex items-center gap-1 min-w-0">
-                  <span className="p-0.5 text-[var(--cordel-text)]/50 hover:text-theme-accent cursor-grab active:cursor-grabbing" title="Glisser pour réordonner">
+                  <span className="p-0.5 text-[var(--cordel-text)]/50 hover:text-theme-accent cursor-grab active:cursor-grabbing" title={t('conductorDragReorderTitle')}>
                     <GripVertical className="w-3 h-3" />
                   </span>
                   <span className="truncate">{t('blockLabel', { n: idx + 1 })}</span>

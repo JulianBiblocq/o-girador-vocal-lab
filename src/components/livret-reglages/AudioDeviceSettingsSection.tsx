@@ -1,9 +1,10 @@
 /**
  * AudioDeviceSettingsSection.tsx
- * Section des périphériques audio (micro/casque) avec test de signal à coupure immédiate (< 85 lignes).
+ * Section des périphériques audio (micro/casque) avec test de signal à coupure immédiate (< 105 lignes).
  */
 import React, { useState, useEffect, useRef } from 'react';
 import { DeviceSelector } from '../livret-prise/DeviceSelector';
+import { useLanguage } from '../../i18n/LanguageContext';
 import { Mic, Activity } from 'lucide-react';
 
 interface AudioDeviceSettingsSectionProps {
@@ -16,16 +17,22 @@ interface AudioDeviceSettingsSectionProps {
 export const AudioDeviceSettingsSection: React.FC<AudioDeviceSettingsSectionProps> = ({
   selectedDeviceId, onDeviceChange, selectedOutputDeviceId, onOutputDeviceChange,
 }) => {
+  const { t } = useLanguage();
   const [isTestingMic, setIsTestingMic] = useState(false);
   const [micLevel, setMicLevel] = useState(0);
   const streamRef = useRef<MediaStream | null>(null);
+  const ctxRef = useRef<AudioContext | null>(null);
   const animRef = useRef<number | null>(null);
 
   const stopMicTest = () => {
     if (animRef.current) cancelAnimationFrame(animRef.current);
     if (streamRef.current) {
-      streamRef.current.getTracks().forEach((t) => t.stop());
+      streamRef.current.getTracks().forEach((tr) => tr.stop());
       streamRef.current = null;
+    }
+    if (ctxRef.current) {
+      ctxRef.current.close().catch(() => {});
+      ctxRef.current = null;
     }
     setIsTestingMic(false);
     setMicLevel(0);
@@ -40,6 +47,7 @@ export const AudioDeviceSettingsSection: React.FC<AudioDeviceSettingsSectionProp
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
       streamRef.current = stream;
       const audioCtx = new AudioContext();
+      ctxRef.current = audioCtx;
       const source = audioCtx.createMediaStreamSource(stream);
       const analyser = audioCtx.createAnalyser();
       analyser.fftSize = 256;
@@ -56,8 +64,7 @@ export const AudioDeviceSettingsSection: React.FC<AudioDeviceSettingsSectionProp
       };
       animRef.current = requestAnimationFrame(loop);
       setIsTestingMic(true);
-    } catch (err) {
-      console.warn('Impossible de tester le micro :', err);
+    } catch {
       stopMicTest();
     }
   };
@@ -73,7 +80,6 @@ export const AudioDeviceSettingsSection: React.FC<AudioDeviceSettingsSectionProp
         onOutputDeviceChange={onOutputDeviceChange}
       />
 
-      {/* Test de niveau micro interactif */}
       <div className="flex items-center justify-between gap-3 pt-2 border-t border-[var(--cordel-border-sub)]">
         <button
           type="button"
@@ -83,7 +89,7 @@ export const AudioDeviceSettingsSection: React.FC<AudioDeviceSettingsSectionProp
           }`}
         >
           <Mic className="w-3.5 h-3.5 text-theme-accent" />
-          <span>{isTestingMic ? 'Arrêter le test' : 'Tester le signal micro'}</span>
+          <span>{isTestingMic ? t('reglagesTestMicStop') : t('reglagesTestMicStart')}</span>
         </button>
 
         {isTestingMic && (
@@ -95,7 +101,7 @@ export const AudioDeviceSettingsSection: React.FC<AudioDeviceSettingsSectionProp
                 style={{ width: `${micLevel}%` }}
               />
             </div>
-            <span className="text-[10px] font-mono font-bold text-emerald-400 w-8 text-right">{micLevel}%</span>
+            <span className="text-[10px] font-mono font-bold text-emerald-600 dark:text-emerald-400 w-8 text-right">{micLevel}%</span>
           </div>
         )}
       </div>

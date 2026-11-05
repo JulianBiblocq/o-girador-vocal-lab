@@ -1,6 +1,6 @@
 /**
  * OrganizadorToadaModal.tsx
- * Modale de sélection directe des fiches de chant d'Organizador avec pré-configuration (< 145 lignes).
+ * Modale de sélection directe des fiches de chant d'Organizador avec pré-configuration (< 138 lignes).
  */
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
@@ -24,9 +24,7 @@ export const OrganizadorToadaModal: React.FC<OrganizadorToadaModalProps> = ({
 }) => {
   const { project, loadProject } = useToadaProject();
   const { t } = useLanguage();
-  const [docs, setDocs] = useState<ToadaDocument[]>([]);
-  const [search, setSearch] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const [docs, setDocs] = useState<ToadaDocument[]>([]), [search, setSearch] = useState(''), [isLoading, setIsLoading] = useState(false);
   const [importBpm, setImportBpm] = useState<number>(project.bpm ?? DEFAULT_TOADA_BPM);
   const [importMeasures, setImportMeasures] = useState<1 | 2 | 4>(2);
   const [importHasAnacrusis, setImportHasAnacrusis] = useState<boolean>(true);
@@ -65,7 +63,7 @@ export const OrganizadorToadaModal: React.FC<OrganizadorToadaModalProps> = ({
     const parsed = parseToadaDocument(doc, 'puxador');
     const docBpm = doc.bpmDefaut ?? parsed.docMeta?.bpmDefaut;
     if (docBpm) setImportBpm(docBpm);
-    loadWithConfig(parsed, docBpm, `${doc.titre} chargée !`);
+    loadWithConfig(parsed, docBpm, t('organizadorDocLoadedToast', { title: doc.titre }));
   };
 
   const handleTxtFile = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -76,7 +74,7 @@ export const OrganizadorToadaModal: React.FC<OrganizadorToadaModalProps> = ({
       const res = parseToadaJsonOrText(ev.target?.result as string, 'puxador');
       const docBpm = res.parsed.docMeta?.bpmDefaut;
       if (docBpm) setImportBpm(docBpm);
-      loadWithConfig(res.parsed, docBpm, `${f.name} importé !`);
+      loadWithConfig(res.parsed, docBpm, t('organizadorFileImportedToast', { name: f.name }));
     };
     r.readAsText(f);
   };
@@ -85,10 +83,7 @@ export const OrganizadorToadaModal: React.FC<OrganizadorToadaModalProps> = ({
 
   return createPortal(
     <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3" onClick={onClose}>
-      <div
-        className="w-full max-w-xl cordel-card flex flex-col gap-2.5 p-4 text-[var(--cordel-text)] max-h-[90vh] rounded shadow-xl animate-in fade-in zoom-in-95 duration-100"
-        onClick={(e) => e.stopPropagation()}
-      >
+      <div className="w-full max-w-xl cordel-card flex flex-col gap-2.5 p-4 text-[var(--cordel-text)] max-h-[90vh] rounded shadow-xl animate-in fade-in zoom-in-95 duration-100" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between border-b border-[var(--cordel-border-sub)] pb-2">
           <h2 className="text-sm font-black tracking-widest uppercase m-0 text-theme-wood flex items-center gap-2">
             <Scroll className="w-4 h-4 text-[var(--cordel-accent-text)]" /><span>{t('fichesOrganizador')}</span>
@@ -97,33 +92,27 @@ export const OrganizadorToadaModal: React.FC<OrganizadorToadaModalProps> = ({
         </div>
 
         {!isUserLoggedIn && (
-          <div className="p-2 border border-amber-500/50 bg-amber-500/10 text-amber-200 text-xs font-mono flex items-center justify-between gap-2 rounded">
-            <span>{t('authLoginRequiredNotice') || 'Connexion requise pour accéder aux fiches.'}</span>
+          <div className="p-2 border border-amber-500/50 bg-amber-500/15 text-amber-900 dark:text-amber-200 text-xs font-mono flex items-center justify-between gap-2 rounded">
+            <span>{t('authLoginRequiredNotice')}</span>
             {onLogin && (
-              <button type="button" onClick={onLogin} className="px-2 py-1 bg-amber-600 hover:bg-amber-500 text-stone-900 font-bold flex items-center gap-1 shrink-0 rounded cursor-pointer">
-                <LogIn className="w-3.5 h-3.5" /><span>{t('authLogin') || 'Connexion'}</span>
+              <button type="button" onClick={onLogin} className="px-2 py-1 bg-amber-600 hover:bg-amber-500 text-white font-bold flex items-center gap-1 shrink-0 rounded cursor-pointer">
+                <LogIn className="w-3.5 h-3.5" /><span>{t('authLogin')}</span>
               </button>
             )}
           </div>
         )}
 
-        <ImportPreconfigBar
-          bpm={importBpm} onBpmChange={setImportBpm} measuresCount={importMeasures}
-          onMeasuresCountChange={setImportMeasures} hasAnacrusis={importHasAnacrusis} onHasAnacrusisChange={setImportHasAnacrusis}
-        />
+        <ImportPreconfigBar bpm={importBpm} onBpmChange={setImportBpm} measuresCount={importMeasures} onMeasuresCountChange={setImportMeasures} hasAnacrusis={importHasAnacrusis} onHasAnacrusisChange={setImportHasAnacrusis} />
 
         <div className="relative">
           <Search className="w-4 h-4 absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--cordel-secondary-text)]" />
-          <input
-            type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t('organizadorSearchPlaceholder')}
-            className="w-full pl-8 pr-3 py-1.5 cordel-card-sm text-xs font-mono text-[var(--cordel-text)] focus:outline-none rounded"
-          />
+          <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t('organizadorSearchPlaceholder')} className="w-full pl-8 pr-3 py-1.5 cordel-card-sm text-xs font-mono text-[var(--cordel-text)] focus:outline-none rounded" />
         </div>
 
         <div className="flex-1 overflow-y-auto flex flex-col gap-1.5 min-h-[160px] max-h-[300px] pr-1 cordel-scrollbar">
           {isLoading ? (
             <div className="flex flex-col items-center justify-center py-10 gap-2 text-[var(--cordel-secondary-text)]">
-              <Loader2 className="w-6 h-6 animate-spin text-theme-wood" /><span className="text-xs font-mono">Chargement...</span>
+              <Loader2 className="w-6 h-6 animate-spin text-theme-wood" />
             </div>
           ) : filtered.length === 0 ? (
             <div className="text-center py-10 text-[var(--cordel-secondary-text)] text-xs font-mono">{t('noOrganizadorToadas')}</div>

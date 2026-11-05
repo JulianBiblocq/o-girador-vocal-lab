@@ -41,18 +41,16 @@ export const SlicerSegmentRow: React.FC<SlicerSegmentRowProps> = ({
         isSelected ? 'border-amber-500 bg-amber-500/10' : 'border-[var(--cordel-border-sub)] bg-[var(--cordel-subcard-bg)]'
       }`}
     >
-      {/* 1. Play & Durée */}
       <div className="flex items-center gap-1.5 min-w-0 shrink-0">
         <button
           type="button" onClick={(e) => { e.stopPropagation(); onPlay(); }}
-          className="p-1 cordel-btn rounded shrink-0 cursor-pointer" title="Écouter la tranche"
+          className="p-1 cordel-btn rounded shrink-0 cursor-pointer" title={t('slicerListenSliceTitle')}
         >
           {isPlaying ? <Square className="w-3.5 h-3.5 fill-current text-amber-500" /> : <Play className="w-3.5 h-3.5 fill-current text-theme-accent" />}
         </button>
         <span className="font-bold text-[11px] text-theme-ink shrink-0">#{index + 1} ({dur}s)</span>
       </div>
 
-      {/* 2. Contrôle Mesures 1M..4M, Anacrouse (+Ana) & Chute 1er Temps (+1T) */}
       <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center p-0.5 cordel-card-sm rounded">
           {([1, 2, 3, 4] as const).map((m) => (
@@ -72,7 +70,7 @@ export const SlicerSegmentRow: React.FC<SlicerSegmentRowProps> = ({
           className={`px-1.5 py-0.5 text-[9.5px] font-bold rounded cursor-pointer transition-colors ${
             hasAna ? 'bg-amber-600 text-white shadow-xs' : 'cordel-card-sm opacity-50'
           }`}
-          title="Activer/Désactiver l'anacrouse (+Ana)"
+          title={t('slicerToggleAnaTitle')}
         >
           +Ana
         </button>
@@ -82,13 +80,12 @@ export const SlicerSegmentRow: React.FC<SlicerSegmentRowProps> = ({
           className={`px-1.5 py-0.5 text-[9.5px] font-bold rounded cursor-pointer transition-colors ${
             hasTail ? 'bg-emerald-700 text-white shadow-xs' : 'cordel-card-sm opacity-50'
           }`}
-          title="Chute sur le 1er temps suivant (+1T)"
+          title={t('slicerToggleTailTitle')}
         >
           +1T
         </button>
       </div>
 
-      {/* 3. Sélecteur de Cible & Alerte Doublon */}
       <div className="flex items-center gap-1.5 flex-1 justify-end min-w-[220px]" onClick={(e) => e.stopPropagation()}>
         {isDuplicateTarget && (
           <span className="px-1.5 py-0.5 text-[9px] font-black bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/50 rounded flex items-center gap-1 shrink-0 animate-pulse">
@@ -117,21 +114,21 @@ export const SlicerSegmentRow: React.FC<SlicerSegmentRowProps> = ({
 
         <button
           type="button" onClick={onSplit} className="p-1 cordel-card-sm text-[var(--cordel-secondary-text)] hover:text-amber-500 rounded cursor-pointer"
-          title="Scinder cette tranche en deux"
+          title={t('slicerSplitSliceTitle')}
         >
           <Scissors className="w-3.5 h-3.5" />
         </button>
         {canMergeNext && onMergeNext && (
           <button
             type="button" onClick={onMergeNext} className="p-1 cordel-card-sm text-[var(--cordel-secondary-text)] hover:text-emerald-500 rounded cursor-pointer"
-            title="Fusionner avec la tranche suivante"
+            title={t('slicerMergeSliceTitle')}
           >
             <Link2 className="w-3.5 h-3.5" />
           </button>
         )}
         <button
           type="button" onClick={onDelete} className="p-1 cordel-card-sm text-[var(--cordel-secondary-text)] hover:text-red-500 rounded cursor-pointer"
-          title="Supprimer cette tranche"
+          title={t('slicerDeleteSliceTitle')}
         >
           <Trash2 className="w-3.5 h-3.5" />
         </button>

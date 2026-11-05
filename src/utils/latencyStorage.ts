@@ -1,7 +1,6 @@
 /**
  * latencyStorage.ts
- * Persistance du micro-decalage utilisateur dans localStorage.
- * Par defaut a 0 ms ou issu de la calibration par claps.
+ * Persistance unifiée de la latence matérielle dans localStorage (signature périphérique + clé globale) (< 85 lignes).
  */
 import { getCalibratedLatency, saveCalibratedLatency } from './deviceSignature';
 
@@ -13,7 +12,9 @@ export const MAX_LATENCY_OFFSET_MS = 300;
 export function getSavedLatencyOffsetMs(sig?: string): number {
   if (sig) {
     const calibrated = getCalibratedLatency(sig);
-    if (calibrated !== null) return calibrated;
+    if (calibrated !== null) {
+      return Math.max(MIN_LATENCY_OFFSET_MS, Math.min(MAX_LATENCY_OFFSET_MS, calibrated));
+    }
   }
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
@@ -31,9 +32,11 @@ export function getSavedLatencyOffsetMs(sig?: string): number {
 }
 
 export function saveLatencyOffsetMs(offsetMs: number, sig?: string): void {
-  const clamped = Math.max(MIN_LATENCY_OFFSET_MS, Math.min(MAX_LATENCY_OFFSET_MS, offsetMs));
+  const clamped = Math.max(MIN_LATENCY_OFFSET_MS, Math.min(MAX_LATENCY_OFFSET_MS, Math.round(offsetMs)));
   if (sig) {
     saveCalibratedLatency(sig, clamped);
+    const inMatch = sig.match(/^in:([^|]+)/);
+    if (inMatch?.[1]) markLatencyCalibrated(inMatch[1]);
   }
   try {
     localStorage.setItem(STORAGE_KEY, clamped.toString());
@@ -55,7 +58,9 @@ export function markLatencyCalibrated(deviceId?: string): void {
   try {
     const key = `ogirador_latency_calibrated_${deviceId || 'default'}`;
     localStorage.setItem(key, 'true');
-    window.dispatchEvent(new CustomEvent('ogirador-latency-calibrated', { detail: { deviceId } }));
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('ogirador-latency-calibrated', { detail: { deviceId } }));
+    }
   } catch {
     // Ignorer
   }
@@ -72,9 +77,10 @@ export function isLatencyReminderDismissedSession(): boolean {
 export function dismissLatencyReminderSession(): void {
   try {
     sessionStorage.setItem('ogirador_latency_dismissed_session', 'true');
-    window.dispatchEvent(new CustomEvent('ogirador-latency-dismissed'));
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('ogirador-latency-dismissed'));
+    }
   } catch {
     // Ignorer
   }
 }
-

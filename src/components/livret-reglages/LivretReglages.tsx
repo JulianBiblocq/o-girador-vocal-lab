@@ -1,8 +1,8 @@
 /**
  * LivretReglages.tsx
- * Onglet ⚙️ Réglages : Configuration technique audio, micro/casque, calibration, latence et tessiture (< 130 lignes).
+ * Onglet ⚙️ Réglages : Configuration technique audio, micro/casque, calibration, latence et tessiture (< 125 lignes).
  */
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Sliders, Headphones, Cpu, Activity, Sparkles } from 'lucide-react';
 import { useAudioHardware } from '../../context/AudioHardwareContext';
 import { useToadaProject } from '../../context/ToadaProjectContext';
@@ -13,7 +13,8 @@ import { CalibrationBanner } from '../livret-prise/CalibrationBanner';
 import { LatencyNudgeBar } from '../livret-prise/LatencyNudgeBar';
 import { TessituraBoundsPanel } from '../livret-prise/TessituraBoundsPanel';
 import { VariantConfigBar } from '../livret-prise/VariantConfigBar';
-import { getSavedLatencyOffsetMs } from '../../utils/latencyStorage';
+import { getSavedLatencyOffsetMs, saveLatencyOffsetMs } from '../../utils/latencyStorage';
+import { buildDeviceSignature } from '../../utils/deviceSignature';
 import { DEFAULT_TESSITURA, type TessituraRange } from '../../types/tessitura.types';
 
 export const LivretReglages: React.FC = () => {
@@ -28,7 +29,13 @@ export const LivretReglages: React.FC = () => {
   } = useToadaProject();
   const { t, locale } = useLanguage();
 
-  const [latencyOffsetMs, setLatencyOffsetMs] = useState(getSavedLatencyOffsetMs);
+  const sig = buildDeviceSignature(selectedDeviceId, selectedOutputDeviceId, recordedSampleRate);
+  const [latencyOffsetMs, setLatencyOffsetMs] = useState(() => getSavedLatencyOffsetMs(sig));
+
+  useEffect(() => {
+    setLatencyOffsetMs(getSavedLatencyOffsetMs(sig));
+  }, [sig]);
+
   const referencePitch = activePattern.referencePitch ?? 'C4';
   const hasRecording = activePattern.variants[activePattern.activeVariantKey]?.recordingResult !== null;
 
@@ -42,7 +49,6 @@ export const LivretReglages: React.FC = () => {
 
   return (
     <div className="flex flex-col gap-5 w-full">
-      {/* En-tête des Réglages */}
       <div className="cordel-card p-3 sm:p-4 flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <Sliders className="w-5 h-5 text-theme-accent" />
@@ -55,38 +61,30 @@ export const LivretReglages: React.FC = () => {
         </span>
       </div>
 
-      {/* Grille principale des réglages techniques */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5 items-stretch">
-        {/* Colonne 1 : Périphériques Audio & Test */}
         <div className="flex flex-col gap-4">
           <div className="text-xs font-bold font-mono uppercase tracking-wider flex items-center gap-1.5 text-theme-accent">
             <Cpu className="w-4 h-4" /><span>{t('reglagesAudioSection')}</span>
           </div>
           <AudioDeviceSettingsSection
-            selectedDeviceId={selectedDeviceId}
-            onDeviceChange={setSelectedDeviceId}
-            selectedOutputDeviceId={selectedOutputDeviceId}
-            onOutputDeviceChange={setSelectedOutputDeviceId}
+            selectedDeviceId={selectedDeviceId} onDeviceChange={setSelectedDeviceId}
+            selectedOutputDeviceId={selectedOutputDeviceId} onOutputDeviceChange={setSelectedOutputDeviceId}
           />
           <CalibrationBanner
-            inputDeviceId={selectedDeviceId}
-            outputDeviceId={selectedOutputDeviceId}
-            sampleRate={recordedSampleRate}
-            onCalibrationComplete={() => {}}
+            inputDeviceId={selectedDeviceId} outputDeviceId={selectedOutputDeviceId} sampleRate={recordedSampleRate}
+            onCalibrationComplete={(ms) => { setLatencyOffsetMs(ms); saveLatencyOffsetMs(ms, sig); }}
           />
           <div className="cordel-card p-3">
-            <LatencyNudgeBar latencyOffsetMs={latencyOffsetMs} onChange={setLatencyOffsetMs} />
+            <LatencyNudgeBar latencyOffsetMs={latencyOffsetMs} onChange={setLatencyOffsetMs} persistToStorage={true} />
           </div>
         </div>
 
-        {/* Colonne 2 : Mode d'écoute, Diapason & Tessiture */}
         <div className="flex flex-col gap-4">
           <div className="text-xs font-bold font-mono uppercase tracking-wider flex items-center gap-1.5 text-theme-accent">
             <Headphones className="w-4 h-4" /><span>{t('reglagesListeningSection')}</span>
           </div>
           <ListeningModePanel
-            listeningMode={listeningMode}
-            onListeningModeChange={setListeningMode}
+            listeningMode={listeningMode} onListeningModeChange={setListeningMode}
             referencePitch={referencePitch}
             onReferencePitchChange={(p) => { updatePattern(activePattern.id, { referencePitch: p }); updateScopedReferencePitch(p); }}
             onPlayReferencePreview={() => engine.playReferencePitchPreview(referencePitch, 1.5, selectedOutputDeviceId)}
@@ -95,16 +93,12 @@ export const LivretReglages: React.FC = () => {
           <div className="text-xs font-bold font-mono uppercase tracking-wider flex items-center gap-1.5 text-theme-accent pt-1">
             <Activity className="w-4 h-4" /><span>{t('reglagesTessituraSection')}</span>
           </div>
-          <TessituraBoundsPanel
-            tessitura={activePattern.tessitura ?? DEFAULT_TESSITURA}
-            onChange={handleTessituraChange}
-            hasRecording={hasRecording}
-          />
+          <TessituraBoundsPanel tessitura={activePattern.tessitura ?? DEFAULT_TESSITURA} onChange={handleTessituraChange} hasRecording={hasRecording} />
 
           <div className="cordel-card p-3 flex flex-col gap-2">
             <span className="text-[11px] font-mono font-bold uppercase text-[var(--cordel-secondary-text)] flex items-center gap-1">
-              <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-              <span>Paramètres par défaut des Déclinaisons</span>
+              <Sparkles className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+              <span>{t('reglagesDefaultVariantsTitle')}</span>
             </span>
             <VariantConfigBar
               refSemitones={pCfg.refSemitones} lowSemitones={pCfg.lowSemitones} highSemitones={pCfg.highSemitones}

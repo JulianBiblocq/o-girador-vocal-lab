@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { getPatternT1OffsetSec } from '../../utils/anacrusisTimingHelper';
+import { useLanguage } from '../../i18n/LanguageContext';
 
 interface WaveformGridCanvasProps {
   width: number; height: number; totalDurationSec: number; anacrusisDurationSec?: number;
@@ -11,6 +12,7 @@ export const WaveformGridCanvas: React.FC<WaveformGridCanvasProps> = ({
   width, height, totalDurationSec, anacrusisDurationSec, t1OffsetSec,
   hasAnacrusis = true, bpm, measuresCount, beatsPerMeasure, beatResolutions,
 }) => {
+  const { t } = useLanguage();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [themeTick, setThemeTick] = React.useState(0);
 
@@ -39,7 +41,6 @@ export const WaveformGridCanvas: React.FC<WaveformGridCanvasProps> = ({
     const xTemps1 = (t1Offset / totalDurationSec) * width;
     const hasAnac = hasAnacrusis !== false;
 
-    // 1. Fond hachuré pour la zone d'élan M-1
     if (hasAnac && xTemps1 > 0) {
       ctx.fillStyle = isLight ? 'rgba(0, 0, 0, 0.05)' : 'rgba(0, 0, 0, 0.45)';
       ctx.fillRect(0, 0, xTemps1, height);
@@ -50,13 +51,12 @@ export const WaveformGridCanvas: React.FC<WaveformGridCanvasProps> = ({
       }
     }
 
-    // 2. Grille temporelle (Mesures M1..MN et subdivisions)
     const startM = hasAnac ? -1 : 0;
     for (let m = startM; m < measuresCount; m++) {
       const mBaseSec = m === -1 ? (t1Offset - measureDurationSec) : (t1Offset + m * measureDurationSec);
       for (let bm = 0; bm < beatsPerMeasure; bm++) {
-        const t = mBaseSec + bm * beatDuration;
-        const x = (t / totalDurationSec) * width;
+        const tm = mBaseSec + bm * beatDuration;
+        const x = (tm / totalDurationSec) * width;
         const isMeasureStart = bm === 0;
 
         ctx.strokeStyle = isMeasureStart
@@ -69,13 +69,12 @@ export const WaveformGridCanvas: React.FC<WaveformGridCanvasProps> = ({
         ctx.strokeStyle = isLight ? 'rgba(26, 26, 26, 0.08)' : 'rgba(244, 236, 216, 0.05)';
         ctx.lineWidth = 0.5;
         for (let s = 1; s < resolution; s++) {
-          const subX = ((t + s * subStepDuration) / totalDurationSec) * width;
+          const subX = ((tm + s * subStepDuration) / totalDurationSec) * width;
           ctx.beginPath(); ctx.moveTo(subX, 22); ctx.lineTo(subX, height); ctx.stroke();
         }
       }
     }
 
-    // 2b. Grille du Temps 1 de la mesure suivante (+T1) et subdivisions
     const tNextT1 = t1Offset + measuresCount * measureDurationSec;
     if (tNextT1 < totalDurationSec) {
       const xNext = (tNextT1 / totalDurationSec) * width;
@@ -94,18 +93,16 @@ export const WaveformGridCanvas: React.FC<WaveformGridCanvasProps> = ({
       }
     }
 
-    // 3. Ligne Dorée Fixe du Temps 1
     ctx.strokeStyle = '#d4af37'; ctx.lineWidth = 2.5;
     ctx.beginPath(); ctx.moveTo(xTemps1, 0); ctx.lineTo(xTemps1, height); ctx.stroke();
 
-    // 4. Libellés textuels d'en-tête
     ctx.font = 'bold 9px monospace';
     if (hasAnac) {
       ctx.fillStyle = isLight ? 'rgba(26, 26, 26, 0.7)' : 'rgba(244, 236, 216, 0.7)';
-      ctx.fillText('ÉLAN (M-1)', 6, 12);
+      ctx.fillText(t('chordGridElanLabel'), 6, 12);
     }
     ctx.fillStyle = '#d4af37';
-    ctx.fillText('TEMPS 1 ▶', xTemps1 + 4, 12);
+    ctx.fillText(`${t('measure1')} ▶`, xTemps1 + 4, 12);
 
     for (let m = 0; m < measuresCount; m++) {
       const mStartSec = t1Offset + m * measureDurationSec;
@@ -119,7 +116,7 @@ export const WaveformGridCanvas: React.FC<WaveformGridCanvasProps> = ({
       ctx.fillStyle = isLight ? '#b45309' : '#fbbf24';
       ctx.fillText('+T1', xNext + 4, 12);
     }
-  }, [width, height, totalDurationSec, anacrusisDurationSec, t1OffsetSec, hasAnacrusis, bpm, measuresCount, beatsPerMeasure, beatResolutions, themeTick]);
+  }, [width, height, totalDurationSec, anacrusisDurationSec, t1OffsetSec, hasAnacrusis, bpm, measuresCount, beatsPerMeasure, beatResolutions, themeTick, t]);
 
   return (
     <canvas ref={canvasRef} style={{ width: `${width}px`, height: `${height}px` }} className="absolute inset-0 pointer-events-none" />

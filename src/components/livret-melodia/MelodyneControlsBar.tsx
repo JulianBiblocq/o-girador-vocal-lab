@@ -1,7 +1,6 @@
 /**
  * MelodyneControlsBar.tsx
- * Barre de contrôle des Régions Melodyne [ In ── Out ] & Aiguillage d'Octave :
- * Justesse, Stabilité, +/-1 Octave, Aimant Briques et actions rapides (< 135 lignes).
+ * Barre de contrôle des Régions Melodyne [ In ── Out ] avec contrastes Jour/Nuit (< 135 lignes).
  */
 import React from 'react';
 import { useLanguage } from '../../i18n/LanguageContext';
@@ -32,18 +31,17 @@ export const MelodyneControlsBar: React.FC<MelodyneControlsBarProps> = ({
 
   return (
     <div className="cordel-card p-2 w-full flex flex-wrap items-center justify-between gap-3 select-none rounded">
-      {/* 1. Titre & Badge d'état de zone */}
       <div className="flex items-center gap-2">
         <span className="text-xs font-mono font-bold text-theme-accent flex items-center gap-1.5 uppercase">
-          <CordelSpark className="w-3.5 h-3.5 text-amber-500" />
+          <CordelSpark className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
           <span>{t('melodyneTitle')}</span>
         </span>
         {selectedRegion ? (
           <div className="flex items-center gap-2">
-            <span className="px-2 py-0.5 text-[9.5px] font-mono font-bold bg-amber-950/70 text-amber-300 border border-amber-500/40 rounded">
+            <span className="px-2 py-0.5 text-[9.5px] font-mono font-bold bg-amber-500/15 dark:bg-amber-950/70 text-amber-900 dark:text-amber-300 border border-amber-500/40 rounded">
               {t('melodyneZoneActiveBadge', { start: selectedRegion.startSec.toFixed(2), end: selectedRegion.endSec.toFixed(2) })}
             </span>
-            <span className="text-[10px] font-mono text-amber-300/80 hidden 2xl:inline">• {t('melodyneZoneHelpHint')}</span>
+            <span className="text-[10px] font-mono text-amber-800 dark:text-amber-300/80 hidden 2xl:inline">• {t('melodyneZoneHelpHint')}</span>
           </div>
         ) : (
           <span className="text-[10px] font-mono text-theme-ink/60 italic hidden sm:inline">
@@ -52,13 +50,12 @@ export const MelodyneControlsBar: React.FC<MelodyneControlsBarProps> = ({
         )}
       </div>
 
-      {/* 2. Les 2 Curseurs (Justesse, Stabilité) si une zone est sélectionnée */}
       {selectedRegion && (
         <div className="flex-1 min-w-[260px] max-w-lg flex items-center gap-3 px-1">
           <div className="flex-1 flex flex-col gap-0.5">
             <div className="flex items-center justify-between text-[10.5px] font-mono font-bold text-theme-ink">
               <span>{t('melodynePitchCenter', { percent: selectedRegion.pitchCenterPct })}</span>
-              {isProcessing && <Loader2 className="w-3 h-3 animate-spin text-amber-400" />}
+              {isProcessing && <Loader2 className="w-3 h-3 animate-spin text-amber-600 dark:text-amber-400" />}
             </div>
             <input
               type="range" min={0} max={100} step={1} value={selectedRegion.pitchCenterPct}
@@ -79,25 +76,22 @@ export const MelodyneControlsBar: React.FC<MelodyneControlsBarProps> = ({
         </div>
       )}
 
-      {/* 3. Boutons d'action rapide & Aiguillage d'Octave */}
       <div className="flex items-center gap-1.5 flex-wrap">
         {onShiftOctave && (
           <div className="flex items-center gap-1 border-r border-theme-border/40 pr-1.5">
-            <button type="button" onClick={() => onShiftOctave(-1)} className="cordel-btn px-2 py-1 text-[10px] font-mono font-bold text-amber-700 dark:text-amber-300 border border-amber-500/40 cursor-pointer rounded" title={selectedRegion ? `Courbe -1 Oct (${selectedRegion.startSec}s-${selectedRegion.endSec}s)` : 'Courbe -1 Oct phrase'}>
+            <button type="button" onClick={() => onShiftOctave(-1)} className="cordel-btn px-2 py-1 text-[10px] font-mono font-bold text-amber-800 dark:text-amber-300 border border-amber-500/40 cursor-pointer rounded">
               <span>{t('melodyneShiftDownOct')}</span>
             </button>
-            <button type="button" onClick={() => onShiftOctave(1)} className="cordel-btn px-2 py-1 text-[10px] font-mono font-bold text-amber-700 dark:text-amber-300 border border-amber-500/40 cursor-pointer rounded" title={selectedRegion ? `Courbe +1 Oct (${selectedRegion.startSec}s-${selectedRegion.endSec}s)` : 'Courbe +1 Oct phrase'}>
+            <button type="button" onClick={() => onShiftOctave(1)} className="cordel-btn px-2 py-1 text-[10px] font-mono font-bold text-amber-800 dark:text-amber-300 border border-amber-500/40 cursor-pointer rounded">
               <span>{t('melodyneShiftUpOct')}</span>
             </button>
           </div>
         )}
 
         {onAlignOctaveToBricks && (
-          <button
-            type="button" onClick={onAlignOctaveToBricks}
-            className="btn-octave-align px-2 py-1 text-[10px] font-mono font-bold cursor-pointer rounded transition-colors"
-            title="Aimanter l'octave de la courbe verte vers les briques MIDI"
-          ><span>{t('melodyneAlignToBricks')}</span></button>
+          <button type="button" onClick={onAlignOctaveToBricks} className="btn-octave-align px-2 py-1 text-[10px] font-mono font-bold cursor-pointer rounded transition-colors">
+            <span>{t('melodyneAlignToBricks')}</span>
+          </button>
         )}
 
         <button
@@ -110,10 +104,9 @@ export const MelodyneControlsBar: React.FC<MelodyneControlsBarProps> = ({
           <span>{t('melodyneCreateZoneBtn')}</span>
         </button>
 
-        <button
-          type="button" onClick={onAddWholePhrase}
-          className="cordel-btn px-2 py-1 text-[10px] font-mono font-bold cursor-pointer rounded"
-        ><span>{t('melodyneWholePhraseBtn')}</span></button>
+        <button type="button" onClick={onAddWholePhrase} className="cordel-btn px-2 py-1 text-[10px] font-mono font-bold cursor-pointer rounded">
+          <span>{t('melodyneWholePhraseBtn')}</span>
+        </button>
 
         {selectedRegion && (
           <>

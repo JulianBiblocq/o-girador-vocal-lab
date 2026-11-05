@@ -1,6 +1,6 @@
 /**
  * SlicerMultiSegmentToolbar.tsx
- * Barre d'outils Slicer : Métronome ON/OFF, Décalage T1 Maître, Calquage Organizador et cascade (< 145 lignes).
+ * Barre d'outils Slicer : Métronome ON/OFF, Décalage T1 Maître, Calquage Organizador et cascade (< 130 lignes).
  */
 import React from 'react';
 import { Volume2, VolumeX, Sparkles, Plus, Trash2, FolderOpen, RefreshCw, Magnet, LayoutGrid } from 'lucide-react';
@@ -24,7 +24,6 @@ export const SlicerMultiSegmentToolbar: React.FC<SlicerMultiSegmentToolbarProps>
 
   return (
     <div className="flex flex-col gap-1.5 p-2 bg-theme-bg/60 border border-theme-border/60 rounded text-xs font-mono">
-      {/* Ligne 1 : Métronome, Calage T1 Maître et Calquage Organizador */}
       <div className="flex flex-wrap items-center justify-between gap-2 pb-1.5 border-b border-[var(--cordel-border-sub)]">
         <div className="flex flex-wrap items-center gap-1.5">
           <button
@@ -32,13 +31,12 @@ export const SlicerMultiSegmentToolbar: React.FC<SlicerMultiSegmentToolbarProps>
             className={`h-7 px-2.5 rounded font-bold flex items-center gap-1.5 cursor-pointer transition-colors ${
               metronomeActive ? 'bg-amber-500 text-stone-950 font-black shadow-xs' : 'cordel-card-sm text-theme-ink/80 hover:text-theme-ink'
             }`}
-            title="Activer/Désactiver le métronome synchrone pendant la lecture"
+            title={t('slicerMetronomeTitle')}
           >
             {metronomeActive ? <Volume2 className="w-3.5 h-3.5 fill-current" /> : <VolumeX className="w-3.5 h-3.5" />}
-            <span>Métronome</span>
+            <span>{t('slicerMetronomeBtn')}</span>
           </button>
 
-          {/* Réglage direct BPM */}
           <div className="flex items-center gap-1 cordel-card-sm px-1.5 py-0.5 rounded text-[11px]">
             <span className="text-[var(--cordel-secondary-text)]">BPM:</span>
             <button type="button" onClick={() => onBpmChange?.(Math.max(30, bpm - 1))} className="px-1 py-0.2 hover:bg-theme-accent/20 rounded cursor-pointer font-bold">-1</button>
@@ -46,9 +44,8 @@ export const SlicerMultiSegmentToolbar: React.FC<SlicerMultiSegmentToolbarProps>
             <button type="button" onClick={() => onBpmChange?.(Math.min(220, bpm + 1))} className="px-1 py-0.2 hover:bg-theme-accent/20 rounded cursor-pointer font-bold">+1</button>
           </div>
 
-          {/* Micro-décalage T1 Maître */}
           <div className="flex items-center gap-0.5 cordel-card-sm px-1.5 py-0.5 rounded text-[11px]">
-            <span className="text-[var(--cordel-secondary-text)] mr-1">T1 Maître : <strong>{gridOffsetSec.toFixed(2)}s</strong></span>
+            <span className="text-[var(--cordel-secondary-text)] mr-1">{t('slicerMasterT1Label')} <strong>{gridOffsetSec.toFixed(2)}s</strong></span>
             <button type="button" onClick={() => onNudgeOffset(-0.05)} className="px-1 py-0.2 hover:bg-theme-accent/20 rounded cursor-pointer font-bold">-50ms</button>
             <button type="button" onClick={() => onNudgeOffset(-0.01)} className="px-1 py-0.2 hover:bg-theme-accent/20 rounded cursor-pointer font-bold">-10ms</button>
             <button type="button" onClick={() => onNudgeOffset(0.01)} className="px-1 py-0.2 hover:bg-theme-accent/20 rounded cursor-pointer font-bold">+10ms</button>
@@ -60,27 +57,27 @@ export const SlicerMultiSegmentToolbar: React.FC<SlicerMultiSegmentToolbarProps>
           <button
             type="button" onClick={onToggleCascade}
             className={`h-7 px-2 cordel-card-sm text-[11px] rounded flex items-center gap-1 cursor-pointer transition-colors ${
-              cascadeMove ? 'bg-amber-600/30 text-amber-500 border-amber-500/50 font-bold' : 'opacity-70 hover:opacity-100'
+              cascadeMove ? 'bg-amber-600/30 text-amber-700 dark:text-amber-400 border-amber-500/50 font-bold' : 'opacity-70 hover:opacity-100'
             }`}
-            title="Déplacer une tranche décale aussi toutes les suivantes"
+            title={t('slicerCascadeTitle')}
           >
             <Magnet className="w-3 h-3" />
-            <span className="hidden sm:inline">Cascade</span>
+            <span className="hidden sm:inline">{t('slicerCascadeBtn')}</span>
           </button>
 
           <button
             type="button" onClick={onAlignOrganizador}
             className="h-7 px-2.5 cordel-btn-primary font-bold flex items-center gap-1.5 cursor-pointer bg-theme-wood text-[#f4ecd8]"
-            title="Créer 1 tranche par motif d'Organizador pré-calée sur la grille"
+            title={t('slicerAlignOrganizadorTitle')}
           >
             <LayoutGrid className="w-3.5 h-3.5" />
-            <span>Calquer sur Organizador</span>
+            <span>{t('slicerAlignOrganizadorBtn')}</span>
           </button>
 
           <button
             type="button" onClick={onSyncOrganizador} disabled={isSyncing}
-            className="h-7 px-2 cordel-card-sm text-[11px] font-bold flex items-center gap-1 cursor-pointer text-amber-500 hover:bg-amber-500/10 rounded"
-            title="Recharger le dernier texte et découpage de la Toada depuis Firestore"
+            className="h-7 px-2 cordel-card-sm text-[11px] font-bold flex items-center gap-1 cursor-pointer text-amber-600 dark:text-amber-400 hover:bg-amber-500/10 rounded"
+            title={t('slicerSyncFirestoreTitle')}
           >
             <RefreshCw className={`w-3 h-3 ${isSyncing ? 'animate-spin' : ''}`} />
             <span className="hidden md:inline">Sync</span>
@@ -88,13 +85,12 @@ export const SlicerMultiSegmentToolbar: React.FC<SlicerMultiSegmentToolbarProps>
         </div>
       </div>
 
-      {/* Ligne 2 : Détection RMS, Ajout, Fichier */}
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-1.5">
           <button
             type="button" onClick={onDetectSilences}
             className="h-7 px-2.5 cordel-card-sm font-bold flex items-center gap-1.5 cursor-pointer hover:bg-amber-600/20 text-theme-ink"
-            title="Repérer automatiquement les silences RMS"
+            title={t('slicerDetectRmsTitle')}
           >
             <Sparkles className="w-3.5 h-3.5 text-amber-500" />
             <span>{t('slicerAutoDetectPhrasesBtn')}</span>
@@ -110,7 +106,7 @@ export const SlicerMultiSegmentToolbar: React.FC<SlicerMultiSegmentToolbarProps>
 
           <button
             type="button" onClick={onClearSegments}
-            className="h-7 px-2 cordel-card-sm text-red-400 hover:text-red-300 border border-red-500/40 hover:bg-red-950/30 flex items-center gap-1 cursor-pointer"
+            className="h-7 px-2 cordel-card-sm text-red-500 dark:text-red-400 hover:text-red-400 border border-red-500/40 hover:bg-red-950/30 flex items-center gap-1 cursor-pointer"
           >
             <Trash2 className="w-3 h-3" />
             <span className="hidden sm:inline">{t('slicerClearSegmentsBtn')}</span>

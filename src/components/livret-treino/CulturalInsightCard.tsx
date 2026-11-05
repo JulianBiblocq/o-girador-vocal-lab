@@ -1,6 +1,6 @@
 /**
  * CulturalInsightCard.tsx
- * Carte culturelle Cordel affichant la traduction, l'anecdote et le lexique bilingue de la Toada (< 85 lignes).
+ * Carte culturelle Cordel affichant la traduction, l'anecdote et le lexique bilingue de la Toada (< 95 lignes).
  */
 import React, { useCallback } from 'react';
 import { useToadaProject } from '../../context/ToadaProjectContext';
@@ -64,7 +64,7 @@ export const CulturalInsightCard: React.FC<Props> = ({ onOpenLexicon }) => {
                 className="cordel-btn px-2 py-0.5 text-[10px] rounded flex items-center gap-1 cursor-pointer"
               >
                 <BookOpen className="w-3 h-3" />
-                <span>Enrichir</span>
+                <span>{t('lexiconBtnLabel')}</span>
               </button>
             )}
           </div>
@@ -78,7 +78,7 @@ export const CulturalInsightCard: React.FC<Props> = ({ onOpenLexicon }) => {
                 <button
                   type="button"
                   onClick={(e) => handleSpeak(item.mot, e)}
-                  title="Écouter la prononciation"
+                  title={t('culturalListenTitle')}
                   className="cordel-btn p-1 rounded shrink-0"
                 >
                   <Volume2 className="w-3 h-3" />

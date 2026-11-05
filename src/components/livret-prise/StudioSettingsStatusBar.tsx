@@ -17,7 +17,7 @@ export const StudioSettingsStatusBar: React.FC = () => {
 
   const tessituraLabel = activePattern.tessitura?.presetId
     ? activePattern.tessitura.presetId.charAt(0).toUpperCase() + activePattern.tessitura.presetId.slice(1)
-    : 'Médium';
+    : t('studioTessituraMedium');
 
   return (
     <div className="cordel-card-sm px-3 py-1.5 flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono select-none rounded">
@@ -42,7 +42,7 @@ export const StudioSettingsStatusBar: React.FC = () => {
         type="button"
         onClick={() => setActiveLivret('reglages')}
         className="px-2 py-0.5 cordel-btn text-[10.5px] font-bold flex items-center gap-1 cursor-pointer"
-        title="Ouvrir les réglages techniques"
+        title={t('studioOpenSettingsTitle')}
       >
         <Sliders className="w-3 h-3 text-theme-accent" />
         <span>{t('statusQuickEditBtn')}</span>

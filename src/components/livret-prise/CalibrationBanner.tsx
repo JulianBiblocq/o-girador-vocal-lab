@@ -1,8 +1,13 @@
+/**
+ * CalibrationBanner.tsx
+ * Bandeau de calibration matérielle Auto-Ping / Synchro Humaine avec contraste Jour/Nuit (< 125 lignes).
+ */
 import React, { useState, useEffect } from 'react';
 import { Sparkles, RefreshCw, CheckCircle2, AlertTriangle, Zap, Hand, X } from 'lucide-react';
 import { runClapCalibration, type CalibrationProgress } from '../../audio/clapCalibration';
 import { runAcousticPingCalibration } from '../../audio/pingCalibration';
-import { buildDeviceSignature, getCalibratedLatency, saveCalibratedLatency } from '../../utils/deviceSignature';
+import { buildDeviceSignature, getCalibratedLatency } from '../../utils/deviceSignature';
+import { saveLatencyOffsetMs } from '../../utils/latencyStorage';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { CalibrationFeedbackBox } from './CalibrationFeedbackBox';
 
@@ -31,6 +36,7 @@ export const CalibrationBanner: React.FC<CalibrationBannerProps> = ({
     try {
       const result = await runAcousticPingCalibration(inputDeviceId, outputDeviceId, sig);
       if (result !== null) {
+        saveLatencyOffsetMs(result, sig);
         setCalibratedLatency(result);
         onCalibrationComplete(result);
         setCalibState('idle');
@@ -49,8 +55,8 @@ export const CalibrationBanner: React.FC<CalibrationBannerProps> = ({
     try {
       const result = await runClapCalibration(inputDeviceId, outputDeviceId, sig, setClapProgress);
       if (result !== null) {
+        saveLatencyOffsetMs(result, sig);
         setCalibratedLatency(result);
-        saveCalibratedLatency(sig, result);
         onCalibrationComplete(result);
       }
     } catch (err) {
@@ -67,13 +73,13 @@ export const CalibrationBanner: React.FC<CalibrationBannerProps> = ({
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           {calibratedLatency !== null ? (
-            <span className="flex items-center gap-1.5 text-emerald-400 font-bold">
-              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+            <span className="flex items-center gap-1.5 text-emerald-700 dark:text-emerald-400 font-bold">
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-700 dark:text-emerald-400 shrink-0" />
               <span>{t('calibReadyBadge', { ms: (calibratedLatency > 0 ? '+' : '') + calibratedLatency })}</span>
             </span>
           ) : (
-            <span className="flex items-center gap-1.5 text-amber-400 font-bold">
-              <AlertTriangle className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+            <span className="flex items-center gap-1.5 text-amber-800 dark:text-amber-400 font-bold">
+              <AlertTriangle className="w-3.5 h-3.5 text-amber-700 dark:text-amber-400 shrink-0" />
               <span>{t('calibNewDeviceWarn')}</span>
             </span>
           )}
@@ -95,19 +101,19 @@ export const CalibrationBanner: React.FC<CalibrationBannerProps> = ({
               type="button" title={t('calibAutoPingTooltip')} onClick={handleStartPing}
               className="cordel-btn px-2.5 py-1 rounded flex items-center gap-1.5 text-[11px] font-bold cursor-pointer border-cyan-500/50 hover:bg-cyan-950/40"
             >
-              <Zap className="w-3 h-3 text-cyan-400" />
+              <Zap className="w-3 h-3 text-cyan-600 dark:text-cyan-400" />
               <span>{t('calibMethodAutoPing')}</span>
             </button>
             <button
               type="button" title={t('calibHumanSyncTooltip')} onClick={handleStartClaps}
               className="cordel-btn px-2.5 py-1 rounded flex items-center gap-1.5 text-[11px] font-bold cursor-pointer border-amber-500/50 hover:bg-amber-950/40"
             >
-              <Hand className="w-3 h-3 text-amber-400" />
+              <Hand className="w-3 h-3 text-amber-700 dark:text-amber-400" />
               <span>{t('calibMethodHumanSync')}</span>
             </button>
             <button
               type="button" title={t('calibCancelTooltip')} onClick={() => setCalibState('idle')}
-              className="cordel-btn p-1 rounded text-theme-ink hover:text-red-400 cursor-pointer"
+              className="cordel-btn p-1 rounded text-theme-ink hover:text-red-500 cursor-pointer"
             >
               <X className="w-3.5 h-3.5" />
             </button>

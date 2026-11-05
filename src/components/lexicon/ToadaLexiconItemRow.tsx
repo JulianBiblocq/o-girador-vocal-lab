@@ -1,6 +1,6 @@
 /**
  * ToadaLexiconItemRow.tsx
- * Ligne d'affichage bilingue permanent [ FR | PT-BR ] avec écoute TTS ralentie (< 110 lignes).
+ * Ligne d'affichage bilingue permanent [ FR | PT-BR ] avec écoute TTS ralentie (< 95 lignes).
  */
 import React, { useCallback } from 'react';
 import type { ToadaLexiconEntry } from '../../types/toadaLexicon.types';
@@ -38,7 +38,7 @@ export const ToadaLexiconItemRow: React.FC<Props> = ({ entry, onDelete, isReadOn
           )}
           {entry.soundCardId && (
             <span className="px-1.5 py-0.5 text-[9px] font-mono font-bold bg-[var(--cordel-coro)] text-[#f4ecd8] rounded">
-              Carte: {entry.soundCardId}
+              {entry.soundCardId}
             </span>
           )}
         </div>
@@ -50,7 +50,7 @@ export const ToadaLexiconItemRow: React.FC<Props> = ({ entry, onDelete, isReadOn
           </div>
           {entry.phonetique && (
             <div>
-              <span className="text-[var(--cordel-secondary-text)] font-semibold">Phonétique : </span>
+              <span className="text-[var(--cordel-secondary-text)] font-semibold">{t('lexiconPhoneticLabel')}</span>
               <span className="font-mono text-[#9a3412] dark:text-[#f4a261]">{entry.phonetique}</span>
             </div>
           )}
@@ -71,7 +71,7 @@ export const ToadaLexiconItemRow: React.FC<Props> = ({ entry, onDelete, isReadOn
           className="cordel-btn p-1.5 rounded cursor-pointer flex items-center gap-1 text-[11px] font-bold"
         >
           <Volume2 className="w-3.5 h-3.5" />
-          <span className="hidden sm:inline">Écouter</span>
+          <span className="hidden sm:inline">{t('listenPitch')}</span>
         </button>
 
         {!isReadOnly && onDelete && (

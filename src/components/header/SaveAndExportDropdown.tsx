@@ -1,6 +1,6 @@
 /**
  * SaveAndExportDropdown.tsx
- * Menu déroulant Cordel 'Sauvegarder & Exporter' (< 135 lignes).
+ * Menu déroulant Cordel 'Sauvegarder & Exporter' (< 130 lignes).
  * Inclut la publication vers Sequenciador et la publication inverse vers Organizador.
  */
 import React, { useState, useRef, useEffect } from 'react';
@@ -43,13 +43,13 @@ export const SaveAndExportDropdown: React.FC<Props> = ({ project, isUserLoggedIn
       const res = await publishToadaToSequencer(project);
       const openNow = await confirmAsync({
         title: t('toadaPublishedSuccess'),
-        message: `${project.title} a été synchronisée. Ouvrir dans Sequenciador ?`,
+        message: t('publishSequencerConfirmMsg', { title: project.title }),
         confirmLabel: t('openInSequencer'),
         cancelLabel: t('dialogCancel'),
       });
       if (openNow) window.open(res.sequenciadorUrl, '_blank');
     } catch (err: any) {
-      window.dispatchEvent(new CustomEvent('app-toast', { detail: { type: 'error', message: `Échec : ${err?.message || 'erreur'}` } }));
+      window.dispatchEvent(new CustomEvent('app-toast', { detail: { type: 'error', message: t('publishGenericErrorToast', { err: err?.message || 'err' }) } }));
     } finally {
       setIsPublishing(false);
     }
@@ -60,9 +60,9 @@ export const SaveAndExportDropdown: React.FC<Props> = ({ project, isUserLoggedIn
     setIsPublishingOrganizador(true);
     try {
       await publishToadaToOrganizador(project);
-      window.dispatchEvent(new CustomEvent('app-toast', { detail: { type: 'success', message: `Fiche « ${project.title} » publiée dans Organizador (Lexique & Quiz élèves inclus) !` } }));
+      window.dispatchEvent(new CustomEvent('app-toast', { detail: { type: 'success', message: t('publishOrganizadorSuccessToast', { title: project.title }) } }));
     } catch (err: any) {
-      window.dispatchEvent(new CustomEvent('app-toast', { detail: { type: 'error', message: `Échec publication Organizador : ${err?.message || 'erreur'}` } }));
+      window.dispatchEvent(new CustomEvent('app-toast', { detail: { type: 'error', message: t('publishOrganizadorErrorToast', { err: err?.message || 'err' }) } }));
     } finally {
       setIsPublishingOrganizador(false);
     }
@@ -75,7 +75,7 @@ export const SaveAndExportDropdown: React.FC<Props> = ({ project, isUserLoggedIn
       await exportFullSongWav(project);
       window.dispatchEvent(new CustomEvent('app-toast', { detail: { type: 'success', message: t('wavExportSuccess') } }));
     } catch (err: any) {
-      window.dispatchEvent(new CustomEvent('app-toast', { detail: { type: 'error', message: `Échec export WAV : ${err?.message || 'erreur'}` } }));
+      window.dispatchEvent(new CustomEvent('app-toast', { detail: { type: 'error', message: t('wavExportErrorToast', { err: err?.message || 'err' }) } }));
     } finally {
       setIsExportingWav(false);
     }
@@ -113,7 +113,7 @@ export const SaveAndExportDropdown: React.FC<Props> = ({ project, isUserLoggedIn
           <button type="button" onClick={handlePublishOrganizador}
             className="w-full p-2 text-left flex items-center gap-2 hover:bg-[var(--cordel-subcard-bg)] rounded transition-colors cursor-pointer border border-transparent hover:border-[var(--cordel-border-sub)]">
             <FileText className="w-3.5 h-3.5 text-amber-600" />
-            <span className="font-bold">📜 Publier vers Organizador</span>
+            <span className="font-bold">{t('publishOrganizadorBtn')}</span>
           </button>
           <button type="button" onClick={handleWav}
             className="w-full p-2 text-left flex items-center gap-2 hover:bg-[var(--cordel-subcard-bg)] rounded transition-colors cursor-pointer border border-transparent hover:border-[var(--cordel-border-sub)]">

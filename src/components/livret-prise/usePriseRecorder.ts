@@ -1,7 +1,6 @@
 /**
  * usePriseRecorder.ts
  * Hook de gestion du cycle d'enregistrement audio et du précompte métronome (< 135 lignes).
- * Compensation native de la latence matérielle à la capture (+latencySec) et persistance atomique de t1OffsetSec.
  */
 import { useState, useRef, useCallback, useEffect } from 'react';
 import type { TimeSignatureString } from '../../types/vocalPack.types';
@@ -45,8 +44,7 @@ export function usePriseRecorder(params: UsePriseRecorderParams) {
   const [isCycleActive, setIsCycleActive] = useState(false);
   const cueHandleRef = useRef<CuePlaybackHandle | null>(null);
   const takeGuideRef = useRef<TakeGuideHandle | null>(null);
-  const sessionTokenRef = useRef<number>(0);
-  const isMountedRef = useRef<boolean>(true);
+  const sessionTokenRef = useRef<number>(0), isMountedRef = useRef<boolean>(true);
   const activeLivretRef = useRef<string>(activeLivret);
   activeLivretRef.current = activeLivret;
 
@@ -97,8 +95,7 @@ export function usePriseRecorder(params: UsePriseRecorderParams) {
     const cue = cueMode === 'none' ? null : cueMode === 'auto_previous' ? getPreviousConductorPattern() : projectPatterns.find((p) => p.id === cueMode);
     const hasCue = !!cue && !!(cue.recordingResult?.pcm?.length || cue.variants?.[cue.activeVariantKey]?.recordingResult?.pcm?.length);
     const preRollMeasures = hasCue && cue ? 1 + cue.measuresCount : (hasAnacrusis ? 2 : 1);
-    const cycleStart = ctx.currentTime + 0.08;
-    const targetT1Time = cycleStart + preRollMeasures * measureDuration;
+    const cycleStart = ctx.currentTime + 0.08, targetT1Time = cycleStart + preRollMeasures * measureDuration;
     const sig = buildDeviceSignature(selectedDeviceId, selectedOutputDeviceId, sampleRate);
     const latencySec = getSavedLatencyOffsetMs(sig) / 1000;
     const captureStart = (targetT1Time - t1OffsetSec) + latencySec;
@@ -130,8 +127,7 @@ export function usePriseRecorder(params: UsePriseRecorderParams) {
     setIsRecording(isCycleActive);
     if (activeLivret !== 'prise') { if (isCycleActive) abortCycle(); return; }
     return useVocalTransportStore.getState().registerHandlers({
-      toggleRecord: handleToggleRecord,
-      stop: () => { if (isCycleActive) abortCycle(); },
+      toggleRecord: handleToggleRecord, stop: () => { if (isCycleActive) abortCycle(); },
     });
   }, [activeLivret, handleToggleRecord, isCycleActive, abortCycle, setIsRecording]);
 

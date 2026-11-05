@@ -1,6 +1,6 @@
 /**
  * SlicerExtractionPanel.tsx
- * Panneau de configuration du pattern cible (nouveau ou existant) et extraction (< 115 lignes).
+ * Panneau de configuration du pattern cible (nouveau ou existant) et extraction (< 110 lignes).
  */
 import React from 'react';
 import type { VocalPatternItem, VocalRole } from '../../types/toadaProject.types';
@@ -30,7 +30,6 @@ export const SlicerExtractionPanel: React.FC<SlicerExtractionPanelProps> = ({
 
   return (
     <div className="flex flex-col gap-2.5 p-3 cordel-card rounded text-xs font-mono">
-      {/* 1. Sélecteur de destination (Bloc existant vs Nouveau) */}
       <div className="flex flex-col gap-1">
         <label className="text-[10px] font-bold text-[var(--cordel-secondary-text)] uppercase">
           {t('slicerTargetBlockLabel')} :
@@ -51,7 +50,6 @@ export const SlicerExtractionPanel: React.FC<SlicerExtractionPanelProps> = ({
         </select>
       </div>
 
-      {/* 2. Si nouveau pattern : Choix du Rôle & Nom */}
       {isNew && (
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex items-center p-0.5 cordel-card-sm rounded select-none">
@@ -82,11 +80,9 @@ export const SlicerExtractionPanel: React.FC<SlicerExtractionPanelProps> = ({
         </div>
       )}
 
-      {/* 3. Bouton d'Extraction */}
       <button
-        type="button" onClick={onExtract}
-        disabled={isExtracting || pegsCount < 2}
-        className={`w-full py-2.5 px-4 cordel-btn-primary flex items-center justify-center gap-2 text-xs font-bold tracking-wider uppercase cursor-pointer transition-colors ${
+        type="button" onClick={onExtract} disabled={isExtracting || pegsCount < 2}
+        className={`w-full sm:w-auto sm:min-w-[260px] self-end py-2.5 px-6 cordel-btn-primary flex items-center justify-center gap-2 text-xs font-bold tracking-wider uppercase cursor-pointer transition-colors ${
           pegsCount < 2 ? 'opacity-50 cursor-not-allowed' : ''
         }`}
       >
@@ -103,11 +99,10 @@ export const SlicerExtractionPanel: React.FC<SlicerExtractionPanelProps> = ({
         )}
       </button>
 
-      {/* 4. Feedback d'extraction réussie */}
       {lastExtractedName && (
         <div className="flex items-center gap-1.5 p-1.5 bg-emerald-500/10 border border-emerald-500/30 rounded text-[11px] text-emerald-800 dark:text-emerald-300">
           <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
-          <span>Pattern « <strong>{lastExtractedName}</strong> » mis à jour avec succès !</span>
+          <span>{t('slicerExtractedSuccessMsg', { name: lastExtractedName })}</span>
         </div>
       )}
     </div>
