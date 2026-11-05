@@ -74,7 +74,7 @@ export function buildOrganizadorSlices(
   const targetList = rolePats.length > 0 ? rolePats : patterns;
   if (targetList.length === 0) return [];
 
-  const metaList: Array<{ pat: VocalPatternItem; t1: number; mCount: number; hasAna: boolean; anacDur: number; isIslandStart: boolean }> = [];
+  const metaList: Array<{ pat: VocalPatternItem; t1: number; mCount: number; hasAna: boolean; anacDur: number; isIslandStart: boolean; pauseMeasures: number; pauseStartT1: number }> = [];
   let prevT1 = gridOffsetSec, prevMCount = targetList[0]?.measuresCount ?? 1;
 
   targetList.forEach((pat, idx) => {
@@ -83,6 +83,7 @@ export function buildOrganizadorSlices(
     const anacDur = hasAna ? anacBeats * beatDur : 0;
     const mCount = pat.measuresCount ?? 1;
     const pauseMeasures = idx > 0 ? computePauseMeasuresBetweenPatterns(slots, targetList[idx - 1].id, pat.id) : 0;
+    const pauseStartT1 = prevT1 + prevMCount * measureDur;
 
     let t1 = prevT1 + (idx === 0 ? 0 : (prevMCount + pauseMeasures) * measureDur);
     let isIslandStart = idx === 0 || pauseMeasures > 0;
@@ -101,17 +102,28 @@ export function buildOrganizadorSlices(
       }
     }
 
-    metaList.push({ pat, t1, mCount, hasAna, anacDur, isIslandStart });
+    metaList.push({ pat, t1, mCount, hasAna, anacDur, isIslandStart, pauseMeasures, pauseStartT1 });
     prevT1 = t1; prevMCount = mCount;
   });
 
   const segments: SliceSegment[] = [];
   for (let i = 0; i < metaList.length; i++) {
     const cur = metaList[i], next = metaList[i + 1];
+    if (cur.pauseMeasures > 0) {
+      const pMeasures = Math.max(1, Math.min(4, cur.pauseMeasures)) as 1 | 2 | 3 | 4;
+      const pStart = Math.round(cur.pauseStartT1 * 100) / 100;
+      const pEnd = Math.round((cur.pauseStartT1 + cur.pauseMeasures * measureDur) * 100) / 100;
+      segments.push({
+        id: `seg-pause-org-${i}`, startSec: pStart, endSec: pEnd, metricT1Sec: pStart,
+        targetPatternId: 'ignore', name: `[PAUSE ${pMeasures}M]`, measuresCount: pMeasures,
+        hasAnacrusis: false, anacrusisBeats: 0, hasTailBeat: false, isPause: true,
+      });
+    }
     const isNextConsecutive = Boolean(next && !next.isIslandStart);
-    const startSec = (i === 0 || cur.isIslandStart)
+    const prevVocalSeg = segments.length > 0 ? segments[segments.length - 1] : null;
+    const startSec = (i === 0 || cur.isIslandStart || !prevVocalSeg || prevVocalSeg.isPause)
       ? Math.max(0, Math.round((cur.t1 - cur.anacDur) * 100) / 100)
-      : segments[i - 1].endSec;
+      : prevVocalSeg.endSec;
     const endSec = isNextConsecutive && next
       ? Math.round((next.t1 + 0.15) * 100) / 100
       : Math.round((cur.t1 + cur.mCount * measureDur + beatDur * 0.75) * 100) / 100;

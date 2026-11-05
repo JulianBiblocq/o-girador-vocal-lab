@@ -9,6 +9,7 @@ import type { SliceSegment } from '../../types/slicerSegments.types';
 import { SlicerAudioEngine } from '../../audio/slicerAudioEngine';
 import { detectVocalPhrases } from '../../audio/silenceDetector';
 import { buildOrganizadorSlices, calculateSliceMetricT1Sec, splitSliceSegment, mergeAdjacentSliceSegments } from '../../utils/slicerAlignmentHelper';
+import { insertPauseInSlices, insertVocalSliceAt, shiftSliceAndFollowingByMeasures, reorderSlicesWithCascade, updatePauseMeasuresWithCascade, deleteSliceWithCascade } from '../../utils/slicerCascadeHelper';
 import { syncProjectWithOrganizador } from '../../utils/toadaSyncService';
 import { SlicerMultiSegmentToolbar } from './SlicerMultiSegmentToolbar';
 import { SlicerSegmentWaveform } from './SlicerSegmentWaveform';
@@ -102,7 +103,8 @@ export const SlicerMultiSection: React.FC<SlicerMultiSectionProps> = ({
         onBpmChange={(nb) => { setSlicerBpm(nb); if (metronomeActive) engine.setMetronome(true, nb, gridOffsetSec); onProjectUpdate?.({ ...project, bpm: nb, toadaMeta: project.toadaMeta ? { ...project.toadaMeta, bpmDefaut: nb } : project.toadaMeta, patterns: (project.patterns || []).map((p) => ({ ...p, bpm: nb, baseBpm: nb })) }); }}
         onNudgeOffset={(d) => setGridOffsetSec((prev) => Math.max(0, Math.round((prev + d) * 100) / 100))} onToggleCascade={() => setCascadeMove((v) => !v)}
         onAlignOrganizador={handleAlignOrganizador} onSyncOrganizador={handleSyncOrganizador} onDetectSilences={handleDetectRmsSilences}
-        onAddSegment={() => onSegmentsChange([...segments, { id: `seg-${Date.now()}`, startSec: gridOffsetSec, endSec: gridOffsetSec + 2 * measureDur, targetPatternId: 'ignore', measuresCount: 2, hasAnacrusis: true, hasTailBeat: true }])}
+        onAddSegment={() => onSegmentsChange(insertVocalSliceAt(segments, segments.length, 2, bpm, gridOffsetSec))}
+        onAddPauseSegment={() => onSegmentsChange(insertPauseInSlices(segments, segments.length, 1, bpm, gridOffsetSec))}
         onClearSegments={() => onSegmentsChange([])} onChangeFile={onChangeFile}
       />
       <SlicerSegmentWaveform
@@ -115,8 +117,21 @@ export const SlicerMultiSection: React.FC<SlicerMultiSectionProps> = ({
         onSegmentsChange={onSegmentsChange} onSelectSegment={setSelectedSegmentId} onPlaySegment={handlePlaySegment}
         onSplitSegment={(segId) => { const target = segments.find((s) => s.id === segId); if (!target) return; const [s1, s2] = splitSliceSegment(target, (target.startSec + target.endSec) / 2, bpm, gridOffsetSec); onSegmentsChange(segments.flatMap((s) => (s.id === segId ? [s1, s2] : [s]))); }}
         onMergeSegment={(segId) => { const idx = segments.findIndex((s) => s.id === segId); if (idx < 0 || idx >= segments.length - 1) return; const merged = mergeAdjacentSliceSegments(segments[idx], segments[idx + 1], bpm, gridOffsetSec); onSegmentsChange([...segments.slice(0, idx), merged, ...segments.slice(idx + 2)]); }}
-        onDeleteSegment={(id) => onSegmentsChange(segments.filter((s) => s.id !== id))}
-        onPreAssign={(mode) => { const list = mode === 'puxador' ? patterns.filter((p) => p.role === 'puxador') : mode === 'coro' ? patterns.filter((p) => p.role === 'coro') : patterns; onSegmentsChange(segments.map((s, idx) => ({ ...s, targetPatternId: idx < list.length ? list[idx].id : 'new' }))); }}
+        onDeleteSegment={(id) => { const idx = segments.findIndex((s) => s.id === id); if (idx >= 0) onSegmentsChange(deleteSliceWithCascade(segments, idx, bpm, cascadeMove)); }}
+        onMoveSegment={(fromIdx, toIdx) => onSegmentsChange(reorderSlicesWithCascade(segments, fromIdx, toIdx, bpm))}
+        onShiftMeasures={(idx, deltaM) => onSegmentsChange(shiftSliceAndFollowingByMeasures(segments, idx, deltaM, bpm))}
+        onInsertPauseBefore={(idx) => onSegmentsChange(insertPauseInSlices(segments, idx, 1, bpm, gridOffsetSec))}
+        onInsertSliceAfter={(idx) => onSegmentsChange(insertVocalSliceAt(segments, idx, 2, bpm, gridOffsetSec))}
+        onUpdatePauseMeasures={(idx, m) => onSegmentsChange(updatePauseMeasuresWithCascade(segments, idx, m, bpm))}
+        onPreAssign={(mode) => {
+          const list = mode === 'puxador' ? patterns.filter((p) => p.role === 'puxador') : mode === 'coro' ? patterns.filter((p) => p.role === 'coro') : patterns;
+          let vIdx = 0;
+          onSegmentsChange(segments.map((s) => {
+            if (s.isPause) return { ...s, targetPatternId: 'ignore' };
+            const pat = list[vIdx++];
+            return { ...s, targetPatternId: pat ? pat.id : 'new' };
+          }));
+        }}
       />
       <button type="button" onClick={onExecuteBatchAssign} disabled={isAssigning || activeCount === 0} className={`w-full sm:w-auto sm:min-w-[320px] self-end py-2.5 px-6 cordel-btn-primary flex items-center justify-center gap-2 text-xs font-black tracking-wider uppercase cursor-pointer transition-colors bg-emerald-700 hover:bg-emerald-600 text-white shadow-md ${activeCount === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}>
         {isAssigning ? (<><Loader2 className="w-4 h-4 animate-spin text-[#f4ecd8]" /><span>{t('slicerAssigningProgress')}</span></>) : (<><Check className="w-4 h-4 text-[#f4ecd8]" /><span>{t('slicerExecuteBatchAssignBtn', { count: activeCount })}</span></>)}

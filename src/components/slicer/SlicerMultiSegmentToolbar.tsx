@@ -12,13 +12,13 @@ interface SlicerMultiSegmentToolbarProps {
   onToggleMetronome: () => void; onBpmChange?: (newBpm: number) => void;
   onNudgeOffset: (deltaSec: number) => void;
   onToggleCascade: () => void; onAlignOrganizador: () => void; onSyncOrganizador: () => void;
-  onDetectSilences: () => void; onAddSegment: () => void; onClearSegments: () => void; onChangeFile: () => void;
+  onDetectSilences: () => void; onAddSegment: () => void; onAddPauseSegment?: () => void; onClearSegments: () => void; onChangeFile: () => void;
 }
 
 export const SlicerMultiSegmentToolbar: React.FC<SlicerMultiSegmentToolbarProps> = ({
   durationSec, bpm, gridOffsetSec, metronomeActive, cascadeMove, isSyncing,
   onToggleMetronome, onBpmChange, onNudgeOffset, onToggleCascade, onAlignOrganizador, onSyncOrganizador,
-  onDetectSilences, onAddSegment, onClearSegments, onChangeFile,
+  onDetectSilences, onAddSegment, onAddPauseSegment, onClearSegments, onChangeFile,
 }) => {
   const { t } = useLanguage();
 
@@ -103,6 +103,16 @@ export const SlicerMultiSegmentToolbar: React.FC<SlicerMultiSegmentToolbarProps>
             <Plus className="w-3 h-3 text-theme-accent" />
             <span>{t('slicerAddSegmentBtn')}</span>
           </button>
+
+          {onAddPauseSegment && (
+            <button
+              type="button" onClick={onAddPauseSegment}
+              className="h-7 px-2 cordel-card-sm font-bold flex items-center gap-1 cursor-pointer hover:bg-stone-500/20 text-theme-ink"
+              title={t('slicerAddPauseTitle')}
+            >
+              <span>{t('slicerAddPauseBtn')}</span>
+            </button>
+          )}
 
           <button
             type="button" onClick={onClearSegments}

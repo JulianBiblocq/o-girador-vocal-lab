@@ -1,6 +1,6 @@
 /**
  * SlicerSegmentList.tsx
- * Liste des tranches avec pré-assignation rapide et détection des doublons (< 90 lignes).
+ * Liste des tranches et Pauses Baque avec déplacement en cascade, -1M/+1M et pré-assignation (< 115 lignes).
  */
 import React, { useMemo } from 'react';
 import type { VocalPatternItem } from '../../types/toadaProject.types';
@@ -20,18 +20,24 @@ interface SlicerSegmentListProps {
   onMergeSegment?: (segId: string) => void;
   onDeleteSegment: (segId: string) => void;
   onPreAssign: (mode: PreAssignMode) => void;
+  onMoveSegment?: (fromIndex: number, toIndex: number) => void;
+  onShiftMeasures?: (index: number, deltaMeasures: number) => void;
+  onInsertPauseBefore?: (index: number) => void;
+  onInsertSliceAfter?: (index: number) => void;
+  onUpdatePauseMeasures?: (index: number, measures: 1 | 2 | 3 | 4) => void;
 }
 
 export const SlicerSegmentList: React.FC<SlicerSegmentListProps> = ({
   segments, patterns, playingSegmentId, selectedSegmentId,
   onSegmentsChange, onSelectSegment, onPlaySegment, onSplitSegment, onMergeSegment, onDeleteSegment, onPreAssign,
+  onMoveSegment, onShiftMeasures, onInsertPauseBefore, onInsertSliceAfter, onUpdatePauseMeasures,
 }) => {
   const { t } = useLanguage();
 
   const duplicateTargetIds = useMemo(() => {
     const counts = new Map<string, number>();
     segments.forEach((s) => {
-      if (s.targetPatternId !== 'ignore' && s.targetPatternId !== 'new') {
+      if (!s.isPause && s.targetPatternId !== 'ignore' && s.targetPatternId !== 'new') {
         counts.set(s.targetPatternId, (counts.get(s.targetPatternId) || 0) + 1);
       }
     });
@@ -80,12 +86,17 @@ export const SlicerSegmentList: React.FC<SlicerSegmentListProps> = ({
         ) : (
           segments.map((seg, idx) => (
             <SlicerSegmentRow
-              key={seg.id} segment={seg} index={idx} patterns={patterns}
+              key={seg.id} segment={seg} index={idx} totalSegments={segments.length} patterns={patterns}
               isPlaying={playingSegmentId === seg.id} isSelected={selectedSegmentId === seg.id}
-              isDuplicateTarget={duplicateTargetIds.has(seg.targetPatternId)}
-              canMergeNext={idx < segments.length - 1}
+              isDuplicateTarget={!seg.isPause && duplicateTargetIds.has(seg.targetPatternId)}
+              canMergeNext={idx < segments.length - 1 && !segments[idx + 1]?.isPause}
               onSelect={() => onSelectSegment(seg.id)} onPlay={() => onPlaySegment(seg)}
               onUpdate={(partial) => handleUpdateSegment(seg.id, partial)}
+              onUpdatePauseMeasures={onUpdatePauseMeasures ? (m) => onUpdatePauseMeasures(idx, m) : undefined}
+              onShiftMeasures={onShiftMeasures ? (deltaM) => onShiftMeasures(idx, deltaM) : undefined}
+              onMoveSegment={onMoveSegment}
+              onInsertPauseBefore={onInsertPauseBefore ? () => onInsertPauseBefore(idx) : undefined}
+              onInsertSliceAfter={onInsertSliceAfter ? () => onInsertSliceAfter(idx + 1) : undefined}
               onSplit={() => onSplitSegment(seg.id)}
               onMergeNext={onMergeSegment ? () => onMergeSegment(seg.id) : undefined}
               onDelete={() => onDeleteSegment(seg.id)}

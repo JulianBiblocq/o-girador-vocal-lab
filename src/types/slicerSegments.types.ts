@@ -16,6 +16,7 @@ export interface SliceSegment {
   hasAnacrusis?: boolean;
   anacrusisBeats?: number;
   hasTailBeat?: boolean;
+  isPause?: boolean;
 }
 
 export type PreAssignMode = 'puxador' | 'coro' | 'all';

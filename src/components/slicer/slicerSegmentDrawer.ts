@@ -41,8 +41,22 @@ export function drawSegmentWaveform(ctx: CanvasRenderingContext2D, opts: DrawSeg
 
   segments.forEach((seg, idx) => {
     const xStart = secToX(seg.startSec), xEnd = secToX(seg.endSec), segW = Math.max(2, xEnd - xStart);
-    const isSelected = seg.id === selectedSegmentId, hasAna = seg.hasAnacrusis !== false && (seg.anacrusisBeats ?? 2) > 0;
-    const hasTail = seg.hasTailBeat !== false, mCount = seg.measuresCount ?? 1, anacBeats = seg.anacrusisBeats ?? (hasAna ? 2 : 0);
+    const isSelected = seg.id === selectedSegmentId, mCount = seg.measuresCount ?? 1;
+    if (seg.isPause) {
+      ctx.fillStyle = isSelected ? 'rgba(100, 116, 139, 0.38)' : 'rgba(120, 113, 108, 0.24)';
+      ctx.fillRect(xStart, 0, segW, height);
+      ctx.strokeStyle = isSelected ? '#94a3b8' : '#78716c'; ctx.lineWidth = isSelected ? 2 : 1.5; ctx.setLineDash([4, 3]);
+      ctx.beginPath(); ctx.moveTo(xStart, 0); ctx.lineTo(xStart, height); ctx.moveTo(xEnd, 0); ctx.lineTo(xEnd, height); ctx.stroke();
+      ctx.setLineDash([]);
+      const pLabel = `🔇 Pause #${idx + 1} (${mCount}M)`;
+      ctx.font = 'bold 9px monospace';
+      const pW = ctx.measureText(pLabel).width + 8;
+      ctx.fillStyle = '#57534e'; ctx.fillRect(xStart + 2, 2, pW, 14);
+      ctx.fillStyle = '#ffffff'; ctx.fillText(pLabel, xStart + 6, 12);
+      return;
+    }
+    const hasAna = seg.hasAnacrusis !== false && (seg.anacrusisBeats ?? 2) > 0;
+    const hasTail = seg.hasTailBeat !== false, anacBeats = seg.anacrusisBeats ?? (hasAna ? 2 : 0);
     const anacDur = hasAna ? anacBeats * beatDur : 0, t1Sec = seg.metricT1Sec ?? (hasAna ? seg.startSec + anacDur : seg.startSec);
     const xT1 = secToX(t1Sec);
 
