@@ -39,8 +39,9 @@ export function createNewMelodyneRegion(
   startSec: number,
   endSec: number,
   totalDurationSec: number,
-  initialPitchCenter = 50,
-  initialFlatten = 50
+  initialPitchCenter = 65,
+  initialFlatten = 20,
+  initialDriftCorrection = 80
 ): MelodyneRegion {
   const safeStart = Math.max(0, Math.min(startSec, endSec));
   const safeEnd = Math.min(totalDurationSec, Math.max(startSec, endSec));
@@ -52,6 +53,7 @@ export function createNewMelodyneRegion(
     startSec: Math.round(safeStart * 1000) / 1000,
     endSec: Math.round(clampedEnd * 1000) / 1000,
     pitchCenterPct: initialPitchCenter,
+    driftCorrectionPct: initialDriftCorrection,
     flattenPct: initialFlatten,
   };
 }

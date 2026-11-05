@@ -20,11 +20,11 @@ import { CordelPiano } from '../common/CordelIcons';
 import type { PianoRollTool } from './pianoRollInteractions';
 
 export interface PianoRollEditorProps {
-  allSteps: VocalStepData[]; pitchCurve: PitchCurvePoint[]; totalDurationSec: number; anacrusisDurationSec: number; beatsPerMeasure: number; beatResolutions: number[]; seekStartSec: number; isPlaying: boolean;
+  allSteps: VocalStepData[]; pitchCurve: PitchCurvePoint[]; rawPitchCurve?: PitchCurvePoint[]; totalDurationSec: number; anacrusisDurationSec: number; beatsPerMeasure: number; beatResolutions: number[]; seekStartSec: number; isPlaying: boolean;
   tonic: string; scaleType: ScaleType; smoothingLevel: number; canUndo?: boolean; canRedo?: boolean; historyCount?: number; regions?: MelodyneRegion[]; selectedRegionId?: string | null; activeTool?: PianoRollTool; onSelectTool?: (tool: PianoRollTool) => void;
   hasAnacrusis?: boolean; bpm?: number; t1OffsetSec?: number; measuresCount?: number; getPlayheadSec?: () => number; onSeek: (sec: number) => void; onUndo?: () => void; onRedo?: () => void; onSetTonic: (t: string) => void; onSetScaleType: (st: ScaleType) => void;
   onSetSmoothingLevel: (lvl: number) => void; onUpdateSteps: (newSteps: VocalStepData[], commit?: boolean) => void; onPlayNotePreview: (midi: number) => void; onReExtractNotes?: () => void; onSelectRegion?: (id: string | null) => void; onAddRegion?: (start: number, end: number) => void;
-  onUpdateRegionBounds?: (id: string, start: number, end: number) => void; onDeleteSelectedRegion?: () => void; selectedStepIdx?: number | null; onSelectStep?: (idx: number | null) => void;
+  onUpdateRegionBounds?: (id: string, start: number, end: number) => void; onDeleteSelectedRegion?: () => void; selectedStepIdx?: number | null; onSelectStep?: (idx: number | null) => void; onBrickMoved?: (rootIdx: number, newSteps: VocalStepData[]) => void;
   harmonyGrid?: PatternHarmonyGrid; onUpdateHarmonyGrid?: (grid: PatternHarmonyGrid) => void; pitchShiftSemitones?: number; readOnly?: boolean;
 }
 

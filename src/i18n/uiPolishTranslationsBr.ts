@@ -99,6 +99,10 @@ export const uiPolishTranslationsBr = {
   syllableQuickSplitPlaceholder: 'Ex: ba-que-de-ro-da (separado por hífens ou espaços)',
   syllableDistributeTitle: 'Distribuir instantaneamente as sílabas nas notas ativas',
   syllableDistributeBtn: 'Distribuir ({count} notas)',
+  melodyneDriftLabel: 'Sustentação: {percent}%',
+  melodyneAutoSweetBtn: '✨ Auto-Afinação Suave',
+  melodyneAutoSweetTitle: 'Afinação musical natural em 1 clique (Afinação 75%, Sustentação 80%, Vibrato preservado, Consoantes protegidas)',
+  melodyneAutoSweetToast: '✨ Auto-Afinação Suave aplicada (Afinação 75% • Sustentação 80% • Vibrato 15%)!',
 
   // Livret 5, Réglages & Modale Organizador
   activeLexiconTitle: '⭐ Vocabulário e Dicção do Canto ({count})',
@@ -114,3 +118,4 @@ export const uiPolishTranslationsBr = {
   organizadorDocLoadedToast: '{title} carregada!',
   organizadorFileImportedToast: '{name} importado!',
 };
+

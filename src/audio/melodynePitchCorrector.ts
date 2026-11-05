@@ -1,106 +1,118 @@
 /**
  * melodynePitchCorrector.ts
- * Processeur DSP non-destructif par Régions Melodyne [ In ── Out ] :
- * Centrage vers la note cible, aplatissement du vibrato/fluctuations et WSOLA (< 130 lignes).
+ * Processeur DSP non-destructif Melodyne Studio 2.0 :
+ * Résolution locale brique par brique, décomposition f0(t) à 3 DDL et synthèse TD-PSOLA (< 130 lignes).
  */
 import type { PitchCurvePoint, VocalStepData, MelodyneRegion } from '../types/vocalPack.types';
-import { applyWsolaPitchCorrection, type WsolaRegionTarget } from './wsolaPitchShifter';
+import {
+  foldOctaveDistance,
+  resolveMelodyneGridGeometry,
+  computeIntervalMedianPitch,
+  buildNoteBrickSpans,
+  resolveLocalBrickTargetAtTime,
+  decomposePitchAtTime,
+  computeTargetMidiAtTime,
+  type NoteBrickSpan,
+} from './melodynePitchDecomposer';
+import { analyzeVoicingAndEpochs, type TdPsolaAnalysis } from './tdPsolaEpochDetector';
+import { applyTdPsolaPitchCorrection, type TdPsolaRegionTarget } from './tdPsolaPitchShifter';
+
+export { foldOctaveDistance };
 
 export interface BrickPitchOffset {
   startSec: number; endSec: number; holdStartSec: number;
   targetMidi: number; sungMedian: number; deltaSemitones: number; effectiveShift: number;
 }
 
-function resolveGridGeometry(allSteps: VocalStepData[], totalDurationSec: number, tGridStart?: number, gridDur?: number) {
-  const stepDur = (allSteps[0]?.decay > 0 && allSteps[0]?.decay < 5) ? allSteps[0].decay : (totalDurationSec / Math.max(1, allSteps.length));
-  const effGridDur = gridDur && gridDur > 0 ? gridDur : (allSteps.length * stepDur);
-  const effTGridStart = tGridStart !== undefined ? tGridStart : Math.max(0, Math.round((totalDurationSec - effGridDur - 0.25) * 1000) / 1000);
-  return { tGridStart: effTGridStart, gridDur: Math.max(0.01, effGridDur) };
-}
-
 export function findTargetMidiForRegion(
   r: MelodyneRegion, allSteps: VocalStepData[], totalDurationSec: number,
-  fallbackMidi = 60, tGridStart?: number, gridDur?: number
+  fallbackMidi = 60, tGridStart?: number, gridDur?: number, queryTimeSec?: number
 ): number {
   if (r.targetMidiOverride && r.targetMidiOverride > 0) return r.targetMidiOverride;
   if (!allSteps || allSteps.length === 0 || totalDurationSec <= 0) return fallbackMidi;
-
-  const geom = resolveGridGeometry(allSteps, totalDurationSec, tGridStart, gridDur);
-  const midSec = (r.startSec + r.endSec) / 2;
-  const relMidSec = Math.max(0, midSec - geom.tGridStart);
-  const stepIdx = Math.max(0, Math.min(allSteps.length - 1, Math.floor((relMidSec / geom.gridDur) * allSteps.length)));
-  const step = allSteps[stepIdx];
-  if (step?.active && step.midiNumber > 0) return step.midiNumber;
-
-  let bestMidi = fallbackMidi, minDist = Infinity;
-  for (let i = 0; i < allSteps.length; i++) {
-    const s = allSteps[i];
-    if (s.active && s.midiNumber > 0) {
-      const sTime = geom.tGridStart + ((i + 0.5) / allSteps.length) * geom.gridDur;
-      const dist = Math.abs(sTime - midSec);
-      if (dist < minDist) { minDist = dist; bestMidi = s.midiNumber; }
-    }
-  }
-  return bestMidi;
+  const bricks = buildNoteBrickSpans(allSteps, [], totalDurationSec, tGridStart, gridDur);
+  const t = queryTimeSec !== undefined ? queryTimeSec : (r.startSec + r.endSec) / 2;
+  return resolveLocalBrickTargetAtTime(bricks, t, fallbackMidi, r.targetMidiOverride).targetMidi;
 }
 
 export function computeRegionMedianPitch(
   rawPitchCurve: PitchCurvePoint[], startSec: number, endSec: number, fallbackMidi = 60
 ): number {
-  const pts = rawPitchCurve.filter((p) => p.timeSec >= startSec && p.timeSec <= endSec && p.midiFloat >= 36);
-  if (pts.length === 0) return fallbackMidi;
-  const sorted = pts.map((p) => p.midiFloat).sort((a, b) => a - b);
-  return sorted[Math.floor(sorted.length / 2)];
+  return computeIntervalMedianPitch(rawPitchCurve, startSec, endSec, fallbackMidi);
 }
 
-export function foldOctaveDistance(delta: number): number {
-  return delta - 12 * Math.round(delta / 12);
-}
-
-function getPitchAtTime(curve: PitchCurvePoint[], timeSec: number, fallbackMidi: number): number {
-  if (!curve || curve.length === 0) return fallbackMidi;
-  let left = 0, right = curve.length - 1;
-  while (left <= right) {
-    const mid = (left + right) >> 1;
-    if (curve[mid].timeSec < timeSec) left = mid + 1;
-    else right = mid - 1;
-  }
-  const idx = Math.max(0, Math.min(curve.length - 1, left));
-  const p = curve[idx];
-  return (p && p.midiFloat >= 36) ? p.midiFloat : fallbackMidi;
+function isRegionActive(r: MelodyneRegion): boolean {
+  return (r.pitchCenterPct ?? 0) > 0 || (r.driftCorrectionPct ?? 0) > 0 || (r.flattenPct ?? 0) > 0;
 }
 
 export function computeCorrectedPitchCurve(
-  rawPitchCurve: PitchCurvePoint[], allSteps: VocalStepData[], totalDurationSec: number, regions: MelodyneRegion[] = []
+  rawPitchCurve: PitchCurvePoint[], allSteps: VocalStepData[], totalDurationSec: number,
+  regions: MelodyneRegion[] = [], tGridStart?: number, gridDur?: number
 ): PitchCurvePoint[] {
-  if (!regions || regions.length === 0 || rawPitchCurve.length === 0) return rawPitchCurve;
+  if (!regions || regions.length === 0 || !rawPitchCurve || rawPitchCurve.length === 0) return rawPitchCurve;
+  const activeRegions = regions.filter(isRegionActive);
+  if (activeRegions.length === 0) return rawPitchCurve;
+
+  const bricks = buildNoteBrickSpans(allSteps, rawPitchCurve, totalDurationSec, tGridStart, gridDur);
   return rawPitchCurve.map((pt) => {
-    const r = regions.find((reg) => pt.timeSec >= reg.startSec && pt.timeSec <= reg.endSec);
+    if (pt.midiFloat < 36) return pt;
+    const r = activeRegions.find((reg) => pt.timeSec >= reg.startSec && pt.timeSec <= reg.endSec);
     if (!r) return pt;
-    const targetMidi = findTargetMidiForRegion(r, allSteps, totalDurationSec, Math.round(pt.midiFloat));
-    const median = computeRegionMedianPitch(rawPitchCurve, r.startSec, r.endSec, targetMidi);
-    const d = pt.midiFloat - median, c = r.pitchCenterPct / 100, f = r.flattenPct / 100;
-    const newMidi = median + c * foldOctaveDistance(targetMidi - median) + (1 - f) * d;
-    return { timeSec: pt.timeSec, midiFloat: Math.round(newMidi * 100) / 100 };
+    const decomp = decomposePitchAtTime(rawPitchCurve, bricks, pt.timeSec, Math.round(pt.midiFloat), r.targetMidiOverride);
+    const { correctedMidi } = computeTargetMidiAtTime(decomp, r);
+    return { timeSec: pt.timeSec, midiFloat: Math.round(correctedMidi * 100) / 100 };
   });
 }
 
 export function correctAudioPitchWithMelodyne(
   rawAudio: Float32Array, sampleRate: number, totalDurationSec: number,
-  rawPitchCurve: PitchCurvePoint[], allSteps: VocalStepData[], regions: MelodyneRegion[]
+  rawPitchCurve: PitchCurvePoint[], allSteps: VocalStepData[], regions: MelodyneRegion[],
+  tGridStart?: number, gridDur?: number, precomputedAnalysis?: TdPsolaAnalysis, precomputedBricks?: NoteBrickSpan[]
 ): Float32Array {
   if (!regions || regions.length === 0 || !rawAudio || rawAudio.length === 0) return new Float32Array(rawAudio);
-  const wsolaTargets: WsolaRegionTarget[] = [];
-  for (const r of regions) {
-    if (r.pitchCenterPct === 0 && r.flattenPct === 0) continue;
-    const targetMidi = findTargetMidiForRegion(r, allSteps, totalDurationSec);
-    const median = computeRegionMedianPitch(rawPitchCurve, r.startSec, r.endSec, targetMidi);
-    const c = r.pitchCenterPct / 100, f = r.flattenPct / 100, deltaFolded = foldOctaveDistance(targetMidi - median);
-    wsolaTargets.push({
-      startSec: r.startSec, endSec: r.endSec,
-      shiftSemitonesAt: (timeSec: number) => c * deltaFolded - f * (getPitchAtTime(rawPitchCurve, timeSec, median) - median),
-    });
+  const activeRegions = regions.filter(isRegionActive);
+  if (activeRegions.length === 0) return new Float32Array(rawAudio);
+
+  const bricks = precomputedBricks ?? buildNoteBrickSpans(allSteps, rawPitchCurve, totalDurationSec, tGridStart, gridDur);
+  const analysis = precomputedAnalysis ?? analyzeVoicingAndEpochs(rawAudio, sampleRate, rawPitchCurve, bricks);
+
+  const targets: TdPsolaRegionTarget[] = activeRegions.map((r) => ({
+    startSec: r.startSec,
+    endSec: r.endSec,
+    shiftSemitonesAt: (timeSec: number) => {
+      const decomp = decomposePitchAtTime(rawPitchCurve, bricks, timeSec, 60, r.targetMidiOverride);
+      return computeTargetMidiAtTime(decomp, r).shiftSemitones;
+    },
+  }));
+
+  return applyTdPsolaPitchCorrection(rawAudio, sampleRate, analysis, targets);
+}
+
+export function ensureRegionForMovedBrick(
+  regions: MelodyneRegion[], allSteps: VocalStepData[], rootIdx: number,
+  totalDurationSec: number, tGridStart?: number, gridDur?: number
+): MelodyneRegion[] {
+  if (!allSteps || rootIdx < 0 || rootIdx >= allSteps.length || totalDurationSec <= 0) return regions;
+  const geom = resolveMelodyneGridGeometry(allSteps, totalDurationSec, tGridStart, gridDur);
+  let ties = 0;
+  while (rootIdx + 1 + ties < allSteps.length && (allSteps[rootIdx + 1 + ties].note === '───' || allSteps[rootIdx + 1 + ties].isTie)) ties++;
+  const bStart = Math.max(0, Math.round((geom.tGridStart + (rootIdx / allSteps.length) * geom.gridDur) * 1000) / 1000);
+  const bEnd = Math.min(totalDurationSec, Math.round((geom.tGridStart + ((rootIdx + 1 + ties) / allSteps.length) * geom.gridDur) * 1000) / 1000);
+  const bMid = 0.5 * (bStart + bEnd);
+  const covering = regions.find((r) => bMid >= r.startSec && bMid <= r.endSec);
+  if (covering) {
+    if (covering.pitchCenterPct > 0) return regions;
+    return regions.map((r) => (r.id === covering.id ? { ...r, pitchCenterPct: 85, driftCorrectionPct: r.driftCorrectionPct ?? 80 } : r));
   }
-  if (wsolaTargets.length === 0) return new Float32Array(rawAudio);
-  return applyWsolaPitchCorrection(rawAudio, sampleRate, wsolaTargets);
+  return [
+    ...regions,
+    {
+      id: `mrg_brk_${rootIdx}_${Date.now().toString(36)}`,
+      startSec: bStart,
+      endSec: Math.max(bStart + 0.05, bEnd),
+      pitchCenterPct: 100,
+      driftCorrectionPct: 80,
+      flattenPct: 15,
+    },
+  ];
 }

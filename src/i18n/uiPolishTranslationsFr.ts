@@ -99,6 +99,10 @@ export const uiPolishTranslationsFr = {
   syllableQuickSplitPlaceholder: 'Ex: ba-que-de-ro-da (séparé par tirets ou espaces)',
   syllableDistributeTitle: 'Distribuer instantanément les syllabes sur les notes actives',
   syllableDistributeBtn: 'Répartir ({count} notes)',
+  melodyneDriftLabel: 'Tenue : {percent}%',
+  melodyneAutoSweetBtn: '✨ Auto-Justesse Douce',
+  melodyneAutoSweetTitle: 'Calage musical naturel en 1 clic (Justesse 75%, Tenue 80%, Vibrato préservé, Consonnes protégées)',
+  melodyneAutoSweetToast: '✨ Auto-Justesse Douce appliquée (Justesse 75% • Tenue 80% • Vibrato 15%) !',
 
   // Livret 5, Réglages & Modale Organizador
   activeLexiconTitle: '⭐ Vocabulaire & Diction du Chant ({count})',
@@ -114,3 +118,4 @@ export const uiPolishTranslationsFr = {
   organizadorDocLoadedToast: '{title} chargée !',
   organizadorFileImportedToast: '{name} importé !',
 };
+

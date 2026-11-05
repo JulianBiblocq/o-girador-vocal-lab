@@ -6,12 +6,15 @@ import path from 'node:path'
 
 function versionBusterPlugin(): Plugin {
   let serializedVersion = ''
+  const pkgPath = path.resolve(process.cwd(), 'package.json')
+  const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8')) as { version?: string }
+  const appVersion = pkg.version || '1.1.0'
 
   return {
     name: 'version-buster-plugin',
     buildStart() {
       const versionData = {
-        version: '1.0.4',
+        version: appVersion,
         buildTime: new Date().toISOString(),
       }
       serializedVersion = JSON.stringify(versionData, null, 2) + '\n'
@@ -21,7 +24,7 @@ function versionBusterPlugin(): Plugin {
     generateBundle() {
       if (!serializedVersion) {
         serializedVersion = JSON.stringify({
-          version: '1.0.4',
+          version: appVersion,
           buildTime: new Date().toISOString(),
         }, null, 2) + '\n'
       }

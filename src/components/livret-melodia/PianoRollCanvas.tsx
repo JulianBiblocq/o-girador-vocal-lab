@@ -8,9 +8,9 @@ import { findBrickRange, moveBrick, resizeBrick, glueBrickToPrevious, splitTieAt
 import { getToolCursorStyle } from '../../utils/toolCursors';
 
 export interface PianoRollCanvasProps {
-  width: number; height: number; minMidi: number; maxMidi: number; rowHeight: number; beatsPerMeasure: number; beatResolutions: number[]; allSteps: VocalStepData[]; pitchCurve: PitchCurvePoint[]; totalDurationSec: number; anacrusisDurationSec: number; seekStartSec: number; isPlaying: boolean; activeTool: PianoRollTool;
+  width: number; height: number; minMidi: number; maxMidi: number; rowHeight: number; beatsPerMeasure: number; beatResolutions: number[]; allSteps: VocalStepData[]; pitchCurve: PitchCurvePoint[]; rawPitchCurve?: PitchCurvePoint[]; totalDurationSec: number; anacrusisDurationSec: number; seekStartSec: number; isPlaying: boolean; activeTool: PianoRollTool;
   regions?: MelodyneRegion[]; selectedRegionId?: string | null; hasAnacrusis?: boolean; t1OffsetSec?: number; bpm?: number; selectedStepIdx?: number | null; getPlayheadSec?: () => number; onOpenContextMenu: (x: number, y: number) => void; onUpdateSteps: (newSteps: VocalStepData[], commit?: boolean) => void; onPlayNotePreview: (midi: number) => void; onOpenTextInput: (stepIndex: number, rect: { x: number; y: number; w: number; h: number }) => void;
-  onSelectRegion?: (id: string | null) => void; onAddRegion?: (startSec: number, endSec: number) => void; onUpdateRegionBounds?: (id: string, startSec: number, endSec: number) => void; onSelectStep?: (idx: number | null) => void; harmonyGrid?: PatternHarmonyGrid; pitchShiftSemitones?: number; readOnly?: boolean;
+  onSelectRegion?: (id: string | null) => void; onAddRegion?: (startSec: number, endSec: number) => void; onUpdateRegionBounds?: (id: string, startSec: number, endSec: number) => void; onSelectStep?: (idx: number | null) => void; onBrickMoved?: (rootIdx: number, newSteps: VocalStepData[]) => void; harmonyGrid?: PatternHarmonyGrid; pitchShiftSemitones?: number; readOnly?: boolean;
 }
 
 export const PianoRollCanvas: React.FC<PianoRollCanvasProps> = (p) => {
@@ -109,7 +109,10 @@ export const PianoRollCanvas: React.FC<PianoRollCanvasProps> = (p) => {
     if (dragRef.current.mode === 'region_create') {
       const s0 = dragRef.current.startSec, s1 = dragRef.current.currentSec;
       if (Math.abs(s1 - s0) >= 0.05) p.onAddRegion?.(Math.min(s0, s1), Math.max(s0, s1));
-    } else if (dragRef.current.changed) p.onUpdateSteps(p.allSteps, true);
+    } else if (dragRef.current.changed) {
+      p.onUpdateSteps(p.allSteps, true);
+      if (dragRef.current.mode === 'move') p.onBrickMoved?.(dragRef.current.rootIdx, p.allSteps);
+    }
     dragRef.current = null;
   };
 

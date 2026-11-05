@@ -1,21 +1,18 @@
 /**
  * useMelodyneAudioProcessor.ts
- * Hook personnalisé gérant l'état des MelodyneRegion, le recalcul temps réel de la courbe
- * et le processing audio WSOLA asynchrone débouncé (< 120 lignes).
+ * Hook gérant l'état des MelodyneRegion, le pré-calcul des marques glottales TD-PSOLA,
+ * le recalcul temps réel de la courbe et la synthèse audio débouncée (< 135 lignes).
  */
 import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import type { PitchCurvePoint, VocalStepData, MelodyneRegion } from '../types/vocalPack.types';
-import { computeCorrectedPitchCurve, correctAudioPitchWithMelodyne } from '../audio/melodynePitchCorrector';
+import { computeCorrectedPitchCurve, correctAudioPitchWithMelodyne, ensureRegionForMovedBrick } from '../audio/melodynePitchCorrector';
+import { buildNoteBrickSpans } from '../audio/melodynePitchDecomposer';
+import { analyzeVoicingAndEpochs } from '../audio/tdPsolaEpochDetector';
 import { createNewMelodyneRegion, updateRegionBounds, deleteMelodyneRegion } from '../components/livret-melodia/melodyneRegionInteractions';
 
 interface UseMelodyneOptions {
-  initialRegions?: MelodyneRegion[];
-  rawAudio: Float32Array;
-  sampleRate: number;
-  totalDurationSec: number;
-  rawPitchCurve: PitchCurvePoint[];
-  allSteps: VocalStepData[];
-  onAudioUpdated: (pcm: Float32Array | null, regions: MelodyneRegion[]) => void;
+  initialRegions?: MelodyneRegion[]; rawAudio: Float32Array; sampleRate: number; totalDurationSec: number;
+  rawPitchCurve: PitchCurvePoint[]; allSteps: VocalStepData[]; onAudioUpdated: (pcm: Float32Array | null, regions: MelodyneRegion[]) => void;
 }
 
 export function useMelodyneAudioProcessor(options: UseMelodyneOptions) {
@@ -26,23 +23,26 @@ export function useMelodyneAudioProcessor(options: UseMelodyneOptions) {
   const debounceTimerRef = useRef<number | null>(null);
 
   const selectedRegion = useMemo(() => regions.find((r) => r.id === selectedRegionId) ?? null, [regions, selectedRegionId]);
+  const bricks = useMemo(() => buildNoteBrickSpans(allSteps, rawPitchCurve, totalDurationSec), [allSteps, rawPitchCurve, totalDurationSec]);
+  const tdPsolaAnalysis = useMemo(
+    () => (rawAudio && rawAudio.length > 0 ? analyzeVoicingAndEpochs(rawAudio, sampleRate, rawPitchCurve, bricks) : undefined),
+    [rawAudio, sampleRate, rawPitchCurve, bricks]
+  );
   const displayedCurve = useMemo(() => computeCorrectedPitchCurve(rawPitchCurve, allSteps, totalDurationSec, regions), [rawPitchCurve, allSteps, totalDurationSec, regions]);
 
-  const triggerAudioProcessing = useCallback((updatedRegions: MelodyneRegion[]) => {
+  const triggerAudioProcessing = useCallback((updatedRegions: MelodyneRegion[], stepsOverride?: VocalStepData[]) => {
     if (debounceTimerRef.current) window.clearTimeout(debounceTimerRef.current);
-    const hasActive = updatedRegions.length > 0 && updatedRegions.some((r) => r.pitchCenterPct > 0 || r.flattenPct > 0);
-    if (!hasActive) {
-      setIsProcessing(false);
-      onAudioUpdated(null, updatedRegions);
-      return;
-    }
+    const hasActive = updatedRegions.length > 0 && updatedRegions.some((r) => (r.pitchCenterPct ?? 0) > 0 || (r.driftCorrectionPct ?? 0) > 0 || (r.flattenPct ?? 0) > 0);
+    if (!hasActive) { setIsProcessing(false); onAudioUpdated(null, updatedRegions); return; }
     setIsProcessing(true);
     debounceTimerRef.current = window.setTimeout(() => {
-      const newPCM = correctAudioPitchWithMelodyne(rawAudio, sampleRate, totalDurationSec, rawPitchCurve, allSteps, updatedRegions);
+      const targetSteps = stepsOverride ?? allSteps;
+      const targetBricks = stepsOverride ? buildNoteBrickSpans(stepsOverride, rawPitchCurve, totalDurationSec) : bricks;
+      const newPCM = correctAudioPitchWithMelodyne(rawAudio, sampleRate, totalDurationSec, rawPitchCurve, targetSteps, updatedRegions, undefined, undefined, tdPsolaAnalysis, targetBricks);
       onAudioUpdated(newPCM, updatedRegions);
       setIsProcessing(false);
-    }, 150);
-  }, [rawAudio, sampleRate, totalDurationSec, rawPitchCurve, allSteps, onAudioUpdated]);
+    }, 110);
+  }, [rawAudio, sampleRate, totalDurationSec, rawPitchCurve, allSteps, bricks, tdPsolaAnalysis, onAudioUpdated]);
 
   const addRegion = useCallback((startSec: number, endSec: number) => {
     const newReg = createNewMelodyneRegion(startSec, endSec, totalDurationSec);
@@ -51,25 +51,35 @@ export function useMelodyneAudioProcessor(options: UseMelodyneOptions) {
   }, [totalDurationSec, triggerAudioProcessing]);
 
   const addWholePhraseRegion = useCallback(() => {
-    const newReg = createNewMelodyneRegion(0, totalDurationSec, totalDurationSec, 50, 50);
+    const newReg = createNewMelodyneRegion(0, totalDurationSec, totalDurationSec, 65, 20, 80);
     setRegions((prev) => { const next = [...prev, newReg]; triggerAudioProcessing(next); return next; });
     setSelectedRegionId(newReg.id);
+  }, [totalDurationSec, triggerAudioProcessing]);
+
+  const applyAutoSweetSpot = useCallback(() => {
+    const sweetReg = createNewMelodyneRegion(0, totalDurationSec, totalDurationSec, 75, 15, 80);
+    setRegions([sweetReg]); setSelectedRegionId(sweetReg.id); triggerAudioProcessing([sweetReg]);
+  }, [totalDurationSec, triggerAudioProcessing]);
+
+  const syncMovedBrickRegion = useCallback((rootIdx: number, updatedSteps: VocalStepData[]) => {
+    setRegions((prev) => {
+      const next = ensureRegionForMovedBrick(prev, updatedSteps, rootIdx, totalDurationSec);
+      triggerAudioProcessing(next, updatedSteps); return next;
+    });
   }, [totalDurationSec, triggerAudioProcessing]);
 
   const updateSelectedRegion = useCallback((partial: Partial<MelodyneRegion>) => {
     if (!selectedRegionId) return;
     setRegions((prev) => {
       const next = prev.map((r) => (r.id === selectedRegionId ? { ...r, ...partial } : r));
-      triggerAudioProcessing(next);
-      return next;
+      triggerAudioProcessing(next); return next;
     });
   }, [selectedRegionId, triggerAudioProcessing]);
 
   const updateBounds = useCallback((regionId: string, newStart: number, newEnd: number) => {
     setRegions((prev) => {
       const next = updateRegionBounds(prev, regionId, newStart, newEnd, totalDurationSec);
-      triggerAudioProcessing(next);
-      return next;
+      triggerAudioProcessing(next); return next;
     });
   }, [totalDurationSec, triggerAudioProcessing]);
 
@@ -95,7 +105,9 @@ export function useMelodyneAudioProcessor(options: UseMelodyneOptions) {
   useEffect(() => {
     if (prevStepsRef.current !== allSteps) {
       prevStepsRef.current = allSteps;
-      if (regions.some((r) => r.pitchCenterPct > 0 || r.flattenPct > 0)) triggerAudioProcessing(regions);
+      if (regions.some((r) => (r.pitchCenterPct ?? 0) > 0 || (r.driftCorrectionPct ?? 0) > 0 || (r.flattenPct ?? 0) > 0)) {
+        triggerAudioProcessing(regions, allSteps);
+      }
     }
   }, [allSteps, regions, triggerAudioProcessing]);
 
@@ -103,6 +115,7 @@ export function useMelodyneAudioProcessor(options: UseMelodyneOptions) {
 
   return {
     regions, selectedRegionId, selectedRegion, displayedCurve, isProcessing, setSelectedRegionId,
-    addRegion, addWholePhraseRegion, updateSelectedRegion, updateBounds, deleteSelected, clearAllRegions, restoreRegions,
+    addRegion, addWholePhraseRegion, applyAutoSweetSpot, syncMovedBrickRegion,
+    updateSelectedRegion, updateBounds, deleteSelected, clearAllRegions, restoreRegions,
   };
 }
