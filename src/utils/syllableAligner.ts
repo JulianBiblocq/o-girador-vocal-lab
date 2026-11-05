@@ -1,7 +1,6 @@
 /**
  * syllableAligner.ts
- * Alignement des syllabes découpées sur les briques de notes mélodiques actives (< 145 lignes).
- * Modes : A (grille théorique sans audio), B (briques MIDI audio guidées par timeAnchors), C (linéaire).
+ * Alignement des syllabes sur les briques MIDI (assignSyllablesStrictlyToExistingBricks & alignAudioStepsWithTimeAnchors < 144 lignes).
  */
 import type { VocalStepData } from '../types/vocalPack.types';
 import type { TimeAnchor } from '../types/toadaDocument.types';
@@ -13,18 +12,26 @@ export function mapSyllablesToSteps(steps: VocalStepData[], syllables: string[])
   return steps.map((st) => (!st.active || st.note === '───') ? { ...st, syllable: '' } : { ...st, syllable: syllables[syllIdx++] ?? '' });
 }
 
+export function assignSyllablesStrictlyToExistingBricks(steps: VocalStepData[], lyricsText: string): VocalStepData[] {
+  const syllables = splitTextIntoLetraSyllables(lyricsText || '');
+  const attackIndices = steps.map((st, idx) => (st.active && st.note !== '───' && !st.isTie ? idx : -1)).filter((idx) => idx !== -1);
+  if (attackIndices.length === 0) return steps;
+  const result = steps.map((st) => ({ ...st, syllable: '' }));
+  if (syllables.length <= attackIndices.length) {
+    for (let k = 0; k < attackIndices.length; k++) result[attackIndices[k]].syllable = syllables[k] ?? '';
+  } else {
+    for (let k = 0; k < attackIndices.length - 1; k++) result[attackIndices[k]].syllable = syllables[k];
+    result[attackIndices[attackIndices.length - 1]].syllable = syllables.slice(attackIndices.length - 1).join('');
+  }
+  return result;
+}
+
 export function alignSyllablesWithTimeAnchors(
   steps: VocalStepData[], timeAnchors: TimeAnchor[], beatsPerMeasure = 4, stepsPerBeat = 4
 ): VocalStepData[] {
   if (!timeAnchors || timeAnchors.length === 0) return steps;
-  const maxStepNeeded = timeAnchors.reduce((max, a) => {
-    const s = (a.measureOffset * beatsPerMeasure + (a.beat - 1)) * stepsPerBeat;
-    return Math.max(max, s + (a.syllables?.length || 1) + stepsPerBeat);
-  }, steps.length);
-
-  const result: VocalStepData[] = Array.from({ length: maxStepNeeded }, (_, i) =>
-    steps[i] ? { ...steps[i] } : { stepIndex: i, active: false, note: 'C4', midiNumber: 60, velocity: 100, decay: 200, syllable: '' }
-  );
+  const maxStepNeeded = timeAnchors.reduce((max, a) => Math.max(max, (a.measureOffset * beatsPerMeasure + (a.beat - 1)) * stepsPerBeat + (a.syllables?.length || 1) + stepsPerBeat), steps.length);
+  const result: VocalStepData[] = Array.from({ length: maxStepNeeded }, (_, i) => steps[i] ? { ...steps[i] } : { stepIndex: i, active: false, note: 'C4', midiNumber: 60, velocity: 100, decay: 200, syllable: '' });
 
   for (const anchor of timeAnchors) {
     const stepStart = (anchor.measureOffset * beatsPerMeasure + (anchor.beat - 1)) * stepsPerBeat;
@@ -46,17 +53,14 @@ export function alignSyllablesWithTimeAnchors(
   return result;
 }
 
-function unTieStep(step: VocalStepData): void {
-  if (step.note === '───' || !step.note) {
-    step.note = midiToNoteName(step.midiNumber || 60); step.isTie = false; step.syllableAttack = true;
-  }
-}
-
 function alignAudioStepsWithTimeAnchors(
   steps: VocalStepData[], timeAnchors: TimeAnchor[], beatsPerMeasure = 4, stepsPerBeat = 4
 ): VocalStepData[] {
-  const result = steps.map((s) => ({ ...s, syllable: '' }));
-  for (const anchor of timeAnchors) {
+  const origAttacks = steps.map((s) => Boolean(s.syllableAttack));
+  const result = steps.map((s) => ({ ...s, syllable: '', note: s.active ? '───' : '', isTie: s.active, syllableAttack: false }));
+
+  for (let aIdx = 0; aIdx < timeAnchors.length; aIdx++) {
+    const anchor = timeAnchors[aIdx], nextAnchor = timeAnchors[aIdx + 1];
     const beatStart = (anchor.measureOffset * beatsPerMeasure + (anchor.beat - 1)) * stepsPerBeat;
     const beatEnd = Math.min(result.length, beatStart + stepsPerBeat);
     if (beatStart >= result.length) continue;
@@ -64,58 +68,60 @@ function alignAudioStepsWithTimeAnchors(
       for (let i = beatStart; i < beatEnd; i++) result[i] = { ...result[i], active: false, note: '', midiNumber: 0, isTie: false, syllable: '' };
       continue;
     }
-    if (anchor.isSustainedHold) {
-      for (let i = beatStart; i < beatEnd; i++) if (result[i].active && result[i].note !== '───') result[i].syllable = '-';
-      continue;
-    }
+    if (anchor.isSustainedHold) continue;
     const syls = anchor.syllables?.length ? anchor.syllables : (anchor.textSlice ? splitTextIntoLetraSyllables(anchor.textSlice) : []);
     if (syls.length === 0) continue;
 
     if (anchor.hasLeadingRest) {
       const prevAct = beatStart > 0 && result[beatStart - 1].active && result[beatStart - 1].midiNumber > 0 && result[beatStart].active;
       result[beatStart] = prevAct
-        ? { ...result[beatStart], active: true, note: '───', midiNumber: result[beatStart - 1].midiNumber, isTie: true, syllable: '', syllableAttack: false }
-        : { ...result[beatStart], active: false, note: '', midiNumber: 0, isTie: false, syllable: '', syllableAttack: false };
+        ? { ...result[beatStart], active: true, note: '───', midiNumber: result[beatStart - 1].midiNumber, isTie: true, syllable: '' }
+        : { ...result[beatStart], active: false, note: '', midiNumber: 0, isTie: false, syllable: '' };
     }
 
-    const zoneStart = anchor.hasLeadingRest ? Math.min(beatEnd - 1, beatStart + 1) : beatStart;
+    const canAnticipate = !anchor.hasLeadingRest && beatStart > 0 && result[beatStart - 1].active && !result[beatStart - 1].syllable
+      && (origAttacks[beatStart - 1] || (beatStart >= 2 && result[beatStart - 2].active && Math.abs(result[beatStart - 1].midiNumber - result[beatStart - 2].midiNumber) >= 1 && Math.abs(result[beatStart - 1].midiNumber - (result[beatStart]?.midiNumber || result[beatStart - 1].midiNumber)) <= 1));
+
+    const zoneStart = canAnticipate ? beatStart - 1 : (anchor.hasLeadingRest ? Math.min(beatEnd - 1, beatStart + 1) : beatStart);
+    const nextAct = result.find((s, idx) => idx >= beatStart && s.active && s.midiNumber > 0);
+    const prevAct = result.slice(0, beatStart).reverse().find((s) => s.active && s.midiNumber > 0);
+    const fbMidi = nextAct?.midiNumber ?? prevAct?.midiNumber ?? 60;
+    for (let i = zoneStart; i < beatEnd; i++) {
+      if (!result[i].active || result[i].midiNumber <= 0) result[i] = { ...result[i], active: true, midiNumber: fbMidi, note: '───', isTie: true };
+    }
+
     const availSpan = Math.max(1, beatEnd - zoneStart), targetHeads = Math.min(syls.length, availSpan);
-    const activeInBeat: number[] = [];
-    for (let i = zoneStart; i < beatEnd; i++) if (result[i].active && result[i].midiNumber > 0) activeInBeat.push(i);
-
-    if (activeInBeat.length < targetHeads) {
-      const nextAct = result.find((s, idx) => idx >= beatStart && s.active && s.midiNumber > 0);
-      const prevAct = result.slice(0, beatStart).reverse().find((s) => s.active && s.midiNumber > 0);
-      const fbMidi = nextAct?.midiNumber ?? prevAct?.midiNumber ?? 60;
-      activeInBeat.length = 0;
-      for (let i = zoneStart; i < beatEnd; i++) {
-        result[i] = { ...result[i], active: true, midiNumber: result[i].midiNumber > 0 ? result[i].midiNumber : fbMidi, note: '───', isTie: true };
-        activeInBeat.push(i);
+    const heads: number[] = [zoneStart];
+    if (targetHeads === 2) {
+      let bestIdx = nextAnchor?.hasLeadingRest ? Math.max(zoneStart + 1, beatEnd - 1) : zoneStart + Math.max(1, Math.floor(availSpan / 2));
+      let bestScore = -1;
+      for (let i = zoneStart + 1; i < beatEnd; i++) {
+        const jump = Math.abs(result[i].midiNumber - result[i - 1].midiNumber) + (origAttacks[i] ? 1.5 : 0) + (nextAnchor?.hasLeadingRest && i === beatEnd - 1 ? 0.8 : 0);
+        if (jump > bestScore) { bestScore = jump; bestIdx = i; }
       }
-    } else {
-      for (let c = 0; c < activeInBeat.length; c++) {
-        const idx = activeInBeat[c], prevIdx = c > 0 ? activeInBeat[c - 1] : idx - 1;
-        const isMelisma = prevIdx >= 0 && result[prevIdx]?.active && Math.abs(result[idx].midiNumber - result[prevIdx].midiNumber) >= 2;
-        if (!isMelisma) result[idx] = { ...result[idx], note: '───', isTie: true, syllableAttack: false };
-      }
+      heads.push(bestIdx);
+    } else if (targetHeads >= 3) {
+      for (let k = 1; k < targetHeads; k++) heads.push(zoneStart + Math.min(availSpan - 1, Math.floor((k * availSpan) / targetHeads)));
     }
 
-    for (let k = 0; k < targetHeads; k++) {
-      unTieStep(result[activeInBeat[Math.min(activeInBeat.length - 1, Math.floor((k * activeInBeat.length) / targetHeads))]]);
-    }
-    const heads = activeInBeat.filter((idx) => result[idx].note !== '───');
-    if (heads.length < targetHeads) {
-      for (const idx of activeInBeat) {
-        if (heads.length >= targetHeads) break;
-        if (result[idx].note === '───') { unTieStep(result[idx]); heads.push(idx); }
+    for (let k = 0; k < heads.length - 1; k++) result[heads[k]].syllable = syls[k];
+    result[heads[heads.length - 1]].syllable = syls.slice(heads.length - 1).join('');
+  }
+
+  // Passe finale 1:1 : seules les étapes porteuses d'une syllabe sont des têtes de brique (0 brique '-' parasite)
+  let seenFirstBrick = false;
+  for (let i = 0; i < result.length; i++) {
+    const hasSyl = Boolean(result[i].syllable && result[i].syllable.trim() !== '');
+    if (hasSyl) {
+      seenFirstBrick = true;
+      const m = result[i].midiNumber > 0 ? result[i].midiNumber : 60;
+      result[i] = { ...result[i], active: true, midiNumber: m, note: midiToNoteName(m), isTie: false, syllableAttack: true };
+    } else if (result[i].active) {
+      if (seenFirstBrick && i > 0 && result[i - 1].active && result[i - 1].midiNumber > 0) {
+        result[i] = { ...result[i], active: true, midiNumber: result[i - 1].midiNumber, note: '───', isTie: true, syllable: '', syllableAttack: false };
+      } else {
+        result[i] = { ...result[i], active: false, midiNumber: 0, note: '', isTie: false, syllable: '', syllableAttack: false };
       }
-      heads.sort((a, b) => a - b);
-    }
-    if (syls.length <= heads.length) {
-      for (let k = 0; k < heads.length; k++) result[heads[k]].syllable = k < syls.length ? syls[k] : '-';
-    } else {
-      for (let k = 0; k < heads.length - 1; k++) result[heads[k]].syllable = syls[k];
-      result[heads[heads.length - 1]].syllable = syls.slice(heads.length - 1).join('');
     }
   }
   return result;
@@ -129,9 +135,7 @@ export function applyLyricsSyllablesToSteps(
     return hasAudioBricks ? alignAudioStepsWithTimeAnchors(steps, timeAnchors, beatsPerMeasure, stepsPerBeat) : alignSyllablesWithTimeAnchors(steps, timeAnchors, beatsPerMeasure, stepsPerBeat);
   }
   if (!lyricsText || !lyricsText.trim()) return steps;
-  const syllables = splitTextIntoLetraSyllables(lyricsText);
-  let syllIdx = 0;
-  return steps.map((st) => !st.active ? { ...st, syllable: '' } : st.note === '───' ? { ...st, syllable: st.syllable || '-' } : { ...st, syllable: syllables[syllIdx++] ?? '' });
+  return assignSyllablesStrictlyToExistingBricks(steps, lyricsText);
 }
 
 export function reconstructWordsFromSteps(steps: VocalStepData[]): string {

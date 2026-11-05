@@ -102,7 +102,11 @@ export function ensureRegionForMovedBrick(
   const covering = regions.find((r) => bMid >= r.startSec && bMid <= r.endSec);
   if (covering) {
     if (covering.pitchCenterPct > 0) return regions;
-    return regions.map((r) => (r.id === covering.id ? { ...r, pitchCenterPct: 85, driftCorrectionPct: r.driftCorrectionPct ?? 80 } : r));
+    return regions.map((r) => (r.id === covering.id ? { ...r, pitchCenterPct: 85, driftCorrectionPct: r.driftCorrectionPct ?? 80, flattenPct: r.flattenPct ?? 0 } : r));
+  }
+  const adjacent = regions.find((r) => Math.abs(r.endSec - bStart) <= 0.06 || Math.abs(bEnd - r.startSec) <= 0.06);
+  if (adjacent) {
+    return regions.map((r) => (r.id === adjacent.id ? { ...r, startSec: Math.min(r.startSec, bStart), endSec: Math.max(r.endSec, bEnd) } : r));
   }
   return [
     ...regions,
@@ -112,7 +116,7 @@ export function ensureRegionForMovedBrick(
       endSec: Math.max(bStart + 0.05, bEnd),
       pitchCenterPct: 100,
       driftCorrectionPct: 80,
-      flattenPct: 15,
+      flattenPct: 0,
     },
   ];
 }

@@ -40,7 +40,7 @@ export function createNewMelodyneRegion(
   endSec: number,
   totalDurationSec: number,
   initialPitchCenter = 65,
-  initialFlatten = 20,
+  initialFlatten = 0,
   initialDriftCorrection = 80
 ): MelodyneRegion {
   const safeStart = Math.max(0, Math.min(startSec, endSec));

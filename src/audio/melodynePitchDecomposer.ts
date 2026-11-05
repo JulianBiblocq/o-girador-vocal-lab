@@ -4,6 +4,7 @@
  * p(t) = mu_note + D(t) [dérive lente < 2.5 Hz] + V(t) [vibrato rapide 4..8 Hz] (< 135 lignes).
  */
 import type { PitchCurvePoint, VocalStepData, MelodyneRegion } from '../types/vocalPack.types';
+import { filterConsonantPitchDips } from './pitchStepSegmentation';
 
 export interface NoteBrickSpan {
   rootIndex: number; startSec: number; endSec: number; attackEndSec: number; targetMidi: number; sungMedian: number;
@@ -40,6 +41,7 @@ export function buildNoteBrickSpans(
   allSteps: VocalStepData[], rawPitchCurve: PitchCurvePoint[], totalDurationSec: number, tGridStart?: number, gridDur?: number
 ): NoteBrickSpan[] {
   if (!allSteps || allSteps.length === 0 || totalDurationSec <= 0) return [];
+  const cleanCurve = filterConsonantPitchDips(rawPitchCurve);
   const geom = resolveMelodyneGridGeometry(allSteps, totalDurationSec, tGridStart, gridDur);
   const spans: NoteBrickSpan[] = [];
   for (let i = 0; i < allSteps.length; i++) {
@@ -51,7 +53,7 @@ export function buildNoteBrickSpans(
     const endSec = geom.tGridStart + ((i + 1 + ties) / allSteps.length) * geom.gridDur;
     const cutRatio = step.melodyneStartRatio !== undefined ? Math.max(0, Math.min(0.85, step.melodyneStartRatio)) : 0;
     const attackEndSec = startSec + (endSec - startSec) * cutRatio;
-    const rawMed = computeIntervalMedianPitch(rawPitchCurve, Math.min(endSec, attackEndSec), endSec, step.midiNumber);
+    const rawMed = computeIntervalMedianPitch(cleanCurve, Math.min(endSec, attackEndSec), endSec, step.midiNumber);
     const sungMedian = rawMed + Math.round((step.midiNumber - rawMed) / 12) * 12;
     spans.push({ rootIndex: i, startSec, endSec, attackEndSec, targetMidi: step.midiNumber, sungMedian });
     i += ties;

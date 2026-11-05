@@ -90,3 +90,4 @@ export const AmbitusNeedleGauge: React.FC<AmbitusNeedleGaugeProps> = ({
     </div>
   );
 };
+

@@ -1,7 +1,5 @@
 /**
- * pitchToStepsQuantizer.ts
- * Quantification MIDI sur la grille des temps basée sur les segments de pitch.
- * Attaques obligatoires sur temps ancrés, scission intra-temps et gestion des silences (< 145 lignes).
+ * pitchToStepsQuantizer.ts — Quantification MIDI sur la grille des temps et gestion des silences (< 144 lignes).
  */
 import type { PitchCurvePoint, VocalStepData } from '../types/vocalPack.types';
 import type { TimeAnchor } from '../types/toadaDocument.types';
@@ -9,7 +7,7 @@ import { midiToNoteName } from '../utils/noteUtils';
 import { snapMidiToScale, type ScaleType } from './scaleQuantizer';
 import { hasSyllableAttack } from './onsetDetector';
 import { getPatternT1OffsetSec } from '../utils/anacrusisTimingHelper';
-import { segmentPitchCurve, computeTrimmedMedianMidi, recalibrateBricksToLocalPitchCurve, type PitchSegment } from './pitchStepSegmentation';
+import { filterConsonantPitchDips, segmentPitchCurve, computeTrimmedMedianMidi, recalibrateBricksToLocalPitchCurve, type PitchSegment } from './pitchStepSegmentation';
 import { buildBeatLyricsMap } from '../utils/timeAnchorParser';
 
 export interface QuantizerParams {
@@ -34,7 +32,8 @@ function findSegmentForStep(segments: PitchSegment[], sStart: number, sEnd: numb
 }
 
 export function quantizePitchToSteps(params: QuantizerParams): QuantizedGridResult {
-  const { pitchCurve, bpm, beatsPerMeasure, measuresCount, beatResolutions, trimStartSec, trimEndSec, hasAnacrusis = true, tonic = 'C', scaleType = 'chromatic', pcm, sampleRate, timeAnchors = [] } = params;
+  const { bpm, beatsPerMeasure, measuresCount, beatResolutions, trimStartSec, trimEndSec, hasAnacrusis = true, tonic = 'C', scaleType = 'chromatic', pcm, sampleRate, timeAnchors = [] } = params;
+  const pitchCurve = filterConsonantPitchDips(params.pitchCurve);
   const beatDuration = 60 / bpm, measureDuration = beatsPerMeasure * beatDuration;
   const t1 = params.t1OffsetSec ?? getPatternT1OffsetSec(hasAnacrusis, measureDuration);
   const hasAnac = hasAnacrusis !== false, startM = hasAnac ? -1 : 0, gridStartSec = hasAnac ? (t1 - measureDuration) : t1;
@@ -96,9 +95,9 @@ export function quantizePitchToSteps(params: QuantizerParams): QuantizedGridResu
         const isFirstVoicedWithSyl = !hasVoicedInBeat && sylCount > 0;
         hasVoicedInBeat = true;
         const isSubdivAttack = sylCount > 0 && subdivTargets.has(s);
-        const allowAcousticAttack = timeAnchors.length === 0 || (sylCount === 0 && !isSustainedHold);
-        const acousticAttack = allowAcousticAttack && pcm && sampleRate ? hasSyllableAttack(pcm, sampleRate, stepStart, stepEnd) : false;
-        const hasAttack = !isSustainedHold && (isFirstVoicedWithSyl || isSubdivAttack || acousticAttack);
+        const acousticAttack = pcm && sampleRate ? hasSyllableAttack(pcm, sampleRate, stepStart, stepEnd) : false;
+        const allowAcousticSplit = timeAnchors.length === 0 || (sylCount === 0 && !isSustainedHold);
+        const hasAttack = !isSustainedHold && (isFirstVoicedWithSyl || isSubdivAttack || (allowAcousticSplit && acousticAttack));
 
         const samePitch = Boolean(prevStep && prevStep.active && prevStep.midiNumber === targetMidi && (prevMidiFloat <= 0 || Math.abs(curFloat - prevMidiFloat) < pitchDiffLimit));
         const canTie = Boolean(prevStep && prevStep.active && (isSustainedHold || (!hasAttack && samePitch)));
@@ -107,7 +106,7 @@ export function quantizePitchToSteps(params: QuantizerParams): QuantizedGridResu
 
         allSteps.push({
           stepIndex: globalStepIndex++, active: true, note: canTie ? '───' : midiToNoteName(effectiveMidi),
-          midiNumber: effectiveMidi, syllable: '', syllableAttack: hasAttack, isTie: canTie, velocity: canTie ? 90 : 100, decay: stepDuration,
+          midiNumber: effectiveMidi, syllable: '', syllableAttack: hasAttack || acousticAttack, isTie: canTie, velocity: canTie ? 90 : 100, decay: stepDuration,
         });
       }
     }

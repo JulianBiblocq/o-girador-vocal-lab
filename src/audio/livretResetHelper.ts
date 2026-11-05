@@ -75,6 +75,9 @@ export function upgradeStalePatternStepsIfNeeded(params: {
   sampleRate: number; rawTxtCode?: string;
 }): VocalStepData[] {
   const { rawDefaultSteps, expectedStepsCount, rawPitchCurve, activePattern, initialPack, beatsPerMeasure, measuresCount, hasAnac, t1OffsetSec, resPerBeat, totalDurationSec, tonic, scaleType, rawPCM, sampleRate, rawTxtCode } = params;
+  if (activePattern.midiLocked && rawDefaultSteps.length > 0) {
+    return rawDefaultSteps.map((s, idx) => ({ ...s, stepIndex: idx }));
+  }
   const anchors = resolveFreshTimeAnchors(activePattern.rawLineCode, activePattern.timeAnchors, beatsPerMeasure, !hasAnac, activePattern.assignedLyricsText, rawTxtCode);
   const bpm = initialPack.metadata.bpm || 88, stepDur = (60 / bpm) / resPerBeat;
   const hasStaleLeadingRest = Boolean(rawPitchCurve.length > 0 && anchors?.some((a) => {
@@ -87,12 +90,13 @@ export function upgradeStalePatternStepsIfNeeded(params: {
     const q = quantizePitchToSteps({ pitchCurve: rawPitchCurve, bpm, beatsPerMeasure, measuresCount, beatResolutions: initialPack.metadata.beatResolutions, trimStartSec: 0, trimEndSec: totalDurationSec, hasAnacrusis: hasAnac, t1OffsetSec, smoothingLevel: 0.15, tonic, scaleType, pcm: rawPCM, sampleRate, timeAnchors: anchors });
     const rawS = hasAnac ? [...q.anacrusisSteps, ...q.gridSteps] : q.gridSteps;
     const aligned = applyLyricsSyllablesToSteps(rawS, activePattern.assignedLyricsText, anchors, beatsPerMeasure, resPerBeat);
-    return recalibrateBricksToLocalPitchCurve(aligned, rawPitchCurve, hasAnac ? 0 : t1OffsetSec, stepDur, tonic, scaleType);
+    return recalibrateBricksToLocalPitchCurve(aligned, rawPitchCurve, hasAnac ? 0 : t1OffsetSec, stepDur, tonic, scaleType).map((s, idx) => ({ ...s, stepIndex: idx }));
   }
   const baseSteps = (rawDefaultSteps.length >= expectedStepsCount || rawDefaultSteps.length === 0)
     ? rawDefaultSteps
     : [...rawDefaultSteps, ...Array.from({ length: expectedStepsCount - rawDefaultSteps.length }, (_, k) => ({ stepIndex: rawDefaultSteps.length + k, active: false, note: '', midiNumber: 0, velocity: 0, decay: stepDur }))];
-  return rawPitchCurve.length > 0 ? recalibrateBricksToLocalPitchCurve(baseSteps, rawPitchCurve, hasAnac ? 0 : t1OffsetSec, stepDur, tonic, scaleType) : baseSteps;
+  const calibrated = rawPitchCurve.length > 0 ? recalibrateBricksToLocalPitchCurve(baseSteps, rawPitchCurve, hasAnac ? 0 : t1OffsetSec, stepDur, tonic, scaleType) : baseSteps;
+  return calibrated.map((s, idx) => ({ ...s, stepIndex: idx }));
 }
 
 export function buildUpdatedVocalPackExport(

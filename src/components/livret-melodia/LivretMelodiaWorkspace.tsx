@@ -14,17 +14,12 @@ import { applyLyricsSyllablesToSteps } from '../../utils/syllableAligner';
 import { resolveFreshTimeAnchors } from '../../utils/timeAnchorParser';
 import { downloadToadaPackJson } from '../../utils/toadaPackExporter';
 import { useVocalTransportStore } from '../../stores/useVocalTransportStore';
-import { PianoRollEditor } from './PianoRollEditor';
-import { MelodyneControlsBar } from './MelodyneControlsBar';
-import { MelodicControls } from './MelodicControls';
-import { LetraEditorPanel } from './LetraEditorPanel';
-import { MelodiaNextStepFooter } from './MelodiaNextStepFooter';
-import { HarmonyProfileSelector } from '../common/HarmonyProfileSelector';
-import { DEFAULT_HARMONY_CONFIG } from '../../types/harmony.types';
-import { moveBrick, type PianoRollTool } from './pianoRollInteractions';
+import { PianoRollEditor } from './PianoRollEditor'; import { MelodyneControlsBar } from './MelodyneControlsBar';
+import { MelodicControls } from './MelodicControls'; import { LetraEditorPanel } from './LetraEditorPanel';
+import { MelodiaNextStepFooter } from './MelodiaNextStepFooter'; import { HarmonyProfileSelector } from '../common/HarmonyProfileSelector';
+import { DEFAULT_HARMONY_CONFIG } from '../../types/harmony.types'; import { moveBrick, type PianoRollTool } from './pianoRollInteractions';
 import { buildUpdatedVocalPackExport, upgradeStalePatternStepsIfNeeded, extractProjectRawLyricsSource } from '../../audio/livretResetHelper';
-import { useMelodiaActions } from './useMelodiaActions';
-import { useLanguage } from '../../i18n/LanguageContext';
+import { useMelodiaActions } from './useMelodiaActions'; import { useLanguage } from '../../i18n/LanguageContext';
 
 export interface LivretMelodiaWorkspaceProps {
   initialPack: VocalPackExport; cleanPCM?: Float32Array; sampleRate?: number; totalDurationSec?: number;
@@ -76,36 +71,35 @@ export const LivretMelodiaWorkspace: React.FC<LivretMelodiaWorkspaceProps> = ({
   }, [commitSnapshot, allSteps, rawPitchCurve, regions, activePattern.assignedLyricsText]);
 
   const handleUpdateSteps = useCallback((newSteps: VocalStepData[], commit = true) => {
-    setAllSteps(newSteps, commit);
-    const updatedPack = buildUpdatedVocalPackExport(initialPack, newSteps, hasAnac, beatsPerMeasure, displayedCurve);
-    updatePattern(activePattern.id, { pack: updatedPack, anacrusisSteps: hasAnac ? newSteps.slice(0, anacLen) : [], mainSteps: (hasAnac ? newSteps.slice(anacLen) : newSteps).map((s, idx) => ({ ...s, stepIndex: idx })), isMidiInitialized: true, ...(commit ? { midiLocked: true } : {}) });
+    const norm = newSteps.map((s, idx) => ({ ...s, stepIndex: idx }));
+    setAllSteps(norm, commit);
+    const updatedPack = buildUpdatedVocalPackExport(initialPack, norm, hasAnac, beatsPerMeasure, displayedCurve);
+    updatePattern(activePattern.id, { pack: updatedPack, anacrusisSteps: hasAnac ? norm.slice(0, anacLen) : [], mainSteps: (hasAnac ? norm.slice(anacLen) : norm).map((s, idx) => ({ ...s, stepIndex: idx })), isMidiInitialized: true, ...(commit ? { midiLocked: true } : {}) });
   }, [setAllSteps, initialPack, hasAnac, beatsPerMeasure, displayedCurve, anacLen, activePattern.id, updatePattern]);
 
   const recompute = useCallback((smooth: number, ton: string, sc: ScaleType) => {
+    const stepDur = (60 / (initialPack.metadata.bpm || 88)) / resPerBeat;
+    if (activePattern.midiLocked && allSteps.length > 0) {
+      const steps = recalibrateBricksToLocalPitchCurve(allSteps, rawPitchCurve, hasAnac ? 0 : t1OffsetSec, stepDur, ton, sc, smooth);
+      commitCurrentSnapshot({ steps }); handleUpdateSteps(steps, false); return;
+    }
     const anchors = resolveFreshTimeAnchors(activePattern.rawLineCode, activePattern.timeAnchors, beatsPerMeasure, !hasAnac, activePattern.assignedLyricsText, rawTxtCode);
     const q = quantizePitchToSteps({ pitchCurve: rawPitchCurve, bpm: initialPack.metadata.bpm, beatsPerMeasure, measuresCount, beatResolutions: initialPack.metadata.beatResolutions, trimStartSec: 0, trimEndSec: totalDurationSec, hasAnacrusis: hasAnac, t1OffsetSec, smoothingLevel: smooth, tonic: ton, scaleType: sc, pcm: rawPCM, sampleRate, timeAnchors: anchors });
     const rawSteps = hasAnac ? [...q.anacrusisSteps, ...q.gridSteps] : q.gridSteps;
     const aligned = (activePattern.assignedLyricsText || anchors?.length) ? applyLyricsSyllablesToSteps(rawSteps, activePattern.assignedLyricsText, anchors, beatsPerMeasure, resPerBeat) : rawSteps;
-    const steps = recalibrateBricksToLocalPitchCurve(aligned, rawPitchCurve, hasAnac ? 0 : t1OffsetSec, (60 / (initialPack.metadata.bpm || 88)) / resPerBeat, ton, sc, smooth);
+    const steps = recalibrateBricksToLocalPitchCurve(aligned, rawPitchCurve, hasAnac ? 0 : t1OffsetSec, stepDur, ton, sc, smooth);
     if (anchors && anchors !== activePattern.timeAnchors) updatePattern(activePattern.id, { timeAnchors: anchors });
     commitCurrentSnapshot({ steps }); handleUpdateSteps(steps, false);
-  }, [rawPitchCurve, initialPack, beatsPerMeasure, measuresCount, totalDurationSec, hasAnac, t1OffsetSec, rawPCM, sampleRate, activePattern.id, activePattern.rawLineCode, activePattern.assignedLyricsText, activePattern.timeAnchors, rawTxtCode, resPerBeat, updatePattern, commitCurrentSnapshot, handleUpdateSteps]);
+  }, [activePattern.midiLocked, allSteps, rawPitchCurve, initialPack, beatsPerMeasure, measuresCount, totalDurationSec, hasAnac, t1OffsetSec, rawPCM, sampleRate, activePattern.id, activePattern.rawLineCode, activePattern.assignedLyricsText, activePattern.timeAnchors, rawTxtCode, resPerBeat, updatePattern, commitCurrentSnapshot, handleUpdateSteps]);
 
   const { handleReset, handleShiftOctave, handleAlignOctaveToBricks, handleDeleteSelected, handleSimplifyMelody, handleWeldSelected } = useMelodiaActions({
     rawPCM, sampleRate, totalDurationSec, activePattern, initialPack, beatsPerMeasure, measuresCount, hasAnac, t1OffsetSec, smoothingLevel, tonic, scaleType, rawPitchCurve, allSteps, selectedRegion, selectedRegionId, selectedStepIdx, regions, clearAllRegions, deleteSelected, commitCurrentSnapshot, setAllSteps, updatePattern, handleUpdateSteps, t, rawTxtCode,
   });
-
   useEffect(() => useVocalTransportStore.getState().registerHandlers({
     togglePlay: handleTogglePlay, stop: () => { player.stop(); setIsPlaying(false); }, undo, redo, deleteSelected: handleDeleteSelected,
     seekRelative: (d: number) => handleSeek(Math.max(0, Math.min(totalDurationSec, seekStartSec + d))),
-    onMidiNote: (m: number) => {
-      if (selectedStepIdx !== null) {
-        const nextSteps = moveBrick(allSteps, selectedStepIdx, m);
-        handleUpdateSteps(nextSteps); syncMovedBrickRegion(selectedStepIdx, nextSteps);
-      }
-    },
+    onMidiNote: (m: number) => { if (selectedStepIdx !== null) { const nextSteps = moveBrick(allSteps, selectedStepIdx, m); handleUpdateSteps(nextSteps); syncMovedBrickRegion(selectedStepIdx, nextSteps); } },
   }), [handleTogglePlay, player, undo, redo, handleDeleteSelected, handleSeek, totalDurationSec, seekStartSec, selectedStepIdx, allSteps, handleUpdateSteps, syncMovedBrickRegion, setIsPlaying]);
-
   useEffect(() => { useVocalTransportStore.getState().setIsPlaying(isPlaying); }, [isPlaying]);
 
   return (

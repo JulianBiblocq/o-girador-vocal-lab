@@ -51,13 +51,13 @@ export function useMelodyneAudioProcessor(options: UseMelodyneOptions) {
   }, [totalDurationSec, triggerAudioProcessing]);
 
   const addWholePhraseRegion = useCallback(() => {
-    const newReg = createNewMelodyneRegion(0, totalDurationSec, totalDurationSec, 65, 20, 80);
+    const newReg = createNewMelodyneRegion(0, totalDurationSec, totalDurationSec, 65, 0, 80);
     setRegions((prev) => { const next = [...prev, newReg]; triggerAudioProcessing(next); return next; });
     setSelectedRegionId(newReg.id);
   }, [totalDurationSec, triggerAudioProcessing]);
 
   const applyAutoSweetSpot = useCallback(() => {
-    const sweetReg = createNewMelodyneRegion(0, totalDurationSec, totalDurationSec, 75, 15, 80);
+    const sweetReg = createNewMelodyneRegion(0, totalDurationSec, totalDurationSec, 75, 0, 80);
     setRegions([sweetReg]); setSelectedRegionId(sweetReg.id); triggerAudioProcessing([sweetReg]);
   }, [totalDurationSec, triggerAudioProcessing]);
 
