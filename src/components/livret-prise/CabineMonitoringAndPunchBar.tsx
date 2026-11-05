@@ -113,3 +113,4 @@ export const CabineMonitoringAndPunchBar: React.FC<CabineMonitoringAndPunchBarPr
     </div>
   );
 };
+

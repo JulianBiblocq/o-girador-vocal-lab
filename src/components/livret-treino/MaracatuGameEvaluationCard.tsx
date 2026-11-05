@@ -1,6 +1,6 @@
 /**
  * MaracatuGameEvaluationCard.tsx
- * Carte d'évaluation des exercices de chant du Maracatu (< 50 lignes).
+ * Carte d'évaluation des 4 exercices de chant du Maracatu (< 55 lignes).
  */
 import React from 'react';
 import type { MaracatuGameId, VocalGameEvaluation } from '../../audio/vocalGameAnalyzers';
@@ -12,6 +12,12 @@ interface Props {
 }
 
 export const MaracatuGameEvaluationCard: React.FC<Props> = ({ evaluation, gameId, t }) => {
+  const statusLabel = evaluation.projectionStatus === 'roda_optimal'
+    ? t('rodaBadgeOptimal')
+    : evaluation.projectionStatus === 'forcage'
+    ? t('rodaBadgeForcage')
+    : t('rodaBadgeTimide');
+
   return (
     <div className={`cordel-card-sm p-3 text-xs font-bold space-y-1.5 rounded border ${
       evaluation.isSuccess ? 'border-[#0f766e]/30 text-[#0f766e] dark:text-[#2dd4bf]' : 'border-[#c25e38]/30 text-[#9a3412] dark:text-[#e69d35]'
@@ -23,6 +29,15 @@ export const MaracatuGameEvaluationCard: React.FC<Props> = ({ evaluation, gameId
             rms: (evaluation.avgRms * 100).toFixed(1),
             cents: evaluation.centsDiff,
             brilliance: evaluation.brillianceRatio,
+          })}
+        </div>
+      )}
+      {gameId === 'a_voz_na_roda' && (
+        <div className="font-mono text-[11px]">
+          {t('game4MetricsLabel', {
+            proj: evaluation.projectionScorePct ?? 0,
+            cents: evaluation.centsDiff,
+            status: statusLabel,
           })}
         </div>
       )}

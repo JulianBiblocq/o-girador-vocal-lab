@@ -1,6 +1,6 @@
 /**
  * harmonyTranslationsFr.ts
- * Traductions françaises pour la grille harmonique et accompagnement MIDI multi-univers (< 30 lignes).
+ * Traductions françaises pour la grille harmonique, la Jauge Projection Roda et les Paliers 75-88-100% (< 65 lignes).
  */
 export const harmonyTranslationsFr = {
   harmonyTitle: 'ACCOMPAGNEMENT HARMONIQUE & ACCORDS MIDI',
@@ -16,4 +16,27 @@ export const harmonyTranslationsFr = {
   harmonyClearChord: 'Effacer l\'accord',
   harmonyNoChordsDefined: 'Aucun accord défini',
   harmonyToggleHelp: 'Activer / couper l\'accompagnement MIDI temps réel',
+  rodaGaugeTitle: '🔔 Projection Roda (Masque 3 kHz)',
+  rodaStatusTimide: '🌬️ Ouvre les résonateurs (pommettes hautes, bouche ouverte)',
+  rodaStatusOptimal: '🔔 Voix de Roda ! Brillance claire dans le masque',
+  rodaStatusForcage: '⚠️ Relâche la gorge : cherche la résonance, pas la force',
+  rodaBadgeTimide: 'Voix timide',
+  rodaBadgeOptimal: 'Voix de Roda',
+  rodaBadgeForcage: 'Gorge serrée',
+  studentDiagProjectionTitle: '🔔 Projection Roda',
+  speedTier75Label: '🐢 75 % • Apprentissage',
+  speedTier88Label: '🚶 88 % • Mise en place',
+  speedTier100Label: '🔥 100 % • Tempo Roda',
+  autoProgressionToggleBtn: '🎯 Progression Auto (75➔88➔100%)',
+  toadaMasteryProgressLabel: '🏆 Motifs maîtrisés au Tempo Roda : {mastered} / {total}',
+  tierUnlocked75Toast: '⭐ Palier 75 % validé ({score} %) ! Passage automatique à 88 %.',
+  tierUnlocked88Toast: '⭐ Palier 88 % validé ({score} %) ! Passage automatique à 100 % (Tempo Roda).',
+  tierUnlocked100Toast: '👑 Motif Maîtrisé à 100 % ({score} %) au Tempo Roda !',
+  patternMasteredCrownBadge: '👑 Maîtrisé (100 %)',
+  game4Tab: '4. 🔔 A Voz na Roda (Résonance du Masque)',
+  game4Goal: 'Maintenir la voyelle longue du motif actif à la hauteur juste (±35 cents) avec une résonance du masque 2.5–3.5 kHz ≥ 45 %.',
+  game4Instruction: 'Chante la voyelle longue de la Toada en faisant sonner le masque (pommettes hautes) pour traverser la Bateria sans forcer.',
+  game4Success: '🔔 Cloche de Roda ! Hauteur juste et résonance 3 kHz éclatante au-dessus des tambours !',
+  game4ForcageWarn: '⚠️ Trop de tension dans la gorge : réduis la poussée et place la vibration dans le masque.',
+  game4MetricsLabel: 'Projection Masque : {proj} % | Justesse : Δ {cents} cts | État : {status}',
 };

@@ -262,7 +262,7 @@ function walkFiles(dir) {
   }
 
   const pkg = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8'));
-  assert.ok(['1.2.0', '1.3.0'].includes(pkg.version), 'package.json doit être en version >= 1.2.0');
+  assert.ok(['1.2.0', '1.3.0', '1.4.0'].includes(pkg.version), 'package.json doit être en version >= 1.2.0');
   console.log(`✓ Gouvernance : ${allSrcFiles.length} fichiers src/ vérifiés (100 % <= 145 lignes, 0 violation Règle 0, version ${pkg.version}).`);
 }
 

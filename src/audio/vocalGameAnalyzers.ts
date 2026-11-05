@@ -1,19 +1,20 @@
 /**
  * vocalGameAnalyzers.ts
- * Analyseurs acoustiques des 3 Exercices Vocaux du Maracatu (Tir Franc, O Chamado, Voz no Passo).
- * Strictement < 130 lignes.
+ * Analyseurs acoustiques des 4 Exercices Vocaux du Maracatu (Tir Franc, O Chamado, Voz no Passo, A Voz na Roda) (< 135 lignes).
  */
-
 import type { PitchCurvePoint } from '../types/vocalPack.types';
 import type { TranslationKey } from '../i18n/i18n.types';
+import type { RodaProjectionStatus } from './rodaResonanceAnalyzer';
 
-export type MaracatuGameId = 'tir_franc' | 'o_chamado' | 'voz_no_passo';
+export type MaracatuGameId = 'tir_franc' | 'o_chamado' | 'voz_no_passo' | 'a_voz_na_roda';
 
 export interface VocalGameSample {
   timeSec: number;
   pitchMidi: number;
   rms: number;
   brillianceRatio: number;
+  projectionScorePct?: number;
+  projectionStatus?: RodaProjectionStatus;
 }
 
 export interface VocalGameEvaluation {
@@ -23,6 +24,8 @@ export interface VocalGameEvaluation {
   centsDiff: number;
   avgRms: number;
   brillianceRatio: number;
+  projectionScorePct?: number;
+  projectionStatus?: RodaProjectionStatus;
   beatStatuses?: [boolean, boolean, boolean, boolean];
   pitchCurve: PitchCurvePoint[];
 }
@@ -67,17 +70,18 @@ export function analyzeTirFranc(targetMidi: number, samples: VocalGameSample[]):
 export function analyzeOChamado(targetMidi: number, samples: VocalGameSample[]): VocalGameEvaluation {
   const voiced = samples.filter((s) => s.pitchMidi > 0 && s.rms >= 0.02);
   if (voiced.length < 3) {
-    return { gameId: 'o_chamado', isSuccess: false, feedbackKey: 'game2NeedPower', centsDiff: 99, avgRms: 0, brillianceRatio: 0, pitchCurve: [] };
+    return { gameId: 'o_chamado', isSuccess: false, feedbackKey: 'game2NeedPower', centsDiff: 99, avgRms: 0, brillianceRatio: 0, projectionScorePct: 0, pitchCurve: [] };
   }
   const avgRms = voiced.reduce((a, s) => a + s.rms, 0) / voiced.length;
   const avgMidi = voiced.reduce((a, s) => a + s.pitchMidi, 0) / voiced.length;
   const centsDiff = Math.round(Math.abs(avgMidi - targetMidi) * 100);
   const brillianceRatio = Math.round((voiced.reduce((a, s) => a + s.brillianceRatio, 0) / voiced.length) * 100) / 100;
+  const projectionScorePct = Math.round(voiced.reduce((a, s) => a + (s.projectionScorePct ?? 0), 0) / voiced.length);
 
-  const hasPower = avgRms >= 0.04, isInTune = centsDiff <= 45, hasMask = brillianceRatio >= 0.35;
+  const hasPower = avgRms >= 0.04, isInTune = centsDiff <= 45, hasMask = brillianceRatio >= 0.35 || projectionScorePct >= 40;
   const isSuccess = hasPower && isInTune && hasMask;
   const feedbackKey: TranslationKey = !hasPower ? 'game2NeedPower' : !isInTune ? 'game1PitchWarn' : !hasMask ? 'game2NeedBrilliance' : 'game2Success';
-  return { gameId: 'o_chamado', isSuccess, feedbackKey, centsDiff, avgRms, brillianceRatio, pitchCurve: [] };
+  return { gameId: 'o_chamado', isSuccess, feedbackKey, centsDiff, avgRms, brillianceRatio, projectionScorePct, pitchCurve: [] };
 }
 
 export function analyzeVozNoPasso(
@@ -104,4 +108,26 @@ export function analyzeVozNoPasso(
   }
   const isSuccess = beatStatuses.every(Boolean) && centsDiff <= 45;
   return { gameId: 'voz_no_passo', isSuccess, feedbackKey: isSuccess ? 'game3Success' : 'game3BumpWarn', centsDiff, avgRms, brillianceRatio: 0, beatStatuses, pitchCurve };
+}
+
+/**
+ * Défi 4 : 🔔 A Voz na Roda — Hauteur juste (±35 cents) + Résonance du masque 2.5–3.5 kHz >= 45 % sans forçage.
+ */
+export function analyzeAVozNaRoda(targetMidi: number, samples: VocalGameSample[]): VocalGameEvaluation {
+  const voiced = samples.filter((s) => s.pitchMidi > 0 && s.rms >= 0.02);
+  if (voiced.length < 3) {
+    return { gameId: 'a_voz_na_roda', isSuccess: false, feedbackKey: 'game2NeedPower', centsDiff: 99, avgRms: 0, brillianceRatio: 0, projectionScorePct: 0, projectionStatus: 'timide', pitchCurve: [] };
+  }
+  const avgRms = voiced.reduce((a, s) => a + s.rms, 0) / voiced.length;
+  const avgMidi = voiced.reduce((a, s) => a + s.pitchMidi, 0) / voiced.length;
+  const centsDiff = Math.round(Math.abs(avgMidi - targetMidi) * 100);
+  const projectionScorePct = Math.round(voiced.reduce((a, s) => a + (s.projectionScorePct ?? 0), 0) / voiced.length);
+  const forcageFrames = voiced.filter((s) => s.projectionStatus === 'forcage').length;
+  const isForcage = forcageFrames > voiced.length * 0.4;
+  const isInTune = centsDiff <= 35;
+  const hasRodaResonance = projectionScorePct >= 45 && !isForcage;
+  const isSuccess = isInTune && hasRodaResonance && avgRms >= 0.03;
+  const projectionStatus: RodaProjectionStatus = isForcage ? 'forcage' : hasRodaResonance ? 'roda_optimal' : 'timide';
+  const feedbackKey: TranslationKey = isForcage ? 'game4ForcageWarn' : !isInTune ? 'game1PitchWarn' : !hasRodaResonance ? 'game2NeedBrilliance' : 'game4Success';
+  return { gameId: 'a_voz_na_roda', isSuccess, feedbackKey, centsDiff, avgRms, brillianceRatio: 0, projectionScorePct, projectionStatus, pitchCurve: [] };
 }

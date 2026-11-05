@@ -1,6 +1,6 @@
 /**
  * harmonyTranslationsBr.ts
- * Traduções brasileiras para a grade harmônica e acompanhamento MIDI multi-universos (< 30 linhas).
+ * Traduções brasileiras para a grade harmônica, Medidor Projeção Roda e Níveis 75-88-100% (< 65 linhas).
  */
 export const harmonyTranslationsBr = {
   harmonyTitle: 'ACOMPANHAMENTO HARMÔNICO & ACORDES MIDI',
@@ -16,4 +16,27 @@ export const harmonyTranslationsBr = {
   harmonyClearChord: 'Apagar acorde',
   harmonyNoChordsDefined: 'Nenhum acorde definido',
   harmonyToggleHelp: 'Ativar / desativar acompanhamento MIDI em tempo real',
+  rodaGaugeTitle: '🔔 Projeção Roda (Máscara 3 kHz)',
+  rodaStatusTimide: '🌬️ Abra os ressonadores (maçãs do rosto altas, boca aberta)',
+  rodaStatusOptimal: '🔔 Voz de Roda ! Brilho claro na máscara',
+  rodaStatusForcage: '⚠️ Relaxe a garganta : busque a ressonância, não a força',
+  rodaBadgeTimide: 'Voz tímida',
+  rodaBadgeOptimal: 'Voz de Roda',
+  rodaBadgeForcage: 'Forçando',
+  studentDiagProjectionTitle: '🔔 Projeção Roda',
+  speedTier75Label: '🐢 75 % • Aprendizado',
+  speedTier88Label: '🚶 88 % • Encaixe',
+  speedTier100Label: '🔥 100 % • Tempo Roda',
+  autoProgressionToggleBtn: '🎯 Progressão Auto (75➔88➔100%)',
+  toadaMasteryProgressLabel: '🏆 Padrões dominados no Tempo Roda : {mastered} / {total}',
+  tierUnlocked75Toast: '⭐ Nível 75 % validado ({score} %) ! Avançando automaticamente para 88 %.',
+  tierUnlocked88Toast: '⭐ Nível 88 % validado ({score} %) ! Avançando para 100 % (Tempo Roda).',
+  tierUnlocked100Toast: '👑 Padrão Dominado a 100 % ({score} %) no Tempo Roda !',
+  patternMasteredCrownBadge: '👑 Dominado (100 %)',
+  game4Tab: '4. 🔔 A Voz na Roda (Ressonância da Máscara)',
+  game4Goal: 'Sustentar a vogal longa do padrão ativo na altura certa (±35 cents) com ressonância da máscara 2.5–3.5 kHz ≥ 45 %.',
+  game4Instruction: 'Cante a vogal longa da Toada fazendo soar a máscara (maçãs do rosto altas) para atravessar a Bateria sem forçar.',
+  game4Success: '🔔 Sino de Roda ! Afinação precisa e ressonância 3 kHz brilhante acima dos tambores !',
+  game4ForcageWarn: '⚠️ Muita tensão na garganta : reduza a força e coloque a vibração na máscara.',
+  game4MetricsLabel: 'Projeção Máscara : {proj} % | Afinação : Δ {cents} cts | Estado : {status}',
 };

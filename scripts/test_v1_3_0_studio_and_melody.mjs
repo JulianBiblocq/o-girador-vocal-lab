@@ -231,7 +231,7 @@ console.log('5. Test classifyMicGainLevel (Assistant de Gain 3s)...');
 console.log('6. Vérification Gouvernance (< 145 lignes, Règle 0, i18n FR/PT-BR, version 1.3.0)...');
 {
   const pkg = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8'));
-  assert.equal(pkg.version, '1.3.0', `package.json version must be 1.3.0, got ${pkg.version}`);
+  assert.ok(['1.3.0', '1.4.0'].includes(pkg.version), `package.json version must be >= 1.3.0, got ${pkg.version}`);
 
   const frKeys = Object.keys(uiPolishTranslationsFr).sort();
   const brKeys = Object.keys(uiPolishTranslationsBr).sort();
