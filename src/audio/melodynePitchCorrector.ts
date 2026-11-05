@@ -15,7 +15,7 @@ import {
   type NoteBrickSpan,
 } from './melodynePitchDecomposer';
 import { analyzeVoicingAndEpochs, type TdPsolaAnalysis } from './tdPsolaEpochDetector';
-import { applyTdPsolaPitchCorrection, type TdPsolaRegionTarget } from './tdPsolaPitchShifter';
+import { applyTdPsolaPitchCorrection, smoothShiftFramesZeroPhase, type TdPsolaRegionTarget } from './tdPsolaPitchShifter';
 
 export { foldOctaveDistance };
 
@@ -54,14 +54,17 @@ export function computeCorrectedPitchCurve(
   if (activeRegions.length === 0) return rawPitchCurve;
 
   const bricks = buildNoteBrickSpans(allSteps, rawPitchCurve, totalDurationSec, tGridStart, gridDur);
-  return rawPitchCurve.map((pt) => {
-    if (pt.midiFloat < 36) return pt;
+  const rawShifts = new Float32Array(rawPitchCurve.length);
+  for (let i = 0; i < rawPitchCurve.length; i++) {
+    const pt = rawPitchCurve[i];
+    if (pt.midiFloat < 36) continue;
     const r = activeRegions.find((reg) => pt.timeSec >= reg.startSec && pt.timeSec <= reg.endSec);
-    if (!r) return pt;
+    if (!r) continue;
     const decomp = decomposePitchAtTime(rawPitchCurve, bricks, pt.timeSec, Math.round(pt.midiFloat), r.targetMidiOverride);
-    const { correctedMidi } = computeTargetMidiAtTime(decomp, r);
-    return { timeSec: pt.timeSec, midiFloat: Math.round(correctedMidi * 100) / 100 };
-  });
+    rawShifts[i] = computeTargetMidiAtTime(decomp, r).shiftSemitones;
+  }
+  const smoothed = smoothShiftFramesZeroPhase(rawShifts, 2);
+  return rawPitchCurve.map((pt, i) => (pt.midiFloat < 36 ? pt : { timeSec: pt.timeSec, midiFloat: Math.round((pt.midiFloat + smoothed[i]) * 100) / 100 }));
 }
 
 export function correctAudioPitchWithMelodyne(

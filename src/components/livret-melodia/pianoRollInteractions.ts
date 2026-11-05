@@ -27,10 +27,10 @@ export function moveBrick(steps: VocalStepData[], stepIndex: number, newMidi: nu
 
   const next = [...steps];
   const root = next[range.rootIndex];
-  next[range.rootIndex] = { ...root, midiNumber: newMidi, note: midiToNoteName(newMidi) };
+  next[range.rootIndex] = { ...root, midiNumber: newMidi, note: midiToNoteName(newMidi), isTie: false, manualPitchMoved: true };
 
   for (let i = range.rootIndex + 1; i <= range.endIndex; i++) {
-    next[i] = { ...next[i], midiNumber: newMidi, note: '───' };
+    next[i] = { ...next[i], midiNumber: newMidi, note: '───', isTie: true, manualPitchMoved: true };
   }
   return next;
 }
@@ -45,11 +45,11 @@ export function resizeBrick(steps: VocalStepData[], rootIndex: number, targetEnd
 
   if (clampedTarget > range.endIndex) {
     for (let i = range.endIndex + 1; i <= clampedTarget; i++) {
-      next[i] = { ...next[i], active: true, midiNumber: rootMidi, note: '───', velocity: 90 };
+      next[i] = { ...next[i], active: true, midiNumber: rootMidi, note: '───', isTie: true, velocity: 90 };
     }
   } else if (clampedTarget < range.endIndex) {
     for (let i = clampedTarget + 1; i <= range.endIndex; i++) {
-      next[i] = { ...next[i], active: false, midiNumber: 0, note: '', syllable: '', velocity: 0 };
+      next[i] = { ...next[i], active: false, midiNumber: 0, note: '', isTie: false, syllable: '', velocity: 0 };
     }
   }
   return next;
@@ -67,7 +67,7 @@ export function glueBrickToPrevious(steps: VocalStepData[], stepIndex: number): 
 
   const next = [...steps];
   for (let i = stepIndex; i <= end; i++) {
-    next[i] = { ...next[i], active: true, midiNumber: targetMidi, note: '───', velocity: 90 };
+    next[i] = { ...next[i], active: true, midiNumber: targetMidi, note: '───', isTie: true, syllable: '', velocity: 90 };
   }
   return next;
 }
@@ -77,7 +77,7 @@ export function splitTieAtStep(steps: VocalStepData[], stepIndex: number): Vocal
   if (!step || !step.active || step.note !== '───') return steps;
 
   const next = [...steps];
-  next[stepIndex] = { ...step, note: midiToNoteName(step.midiNumber), velocity: 100 };
+  next[stepIndex] = { ...step, note: midiToNoteName(step.midiNumber), isTie: false, syllableAttack: true, velocity: 100 };
   return next;
 }
 
@@ -87,7 +87,7 @@ export function eraseBrick(steps: VocalStepData[], stepIndex: number): VocalStep
 
   const next = [...steps];
   for (let i = range.rootIndex; i <= range.endIndex; i++) {
-    next[i] = { ...next[i], active: false, midiNumber: 0, note: '', syllable: '', velocity: 0 };
+    next[i] = { ...next[i], active: false, midiNumber: 0, note: '', isTie: false, syllable: '', velocity: 0 };
   }
   return next;
 }
@@ -100,6 +100,8 @@ export function createSingleNote(steps: VocalStepData[], stepIndex: number, midi
     active: true,
     midiNumber: midi,
     note: midiToNoteName(midi),
+    isTie: false,
+    manualPitchMoved: true,
     syllable: '',
     velocity: 100,
   };

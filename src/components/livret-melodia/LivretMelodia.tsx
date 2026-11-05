@@ -41,7 +41,7 @@ export const LivretMelodia: React.FC<LivretMelodiaProps> = (props) => {
   const sampleRate = activeVariant.recordingResult?.sampleRate ?? recordedSampleRate;
   const hasAudio = Boolean(rawPCM && rawPCM.length > 0);
   const isMelodiaReady = Boolean(
-    activePattern.pack && activePattern.rawAudioSamples && (activePattern.mainSteps?.length ?? 0) > 0 && (activePattern as any).hasCanonicalAlignment
+    activePattern.pack && activePattern.rawAudioSamples && (activePattern.mainSteps?.length ?? 0) > 0
   );
 
   useEffect(() => {

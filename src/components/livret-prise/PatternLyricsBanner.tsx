@@ -38,10 +38,10 @@ export const PatternLyricsBanner: React.FC = () => {
     const hasAnac = activePattern.hasAnacrusis !== false;
     const all = hasAnac ? [...(activePattern.anacrusisSteps || []), ...(activePattern.mainSteps || [])] : (activePattern.mainSteps || []);
     const aligned = applyLyricsSyllablesToSteps(all, activePattern.assignedLyricsText, activePattern.timeAnchors);
-    const anacLen = hasAnac ? (activePattern.anacrusisSteps?.length || 0) : 0;
+    const anacLen = hasAnac ? (activePattern.anacrusisSteps?.length || 16) : 0;
     updatePattern(activePattern.id, {
       anacrusisSteps: hasAnac ? aligned.slice(0, anacLen) : [],
-      mainSteps: aligned.slice(anacLen),
+      mainSteps: aligned.slice(anacLen).map((s, idx) => ({ ...s, stepIndex: idx })),
     });
   };
 

@@ -22,6 +22,7 @@ export interface VocalStepData {
   decay: number; // Durée relative ou millisecondes
   microtiming?: number; // Décalage fin (nudge en ms ou fraction de pas)
   melodyneStartRatio?: number; // 0.0 à 0.95 (défaut 0.25) découpe interne d'attaque naturelle
+  manualPitchMoved?: boolean; // Indique que l'utilisateur a déplacé manuellement la brique MIDI
 }
 
 /** Données de calibration de l'anacrouse / mesure d'élan (M-1) */

@@ -7,12 +7,14 @@ import type { PitchCurvePoint, VocalStepData, MelodyneRegion } from '../types/vo
 import { filterConsonantPitchDips } from './pitchStepSegmentation';
 
 export interface NoteBrickSpan {
-  rootIndex: number; startSec: number; endSec: number; attackEndSec: number; targetMidi: number; sungMedian: number;
+  rootIndex: number; startSec: number; endSec: number; attackEndSec: number;
+  targetMidi: number; sungMedian: number; isManualMove?: boolean;
 }
 
 export interface PitchDecompositionPoint {
   hasVoicedPitch: boolean; rawMidi: number; targetMidi: number; sungMedian: number;
   driftSemitones: number; vibratoSemitones: number; inAttackZone: boolean; attackRamp: number;
+  isManualMove?: boolean;
 }
 
 export function foldOctaveDistance(delta: number): number {
@@ -55,7 +57,7 @@ export function buildNoteBrickSpans(
     const attackEndSec = startSec + (endSec - startSec) * cutRatio;
     const rawMed = computeIntervalMedianPitch(cleanCurve, Math.min(endSec, attackEndSec), endSec, step.midiNumber);
     const sungMedian = rawMed + Math.round((step.midiNumber - rawMed) / 12) * 12;
-    spans.push({ rootIndex: i, startSec, endSec, attackEndSec, targetMidi: step.midiNumber, sungMedian });
+    spans.push({ rootIndex: i, startSec, endSec, attackEndSec, targetMidi: step.midiNumber, sungMedian, isManualMove: Boolean(step.manualPitchMoved) });
     i += ties;
   }
   return spans;
@@ -63,9 +65,9 @@ export function buildNoteBrickSpans(
 
 export function resolveLocalBrickTargetAtTime(
   bricks: NoteBrickSpan[], timeSec: number, fallbackMidi = 60, overrideMidi?: number
-): { brick: NoteBrickSpan | null; targetMidi: number; sungMedian: number; inAttackZone: boolean; attackRamp: number } {
+): { brick: NoteBrickSpan | null; targetMidi: number; sungMedian: number; inAttackZone: boolean; attackRamp: number; isManualMove?: boolean } {
   if (bricks.length === 0) {
-    return { brick: null, targetMidi: overrideMidi && overrideMidi > 0 ? overrideMidi : fallbackMidi, sungMedian: fallbackMidi, inAttackZone: false, attackRamp: 1 };
+    return { brick: null, targetMidi: overrideMidi && overrideMidi > 0 ? overrideMidi : fallbackMidi, sungMedian: fallbackMidi, inAttackZone: false, attackRamp: 1, isManualMove: false };
   }
   let idx = bricks.findIndex((b) => timeSec >= b.startSec && timeSec <= b.endSec);
   if (idx === -1) {
@@ -79,16 +81,19 @@ export function resolveLocalBrickTargetAtTime(
   let targetMidi = overrideMidi && overrideMidi > 0 ? overrideMidi : brick.targetMidi;
   if (!overrideMidi && idx > 0) {
     const prev = bricks[idx - 1], dt = timeSec - brick.startSec;
-    if (dt >= 0 && dt < 0.025 && brick.startSec - prev.endSec <= 0.04 && prev.targetMidi !== brick.targetMidi) {
-      targetMidi = prev.targetMidi + 0.5 * (1 - Math.cos(Math.PI * (dt / 0.025))) * (brick.targetMidi - prev.targetMidi);
+    if (dt >= 0 && dt < 0.035 && brick.startSec - prev.endSec <= 0.04 && prev.targetMidi !== brick.targetMidi) {
+      targetMidi = prev.targetMidi + 0.5 * (1 - Math.cos(Math.PI * (dt / 0.035))) * (brick.targetMidi - prev.targetMidi);
     }
   }
-  const inAttackZone = brick.attackEndSec > brick.startSec && timeSec >= brick.startSec && timeSec < brick.attackEndSec;
+  const effStart = Math.max(brick.startSec, brick.attackEndSec);
+  const inAttackZone = timeSec < effStart || timeSec > brick.endSec;
   let attackRamp = inAttackZone ? 0 : 1;
-  if (!inAttackZone && brick.attackEndSec > brick.startSec && timeSec < brick.attackEndSec + 0.035) {
-    attackRamp = 0.5 * (1 - Math.cos(Math.PI * ((timeSec - brick.attackEndSec) / 0.035)));
+  if (!inAttackZone) {
+    const dtStart = timeSec - effStart, dtEnd = brick.endSec - timeSec;
+    if (dtStart < 0.035) attackRamp = Math.min(attackRamp, 0.5 * (1 - Math.cos(Math.PI * (dtStart / 0.035))));
+    if (dtEnd < 0.035) attackRamp = Math.min(attackRamp, 0.5 * (1 - Math.cos(Math.PI * (dtEnd / 0.035))));
   }
-  return { brick, targetMidi, sungMedian: brick.sungMedian, inAttackZone, attackRamp };
+  return { brick, targetMidi, sungMedian: brick.sungMedian, inAttackZone, attackRamp, isManualMove: brick.isManualMove };
 }
 
 export function decomposePitchAtTime(
@@ -121,7 +126,12 @@ export function computeTargetMidiAtTime(
 ): { correctedMidi: number; shiftSemitones: number } {
   if (!decomp.hasVoicedPitch || decomp.inAttackZone) return { correctedMidi: decomp.rawMidi, shiftSemitones: 0 };
   const c = (region.pitchCenterPct ?? 0) / 100, d = (region.driftCorrectionPct ?? 80) / 100, f = (region.flattenPct ?? 0) / 100;
-  const targetModel = decomp.sungMedian + c * foldOctaveDistance(decomp.targetMidi - decomp.sungMedian) + (1 - d) * decomp.driftSemitones + (1 - f) * decomp.vibratoSemitones;
+  let centerDelta = foldOctaveDistance(decomp.targetMidi - decomp.sungMedian);
+  // Protection anti-saut aberrant (> 2.5 demi-tons en mode auto) pour ne jamais tordre la voix sur une consonne
+  if (!decomp.isManualMove && !region.targetMidiOverride && Math.abs(centerDelta) > 2.5) {
+    centerDelta = 0;
+  }
+  const targetModel = decomp.sungMedian + c * centerDelta + (1 - d) * decomp.driftSemitones + (1 - f) * decomp.vibratoSemitones;
   const shift = Math.max(-12, Math.min(12, decomp.attackRamp * (targetModel - decomp.rawMidi)));
   return { correctedMidi: decomp.rawMidi + shift, shiftSemitones: shift };
 }
