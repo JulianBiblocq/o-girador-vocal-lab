@@ -16,7 +16,10 @@ export function computeSlotsMeasureLayout(slots: ToadaArrangementSlot[], pattern
   return slots.map((slot, slotIndex) => {
     const pux = patterns.find((p) => p.id === slot.puxadorPatternId);
     const coro = patterns.find((p) => p.id === slot.coroPatternId);
-    const measuresInSlot = Math.max(pux?.measuresCount ?? 1, coro?.measuresCount ?? 1, 1);
+    const isSilenceSlot = !pux && !coro;
+    const measuresInSlot = isSilenceSlot
+      ? Math.max(1, Math.min(8, slot.advanceMeasures ?? 1))
+      : Math.max(pux?.measuresCount ?? 1, coro?.measuresCount ?? 1, 1);
     const advanceMeasures = slot.advanceMeasures ?? measuresInSlot;
     const layout = { slotIndex, startMeasure: currentMeasure, advanceMeasures, measuresInSlot };
     currentMeasure += advanceMeasures;

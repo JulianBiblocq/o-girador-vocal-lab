@@ -47,6 +47,17 @@ export function drawPianoRollGrid(ctx: CanvasRenderingContext2D, opts: DrawGridO
       ctx.lineWidth = isT1 ? 2.5 : isExtraEnd ? 2 : b % beatsPerMeasure === 0 ? 1.5 : 1;
       ctx.strokeStyle = isT1 ? '#d4af37' : isExtraEnd ? '#f59e0b' : b % beatsPerMeasure === 0 ? (isLight ? 'rgba(26, 26, 26, 0.35)' : 'rgba(245, 240, 230, 0.45)') : (isLight ? 'rgba(26, 26, 26, 0.15)' : 'rgba(245, 240, 230, 0.22)');
       ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, height); ctx.stroke();
+
+      const m1StartBeat = hasAnacrusis ? beatsPerMeasure : 0;
+      const firstActiveStep = allSteps.findIndex((st, idx) => idx >= m1StartBeat * subdivPerBeat && st.active && st.midiNumber > 0);
+      if (b >= m1StartBeat && b < m1StartBeat + beatsPerMeasure && firstActiveStep > (b + 1) * subdivPerBeat - 1) {
+        const beatInM1 = (b - m1StartBeat) + 1;
+        ctx.fillStyle = isLight ? 'rgba(180, 83, 9, 0.18)' : 'rgba(245, 158, 11, 0.18)';
+        ctx.fillRect(x + 2, 2, Math.min(34, nextBeatX - x - 4), 14);
+        ctx.font = 'bold 9px monospace';
+        ctx.fillStyle = isLight ? '#92400e' : '#fcd34d';
+        ctx.fillText(`𝄽 T${beatInM1}`, x + 5, 12);
+      }
     } else {
       ctx.strokeStyle = isLight ? 'rgba(26, 26, 26, 0.10)' : 'rgba(245, 240, 230, 0.12)';
       ctx.setLineDash([2, 3]); ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, height); ctx.stroke(); ctx.setLineDash([]);

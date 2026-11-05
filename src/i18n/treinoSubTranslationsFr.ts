@@ -122,4 +122,10 @@ export const treinoSubTranslationsFr = {
   culturalAnecdoteLabel: 'Histoire & Contexte :',
   culturalLexiqueLabel: 'Lexique & Symboles (notesLexique) :',
   customTeacherTip: 'Conseil vocal du Mestre pour cette Toada',
+  calageAutoSnapVoiceBtn: '🎯 Auto-caler sur la voix', conductorAddSilenceBtn: 'Pause Bateria', conductorPauseShort: 'Pause',
+  trainerLoopBtn: 'Boucle', studentDiagCentered: 'Pile au centre', studentDiagOnTime: 'Dans le temps',
+  studentDiagPitchTitle: '🎯 Justesse Mélodique', studentDiagAttackTitle: '🥁 Attaque Rythmique', studentDiagStabilityTitle: '🌬️ Tenue & Stabilité',
+  studentDiagScoreGlobal: 'Score global : {score}%', studentListenMixBtn: 'Mix Mestre + Moi', studentListenMestreBtn: 'Mestre Seul',
+  pronunciationMirrorBtn: 'Miroir (Mestre ➔ Moi)', pronunciationMirrorRecording: 'Parlez/Chantez...', pronunciationMirrorPlaying: 'Écoute Mestre ➔ Moi...',
+  gameToadaContextualizedBadge: 'Calé sur la Toada active',
 };

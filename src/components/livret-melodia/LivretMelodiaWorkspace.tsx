@@ -79,7 +79,7 @@ export const LivretMelodiaWorkspace: React.FC<LivretMelodiaWorkspaceProps> = ({
   const handleUpdateSteps = useCallback((newSteps: VocalStepData[], commit = true) => {
     setAllSteps(newSteps, commit);
     const updatedPack = buildUpdatedVocalPackExport(initialPack, newSteps, hasAnac, beatsPerMeasure, displayedCurve);
-    updatePattern(activePattern.id, { pack: updatedPack, anacrusisSteps: hasAnac ? newSteps.slice(0, anacLen) : [], mainSteps: (hasAnac ? newSteps.slice(anacLen) : newSteps).map((s, idx) => ({ ...s, stepIndex: idx })), isMidiInitialized: true });
+    updatePattern(activePattern.id, { pack: updatedPack, anacrusisSteps: hasAnac ? newSteps.slice(0, anacLen) : [], mainSteps: (hasAnac ? newSteps.slice(anacLen) : newSteps).map((s, idx) => ({ ...s, stepIndex: idx })), isMidiInitialized: true, ...(commit ? { midiLocked: true } : {}) });
   }, [setAllSteps, initialPack, hasAnac, beatsPerMeasure, displayedCurve, anacLen, activePattern.id, updatePattern]);
 
   const recompute = useCallback((smooth: number, ton: string, sc: ScaleType) => {

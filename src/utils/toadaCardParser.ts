@@ -9,17 +9,9 @@ import { extractTimeAnchors, isAnchorOnlyLine, convertTwoLineNotationToBrackets 
 import { extractChordsFromTextLine, INLINE_CHORD_REGEX } from './chordParser';
 
 export interface InlineDirectives {
-  cleanText: string;
-  measuresCount?: 1 | 2 | 3 | 4;
-  hasAnacrusis?: boolean;
-  anacrusisBeats?: number;
-  isLinkedMeasure?: boolean;
-  chords?: string[];
-  sectionName?: string;
-  sectionBpm?: number;
-  lineSignature?: string;
-  timeAnchors?: TimeAnchor[];
-  exitBeat?: number;
+  cleanText: string; measuresCount?: 1 | 2 | 3 | 4; hasAnacrusis?: boolean; anacrusisBeats?: number;
+  isLinkedMeasure?: boolean; chords?: string[]; sectionName?: string; sectionBpm?: number;
+  lineSignature?: string; timeAnchors?: TimeAnchor[]; exitBeat?: number;
 }
 
 export function isOrganizadorStructureText(text: string): boolean {
@@ -29,12 +21,8 @@ export function isOrganizadorStructureText(text: string): boolean {
 
 export function extractInlineLineDirectives(rawSegmentText: string, beatsPerMeasure = 4): InlineDirectives {
   let text = rawSegmentText.trim();
-  let measuresCount: 1 | 2 | 3 | 4 | undefined;
-  let hasAnacrusis: boolean | undefined;
-  let isLinkedMeasure: boolean | undefined;
-  let sectionName: string | undefined;
-  let sectionBpm: number | undefined;
-  let lineSignature: string | undefined;
+  let measuresCount: 1 | 2 | 3 | 4 | undefined, hasAnacrusis: boolean | undefined, isLinkedMeasure: boolean | undefined;
+  let sectionName: string | undefined, sectionBpm: number | undefined, lineSignature: string | undefined;
 
   const sigMatch = text.match(/^\[sig:(2\/4|3\/4|4\/4|6\/8|12\/8)\]\s*/i);
   if (sigMatch) { lineSignature = sigMatch[1]; text = text.slice(sigMatch[0].length).trim(); }
@@ -62,7 +50,7 @@ export function extractInlineLineDirectives(rawSegmentText: string, beatsPerMeas
   const chords = extractedChords.length > 0 ? extractedChords.map((c) => c.chord) : undefined;
   if (chords) text = text.replace(new RegExp(INLINE_CHORD_REGEX.source, 'g'), '');
 
-  const anchorRes = extractTimeAnchors(text, beatsPerMeasure);
+  const anchorRes = extractTimeAnchors(text, beatsPerMeasure, hasAnacrusis === false);
   text = anchorRes.cleanText;
   if (measuresCount === undefined && anchorRes.measuresCount !== undefined) measuresCount = anchorRes.measuresCount;
   if (hasAnacrusis === undefined && anchorRes.hasAnacrusis !== undefined) hasAnacrusis = anchorRes.hasAnacrusis;
@@ -96,6 +84,15 @@ export function parseOrganizadorCards(rawText: string): string[] {
 
 export function parseOrganizadorCardLine(lineText: string, boldRole: VocalRole = 'puxador', cardIndex?: number, beatsPerMeasure = 4): ParsedLyricsSegment {
   const rawLineCode = lineText.trim();
+  const pauseMatch = rawLineCode.match(/^\[\s*(?:PAUSE|SILENCE)(?:\s+BATERIA)?\s+(\d+)\s*M(?:ESURES?)?\s*\]$/i);
+  if (pauseMatch) {
+    const mCount = Math.max(1, Math.min(8, parseInt(pauseMatch[1], 10) || 1));
+    return {
+      cardIndex, rawLineCode, role: boldRole, text: '',
+      measuresCount: Math.min(4, mCount) as 1 | 2 | 3 | 4,
+      hasAnacrusis: false, isSilenceSlot: true, silenceMeasures: mCount,
+    };
+  }
   let cleanLine = rawLineCode;
   let forcedRole: VocalRole | null = null;
   const puxMatch = cleanLine.match(/^(?:puxador|solo)\s*[:\-]\s*/i);
@@ -131,7 +128,7 @@ export function parseOrganizadorToadaSegments(rawStructureText: string, rawPhone
   for (const line of cardLines) {
     const seg = parseOrganizadorCardLine(line, boldRole, cardIdx, beatsPerMeasure);
     if (seg.sectionName) { currentSectionName = seg.sectionName; currentSectionBpm = seg.sectionBpm; }
-    if (!seg.text && !seg.timeAnchors?.length) continue;
+    if (!seg.text && !seg.timeAnchors?.length && !seg.isSilenceSlot) continue;
     seg.cardIndex = cardIdx;
     seg.sectionName = currentSectionName;
     seg.sectionBpm = currentSectionBpm;

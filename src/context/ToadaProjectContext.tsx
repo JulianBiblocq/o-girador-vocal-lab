@@ -81,7 +81,7 @@ export const ToadaProjectProvider: React.FC<{ children: React.ReactNode }> = ({ 
       const filtered = prev.patterns.filter((p) => p.id !== id).map((p) => (p.linkedSourcePatternId === id ? unlinkPattern(p) : p));
       const nextActiveId = prev.activePatternId === id || !filtered.some((p) => p.id === prev.activePatternId) ? filtered[0].id : prev.activePatternId;
       const clearedSlots = prev.slots.map((s) => ({ ...s, puxadorPatternId: s.puxadorPatternId === id ? null : s.puxadorPatternId, coroPatternId: s.coroPatternId === id ? null : s.coroPatternId }));
-      const nonEmpty = clearedSlots.filter((s) => s.puxadorPatternId !== null || s.coroPatternId !== null);
+      const nonEmpty = clearedSlots.filter((s) => s.puxadorPatternId !== null || s.coroPatternId !== null || (s.advanceMeasures && s.advanceMeasures >= 1));
       return { ...prev, patterns: filtered, slots: nonEmpty.length > 0 ? nonEmpty : [clearedSlots[0]], activePatternId: nextActiveId };
     });
   }, []);
@@ -89,9 +89,9 @@ export const ToadaProjectProvider: React.FC<{ children: React.ReactNode }> = ({ 
     stopAllActiveAudioEngines();
     setProject({ ...p, activePatternId: p.patterns.some((pat) => pat.id === p.activePatternId) ? p.activePatternId : (p.patterns[0]?.id ?? '') });
   }, []);
-  const addSlot = useCallback(() => setProject((prev) => ({ ...prev, slots: [...prev.slots, { slotId: `slot-${Date.now().toString(36)}`, puxadorPatternId: null, coroPatternId: null }] })), []);
+  const addSlot = useCallback((advanceMeasures?: number) => setProject((prev) => ({ ...prev, slots: [...prev.slots, { slotId: `slot-${Date.now().toString(36)}-${prev.slots.length}`, puxadorPatternId: null, coroPatternId: null, ...(typeof advanceMeasures === 'number' ? { advanceMeasures } : {}) }] })), []);
   const removeSlot = useCallback((slotId: string) => setProject((prev) => (prev.slots.length <= 1 ? prev : { ...prev, slots: prev.slots.filter((s) => s.slotId !== slotId) })), []);
-  const updateSlot = useCallback((slotId: string, puxadorId: string | null, coroId: string | null) => setProject((prev) => ({ ...prev, slots: prev.slots.map((s) => (s.slotId === slotId ? { ...s, puxadorPatternId: puxadorId, coroPatternId: coroId } : s)) })), []);
+  const updateSlot = useCallback((slotId: string, puxadorId: string | null, coroId: string | null, advanceMeasures?: number) => setProject((prev) => ({ ...prev, slots: prev.slots.map((s) => (s.slotId === slotId ? { ...s, puxadorPatternId: puxadorId, coroPatternId: coroId, ...(advanceMeasures !== undefined ? { advanceMeasures } : {}) } : s)) })), []);
   const reorderSlots = useCallback((fromIndex: number, toIndex: number) => setProject((prev) => {
     if (fromIndex === toIndex || fromIndex < 0 || fromIndex >= prev.slots.length || toIndex < 0 || toIndex >= prev.slots.length) return prev;
     const nextSlots = [...prev.slots]; const [moved] = nextSlots.splice(fromIndex, 1); nextSlots.splice(toIndex, 0, moved);

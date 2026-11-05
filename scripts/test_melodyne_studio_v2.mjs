@@ -210,3 +210,4 @@ console.log('🧪 Lancement de la suite de tests Melodyne Studio 2.0...');
 }
 
 console.log('🎉 Tous les tests Melodyne Studio 2.0 ont réussi à 100 % !');
+

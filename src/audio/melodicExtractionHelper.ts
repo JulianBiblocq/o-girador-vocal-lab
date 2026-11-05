@@ -26,6 +26,24 @@ export interface ExtractMelodicResult {
   anacrusisSteps: VocalStepData[]; mainSteps: VocalStepData[]; allSteps: VocalStepData[]; totalDurationSec: number;
 }
 
+export function rebuildCanonicalCleanAudio(params: {
+  rawPCM: Float32Array; sampleRate: number; bpm: number; measuresCount: number;
+  beatsPerMeasure: number; hasAnacrusis: boolean; trimStartSec?: number; trimEndSec?: number;
+  t1OffsetSec?: number; lowCutEnabled?: boolean; enableTonePolish?: boolean;
+}): Float32Array {
+  const beatDuration = 60 / Math.max(30, params.bpm);
+  const measureDuration = params.beatsPerMeasure * beatDuration;
+  const cleanT1OffsetSec = params.hasAnacrusis ? measureDuration : 0.15;
+  const rawT1OffsetSec = getPatternT1OffsetSec(params.hasAnacrusis, measureDuration, params.t1OffsetSec);
+  const totalDurationSec = getPatternTotalDurationSec(params.hasAnacrusis, params.measuresCount, measureDuration, 0.25, beatDuration, cleanT1OffsetSec);
+  const rawTrimStart = Math.max(0, params.trimStartSec ?? 0);
+  const rawTrimEnd = params.trimEndSec && params.trimEndSec > 0 ? params.trimEndSec : (params.rawPCM.length / params.sampleRate);
+  return createPaddedPreviewBuffer(
+    params.rawPCM, params.sampleRate, totalDurationSec, rawTrimStart, rawTrimEnd, 0,
+    params.lowCutEnabled ?? true, true, params.enableTonePolish ?? true, rawT1OffsetSec, cleanT1OffsetSec
+  );
+}
+
 export function extractPatternMelodicData(params: ExtractMelodicParams): ExtractMelodicResult {
   const {
     rawPCM, sampleRate, bpm, timeSignature, measuresCount, beatsPerMeasure,

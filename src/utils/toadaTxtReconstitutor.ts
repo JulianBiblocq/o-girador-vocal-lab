@@ -121,6 +121,11 @@ export function reconstituteToadaTxt(project: ToadaProject): { rawTxtCode: strin
     for (const slot of project.slots) {
       const patPux = slot.puxadorPatternId ? patMap.get(slot.puxadorPatternId) : null;
       const patCoro = slot.coroPatternId ? patMap.get(slot.coroPatternId) : null;
+      if (!patPux && !patCoro) {
+        const m = Math.max(1, Math.min(8, slot.advanceMeasures ?? 1));
+        lines.push(`[PAUSE ${m}M]`);
+        continue;
+      }
       if (patPux) lines.push(reconstituteSinglePatternLine(patPux));
       if (patCoro) lines.push(reconstituteSinglePatternLine(patCoro));
     }

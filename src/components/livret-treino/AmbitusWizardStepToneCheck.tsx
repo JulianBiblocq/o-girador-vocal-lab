@@ -53,11 +53,9 @@ export const AmbitusWizardStepToneCheck: React.FC<AmbitusWizardStepToneCheckProp
       if (phaseRef.current === 'sing') {
         setProgress(Math.round(tick.progressRatio * 100));
         if (tick.pitchMidi > 0) {
-          let d = tick.pitchMidi - currentMidi;
-          while (d > 6) d -= 12;
-          while (d < -6) d += 12;
-          if (Math.abs(d) <= 1.2) setLiveHint(t('ambitusPitchPerfect'));
-          else if (d < -1.2) setLiveHint(t('ambitusPitchTooLow'));
+          const d = tick.pitchMidi - currentMidi;
+          if (Math.abs(d) <= 0.75) setLiveHint(t('ambitusPitchPerfect'));
+          else if (d < -0.75) setLiveHint(t('ambitusPitchTooLow'));
           else setLiveHint(t('ambitusPitchTooHigh'));
         }
       }

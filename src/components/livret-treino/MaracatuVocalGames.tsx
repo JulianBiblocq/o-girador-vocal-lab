@@ -1,82 +1,87 @@
 /**
  * MaracatuVocalGames.tsx
- * Atelier 2 : Les 3 Exercices Vocaux du Maracatu (Tir Franc, O Chamado, Voz no Passo).
- * Strictement < 135 lignes, Zero Render Thrashing & Charte Zéro Rouge.
+ * Atelier 4 : Jeux de Voix Maracatu contextualisés sur la Toada active (BPM, note d'attaque, note longue et intervalle réels) (< 140 lignes).
  */
-
 import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import { useLanguage } from '../../i18n/LanguageContext';
+import { useToadaProject } from '../../context/ToadaProjectContext';
 import { MaracatuVocalGameEngine, registerTreinoKillSwitch } from '../../audio/maracatuVocalGameEngine';
 import type { MaracatuGameId, VocalGameEvaluation } from '../../audio/vocalGameAnalyzers';
 import type { VocalStepData, PitchCurvePoint } from '../../types/vocalPack.types';
 import { loadVocalProfile } from '../../utils/ambitusStorage';
 import { noteNameToMidi, midiToNoteName } from '../../utils/noteUtils';
-import { PianoRollEditor } from '../livret-melodia/PianoRollEditor';
+import { MelodicHighwayCanvas } from './MelodicHighwayCanvas';
 import { MaracatuGameEvaluationCard } from './MaracatuGameEvaluationCard';
-import { Play, Square, Volume2 } from 'lucide-react';
+import { Play, Square, Volume2, Music } from 'lucide-react';
 
 const CALL_SYLLABLES = ['Ô !', 'Ê !', 'Nagô !'] as const;
-const BPM = 80;
-const BEAT_DUR = 60 / BPM;
 
 export const MaracatuVocalGames: React.FC = () => {
-  const { t } = useLanguage();
+  const { t } = useLanguage(), { project, activePattern } = useToadaProject();
   const engine = useMemo(() => new MaracatuVocalGameEngine(), []);
   const profile = useMemo(() => loadVocalProfile(), []);
-  const baseMidi = useMemo(() => (profile ? noteNameToMidi(profile.vocalProfile.comfortCenterNote) : 60), [profile]);
+  const fallbackMidi = useMemo(() => (profile ? noteNameToMidi(profile.vocalProfile.comfortCenterNote) : 60), [profile]);
 
-  const [gameId, setGameId] = useState<MaracatuGameId>('tir_franc');
-  const [transposeSt, setTransposeSt] = useState(0);
-  const [syllable, setSyllable] = useState<string>(CALL_SYLLABLES[0]);
-  const [isRunning, setIsRunning] = useState(false);
-  const [evaluation, setEvaluation] = useState<VocalGameEvaluation | null>(null);
-  const [curve, setCurve] = useState<PitchCurvePoint[]>([]);
+  const [gameId, setGameId] = useState<MaracatuGameId>('tir_franc'), [transposeSt, setTransposeSt] = useState(0);
+  const [syllable, setSyllable] = useState<string>(CALL_SYLLABLES[0]), [isRunning, setIsRunning] = useState(false);
+  const [evaluation, setEvaluation] = useState<VocalGameEvaluation | null>(null), [curve, setCurve] = useState<PitchCurvePoint[]>([]);
 
-  const targetMidi = Math.max(36, Math.min(84, baseMidi + transposeSt));
+  const bpm = activePattern.bpm ?? activePattern.baseBpm ?? project.bpm ?? 88, beatDur = 60 / bpm;
+
+  const toadaContext = useMemo(() => {
+    const raw = [...(activePattern.anacrusisSteps || []), ...(activePattern.mainSteps || [])];
+    const groups: { midi: number; syllable: string; len: number }[] = [];
+    for (let i = 0; i < raw.length; i++) {
+      const s = raw[i]; if (!s.active || s.midiNumber <= 0 || s.note === '───') continue;
+      let ties = 0; while (i + 1 + ties < raw.length && raw[i + 1 + ties].note === '───') ties++;
+      groups.push({ midi: s.midiNumber, syllable: s.syllable?.trim() || '', len: 1 + ties }); i += ties;
+    }
+    const attackNote = groups[0]?.midi ?? fallbackMidi, attackSyl = groups[0]?.syllable || CALL_SYLLABLES[0];
+    const holdNote = [...groups].sort((a, b) => b.len - a.len)[0]?.midi ?? attackNote;
+    const secondNote = groups.find((g) => g.midi !== attackNote)?.midi ?? attackNote;
+    return { attackNote, attackSyl, holdNote, secondNote, hasToadaNotes: groups.length > 0 };
+  }, [activePattern, fallbackMidi]);
+
+  const baseMidi = gameId === 'o_chamado' ? toadaContext.holdNote : toadaContext.attackNote;
+  const targetMidi = Math.max(36, Math.min(84, baseMidi + transposeSt)), secondMidi = Math.max(36, Math.min(84, toadaContext.secondNote + transposeSt));
   const targetNoteName = midiToNoteName(targetMidi);
-  const playheadRef = useRef(0);
-  const statusBannerRef = useRef<HTMLDivElement | null>(null);
-  const progressBarRef = useRef<HTMLDivElement | null>(null);
-  const liveCurveRef = useRef<PitchCurvePoint[]>([]);
+  const playheadRef = useRef(0), statusBannerRef = useRef<HTMLDivElement | null>(null), progressBarRef = useRef<HTMLDivElement | null>(null), liveCurveRef = useRef<PitchCurvePoint[]>([]);
 
   useEffect(() => {
     const unregister = registerTreinoKillSwitch(() => { engine.stop(); setIsRunning(false); });
     return () => { unregister(); engine.stop(); };
   }, [engine]);
 
-  const stepBricks: VocalStepData[] = useMemo(() => (
-    Array.from({ length: 48 }, (_, i) => ({
-      stepIndex: i, active: i >= 16, note: i === 16 ? targetNoteName : '───',
-      midiNumber: i >= 16 ? targetMidi : 0, velocity: 100, decay: 1,
-      syllable: i === 16 ? 'Ô───' : '', syllableAttack: i === 16,
-    }))
-  ), [targetMidi, targetNoteName]);
+  const stepBricks: VocalStepData[] = useMemo(() => Array.from({ length: 48 }, (_, i) => {
+    const m = i >= 32 ? secondMidi : targetMidi, nName = midiToNoteName(m), isHead = i === 16 || i === 32;
+    return { stepIndex: i, active: i >= 16, note: isHead ? nName : '───', midiNumber: i >= 16 ? m : 0, velocity: 100, decay: 1, syllable: i === 16 ? (toadaContext.attackSyl || 'Ô───') : i === 32 ? nName : '', syllableAttack: isHead };
+  }), [targetMidi, secondMidi, toadaContext.attackSyl]);
 
   const handleToggleGame = useCallback(async () => {
     if (isRunning) { engine.stop(); setIsRunning(false); return; }
-    setIsRunning(true); setEvaluation(null); setCurve([]);
-    liveCurveRef.current = []; playheadRef.current = 0;
-
-    await engine.startGame(gameId, targetMidi, BPM, (tick) => {
-      playheadRef.current = 4 * BEAT_DUR + tick.elapsedSingSec;
+    setIsRunning(true); setEvaluation(null); setCurve([]); liveCurveRef.current = []; playheadRef.current = 0;
+    await engine.startGame(gameId, targetMidi, bpm, (tick) => {
+      playheadRef.current = 4 * beatDur + tick.elapsedSingSec;
       if (tick.liveCurvePoint) liveCurveRef.current.push(tick.liveCurvePoint);
-      if (statusBannerRef.current) {
-        statusBannerRef.current.textContent = tick.phase === 'precount'
-          ? `${t('gamePrecountStatus')} (${tick.beatIndex + 1}/4)`
-          : `${t('gameSingNowStatus')} — ${tick.pitchMidi > 0 ? midiToNoteName(Math.round(tick.pitchMidi)) : '...'}`;
-      }
-      if (progressBarRef.current) {
-        const ratio = tick.phase === 'sing' ? Math.min(1, tick.elapsedSingSec / tick.totalSingSec) : 0;
-        progressBarRef.current.style.transform = `scaleX(${ratio.toFixed(3)})`;
-      }
-    }, (res) => {
-      setIsRunning(false); setEvaluation(res); setCurve(res.pitchCurve.length ? res.pitchCurve : [...liveCurveRef.current]);
-    });
-  }, [isRunning, engine, gameId, targetMidi, t]);
+      if (statusBannerRef.current) statusBannerRef.current.textContent = tick.phase === 'precount' ? `${t('gamePrecountStatus')} (${tick.beatIndex + 1}/4)` : `${t('gameSingNowStatus')} — ${tick.pitchMidi > 0 ? midiToNoteName(Math.round(tick.pitchMidi)) : '...'}`;
+      if (progressBarRef.current) progressBarRef.current.style.transform = `scaleX(${(tick.phase === 'sing' ? Math.min(1, tick.elapsedSingSec / tick.totalSingSec) : 0).toFixed(3)})`;
+    }, (res) => { setIsRunning(false); setEvaluation(res); setCurve(res.pitchCurve.length ? res.pitchCurve : [...liveCurveRef.current]); });
+  }, [isRunning, engine, gameId, targetMidi, bpm, beatDur, t]);
 
   return (
     <div className="space-y-4">
       <div className="cordel-card p-4 space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-[var(--cordel-border-sub)] text-xs font-mono">
+          <span className="flex items-center gap-1.5 font-bold text-theme-accent">
+            <Music className="w-3.5 h-3.5" />
+            <span>{project.title} • {activePattern.name} ({bpm} BPM)</span>
+          </span>
+          {toadaContext.hasToadaNotes && (
+            <span className="px-2 py-0.5 rounded bg-emerald-600/15 text-emerald-800 dark:text-emerald-300 font-bold text-[11px]">
+              {t('gameToadaContextualizedBadge')}
+            </span>
+          )}
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
           {([
             { id: 'tir_franc', label: t('game1Tab') }, { id: 'o_chamado', label: t('game2Tab') }, { id: 'voz_no_passo', label: t('game3Tab') },
@@ -94,8 +99,8 @@ export const MaracatuVocalGames: React.FC = () => {
           <p className="font-bold text-[#9a3412] dark:text-[#f4a261]">{gameId === 'tir_franc' ? t('game1Goal') : gameId === 'o_chamado' ? t('game2Goal') : t('game3Goal')}</p>
           <p className="italic text-[var(--cordel-secondary-text)]">{gameId === 'tir_franc' ? t('game1Instruction') : gameId === 'o_chamado' ? t('game2Instruction') : t('game3Instruction')}</p>
           {gameId === 'tir_franc' && (
-            <div className="flex items-center gap-2 pt-1">
-              {CALL_SYLLABLES.map((syl) => (
+            <div className="flex items-center gap-2 pt-1 flex-wrap">
+              {Array.from(new Set([toadaContext.attackSyl, ...CALL_SYLLABLES])).filter(Boolean).map((syl) => (
                 <button
                   key={syl} type="button" onClick={() => setSyllable(syl)}
                   className={`px-2.5 py-1 text-xs font-bold border rounded cursor-pointer ${syllable === syl ? 'bg-[var(--cordel-coro)] text-[#f4ecd8] border-[var(--cordel-coro)]' : 'cordel-btn'}`}
@@ -127,11 +132,9 @@ export const MaracatuVocalGames: React.FC = () => {
           </div>
         </div>
         {gameId === 'voz_no_passo' && (
-          <PianoRollEditor readOnly={true} allSteps={stepBricks} pitchCurve={curve} totalDurationSec={12 * BEAT_DUR} anacrusisDurationSec={4 * BEAT_DUR} beatsPerMeasure={4} beatResolutions={[4, 4, 4, 4]} seekStartSec={0} isPlaying={isRunning} tonic="C" scaleType="chromatic" smoothingLevel={1} getPlayheadSec={() => playheadRef.current} onUpdateSteps={() => {}} onSeek={() => {}} onSetTonic={() => {}} onSetScaleType={() => {}} onSetSmoothingLevel={() => {}} onPlayNotePreview={() => {}} />
+          <MelodicHighwayCanvas allSteps={stepBricks} studentPitchCurve={curve} totalDurationSec={12 * beatDur} beatsPerMeasure={4} hasAnacrusis={true} isPlaying={isRunning} getPlayheadSec={() => playheadRef.current} />
         )}
-        {evaluation && (
-          <MaracatuGameEvaluationCard evaluation={evaluation} gameId={gameId} t={t} />
-        )}
+        {evaluation && <MaracatuGameEvaluationCard evaluation={evaluation} gameId={gameId} t={t} />}
       </div>
     </div>
   );

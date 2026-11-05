@@ -37,7 +37,7 @@ export const PatternLyricsBanner: React.FC = () => {
     if (!activePattern.assignedLyricsText) return;
     const hasAnac = activePattern.hasAnacrusis !== false;
     const all = hasAnac ? [...(activePattern.anacrusisSteps || []), ...(activePattern.mainSteps || [])] : (activePattern.mainSteps || []);
-    const aligned = applyLyricsSyllablesToSteps(all, activePattern.assignedLyricsText);
+    const aligned = applyLyricsSyllablesToSteps(all, activePattern.assignedLyricsText, activePattern.timeAnchors);
     const anacLen = hasAnac ? (activePattern.anacrusisSteps?.length || 0) : 0;
     updatePattern(activePattern.id, {
       anacrusisSteps: hasAnac ? aligned.slice(0, anacLen) : [],
@@ -45,16 +45,26 @@ export const PatternLyricsBanner: React.FC = () => {
     });
   };
 
+  const restBadges = useMemo(() => {
+    const anchors = activePattern.timeAnchors || [];
+    return anchors.filter((a) => a.isInitialRest || a.isRest).map((a) => `𝄽 T${a.beat}`);
+  }, [activePattern.timeAnchors]);
+
   return (
     <div className="cordel-card p-2 sm:p-2.5 flex flex-col gap-1.5 rounded">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center gap-1.5 min-w-0">
+        <div className="flex items-center gap-1.5 min-w-0 flex-wrap">
           <span className={`px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider rounded ${isPuxador ? 'bg-role-puxador text-white' : 'bg-role-coro text-white'}`}>
             {isPuxador ? t('rolePuxador') : t('roleCoro')}
           </span>
           <span className="text-[11px] font-mono font-bold text-[var(--cordel-secondary-text)] truncate">
             {activePattern.name}
           </span>
+          {restBadges.map((badge, idx) => (
+            <span key={idx} className="px-1.5 py-0.5 text-[10px] font-mono font-bold rounded bg-amber-500/15 text-amber-800 dark:text-amber-300 border border-amber-500/40">
+              {badge}
+            </span>
+          ))}
         </div>
       </div>
 

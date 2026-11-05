@@ -64,10 +64,13 @@ export const LivretMelodia: React.FC<LivretMelodiaProps> = (props) => {
       lowCutEnabled: activeVariant.lowCutEnabled, enableTonePolish: activeVariant.enableTonePolish !== false,
     });
 
+    const preserveMidi = Boolean(activePattern.midiLocked && (activePattern.mainSteps?.length ?? 0) > 0);
     updatePattern(activePattern.id, {
       pack: res.pack, rawAudioSamples: res.cleanPCM, rawPitchCurve: res.pitchCurve,
-      pitchCurve: res.pitchCurve, anacrusisSteps: res.anacrusisSteps, mainSteps: res.mainSteps,
-      isMidiInitialized: true, midiLocked: true, hasCanonicalAlignment: true as any, correctedAudioSamples: null,
+      pitchCurve: res.pitchCurve,
+      anacrusisSteps: preserveMidi ? (activePattern.anacrusisSteps || []) : res.anacrusisSteps,
+      mainSteps: preserveMidi ? (activePattern.mainSteps || []) : res.mainSteps,
+      isMidiInitialized: true, midiLocked: preserveMidi, hasCanonicalAlignment: true as any, correctedAudioSamples: null,
     });
   }, [hasAudio, rawPCM, isMelodiaReady, activePattern, activeVariant, project, sampleRate, updatePattern]);
 

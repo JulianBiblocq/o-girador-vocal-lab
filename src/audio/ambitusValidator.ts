@@ -1,7 +1,7 @@
 /**
  * ambitusValidator.ts
- * Règles acoustiques et diagnostic directionnel d'ambitus pour le Maracatu.
- * Strictement < 140 lignes.
+ * Validation acoustique Haute Précision de l'ambitus : octave stricte (sans mod 12),
+ * tenue continue >= 1.2s, jitter phonatoire < 35 cents et anti-affaissement (< 125 lignes).
  */
 import type { AmbitusStepResult, AmbitusValidationStatus } from '../types/vocalProfile.types';
 import { midiToNoteName } from '../utils/noteUtils';
@@ -12,11 +12,13 @@ export interface ValidationSample {
   rms: number;
 }
 
-export const AMBITUS_HOLD_SEC = 2.0;
+export const AMBITUS_HOLD_SEC = 1.6;
+export const MIN_STABLE_HOLD_SEC = 1.2;
 export const MIN_PROJECTION_RMS = 0.012;
 export const AMBITUS_MIN_RMS = MIN_PROJECTION_RMS;
 export const MAX_SAGGING_CENTS = 50;
-export const PITCH_TOLERANCE_SEMITONES = 1.2;
+export const MAX_JITTER_CENTS = 35;
+export const PITCH_TOLERANCE_SEMITONES = 0.85;
 export const MAX_CONTINUITY_GAP_SEC = 0.35;
 
 export interface AmbitusDetailedFeedback {
@@ -62,10 +64,37 @@ export function validateAmbitusNote(
     if (gap > maxGapSec) maxGapSec = gap;
   }
 
-  if (durationSec < targetHoldSec * 0.75 || maxGapSec > MAX_CONTINUITY_GAP_SEC) {
+  const requiredHoldSec = Math.min(MIN_STABLE_HOLD_SEC, targetHoldSec * 0.75);
+  if (durationSec < requiredHoldSec || maxGapSec > MAX_CONTINUITY_GAP_SEC) {
     return {
       note: noteName, midi: targetMidi, heldDurationSec: durationSec, avgRms,
       isSolid: false, status: 'failed_pitch', messageKey: 'ambitusCoachingTooShort',
+    };
+  }
+
+  // 1. Justesse stricte dans l'octave cible (SANS repliement mod 12 !)
+  const avgDiff = voiced.reduce((acc, s) => acc + (s.pitchMidi - targetMidi), 0) / voiced.length;
+  if (avgDiff < -PITCH_TOLERANCE_SEMITONES) {
+    return {
+      note: noteName, midi: targetMidi, heldDurationSec: durationSec, avgRms,
+      isSolid: false, status: 'failed_pitch', messageKey: 'ambitusCoachingTooLow',
+    };
+  }
+  if (avgDiff > PITCH_TOLERANCE_SEMITONES) {
+    return {
+      note: noteName, midi: targetMidi, heldDurationSec: durationSec, avgRms,
+      isSolid: false, status: 'failed_pitch', messageKey: 'ambitusCoachingTooHigh',
+    };
+  }
+
+  // 2. Stabilité phonatoire : jitter (écart-type de la hauteur) < 35 cents
+  const meanPitch = voiced.reduce((acc, s) => acc + s.pitchMidi, 0) / voiced.length;
+  const varianceCents = voiced.reduce((acc, s) => acc + Math.pow((s.pitchMidi - meanPitch) * 100, 2), 0) / voiced.length;
+  const jitterCents = Math.sqrt(varianceCents);
+  if (jitterCents > MAX_JITTER_CENTS) {
+    return {
+      note: noteName, midi: targetMidi, heldDurationSec: durationSec, avgRms,
+      isSolid: false, status: 'failed_sagging', messageKey: 'ambitusCoachingSagging',
     };
   }
 
@@ -85,27 +114,6 @@ export function validateAmbitusNote(
         isSolid: false, status: 'failed_sagging', messageKey: 'ambitusCoachingSagging',
       };
     }
-  }
-
-  // 4. Justesse globale et directionnelle (+/- 1.2 st avec repliement d'octave si saut)
-  const wrapDiff = (m: number) => {
-    let d = m - targetMidi;
-    while (d > 6) d -= 12;
-    while (d < -6) d += 12;
-    return d;
-  };
-  const avgDiff = voiced.reduce((acc, s) => acc + wrapDiff(s.pitchMidi), 0) / voiced.length;
-  if (avgDiff < -PITCH_TOLERANCE_SEMITONES) {
-    return {
-      note: noteName, midi: targetMidi, heldDurationSec: durationSec, avgRms,
-      isSolid: false, status: 'failed_pitch', messageKey: 'ambitusCoachingTooLow',
-    };
-  }
-  if (avgDiff > PITCH_TOLERANCE_SEMITONES) {
-    return {
-      note: noteName, midi: targetMidi, heldDurationSec: durationSec, avgRms,
-      isSolid: false, status: 'failed_pitch', messageKey: 'ambitusCoachingTooHigh',
-    };
   }
 
   return {

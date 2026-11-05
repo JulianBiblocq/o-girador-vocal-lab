@@ -110,10 +110,10 @@ const waveformEditorCode = fs.readFileSync(path.join(SRC_DIR, 'components/livret
 const reglagesCode = fs.readFileSync(path.join(SRC_DIR, 'components/livret-reglages/LivretReglages.tsx'), 'utf8');
 const calibrationBannerCode = fs.readFileSync(path.join(SRC_DIR, 'components/livret-prise/CalibrationBanner.tsx'), 'utf8');
 
-// 3a. WaveformTrimEditor doit passer persistToStorage={false} à LatencyNudgeBar
+// 3a. WaveformTrimEditor ne doit jamais écraser la latence matérielle globale (soit persistToStorage={false}, soit pilotage direct de t1OffsetSec sans LatencyNudgeBar)
 assert.ok(
-  waveformEditorCode.includes('persistToStorage={false}'),
-  'WaveformTrimEditor.tsx doit passer persistToStorage={false} à LatencyNudgeBar'
+  waveformEditorCode.includes('persistToStorage={false}') || !waveformEditorCode.includes('LatencyNudgeBar'),
+  'WaveformTrimEditor.tsx ne doit jamais écraser la latence matérielle globale'
 );
 
 // 3b. LatencyNudgeBar ne doit appeler saveLatencyOffsetMs que si persistToStorage est vrai

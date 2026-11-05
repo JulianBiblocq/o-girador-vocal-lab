@@ -26,9 +26,9 @@ export interface ToadaProjectContextValue {
   injectPatternIntoTarget: (sourceId: string, targetId: string) => void;
   unlinkPattern: (patternId: string) => void;
   loadProject: (newProject: ToadaProject) => void;
-  addSlot: () => void;
+  addSlot: (advanceMeasures?: number) => void;
   removeSlot: (slotId: string) => void;
-  updateSlot: (slotId: string, puxadorId: string | null, coroId: string | null) => void;
+  updateSlot: (slotId: string, puxadorId: string | null, coroId: string | null, advanceMeasures?: number) => void;
   reorderSlots: (fromIndex: number, toIndex: number) => void;
   setCueMode: (mode: string) => void;
   getPreviousConductorPattern: () => VocalPatternItem | null;

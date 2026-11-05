@@ -1,3 +1,5 @@
+import { register } from 'node:module';
+
 export async function resolve(specifier, context, nextResolve) {
   try {
     return await nextResolve(specifier, context);
@@ -12,3 +14,7 @@ export async function resolve(specifier, context, nextResolve) {
     throw err;
   }
 }
+
+try {
+  register(import.meta.url);
+} catch {}

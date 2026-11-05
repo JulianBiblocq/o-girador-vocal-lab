@@ -69,6 +69,14 @@ export function drawSegmentWaveform(ctx: CanvasRenderingContext2D, opts: DrawSeg
       ctx.fillStyle = '#10b981'; ctx.beginPath(); ctx.arc(xEnd, midY, 5, 0, Math.PI * 2); ctx.fill();
       ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1.5; ctx.stroke();
       ctx.fillStyle = '#ffffff'; ctx.font = 'bold 9px sans-serif'; ctx.fillText('•', xEnd - 2.5, midY + 3);
+    } else if (nextSeg && nextSeg.startSec - seg.endSec >= measureDur * 0.5) {
+      const xGapStart = xEnd, xGapEnd = secToX(nextSeg.startSec), gapW = Math.max(4, xGapEnd - xGapStart);
+      const nextT1 = nextSeg.metricT1Sec ?? nextSeg.startSec;
+      const pauseM = Math.max(1, Math.round((nextT1 - (t1Sec + mCount * measureDur)) / measureDur));
+      ctx.fillStyle = isLight ? 'rgba(120, 113, 108, 0.22)' : 'rgba(168, 162, 158, 0.16)';
+      ctx.fillRect(xGapStart, 0, gapW, height);
+      ctx.font = 'bold 8px monospace'; ctx.fillStyle = isLight ? '#57534e' : '#d6d3d1';
+      ctx.fillText(`🔇 Pause (${pauseM}M)`, xGapStart + 4, midY + 3);
     }
 
     if (xT1 >= xStart - 10 && xT1 <= xEnd) {

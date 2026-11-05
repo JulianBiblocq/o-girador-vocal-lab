@@ -55,6 +55,10 @@ export function generateToadaFromSheet(project: ToadaProject, parsed: ParsedToad
   let i = 0;
   while (i < parsed.segments.length) {
     const seg = parsed.segments[i];
+    if (seg.isSilenceSlot) {
+      newSlots.push({ slotId: `slot-${newSlots.length + 1}`, puxadorPatternId: null, coroPatternId: null, advanceMeasures: Math.max(1, Math.min(8, seg.silenceMeasures ?? seg.measuresCount ?? 1)) });
+      i++; continue;
+    }
     const nextSeg = parsed.segments[i + 1];
 
     if (seg.isMixedPair && nextSeg && nextSeg.isMixedPair && seg.role !== nextSeg.role) {

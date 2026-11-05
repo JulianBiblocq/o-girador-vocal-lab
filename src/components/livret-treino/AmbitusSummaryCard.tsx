@@ -9,6 +9,7 @@ import type { VocalProfilePayload } from '../../types/vocalProfile.types';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { useToadaProject } from '../../context/ToadaProjectContext';
 import { analyzeToadaCompatibility } from '../../utils/ambitusStorage';
+import { midiToNoteName } from '../../utils/noteUtils';
 import { CheckCircle, ArrowRightLeft, Cloud } from 'lucide-react';
 
 interface Props {
@@ -22,6 +23,8 @@ export const AmbitusSummaryCard: React.FC<Props> = ({ profile, isCompleted = tru
 
   const p = profile.vocalProfile;
   const compatibility = analyzeToadaCompatibility(profile, project.patterns);
+  const toadaMidis = project.patterns.flatMap((pat) => [...(pat.anacrusisSteps || []), ...(pat.mainSteps || [])]).filter((s) => s.active && s.midiNumber > 0).map((s) => s.midiNumber);
+  const toadaRangeText = toadaMidis.length > 0 ? `${midiToNoteName(Math.min(...toadaMidis))} – ${midiToNoteName(Math.max(...toadaMidis))}` : null;
 
   return (
     <div className="cordel-card p-4 space-y-4">
@@ -59,16 +62,14 @@ export const AmbitusSummaryCard: React.FC<Props> = ({ profile, isCompleted = tru
           : 'bg-[#c25e38]/10 border-[#c25e38]/30 text-[#9a3412] dark:text-[#e69d35]'
       }`}>
         {compatibility.isCompatible ? (
-          <div className="flex items-center gap-1.5 font-semibold">
-            <CheckCircle className="w-4 h-4 shrink-0" />
-            <span>{t('ambitusToadaFit')}</span>
+          <div className="flex items-center justify-between w-full gap-1.5 font-semibold">
+            <div className="flex items-center gap-1.5"><CheckCircle className="w-4 h-4 shrink-0" /><span>{t('ambitusToadaFit')}</span></div>
+            {toadaRangeText && <span className="font-mono text-[11px] opacity-85">({project.title}: {toadaRangeText})</span>}
           </div>
         ) : (
-          <div className="flex items-center gap-1.5 font-semibold">
-            <ArrowRightLeft className="w-4 h-4 shrink-0" />
-            <span>
-              {t('ambitusToadaTransposeAdvice').replace('{n}', (compatibility.suggestedTranspositionSemitones > 0 ? '+' : '') + compatibility.suggestedTranspositionSemitones)}
-            </span>
+          <div className="flex items-center justify-between w-full gap-1.5 font-semibold">
+            <div className="flex items-center gap-1.5"><ArrowRightLeft className="w-4 h-4 shrink-0" /><span>{t('ambitusToadaTransposeAdvice').replace('{n}', (compatibility.suggestedTranspositionSemitones > 0 ? '+' : '') + compatibility.suggestedTranspositionSemitones)}</span></div>
+            {toadaRangeText && <span className="font-mono text-[11px] opacity-85">({project.title}: {toadaRangeText})</span>}
           </div>
         )}
       </div>

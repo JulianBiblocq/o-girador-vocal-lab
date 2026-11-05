@@ -14,23 +14,20 @@ import { getSavedLatencyOffsetMs } from '../../utils/latencyStorage';
 import { useVocalTransportStore } from '../../stores/useVocalTransportStore';
 import { NO_ANACRUSIS_PRE_MARGIN_SEC, getPatternTotalDurationSec } from '../../utils/anacrusisTimingHelper';
 import { registerAudioKillSwitch, stopAllActiveAudioEngines } from '../../audio/sharedAudioContext';
+import { autoSnapT1ToVocalOnset } from '../../audio/vocalOnsetDetector';
+import { rebuildCanonicalCleanAudio } from '../../audio/melodicExtractionHelper';
 
 export interface UsePriseRecorderParams {
-  engine: MetronomeEngine; recorder: VocalRecorderEngine;
-  activePattern: VocalPatternItem; activeVariant: VocalAudioVariant;
-  cueMode: string; getPreviousConductorPattern: () => VocalPatternItem | null;
-  projectPatterns: VocalPatternItem[]; timeSignature: TimeSignatureString;
-  measuresCount: 1 | 2 | 3 | 4; hasAnacrusis: boolean;
-  beatsPerMeasure: number; beatDuration: number;
-  effectiveBpm: number; effectivePitch: string;
-  listeningMode: ListeningMode; selectedDeviceId: string; selectedOutputDeviceId: string;
+  engine: MetronomeEngine; recorder: VocalRecorderEngine; activePattern: VocalPatternItem; activeVariant: VocalAudioVariant;
+  cueMode: string; getPreviousConductorPattern: () => VocalPatternItem | null; projectPatterns: VocalPatternItem[];
+  timeSignature: TimeSignatureString; measuresCount: 1 | 2 | 3 | 4; hasAnacrusis: boolean; beatsPerMeasure: number;
+  beatDuration: number; effectiveBpm: number; effectivePitch: string; listeningMode: ListeningMode;
+  selectedDeviceId: string; selectedOutputDeviceId: string;
   updateVariant: (patternId: string, variantKey: string, partial: Partial<VocalAudioVariant>) => void;
   updatePattern?: (patternId: string, partial: Partial<VocalPatternItem>) => void;
-  updatePatternAndVariant?: (
-    patternId: string, variantKey: string, patternPartial: Partial<VocalPatternItem>, variantPartial: Partial<VocalAudioVariant>
-  ) => void;
-  recordedSampleRate: number; setRecordedSampleRate: (sr: number) => void;
-  activeLivret: string; harmonyConfig?: import('../../types/harmony.types').HarmonyConfig;
+  updatePatternAndVariant?: (patternId: string, variantKey: string, p: Partial<VocalPatternItem>, v: Partial<VocalAudioVariant>) => void;
+  recordedSampleRate: number; setRecordedSampleRate: (sr: number) => void; activeLivret: string;
+  harmonyConfig?: import('../../types/harmony.types').HarmonyConfig;
 }
 
 export function usePriseRecorder(params: UsePriseRecorderParams) {
@@ -42,12 +39,9 @@ export function usePriseRecorder(params: UsePriseRecorderParams) {
   } = params;
 
   const [isCycleActive, setIsCycleActive] = useState(false);
-  const cueHandleRef = useRef<CuePlaybackHandle | null>(null);
-  const takeGuideRef = useRef<TakeGuideHandle | null>(null);
-  const sessionTokenRef = useRef<number>(0), isMountedRef = useRef<boolean>(true);
-  const activeLivretRef = useRef<string>(activeLivret);
+  const cueHandleRef = useRef<CuePlaybackHandle | null>(null), takeGuideRef = useRef<TakeGuideHandle | null>(null);
+  const sessionTokenRef = useRef<number>(0), isMountedRef = useRef<boolean>(true), activeLivretRef = useRef<string>(activeLivret);
   activeLivretRef.current = activeLivret;
-
   const setIsRecording = useVocalTransportStore((s) => s.setIsRecording);
 
   const abortCycle = useCallback(() => {
@@ -57,16 +51,18 @@ export function usePriseRecorder(params: UsePriseRecorderParams) {
   }, [engine, recorder, setIsRecording]);
 
   const commitRecordedTake = useCallback((pcm: Float32Array, sr: number, t1OffsetSec: number, totalRecordedSec: number) => {
-    const recResult = { pcm, sampleRate: sr, recordedBpm: effectiveBpm, t1OffsetSec };
-    const varUpdates: Partial<VocalAudioVariant> = { recordingResult: recResult, t1OffsetSec, trimStartSec: 0, trimEndSec: totalRecordedSec };
+    const snappedT1 = autoSnapT1ToVocalOnset({ pcm, sampleRate: sr, bpm: effectiveBpm, timeAnchors: activePattern.timeAnchors, hasAnacrusis, beatsPerMeasure, expectedT1Sec: t1OffsetSec });
+    const cleanPCM = rebuildCanonicalCleanAudio({ rawPCM: pcm, sampleRate: sr, bpm: effectiveBpm, measuresCount, beatsPerMeasure, hasAnacrusis, trimStartSec: 0, trimEndSec: totalRecordedSec, t1OffsetSec: snappedT1, lowCutEnabled: activeVariant.lowCutEnabled, enableTonePolish: activeVariant.enableTonePolish !== false });
+    const recResult = { pcm, sampleRate: sr, recordedBpm: effectiveBpm, t1OffsetSec: snappedT1 };
+    const varUpdates: Partial<VocalAudioVariant> = { recordingResult: recResult, t1OffsetSec: snappedT1, trimStartSec: 0, trimEndSec: totalRecordedSec };
     const isMainTake = activeVariant.speedRatio === 1.0 && activeVariant.pitchShiftSemitones === 0;
     const patUpdates: Partial<VocalPatternItem> = {
-      ...(isMainTake ? { recordingResult: recResult, t1OffsetSec, trimStartSec: 0, trimEndSec: totalRecordedSec } : { t1OffsetSec }),
-      pack: null, rawAudioSamples: null, isMidiInitialized: false, midiLocked: false,
+      ...(isMainTake ? { recordingResult: recResult, t1OffsetSec: snappedT1, trimStartSec: 0, trimEndSec: totalRecordedSec, rawAudioSamples: cleanPCM } : { t1OffsetSec: snappedT1 }),
+      pack: null, isMidiInitialized: false, midiLocked: false, hasCanonicalAlignment: false as any, correctedAudioSamples: null,
     };
     if (updatePatternAndVariant) updatePatternAndVariant(activePattern.id, activeVariant.variantKey, patUpdates, varUpdates);
     else { updateVariant(activePattern.id, activeVariant.variantKey, varUpdates); updatePattern?.(activePattern.id, patUpdates); }
-  }, [activePattern.id, activeVariant.variantKey, activeVariant.speedRatio, activeVariant.pitchShiftSemitones, effectiveBpm, updatePatternAndVariant, updateVariant, updatePattern]);
+  }, [activePattern.id, activePattern.timeAnchors, activeVariant.variantKey, activeVariant.speedRatio, activeVariant.pitchShiftSemitones, activeVariant.lowCutEnabled, activeVariant.enableTonePolish, effectiveBpm, hasAnacrusis, beatsPerMeasure, measuresCount, updatePatternAndVariant, updateVariant, updatePattern]);
 
   const handleToggleRecord = useCallback(async () => {
     const measureDuration = beatsPerMeasure * beatDuration;

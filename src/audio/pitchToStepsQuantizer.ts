@@ -39,7 +39,7 @@ export function quantizePitchToSteps(params: QuantizerParams): QuantizedGridResu
   const t1 = params.t1OffsetSec ?? getPatternT1OffsetSec(hasAnacrusis, measureDuration);
   const hasAnac = hasAnacrusis !== false, startM = hasAnac ? -1 : 0;
   const allSteps: VocalStepData[] = [];
-  const beatMap = buildBeatLyricsMap(timeAnchors);
+  const beatMap = buildBeatLyricsMap(timeAnchors, hasAnac);
   let globalStepIndex = 0, previousSegmentId = -1;
 
   const segments = segmentPitchCurve(pitchCurve, { minDurationSec: 0.045, pitchJumpThreshold: 1.2 });

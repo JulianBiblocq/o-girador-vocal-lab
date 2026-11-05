@@ -49,8 +49,8 @@ export const MasterTakeSlicerModal: React.FC<SlicerModalProps> = ({
   const loadAudioWithAutoSlices = useCallback((aud: DecodedAudioResult) => {
     setAudio(aud); setTrimIn(0); setTrimOut(Math.min(aud.durationSec, 8)); setBeatPegs([]);
     const detected = detectVocalPhrases(aud.pcm, aud.sampleRate);
-    setSegments(buildOrganizadorSlices(project.patterns, defaultRole, project.bpm || 88, detected, 0.8));
-  }, [defaultRole, project.patterns, project.bpm]);
+    setSegments(buildOrganizadorSlices(project.patterns, defaultRole, project.bpm || 88, detected, 0.8, project.slots));
+  }, [defaultRole, project.patterns, project.bpm, project.slots]);
 
   useEffect(() => {
     if (isOpen) stopAllActiveAudioEngines('slicer-player');

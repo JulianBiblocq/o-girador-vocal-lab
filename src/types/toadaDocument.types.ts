@@ -69,6 +69,8 @@ export interface ParsedLyricsSegment {
   sectionName?: string;
   timeAnchors?: TimeAnchor[];
   exitBeat?: number;
+  isSilenceSlot?: boolean;
+  silenceMeasures?: number;
 }
 
 export interface ParsedToadaSheetResult {
