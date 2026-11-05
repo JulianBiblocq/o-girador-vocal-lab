@@ -4,7 +4,6 @@
  */
 import type { TimeAnchor } from '../types/toadaDocument.types';
 import { splitTextIntoLetraSyllables } from './syllableSplitter';
-
 export const TIME_ANCHOR_REGEX = /\[(?:M(\d+)[•\.:])?([1-9]|1[0-2])\]/gi;
 
 export function isAnchorOnlyLine(line: string): boolean {
@@ -119,7 +118,8 @@ export function extractTimeAnchors(rawText: string, beatsPerMeasure = 4, forceTh
     }
   }
   const cleanText = rawText.replace(/\[(?:M\d+[•\.:])?([1-9]|1[0-2])\]/gi, '').replace(/\[(?:silence|pause)\]|𝄽/gi, ' ').replace(/_/g, ' ').replace(/\s{2,}/g, ' ').trim();
-  const count1 = timeAnchors.filter((x) => x.beat === 1 && (!hasAnacrusis || x.measureOffset > 0)).length;
+  const lastA = timeAnchors[timeAnchors.length - 1], prevA = timeAnchors[timeAnchors.length - 2], rawCount1 = timeAnchors.filter((x) => x.beat === 1 && (!hasAnacrusis || x.measureOffset > 0)).length;
+  const count1 = (rawCount1 >= 2 && lastA?.beat === 1 && prevA && prevA.beat > 1 && (lastA.syllables?.length ?? 0) <= 1) ? rawCount1 - 1 : rawCount1;
   const rawMeasuresCount = Math.min(4, Math.max(1, count1 > 0 ? count1 : (hasAnacrusis ? (measureOffset || 1) : measureOffset + 1))) as 1 | 2 | 3 | 4;
   return { cleanText, timeAnchors, measuresCount: rawMeasuresCount, hasAnacrusis, anacrusisBeats, anacrusisStartBeat, exitBeat: timeAnchors[timeAnchors.length - 1]?.beat };
 }

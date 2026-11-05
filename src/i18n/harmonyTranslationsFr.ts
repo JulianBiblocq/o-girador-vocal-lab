@@ -35,7 +35,7 @@ export const harmonyTranslationsFr = {
   patternMasteredCrownBadge: '👑 Maîtrisé (100 %)',
   game4Tab: '4. 🔔 A Voz na Roda (Résonance du Masque)',
   game4Goal: 'Maintenir la voyelle longue du motif actif à la hauteur juste (±35 cents) avec une résonance du masque 2.5–3.5 kHz ≥ 45 %.',
-  game4Instruction: 'Chante la voyelle longue de la Toada en faisant sonner le masque (pommettes hautes) pour traverser la Bateria sans forcer.',
+  game4Instruction: 'Chante la voyelle longue de la Toada en faisant sonner le masque (pommettes hautes) pour traverser le Baque sans forcer.',
   game4Success: '🔔 Cloche de Roda ! Hauteur juste et résonance 3 kHz éclatante au-dessus des tambours !',
   game4ForcageWarn: '⚠️ Trop de tension dans la gorge : réduis la poussée et place la vibration dans le masque.',
   game4MetricsLabel: 'Projection Masque : {proj} % | Justesse : Δ {cents} cts | État : {status}',

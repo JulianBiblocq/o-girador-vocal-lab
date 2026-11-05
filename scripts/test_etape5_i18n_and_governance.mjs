@@ -31,7 +31,7 @@ console.log(`🔍 Inspection de ${allSrcFiles.length} fichiers dans src/...`);
 // ============================================================================
 // TEST 1 : RÈGLE 0 STRICTE DE NOMMAGE DES APPLICATIONS O GIRADOR
 // ============================================================================
-const FORBIDDEN_APP_NAMES_REGEX = /\b(Organizad'Or|Organizad'or|S[eé]quenciad'Or|S[eé]quenciad'or|Cantad'Or|Cantad'or|Orquestrad'Or|Orquestrad'or|Orchestrad'Or|Orchestrad'or|Mostrad'Or|Mostrad'or|Dan[cç]ad'Or|Dan[cç]ad'or|O'Girad'Or|O\s+Girad'Or)\b/i;
+const FORBIDDEN_APP_NAMES_REGEX = /\b(Organizad'Or|Organizad'or|S[eé]quenciad'Or|S[eé]quenciad'or|Cantad'Or|Cantad'or|Orquestrad'Or|Orquestrad'or|Orchestrad'Or|Orchestrad'or|Mostrad'Or|Mostrad'or|Dan[cç]ad'Or|Dan[cç]ad'or|O'Girad'Or|O\s+Girad'Or|bateria)\b/i;
 
 const rule0Violations = [];
 for (const file of allSrcFiles) {

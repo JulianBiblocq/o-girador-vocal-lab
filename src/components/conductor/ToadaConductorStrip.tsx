@@ -1,6 +1,6 @@
 /**
  * ToadaConductorStrip.tsx
- * Ligne 2 : Frise Conducteur avec Rails Puxador/Coro, Pause Bateria (1M..8M), Live Tempo et Timeline Audio (< 140 lignes).
+ * Ligne 2 : Frise Conducteur avec Rails Puxador/Coro, Pause Baque (1M..8M), Live Tempo et Timeline Audio (< 140 lignes).
  */
 import React, { useState, useMemo, useEffect } from 'react';
 import { useToadaProject } from '../../context/ToadaProjectContext';

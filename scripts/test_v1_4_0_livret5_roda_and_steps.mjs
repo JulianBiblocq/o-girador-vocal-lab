@@ -239,3 +239,4 @@ console.log('4. Vérification Gouvernance (< 145 lignes, Règle 0, i18n FR/PT-BR
 }
 
 console.log('\n🎉 TOUS LES TESTS v1.4.0 (LIVRET 5 : PROJECTION RODA & PALIERS 75-88-100%) SONT PASSÉS AVEC SUCCÈS !');
+

@@ -137,3 +137,4 @@ export function computeSessionProjectionSummary(
 
   return { avgProjectionScorePct, dominantStatus, voicedFramesCount: voiced.length };
 }
+

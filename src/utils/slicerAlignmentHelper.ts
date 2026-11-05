@@ -1,6 +1,6 @@
 /**
  * slicerAlignmentHelper.ts
- * Helper pur de génération et calquage des tranches sur les motifs Organizador et pauses Bateria (< 140 lignes).
+ * Helper pur de génération et calquage des tranches sur les motifs Organizador et pauses Baque (< 140 lignes).
  */
 import type { VocalPatternItem, VocalRole, ToadaArrangementSlot } from '../types/toadaProject.types';
 import type { SliceSegment } from '../types/slicerSegments.types';

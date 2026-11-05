@@ -122,7 +122,7 @@ export const treinoSubTranslationsFr = {
   culturalAnecdoteLabel: 'Histoire & Contexte :',
   culturalLexiqueLabel: 'Lexique & Symboles (notesLexique) :',
   customTeacherTip: 'Conseil vocal du Mestre pour cette Toada',
-  calageAutoSnapVoiceBtn: '🎯 Auto-caler sur la voix', conductorAddSilenceBtn: 'Pause Bateria', conductorPauseShort: 'Pause',
+  calageAutoSnapVoiceBtn: '🎯 Auto-caler sur la voix', conductorAddSilenceBtn: '🔇 Pause Baque', conductorPauseShort: 'Pause Baque',
   trainerLoopBtn: 'Boucle', studentDiagCentered: 'Pile au centre', studentDiagOnTime: 'Dans le temps',
   studentDiagPitchTitle: '🎯 Justesse Mélodique', studentDiagAttackTitle: '🥁 Attaque Rythmique', studentDiagStabilityTitle: '🌬️ Tenue & Stabilité',
   studentDiagScoreGlobal: 'Score global : {score}%', studentListenMixBtn: 'Mix Mestre + Moi', studentListenMestreBtn: 'Mestre Seul',

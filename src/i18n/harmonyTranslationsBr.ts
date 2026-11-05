@@ -35,7 +35,7 @@ export const harmonyTranslationsBr = {
   patternMasteredCrownBadge: '👑 Dominado (100 %)',
   game4Tab: '4. 🔔 A Voz na Roda (Ressonância da Máscara)',
   game4Goal: 'Sustentar a vogal longa do padrão ativo na altura certa (±35 cents) com ressonância da máscara 2.5–3.5 kHz ≥ 45 %.',
-  game4Instruction: 'Cante a vogal longa da Toada fazendo soar a máscara (maçãs do rosto altas) para atravessar a Bateria sem forçar.',
+  game4Instruction: 'Cante a vogal longa da Toada fazendo soar a máscara (maçãs do rosto altas) para atravessar o Baque sem forçar.',
   game4Success: '🔔 Sino de Roda ! Afinação precisa e ressonância 3 kHz brilhante acima dos tambores !',
   game4ForcageWarn: '⚠️ Muita tensão na garganta : reduza a força e coloque a vibração na máscara.',
   game4MetricsLabel: 'Projeção Máscara : {proj} % | Afinação : Δ {cents} cts | Estado : {status}',

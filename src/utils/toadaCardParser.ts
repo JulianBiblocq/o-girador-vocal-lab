@@ -84,7 +84,7 @@ export function parseOrganizadorCards(rawText: string): string[] {
 
 export function parseOrganizadorCardLine(lineText: string, boldRole: VocalRole = 'puxador', cardIndex?: number, beatsPerMeasure = 4): ParsedLyricsSegment {
   const rawLineCode = lineText.trim();
-  const pauseMatch = rawLineCode.match(/^\[\s*(?:PAUSE|SILENCE)(?:\s+BATERIA)?\s+(\d+)\s*M(?:ESURES?)?\s*\]$/i);
+  const pauseMatch = rawLineCode.match(/^\[\s*(?:PAUSE|SILENCE)(?:\s+(?:BAQUE|[A-Z]+))?\s+(\d+)\s*M(?:ESURES?)?\s*\]$/i);
   if (pauseMatch) {
     const mCount = Math.max(1, Math.min(8, parseInt(pauseMatch[1], 10) || 1));
     return {
