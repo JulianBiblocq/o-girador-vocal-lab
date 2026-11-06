@@ -75,6 +75,8 @@ export interface VocalPatternItem {
   variantPitchesConfig?: VariantPitchesConfig; variantSpeedsConfig?: VariantSpeedsConfig;
   harmonyGrid?: PatternHarmonyGrid;
   timeAnchors?: TimeAnchor[]; exitBeat?: number; hasTailBeat?: boolean;
+  troupeTransposedPCM?: Float32Array | null;
+  troupeTransposedSemitones?: number;
 }
 
 export interface VariantPitchesConfig {
@@ -105,4 +107,9 @@ export interface ToadaProject {
   sheetLines?: Array<{ role: VocalRole; text: string; phoneticText?: string; [key: string]: any }>;
   harmonyConfig?: HarmonyConfig;
   globalHarmonyGrid?: PatternHarmonyGrid;
+  sungScaleRoot?: string;
+  sungScaleMode?: string;
+  transpositionSemitones?: number;
+  troupeScaleRoot?: string;
+  previewListenTarget?: 'sung' | 'troupe';
 }

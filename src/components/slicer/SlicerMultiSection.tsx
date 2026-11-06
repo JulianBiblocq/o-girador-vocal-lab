@@ -1,6 +1,5 @@
 /**
- * SlicerMultiSection.tsx
- * Orchestration multi-tranches par rôle (Puxador / Coro), grille métronome, commutateur [Avec les trous | Phrases à la suite] et magnétisme (< 148 lignes).
+ * SlicerMultiSection.tsx — Orchestration multi-tranches par rôle (Puxador / Coro), grille métronome, commutateur [Avec les trous | Phrases à la suite] et magnétisme (< 142 lignes).
  */
 import React, { useState, useEffect, useCallback } from 'react';
 import type { DecodedAudioResult } from '../../utils/directAudioImporter';
@@ -28,7 +27,6 @@ interface SlicerMultiSectionProps {
   onSegmentsChange: (segments: SliceSegment[], nextGridOffsetSec?: number) => void;
   onExecuteBatchAssign: () => void; onProjectUpdate?: (p: ToadaProject) => void;
 }
-
 export const SlicerMultiSection: React.FC<SlicerMultiSectionProps> = ({
   project, audio, segments, onSegmentsChange, patterns, defaultRole, roleCounts,
   hasPuxadorMaster, hasCoroMaster, postAssignBanner, onSelectRoleSession, onLoadRoleFile, onCloseModal,
@@ -41,21 +39,17 @@ export const SlicerMultiSection: React.FC<SlicerMultiSectionProps> = ({
   const [gapMode, setGapMode] = useState<SlicerGapMode>('with_gaps'), [isSyncing, setIsSyncing] = useState(false);
   const [slicerBpm, setSlicerBpm] = useState(project.bpm || 88);
   const bpm = slicerBpm, beatDur = 60 / bpm, measureDur = beatDur * 4;
-
   useEffect(() => { if (typeof initialGridOffsetSec === 'number') setGridOffsetSec(initialGridOffsetSec); }, [initialGridOffsetSec]);
   useEffect(() => {
     if (project.bpm && project.bpm !== slicerBpm) { setSlicerBpm(project.bpm); if (metronomeActive) engine.setMetronome(true, project.bpm, gridOffsetSec); }
   }, [project.bpm, slicerBpm, metronomeActive, engine, gridOffsetSec]);
-
   const applyAlignment = useCallback((mode: SlicerGapMode, customOffset?: number) => {
     const detected = detectVocalPhrases(audio.pcm, audio.sampleRate);
     const effOff = typeof customOffset === 'number' ? customOffset : calculateInitialMasterGridOffsetSec(patterns, defaultRole, bpm, detected, project.slots);
     setGridOffsetSec(effOff);
     onSegmentsChange(buildOrganizadorSlices(patterns, defaultRole, bpm, detected, effOff, project.slots, audio.pcm, audio.sampleRate, mode), effOff);
   }, [patterns, defaultRole, bpm, audio, project.slots, onSegmentsChange]);
-
   const handleGapModeChange = useCallback((nextMode: SlicerGapMode) => { setGapMode(nextMode); applyAlignment(nextMode, gridOffsetSec); }, [applyAlignment, gridOffsetSec]);
-
   const handleDetectRmsSilences = useCallback(() => {
     const detected = detectVocalPhrases(audio.pcm, audio.sampleRate);
     const rolePats = patterns.filter((p) => p.role === defaultRole), list = rolePats.length > 0 ? rolePats : patterns;

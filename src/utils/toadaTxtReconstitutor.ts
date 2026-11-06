@@ -1,15 +1,12 @@
 /**
- * toadaTxtReconstitutor.ts
- * Reconstitution 100% fidèle du format .txt (POSER LES TEMPS) et du HTML souligné (parolesOriginales)
+ * toadaTxtReconstitutor.ts — Reconstitution 100% fidèle du format .txt (POSER LES TEMPS) et du HTML souligné (parolesOriginales)
  * depuis les pas du Piano Roll (Livret 4) et la Frise Conducteur (< 140 lignes).
  */
 import type { ToadaProject, VocalPatternItem } from '../types/toadaProject.types';
 import type { VocalStepData } from '../types/vocalPack.types';
 import { formatMeasureChordsString } from './chordGridHelper';
 import { resolvePatternOrTwinOrganizadorLine, hasEditedMidiSyllables } from './stepsToOrganizadorLineBuilder';
-import {
-  cleanLyricsForAlignment, extractActiveSyllablesFromPattern, formatWordsWithUnderlinedSyllables,
-} from './syllableUnderlineFormatter';
+import { cleanLyricsForAlignment, extractActiveSyllablesFromPattern, formatWordsWithUnderlinedSyllables } from './syllableUnderlineFormatter';
 
 export function stitchSyllablesFromSteps(steps: VocalStepData[] = []): string {
   const active = steps.filter((s) => s.active && s.syllable && s.syllable !== '───');

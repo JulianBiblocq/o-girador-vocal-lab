@@ -1,9 +1,11 @@
 /**
  * toadaPublishHelpers.ts
- * Extraction du buffer WAV découpé et assainissement strict (< 50 Ko, zéro Base64)
- * du payload Firestore pour Sequenciador (< 120 lignes, Rule 6.A).
+ * Extraction du buffer WAV découpé (avec transposition Studio dans la Tonalité Troupe)
+ * et assainissement strict (< 50 Ko, zéro Base64) du payload Firestore `/toada_packs` (< 138 lignes).
  */
 import type { VocalPatternItem } from '../types/toadaProject.types';
+import { transposeVocalSteps } from '../utils/scaleTranspositionHelper';
+import { transposePitchNote } from '../utils/musicalMath';
 
 export function pcmToWavBlob(pcm: Float32Array, sampleRate: number): Blob {
   const numChannels = 1, bitsPerSample = 16;
@@ -62,7 +64,6 @@ export function slicePatternPcm(
   const slicedPcm = startSample < endSample ? fullPcm.slice(startSample, endSample) : fullPcm;
   const slicedDurationSec = slicedPcm.length / sampleRate;
 
-  // L'ancre Temps 1 dans le buffer coupé qui démarre à 0s :
   const exportedT1OffsetSec = Math.max(0, rawT1OffsetSec - safeStart);
   const startOffsetSec = -exportedT1OffsetSec;
 
@@ -74,7 +75,8 @@ export function sanitizePatternForFirestore(
   audioUrl?: string,
   slicedDurationSec?: number,
   exportedT1OffsetSec?: number,
-  startOffsetSec?: number
+  startOffsetSec?: number,
+  transpositionSemitones = 0
 ): Record<string, any> {
   const sanitizedVariants: Record<string, any> = {};
   const activeKey = p.activeVariantKey || 'spd100_pit+0';
@@ -103,6 +105,7 @@ export function sanitizePatternForFirestore(
     pack: _pack,
     rawAudioSamples: _raw,
     correctedAudioSamples: _corr,
+    troupeTransposedPCM: _troupePcm,
     recordingResult: _recRes,
     rawPitchCurve: _rawCurve,
     pitchCurve: _curve,
@@ -110,15 +113,26 @@ export function sanitizePatternForFirestore(
   } = p as any;
 
   const patBpm = p.bpm ?? p.baseBpm ?? 88;
+  const transposedAnacrusis = transposeVocalSteps(p.anacrusisSteps || [], transpositionSemitones);
+  const transposedMain = transposeVocalSteps(p.mainSteps || [], transpositionSemitones);
+  const exportedRefPitch = transposePitchNote(p.referencePitch || 'A3', transpositionSemitones);
+
   return {
     ...patternRest,
     bpm: patBpm,
     baseBpm: patBpm,
+    referencePitch: exportedRefPitch,
+    sungReferencePitch: p.referencePitch || 'A3',
+    transpositionSemitones,
+    hasAnacrusis: p.hasAnacrusis !== false,
+    hasTailBeat: Boolean(p.hasTailBeat || p.exitBeat === 1),
+    anacrusisSteps: transposedAnacrusis,
+    mainSteps: transposedMain,
     audioUrl,
-    t1OffsetSec: exportedT1OffsetSec ?? p.t1OffsetSec,
-    startOffsetSec: startOffsetSec ?? (p as any).startOffsetSec,
+    t1OffsetSec: exportedT1OffsetSec ?? p.t1OffsetSec ?? 0,
+    startOffsetSec: startOffsetSec ?? (p as any).startOffsetSec ?? 0,
     trimStartSec: 0,
-    trimEndSec: slicedDurationSec ?? p.trimEndSec,
+    trimEndSec: slicedDurationSec ?? p.trimEndSec ?? 0,
     variants: sanitizedVariants,
   };
 }

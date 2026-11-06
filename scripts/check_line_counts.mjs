@@ -9,8 +9,8 @@ function walk(dir) {
       walk(p);
     } else if (p.endsWith('.ts') || p.endsWith('.tsx') || p.endsWith('.js') || p.endsWith('.jsx')) {
       const lines = fs.readFileSync(p, 'utf8').split('\n').length;
-      if (lines > 150) {
-        console.error(`⚠️ > 150 lines: ${lines} lines in ${p}`);
+      if (lines >= 145) {
+        console.error(`⚠️ >= 145 lines: ${lines} lines in ${p}`);
         overLimitCount++;
       }
     }

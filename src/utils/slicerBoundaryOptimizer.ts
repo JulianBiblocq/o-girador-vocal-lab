@@ -1,8 +1,5 @@
 /**
- * slicerBoundaryOptimizer.ts
- * Optimisation mathématique des frontières du Slicer (Livret 3) :
- * Cas A : Fenêtre [T_b + 0.35*Δ_next, T_b + 0.92*Δ_next] avec pénalité < 20% du pic de T1.
- * Cas B : Extinction vocale complète sur >= 60ms dans [T_b + 0.6*beatDur, T_b + 2.5*beatDur] (< 145 lignes).
+ * slicerBoundaryOptimizer.ts — Optimisation mathématique des frontières du Slicer (Livret 3) (< 140 lignes).
  */
 import type { VocalPatternItem, VocalRole } from '../types/toadaProject.types';
 import { resolveFreshTimeAnchors } from './timeAnchorParser';

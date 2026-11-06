@@ -5,6 +5,7 @@
 import type { VocalPatternItem } from '../../types/toadaProject.types';
 import { getPatternT1OffsetSec } from '../../utils/anacrusisTimingHelper';
 import { selectBestAudioVariant } from '../../utils/variantMatcher';
+import { getOrComputeTroupeTransposedPCM } from '../../audio/formantPreservingPitchShifter';
 import type { ToadaTimelineClock } from './toadaTimingScheduler';
 
 export interface ScheduledVoiceResult {
@@ -16,7 +17,8 @@ export function schedulePatternVoice(
   ctx: AudioContext,
   pat: VocalPatternItem,
   slotT1Time: number,
-  clock: ToadaTimelineClock
+  clock: ToadaTimelineClock,
+  transpositionSemitones = 0
 ): ScheduledVoiceResult | null {
   const match = selectBestAudioVariant(pat.variants, 1.0, 0, pat.baseBpm ?? pat.bpm ?? 88);
   const variant = match?.variant ?? pat.variants?.[pat.activeVariantKey];
@@ -25,8 +27,11 @@ export function schedulePatternVoice(
   const useCorrected = Boolean(isMainVar && pat.correctedAudioSamples && pat.correctedAudioSamples.length > 0);
   if (!useCorrected && !rec?.pcm?.length) return null;
 
-  const pcm = useCorrected ? pat.correctedAudioSamples! : rec!.pcm;
+  const basePcm = useCorrected ? pat.correctedAudioSamples! : rec!.pcm;
   const sampleRate = useCorrected ? (pat.pack?.audio?.sampleRate ?? rec?.sampleRate ?? 44100) : rec!.sampleRate;
+  const pcm = transpositionSemitones !== 0
+    ? getOrComputeTroupeTransposedPCM(basePcm, sampleRate, transpositionSemitones)
+    : basePcm;
   const trimStartSec = useCorrected ? (pat.pack?.audio?.trim?.startSec ?? 0) : (variant?.trimStartSec || pat.trimStartSec || 0);
   const rawTrimEnd = useCorrected ? (pat.pack?.audio?.trim?.endSec ?? 0) : (variant?.trimEndSec || pat.trimEndSec || 0);
   const trimEndSec = rawTrimEnd > trimStartSec ? rawTrimEnd : pcm.length / sampleRate;

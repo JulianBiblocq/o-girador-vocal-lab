@@ -100,7 +100,11 @@ export function analyzeFullProjectScale(patterns: VocalPatternItem[], lang: 'fr'
 
 export function applyDetectedScaleToProject(project: ToadaProject, tonic: string, scaleType: ScaleType, referencePitch?: string, lang: 'fr' | 'br' = 'fr'): ToadaProject {
   const pc = getTonicSemitone(tonic), cleanTonic = NOTE_NAMES[pc] || 'A';
-  const refPitch = referencePitch || `${cleanTonic}3`, keyLabel = formatProjectScaleLabel(cleanTonic, scaleType, lang);
+  const shiftSt = Math.max(-6, Math.min(6, Math.round(project.transpositionSemitones ?? project.toadaMeta?.transpositionSemitones ?? 0)));
+  const troupePc = (((pc + shiftSt) % 12) + 12) % 12, troupeTonic = NOTE_NAMES[troupePc] || cleanTonic;
+  const refPitch = referencePitch || `${cleanTonic}3`;
+  const sungLabel = formatProjectScaleLabel(cleanTonic, scaleType, lang);
+  const troupeLabel = formatProjectScaleLabel(troupeTonic, scaleType, lang);
   const allowed = scaleType === 'chromatic' ? null : buildAllowedPitchClasses(cleanTonic, scaleType);
   const patterns = project.patterns.map((pat) => {
     const hasAnac = pat.hasAnacrusis !== false, all = hasAnac ? [...(pat.anacrusisSteps || []), ...(pat.mainSteps || [])] : (pat.mainSteps || []);
@@ -111,5 +115,21 @@ export function applyDetectedScaleToProject(project: ToadaProject, tonic: string
     const anacLen = hasAnac ? (pat.anacrusisSteps?.length ?? 0) : 0;
     return { ...pat, referencePitch: refPitch, anacrusisSteps: hasAnac ? req.slice(0, anacLen) : [], mainSteps: (hasAnac ? req.slice(anacLen) : req).map((s, idx) => ({ ...s, stepIndex: idx })) };
   });
-  return { ...project, toadaMeta: { ...(project.toadaMeta || {}), tonaliteDefaut: keyLabel }, patterns };
+  return {
+    ...project,
+    sungScaleRoot: cleanTonic,
+    sungScaleMode: scaleType,
+    transpositionSemitones: shiftSt,
+    troupeScaleRoot: troupeTonic,
+    toadaMeta: {
+      ...(project.toadaMeta || {}),
+      tonaliteDefaut: troupeLabel,
+      tonaliteChanteeOrigine: sungLabel,
+      transpositionSemitones: shiftSt,
+      sungScaleRoot: cleanTonic,
+      sungScaleMode: scaleType,
+      troupeScaleRoot: troupeTonic,
+    },
+    patterns,
+  };
 }

@@ -1,7 +1,7 @@
 /**
  * cloudToadaPublisher.ts
- * Téléversement des WAV découpés dans Storage et publication du pack Toada (< 50 Ko)
- * dans Firestore pour Sequenciador (< 125 lignes, Rule 6.A).
+ * Téléversement des WAV découpés (rendus avec formantPreservingPitchShifter dans la Tonalité de la Troupe)
+ * dans Storage et publication du pack Toada complet dans Firestore `/toada_packs` pour Sequenciador (< 140 lignes).
  */
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { doc, setDoc } from 'firebase/firestore';
@@ -11,6 +11,8 @@ import { type ToadaProject, DEFAULT_TOADA_BPM } from '../types/toadaProject.type
 import { getSequenciadorToadaUrl } from '../utils/ecosystemUrls';
 import { getBeatsPerMeasure } from '../utils/musicalMath';
 import { getPatternT1OffsetSec } from '../utils/anacrusisTimingHelper';
+import { resolveProjectDualScale } from '../utils/scaleTranspositionHelper';
+import { getOrComputeTroupeTransposedPCM } from '../audio/formantPreservingPitchShifter';
 import { pcmToWavBlob, slicePatternPcm, sanitizePatternForFirestore } from './toadaPublishHelpers';
 
 export function removeUndefinedFields<T>(obj: T): T {
@@ -30,14 +32,53 @@ export function getSequenciadorUrl(toadaId: string): string {
   return getSequenciadorToadaUrl(toadaId);
 }
 
+export function buildSequencerToadaPackDocument(
+  project: ToadaProject,
+  processedPatterns?: Record<string, any>[]
+): Record<string, any> {
+  const toadaId = project.id;
+  const projectBpm = Number(project.bpm || project.toadaMeta?.bpmDefaut || DEFAULT_TOADA_BPM);
+  const dualScale = resolveProjectDualScale(project, 'fr');
+  const shiftSt = dualScale.transpositionSemitones;
+
+  const patterns = processedPatterns ?? project.patterns.map((p) =>
+    sanitizePatternForFirestore(p, (p as any).audioUrl, p.trimEndSec, p.t1OffsetSec, undefined, shiftSt)
+  );
+
+  return {
+    id: toadaId, title: project.title, bpm: projectBpm, timeSignature: project.timeSignature,
+    sungKey: dualScale.sungScaleLabel, troupeKey: dualScale.troupeScaleLabel,
+    sungScaleRoot: dualScale.sungScaleRoot, sungScaleMode: dualScale.sungScaleMode,
+    troupeScaleRoot: dualScale.troupeScaleRoot, transpositionSemitones: shiftSt,
+    project: {
+      id: project.id, title: project.title, bpm: projectBpm, timeSignature: project.timeSignature,
+      sungKey: dualScale.sungScaleLabel, troupeKey: dualScale.troupeScaleLabel, transpositionSemitones: shiftSt,
+      measuresCount: (project as any).measuresCount || 2, harmonyConfig: project.harmonyConfig ?? null, updatedAt: Date.now(),
+    },
+    metadata: {
+      title: project.title, toada: project.title, bpm: projectBpm, timeSignature: project.timeSignature,
+      sungKey: dualScale.sungScaleLabel, troupeKey: dualScale.troupeScaleLabel, transpositionSemitones: shiftSt, publishedAt: Date.now(),
+    },
+    toadaMeta: {
+      ...(project.toadaMeta || {}), tonaliteDefaut: dualScale.troupeScaleLabel,
+      tonaliteChanteeOrigine: dualScale.sungScaleLabel, transpositionSemitones: shiftSt,
+    },
+    patterns, arrangementSlots: project.slots || [], slots: project.slots || [],
+    harmonyConfig: project.harmonyConfig ?? null, globalHarmonyGrid: project.globalHarmonyGrid ?? null,
+    createdAt: (project as any).createdAt || Date.now(), updatedAt: Date.now(),
+  };
+}
+
 export async function publishToadaToSequencer(
   project: ToadaProject,
   onProgress?: (stepText: string) => void
 ): Promise<{ success: boolean; toadaId: string; sequenciadorUrl: string }> {
   const toadaId = project.id;
-  const processedPatterns = [];
+  const processedPatterns: Record<string, any>[] = [];
   const projectBpm = Number(project.bpm || project.toadaMeta?.bpmDefaut || DEFAULT_TOADA_BPM);
   const beatsPerMeasure = getBeatsPerMeasure(project.timeSignature);
+  const dualScale = resolveProjectDualScale(project, 'fr');
+  const shiftSt = dualScale.transpositionSemitones;
 
   for (let i = 0; i < project.patterns.length; i++) {
     const p = project.patterns[i];
@@ -50,39 +91,23 @@ export async function publishToadaToSequencer(
     const rec = variant?.recordingResult ?? p.recordingResult;
     const sampleRate = rec?.sampleRate || p.pack?.audio?.sampleRate || 44100;
 
-    let fullPcm: Float32Array | null | undefined;
-    let rawT1: number;
-    let trimStart: number;
-    let trimEnd: number;
+    const useCorr = Boolean(p.correctedAudioSamples && p.correctedAudioSamples.length > 0);
+    const fullPcm = useCorr ? p.correctedAudioSamples : (rec?.pcm ?? p.rawAudioSamples);
+    const explicitT1 = p.t1OffsetSec ?? variant?.t1OffsetSec ?? rec?.t1OffsetSec;
+    const rawT1 = useCorr ? getPatternT1OffsetSec(p.hasAnacrusis, measureDurationSec) : getPatternT1OffsetSec(p.hasAnacrusis, measureDurationSec, explicitT1);
+    const trimStart = useCorr ? (p.pack?.audio?.trim?.startSec ?? 0) : (variant?.trimStartSec ?? p.trimStartSec ?? 0);
+    const rawEnd = useCorr ? (p.pack?.audio?.trim?.endSec ?? 0) : (variant?.trimEndSec || p.trimEndSec || 0);
+    const trimEnd = rawEnd > 0 ? rawEnd : (fullPcm ? fullPcm.length / sampleRate : 0);
 
-    if (p.correctedAudioSamples && p.correctedAudioSamples.length > 0) {
-      // Référentiel cleanPCM (retouche Melodyne active)
-      fullPcm = p.correctedAudioSamples;
-      rawT1 = getPatternT1OffsetSec(p.hasAnacrusis, measureDurationSec);
-      trimStart = p.pack?.audio?.trim?.startSec ?? 0;
-      trimEnd = p.pack?.audio?.trim?.endSec ?? (fullPcm.length / sampleRate);
-    } else {
-      // Référentiel recordingResult.pcm (prise directe ou tranche Slicer)
-      fullPcm = rec?.pcm ?? p.rawAudioSamples;
-      const explicitT1 = p.t1OffsetSec ?? variant?.t1OffsetSec ?? rec?.t1OffsetSec;
-      rawT1 = getPatternT1OffsetSec(p.hasAnacrusis, measureDurationSec, explicitT1);
-      trimStart = variant?.trimStartSec ?? p.trimStartSec ?? 0;
-      const rawEnd = variant?.trimEndSec || p.trimEndSec || 0;
-      trimEnd = rawEnd > 0 ? rawEnd : (fullPcm ? fullPcm.length / sampleRate : 0);
-    }
-
-    let slicedDurationSec: number | undefined;
-    let exportedT1OffsetSec: number | undefined;
-    let startOffsetSec: number | undefined;
-
+    let slicedDurationSec: number | undefined, exportedT1OffsetSec: number | undefined, startOffsetSec: number | undefined;
     if (fullPcm && fullPcm.length > 0) {
       try {
         const sliced = slicePatternPcm(fullPcm, sampleRate, rawT1, trimStart, trimEnd);
         slicedDurationSec = sliced.slicedDurationSec;
         exportedT1OffsetSec = sliced.exportedT1OffsetSec;
         startOffsetSec = sliced.startOffsetSec;
-
-        const wavBlob = pcmToWavBlob(sliced.slicedPcm, sampleRate);
+        const troupePcm = shiftSt !== 0 ? getOrComputeTroupeTransposedPCM(sliced.slicedPcm, sampleRate, shiftSt) : sliced.slicedPcm;
+        const wavBlob = pcmToWavBlob(troupePcm, sampleRate);
         const storageRef = ref(storage, `vocalRecordings/${toadaId}_${p.id}.wav`);
         await uploadBytes(storageRef, wavBlob, { contentType: 'audio/wav' });
         audioUrl = await getDownloadURL(storageRef);
@@ -91,44 +116,11 @@ export async function publishToadaToSequencer(
       }
     }
 
-    const cleanPat = sanitizePatternForFirestore(p, audioUrl, slicedDurationSec, exportedT1OffsetSec, startOffsetSec);
-    processedPatterns.push(cleanPat);
+    processedPatterns.push(sanitizePatternForFirestore(p, audioUrl, slicedDurationSec, exportedT1OffsetSec, startOffsetSec, shiftSt));
   }
 
   onProgress?.('Enregistrement du pack dans Firestore...');
-  const packDoc = {
-    id: toadaId,
-    title: project.title,
-    bpm: projectBpm,
-    timeSignature: project.timeSignature,
-    project: {
-      id: project.id,
-      title: project.title,
-      bpm: projectBpm,
-      timeSignature: project.timeSignature,
-      measuresCount: (project as any).measuresCount || 2,
-      harmonyConfig: project.harmonyConfig ?? null,
-      updatedAt: Date.now(),
-    },
-    metadata: {
-      title: project.title,
-      toada: project.title,
-      bpm: projectBpm,
-      timeSignature: project.timeSignature,
-      publishedAt: Date.now(),
-    },
-    toadaMeta: project.toadaMeta ?? null,
-    patterns: processedPatterns,
-    arrangementSlots: project.slots || [],
-    slots: project.slots || [],
-    harmonyConfig: project.harmonyConfig ?? null,
-    globalHarmonyGrid: project.globalHarmonyGrid ?? null,
-    createdAt: (project as any).createdAt || Date.now(),
-    updatedAt: Date.now(),
-  };
-
-  const cleanDoc = removeUndefinedFields(packDoc);
+  const cleanDoc = removeUndefinedFields(buildSequencerToadaPackDocument(project, processedPatterns));
   await setDoc(doc(db, 'toada_packs', toadaId), cleanDoc);
-  const sequenciadorUrl = getSequenciadorUrl(toadaId);
-  return { success: true, toadaId, sequenciadorUrl };
+  return { success: true, toadaId, sequenciadorUrl: getSequenciadorUrl(toadaId) };
 }

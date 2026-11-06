@@ -40,38 +40,20 @@ export const SlicerMultiSegmentToolbar: React.FC<SlicerMultiSegmentToolbarProps>
   return (
     <div className="flex flex-col gap-1.5 p-2 bg-theme-bg/60 border border-theme-border/60 rounded text-xs font-mono">
       <div className="pb-1.5 border-b border-[var(--cordel-border-sub)]">
-        <SlicerRoleSessionBar
-          activeRole={activeRole}
-          counts={roleCounts}
-          hasPuxadorMaster={hasPuxadorMaster}
-          hasCoroMaster={hasCoroMaster}
-          postAssignBanner={postAssignBanner}
-          onSelectRoleSession={onSelectRoleSession}
-          onLoadRoleFile={onLoadRoleFile}
-          onCloseModal={onCloseModal}
-        />
+        <SlicerRoleSessionBar activeRole={activeRole} counts={roleCounts} hasPuxadorMaster={hasPuxadorMaster} hasCoroMaster={hasCoroMaster} postAssignBanner={postAssignBanner} onSelectRoleSession={onSelectRoleSession} onLoadRoleFile={onLoadRoleFile} onCloseModal={onCloseModal} />
       </div>
-
       <div className="flex flex-wrap items-center justify-between gap-2 pb-1.5 border-b border-[var(--cordel-border-sub)]">
         <div className="flex flex-wrap items-center gap-1.5">
-          <button
-            type="button" onClick={onToggleMetronome}
-            className={`h-7 px-2.5 rounded font-bold flex items-center gap-1.5 cursor-pointer transition-colors ${
-              metronomeActive ? 'bg-amber-500 text-stone-950 font-black shadow-xs' : 'cordel-card-sm text-theme-ink/80 hover:text-theme-ink'
-            }`}
-            title={t('slicerMetronomeTitle')}
-          >
+          <button type="button" onClick={onToggleMetronome} className={`h-7 px-2.5 rounded font-bold flex items-center gap-1.5 cursor-pointer transition-colors ${metronomeActive ? 'bg-amber-500 text-stone-950 font-black shadow-xs' : 'cordel-card-sm text-theme-ink/80 hover:text-theme-ink'}`} title={t('slicerMetronomeTitle')}>
             {metronomeActive ? <Volume2 className="w-3.5 h-3.5 fill-current" /> : <VolumeX className="w-3.5 h-3.5" />}
             <span>{t('slicerMetronomeBtn')}</span>
           </button>
-
           <div className="flex items-center gap-1 cordel-card-sm px-1.5 py-0.5 rounded text-[11px]">
             <span className="text-[var(--cordel-secondary-text)]">BPM:</span>
             <button type="button" onClick={() => onBpmChange?.(Math.max(30, bpm - 1))} className="px-1 py-0.2 hover:bg-theme-accent/20 rounded cursor-pointer font-bold">-1</button>
             <strong className="text-amber-500 font-black px-0.5">{bpm}</strong>
             <button type="button" onClick={() => onBpmChange?.(Math.min(220, bpm + 1))} className="px-1 py-0.2 hover:bg-theme-accent/20 rounded cursor-pointer font-bold">+1</button>
           </div>
-
           <div className="flex items-center gap-0.5 cordel-card-sm px-1.5 py-0.5 rounded text-[11px]">
             <span className="text-[var(--cordel-secondary-text)] mr-1">{t('slicerMasterT1Label')} <strong>{gridOffsetSec.toFixed(2)}s</strong></span>
             <button type="button" onClick={() => onNudgeOffset(-0.05)} className="px-1 py-0.2 hover:bg-theme-accent/20 rounded cursor-pointer font-bold">-50ms</button>

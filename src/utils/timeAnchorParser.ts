@@ -1,11 +1,10 @@
 /**
- * timeAnchorParser.ts — Parsing des ancres de temps ([1]..[12], [M•1]), silences initiaux (𝄽) et tenues de note (< 148 lignes).
+ * timeAnchorParser.ts — Parsing des ancres de temps ([1]..[12], [M•1]), silences initiaux (𝄽) et tenues de note (< 142 lignes).
  */
 import type { TimeAnchor } from '../types/toadaDocument.types';
 import { splitTextIntoLetraSyllables } from './syllableSplitter';
 import { isIntraWordBadgeBoundary, computeBeatSyllableSubdivs } from './subbeatAnchorHelper';
 export const TIME_ANCHOR_REGEX = /\[(?:M(\d+)[•·\.:])?([1-9]|1[0-2])\]/gi;
-
 export function isAnchorOnlyLine(line: string): boolean {
   return Boolean(line.trim() && /^[\d\s_M•·\.:\[\]]+$/.test(line) && /\b([1-9]|1[0-2])\b/.test(line));
 }
@@ -40,11 +39,7 @@ export function computeMeasuresCountFromAnchors(timeAnchors: TimeAnchor[] | unde
   const isTailExitBeat1 = Boolean(rawCount1 >= 2 && lastA?.beat === 1 && prevA && prevA.beat > 1 && !lastA.isSustainedHold);
   return Math.min(4, Math.max(1, isTailExitBeat1 ? rawCount1 - 1 : rawCount1)) as 1 | 2 | 3 | 4;
 }
-
-export interface ExtractedAnchorsResult {
-  cleanText: string; timeAnchors: TimeAnchor[]; measuresCount?: 1 | 2 | 3 | 4;
-  hasAnacrusis?: boolean; anacrusisBeats?: number; anacrusisStartBeat?: number; exitBeat?: number;
-}
+export interface ExtractedAnchorsResult { cleanText: string; timeAnchors: TimeAnchor[]; measuresCount?: 1 | 2 | 3 | 4; hasAnacrusis?: boolean; anacrusisBeats?: number; anacrusisStartBeat?: number; exitBeat?: number; }
 export function extractTimeAnchors(rawText: string, beatsPerMeasure = 4, forceThetic = false): ExtractedAnchorsResult {
   const matches: Array<{ beat: number; absMeasure?: number; index: number; fullLength: number }> = [], regex = /\[(?:M(\d+)[•·\.:])?([1-9]|1[0-2])\]/gi;
   let m: RegExpExecArray | null;
@@ -104,7 +99,6 @@ export function extractTimeAnchors(rawText: string, beatsPerMeasure = 4, forceTh
   const rawMeasuresCount = Math.min(4, Math.max(1, count1 > 0 ? count1 : (hasAnacrusis ? (measureOffset || 1) : measureOffset + 1))) as 1 | 2 | 3 | 4;
   return { cleanText, timeAnchors, measuresCount: rawMeasuresCount, hasAnacrusis, anacrusisBeats, anacrusisStartBeat, exitBeat: isTailExit1 ? 1 : timeAnchors[timeAnchors.length - 1]?.beat };
 }
-
 export function buildBeatLyricsMap(timeAnchors: TimeAnchor[], _hasAnacrusis = false): Record<string, TimeAnchor> {
   const map: Record<string, TimeAnchor> = {};
   for (const a of timeAnchors) map[`${a.measureOffset}_${a.beat}`] = { ...a, syllables: a.syllables || [] };

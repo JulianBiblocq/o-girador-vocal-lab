@@ -8,7 +8,7 @@ export async function resolve(specifier, context, nextResolve) {
     return await nextResolve(specifier, context);
   } catch (err) {
     if (specifier.startsWith('.') || specifier.startsWith('/')) {
-      for (const ext of ['.ts', '.tsx', '.js', '/index.ts']) {
+      for (const ext of ['.ts', '.tsx', '.js', '.jsx', '/index.ts']) {
         try {
           return await nextResolve(specifier + ext, context);
         } catch {}
@@ -19,7 +19,7 @@ export async function resolve(specifier, context, nextResolve) {
 }
 
 export async function load(url, context, nextLoad) {
-  if (url.endsWith('.tsx')) {
+  if (url.endsWith('.tsx') || url.endsWith('.jsx')) {
     const raw = readFileSync(fileURLToPath(url), 'utf8');
     const transpiled = ts.transpileModule(raw, {
       compilerOptions: {

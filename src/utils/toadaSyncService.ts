@@ -1,10 +1,10 @@
 /**
  * toadaSyncService.ts
- * Service de re-synchronisation unifiée non destructive depuis Firestore Organizador (< 130 lignes).
- * Apparie par cardIndex (puis clé normalisée) et recalcule l'alignement syllabique sur l'audio existant.
+ * Service de re-synchronisation unifiée non destructive depuis Firestore Organizador & Sequenciador `/toada_packs` (< 140 lignes).
+ * Apparie par cardIndex (puis clé normalisée), recalcule l'alignement syllabique et synchronise transpositionSemitones / troupeKey.
  */
 import { type ToadaProject, type VocalPatternItem, DEFAULT_TOADA_BPM } from '../types/toadaProject.types';
-import { fetchOrganizadorToadas, fetchOrganizadorToadaById, type ToadaDocument } from '../services/firebaseClient';
+import { fetchOrganizadorToadas, fetchOrganizadorToadaById, fetchToadaPackById, type ToadaDocument } from '../services/firebaseClient';
 import { normalizeSongTitle } from './varalSongFilter';
 import { parseToadaDocument } from './toadaSheetParser';
 import { generateToadaFromSheet } from './toadaConductorGenerator';
@@ -12,36 +12,38 @@ import { buildNormalizedPatternKey } from './timeAnchorParser';
 import { getBeatsPerMeasure } from './musicalMath';
 import { getDefaultBeatResolutions } from './alignmentMath';
 import { extractPatternMelodicData } from '../audio/melodicExtractionHelper';
+import { parseStoredScaleString } from '../audio/projectScaleAnalyzer';
+import { applyDualScaleToProject, computeSemitoneDistance, resolveProjectDualScale } from './scaleTranspositionHelper';
 
-function findMatchingExistingPattern(
-  newPat: VocalPatternItem,
-  newIdx: number,
-  existingPatterns: VocalPatternItem[],
-  usedIds: Set<string>
-): VocalPatternItem | undefined {
+function findMatchingExistingPattern(newPat: VocalPatternItem, newIdx: number, existingPatterns: VocalPatternItem[], usedIds: Set<string>): VocalPatternItem | undefined {
   const targetCardIdx = newPat.cardIndex ?? newIdx;
-
-  // 1. Priorité absolue : même cardIndex et même rôle
-  const byCardAndRole = existingPatterns.find(
-    (p, idx) => !usedIds.has(p.id) && (p.cardIndex ?? idx) === targetCardIdx && p.role === newPat.role
-  );
+  const byCardAndRole = existingPatterns.find((p, idx) => !usedIds.has(p.id) && (p.cardIndex ?? idx) === targetCardIdx && p.role === newPat.role);
   if (byCardAndRole) return byCardAndRole;
 
-  // 2. Repli : même clé normalisée (texte + ancres)
   const targetKey = buildNormalizedPatternKey(newPat.role, newPat.assignedLyricsText || '', newPat.timeAnchors);
-  const byNormKey = existingPatterns.find(
-    (p) => !usedIds.has(p.id) && buildNormalizedPatternKey(p.role, p.assignedLyricsText || '', p.timeAnchors) === targetKey
-  );
+  const byNormKey = existingPatterns.find((p) => !usedIds.has(p.id) && buildNormalizedPatternKey(p.role, p.assignedLyricsText || '', p.timeAnchors) === targetKey);
   if (byNormKey) return byNormKey;
 
-  // 3. Repli : même rôle et même nom (1er mot)
-  const byRoleAndName = existingPatterns.find(
-    (p) => !usedIds.has(p.id) && p.role === newPat.role && p.name === newPat.name
-  );
+  const byRoleAndName = existingPatterns.find((p) => !usedIds.has(p.id) && p.role === newPat.role && p.name === newPat.name);
   if (byRoleAndName) return byRoleAndName;
-
-  // 4. Repli : même cardIndex même si le rôle a basculé
   return existingPatterns.find((p, idx) => !usedIds.has(p.id) && (p.cardIndex ?? idx) === targetCardIdx);
+}
+
+export function applySequenciadorPackTranspositionToProject(
+  project: ToadaProject,
+  packData: { transpositionSemitones?: number; troupeKey?: string; sungKey?: string; sungScaleRoot?: string; sungScaleMode?: string; troupeScaleRoot?: string }
+): ToadaProject {
+  const currentDual = resolveProjectDualScale(project, 'fr');
+  const parsedSung = parseStoredScaleString(packData.sungKey);
+  const parsedTroupe = parseStoredScaleString(packData.troupeKey);
+  const sungRoot = packData.sungScaleRoot || parsedSung?.tonic || currentDual.sungScaleRoot;
+  const sungMode = (packData.sungScaleMode || parsedSung?.scaleType || parsedTroupe?.scaleType || currentDual.sungScaleMode) as any;
+
+  let nextSt = packData.transpositionSemitones;
+  if (nextSt === undefined && (packData.troupeScaleRoot || parsedTroupe?.tonic)) {
+    nextSt = computeSemitoneDistance(sungRoot, (packData.troupeScaleRoot || parsedTroupe?.tonic)!);
+  }
+  return applyDualScaleToProject(project, sungRoot, sungMode, nextSt ?? currentDual.transpositionSemitones, currentDual.sungReferencePitch, 'fr');
 }
 
 export function mergeSyncedToadaDocIntoProject(
@@ -94,8 +96,16 @@ export function mergeSyncedToadaDocIntoProject(
   });
 
   freshProject.toadaMeta = { ...(project.toadaMeta || {}), ...doc, bpmDefaut: targetBpm };
-  const toastMessage = `Toada « ${doc.titre} » synchronisée avec Organizador (${freshProject.patterns.length} blocs) !`;
-  return { updatedProject: freshProject, toastMessage };
+  const withDual = applySequenciadorPackTranspositionToProject(freshProject, {
+    transpositionSemitones: doc.transpositionSemitones ?? project.transpositionSemitones,
+    troupeKey: doc.tonaliteDefaut || project.toadaMeta?.tonaliteDefaut,
+    sungKey: doc.tonaliteChanteeOrigine || project.toadaMeta?.tonaliteChanteeOrigine,
+    sungScaleRoot: doc.sungScaleRoot || project.sungScaleRoot,
+    sungScaleMode: doc.sungScaleMode || project.sungScaleMode,
+    troupeScaleRoot: doc.troupeScaleRoot || project.troupeScaleRoot,
+  });
+  const toastMessage = `Toada « ${doc.titre} » synchronisée (${withDual.patterns.length} blocs • Troupe : ${withDual.toadaMeta?.tonaliteDefaut || 'Auto'}) !`;
+  return { updatedProject: withDual, toastMessage };
 }
 
 export async function syncProjectWithOrganizador(
@@ -113,6 +123,12 @@ export async function syncProjectWithOrganizador(
       const all = await fetchOrganizadorToadas(effectiveGroupId);
       const cleanTitle = normalizeSongTitle(projectTitle);
       doc = all.find((d) => normalizeSongTitle(d.titre) === cleanTitle) ?? null;
+    }
+    const cloudPack = await fetchToadaPackById(project.id).catch(() => null);
+    if (cloudPack && doc) {
+      if (cloudPack.transpositionSemitones !== undefined) doc.transpositionSemitones = cloudPack.transpositionSemitones;
+      if (cloudPack.toadaMeta?.tonaliteDefaut) doc.tonaliteDefaut = cloudPack.toadaMeta.tonaliteDefaut;
+      if (cloudPack.toadaMeta?.tonaliteChanteeOrigine) doc.tonaliteChanteeOrigine = cloudPack.toadaMeta.tonaliteChanteeOrigine;
     }
   } catch (err) {
     console.warn('[toadaSyncService] Échec récupération Organizador :', err);

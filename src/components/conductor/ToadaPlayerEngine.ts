@@ -99,8 +99,9 @@ export class ToadaPlayerEngine {
         const slot = project.slots[layout.slotIndex];
         const pux = project.patterns.find((p) => p.id === slot.puxadorPatternId);
         const coro = project.patterns.find((p) => p.id === slot.coroPatternId);
-        if (pux) { const v = schedulePatternVoice(this.ctx, pux, slotT1Time, this.clock); if (v) this.activeVoices.push(v); }
-        if (coro) { const v = schedulePatternVoice(this.ctx, coro, slotT1Time, this.clock); if (v) this.activeVoices.push(v); }
+        const shiftSt = project.previewListenTarget === 'sung' ? 0 : (project.transpositionSemitones ?? project.toadaMeta?.transpositionSemitones ?? 0);
+        if (pux) { const v = schedulePatternVoice(this.ctx, pux, slotT1Time, this.clock, shiftSt); if (v) this.activeVoices.push(v); }
+        if (coro) { const v = schedulePatternVoice(this.ctx, coro, slotT1Time, this.clock, shiftSt); if (v) this.activeVoices.push(v); }
 
         const patHarmony = pux?.harmonyGrid || coro?.harmonyGrid || project.globalHarmonyGrid;
         if (project.harmonyConfig?.enabled && patHarmony) {
@@ -108,7 +109,7 @@ export class ToadaPlayerEngine {
           this.harmonyEngine.schedule(this.ctx, this.ctx.destination, {
             grid: patHarmony, bpm, beatsPerMeasure, measuresCount: layout.measuresInSlot,
             startTime: slotT1Time, totalDurationSec: layout.measuresInSlot * beatsPerMeasure * (60 / bpm),
-            hasAnacrusis: false, t1OffsetSec: 0, append: true,
+            hasAnacrusis: false, t1OffsetSec: 0, append: true, pitchShiftSemitones: shiftSt,
             profile: project.harmonyConfig.profile, volume: project.harmonyConfig.volume, muteBass: project.harmonyConfig.muteBass,
           });
         }

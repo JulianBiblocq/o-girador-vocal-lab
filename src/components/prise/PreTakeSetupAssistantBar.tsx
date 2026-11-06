@@ -1,7 +1,7 @@
 /**
  * PreTakeSetupAssistantBar.tsx
- * Bandeau guidé bilingue (FR / PT-BR) « Préparation avant de Chanter » en 3 étapes cohérentes :
- * 1. Latence matérielle (vérifiée via signature d'appareil), 2. Tempo (BPM + Tap), 3. Gamme unifiée (< 138 lignes).
+ * Bandeau guidé bilingue (FR / PT-BR) « Préparation avant de Chanter » :
+ * 1. Latence matérielle, 2. Tempo (BPM + Tap), 3. Double Tonalité (Prise chantée ➔ Tonalité Troupe + Écoute) (< 140 lignes).
  */
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useToadaProject } from '../../context/ToadaProjectContext';
@@ -10,14 +10,12 @@ import { useVocalTransportStore } from '../../stores/useVocalTransportStore';
 import { isLatencyCalibrated } from '../../utils/latencyStorage';
 import { buildDeviceSignature, getCalibratedLatency } from '../../utils/deviceSignature';
 import { useQuickScaleDetector } from '../../hooks/useQuickScaleDetector';
-import {
-  analyzeFullProjectScale, applyDetectedScaleToProject, resolveProjectActiveScale,
-  formatProjectScaleLabel, SOLFEGE_NOTE_NAMES, SOLFEGE_NOTE_NAMES_BR,
-} from '../../audio/projectScaleAnalyzer';
+import { analyzeFullProjectScale, formatProjectScaleLabel, SOLFEGE_NOTE_NAMES, SOLFEGE_NOTE_NAMES_BR } from '../../audio/projectScaleAnalyzer';
+import { resolveProjectDualScale, applyDualScaleToProject, clampTranspositionSemitones, computeSemitoneDistance } from '../../utils/scaleTranspositionHelper';
 import { NOTE_NAMES } from '../../utils/noteUtils';
 import type { ScaleType } from '../../audio/scaleQuantizer';
 import { useLanguage } from '../../i18n/LanguageContext';
-import { Zap, Check, Drum, Hand, Music2, RefreshCw, HelpCircle, Unlock, Settings, Loader2 } from 'lucide-react';
+import { Zap, Check, Drum, Hand, Mic, Target, Ear, ChevronLeft, ChevronRight, RefreshCw, HelpCircle, Unlock, Settings, Loader2 } from 'lucide-react';
 
 const MODES_FR: Array<{ key: ScaleType; label: string }> = [
   { key: 'natural_minor', label: 'Mineur' }, { key: 'major', label: 'Majeur' },
@@ -32,23 +30,20 @@ export const PreTakeSetupAssistantBar: React.FC = () => {
   const { language } = useLanguage(), isBr = language === 'br';
   const solfegeNames = isBr ? SOLFEGE_NOTE_NAMES_BR : SOLFEGE_NOTE_NAMES, modeList = isBr ? MODES_BR : MODES_FR;
   const { project, activePattern, loadProject, updateScopedBpm } = useToadaProject();
-  const { selectedDeviceId, selectedOutputDeviceId, recordedSampleRate } = useAudioHardware();
+  const { engine, selectedDeviceId, selectedOutputDeviceId, recordedSampleRate } = useAudioHardware();
   const setActiveLivret = useVocalTransportStore((s) => s.setActiveLivret);
-
   const sig = buildDeviceSignature(selectedDeviceId, selectedOutputDeviceId, recordedSampleRate);
   const [calibratedMs, setCalibratedMs] = useState<number | null>(() => getCalibratedLatency(sig));
-  const [isEditingScale, setIsEditingScale] = useState(false);
-  const [selTonic, setSelTonic] = useState('A'), [selMode, setSelMode] = useState<ScaleType>('natural_minor');
+  const [isEditingScale, setIsEditingScale] = useState(false), [selTonic, setSelTonic] = useState('A'), [selMode, setSelMode] = useState<ScaleType>('natural_minor');
   const tapTimesRef = useRef<number[]>([]), [tapCount, setTapCount] = useState(0);
-
   const bpm = activePattern?.bpm ?? activePattern?.baseBpm ?? project.bpm ?? 88;
   const { isListeningScale, suggestion, startQuickScaleListen, clearSuggestion } = useQuickScaleDetector(project, loadProject, selectedDeviceId);
-
   const projectAnalysis = useMemo(() => analyzeFullProjectScale(project.patterns, language), [project.patterns, language]);
-  const resolvedScale = useMemo(() => resolveProjectActiveScale(project, language, projectAnalysis), [project, language, projectAnalysis]);
-  const activeTonic = suggestion?.tonic || resolvedScale.tonic;
-  const activeScaleType: ScaleType = suggestion?.scaleType || resolvedScale.scaleType;
-  const activeScaleText = suggestion ? formatProjectScaleLabel(suggestion.tonic, suggestion.scaleType, language) : resolvedScale.label;
+  const dualScale = useMemo(() => resolveProjectDualScale(project, language, projectAnalysis), [project, language, projectAnalysis]);
+  const activeSungTonic = suggestion?.tonic || dualScale.sungScaleRoot, activeSungMode: ScaleType = suggestion?.scaleType || dualScale.sungScaleMode;
+  const activeSungLabel = suggestion ? formatProjectScaleLabel(suggestion.tonic, suggestion.scaleType, language) : dualScale.sungScaleLabel;
+  const shiftSt = dualScale.transpositionSemitones, stBadge = shiftSt === 0 ? '0 st' : shiftSt > 0 ? `+${shiftSt} st` : `${shiftSt} st`;
+  const listenTarget: 'sung' | 'troupe' = project.previewListenTarget ?? (shiftSt !== 0 ? 'troupe' : 'sung');
 
   useEffect(() => {
     setCalibratedMs(getCalibratedLatency(sig));
@@ -66,10 +61,10 @@ export const PreTakeSetupAssistantBar: React.FC = () => {
     }
   }, [updateScopedBpm]);
 
-  const applyScale = (tonic: string, mode: ScaleType) => {
-    const nextProj = applyDetectedScaleToProject(project, tonic, mode, resolvedScale.referencePitch, language);
+  const applyDual = (sungRoot: string, mode: ScaleType, nextSt = shiftSt) => {
+    const nextProj = applyDualScaleToProject(project, sungRoot, mode, nextSt, dualScale.sungReferencePitch, language);
     loadProject(nextProj); clearSuggestion(); setIsEditingScale(false);
-    window.dispatchEvent(new CustomEvent('app-toast', { detail: { message: `${isBr ? 'Escala aplicada' : 'Gamme appliquée'} : ${nextProj.toadaMeta?.tonaliteDefaut}`, type: 'success' } }));
+    window.dispatchEvent(new CustomEvent('app-toast', { detail: { message: `${isBr ? 'Tonalidade da tropa' : 'Tonalité Troupe'} : ${nextProj.toadaMeta?.tonaliteDefaut}`, type: 'success' } }));
   };
 
   const isDeviceCalibrated = calibratedMs !== null && isLatencyCalibrated(selectedDeviceId);
@@ -86,32 +81,27 @@ export const PreTakeSetupAssistantBar: React.FC = () => {
           </div>
         ) : (
           <button type="button" onClick={() => setActiveLivret('reglages')} className="px-2.5 py-1 rounded bg-emerald-700/15 border border-emerald-600/40 text-emerald-800 dark:text-emerald-300 font-bold flex items-center gap-1.5 cursor-pointer">
-            <Check className="w-3.5 h-3.5" />
-            <span>1. {isBr ? `Latência calibrada (${calibratedMs} ms)` : `Latence calée (${calibratedMs} ms)`}</span>
-            <Settings className="w-3 h-3 opacity-70" />
+            <Check className="w-3.5 h-3.5" /><span>1. {isBr ? `Latência (${calibratedMs} ms)` : `Latence calée (${calibratedMs} ms)`}</span><Settings className="w-3 h-3 opacity-70" />
           </button>
         )}
-      </div>
-
-      <div className="flex items-center gap-1.5 flex-wrap">
         <span className="px-2 py-1 cordel-card-sm rounded font-bold inline-flex items-center gap-1">
           <Drum className="w-3.5 h-3.5 text-[#9a3412] dark:text-amber-300" />
-          <span>2. {isBr ? 'Andamento :' : 'Tempo :'} <strong className="text-[#9a3412] dark:text-amber-300">{bpm} BPM</strong> ({project.timeSignature || '4/4'})</span>
+          <span>2. {isBr ? 'Andamento :' : 'Tempo :'} <strong className="text-[#9a3412] dark:text-amber-300">{bpm} BPM</strong></span>
         </span>
-        <button type="button" onClick={handleTapTempo} className="px-2.5 py-1 cordel-btn font-bold flex items-center gap-1 rounded cursor-pointer">
-          <Hand className="w-3.5 h-3.5 text-[#9a3412] dark:text-amber-300" /><span>Tap Tempo {tapCount >= 2 ? `(${tapCount})` : ''}</span>
+        <button type="button" onClick={handleTapTempo} className="px-2 py-1 cordel-btn font-bold flex items-center gap-1 rounded cursor-pointer">
+          <Hand className="w-3.5 h-3.5 text-[#9a3412] dark:text-amber-300" /><span>Tap {tapCount >= 2 ? `(${tapCount})` : ''}</span>
         </button>
       </div>
 
       <div className="flex items-center gap-1.5 flex-wrap">
         <span className="px-2 py-1 cordel-card-sm rounded font-bold inline-flex items-center gap-1">
-          <Music2 className="w-3.5 h-3.5 text-[#9a3412] dark:text-amber-300" />
-          <span>3. {isBr ? 'Escala detectada :' : 'Gamme détectée :'} <strong className="text-[#9a3412] dark:text-amber-300">{activeScaleText}</strong></span>
+          <Mic className="w-3.5 h-3.5 text-[#9a3412] dark:text-amber-300" />
+          <span>3. {isBr ? 'Gravação cantada :' : 'Prise chantée :'} <strong className="text-[#9a3412] dark:text-amber-300">{activeSungLabel}</strong></span>
         </span>
-        <button type="button" onClick={() => applyScale(activeTonic, activeScaleType)} className="px-2 py-1 rounded bg-emerald-700 hover:bg-emerald-600 text-white font-bold flex items-center gap-1 cursor-pointer">
+        <button type="button" onClick={() => applyDual(activeSungTonic, activeSungMode, shiftSt)} className="px-2 py-1 rounded bg-emerald-700 hover:bg-emerald-600 text-white font-bold flex items-center gap-1 cursor-pointer">
           <Check className="w-3 h-3" /><span>{isBr ? 'Validar' : 'Valider'}</span>
         </button>
-        <button type="button" onClick={() => { setSelTonic(activeTonic); setSelMode(activeScaleType === 'chromatic' ? 'natural_minor' : activeScaleType); setIsEditingScale((v) => !v); }} className="px-2 py-1 rounded cordel-btn font-bold flex items-center gap-1 cursor-pointer">
+        <button type="button" onClick={() => { setSelTonic(activeSungTonic); setSelMode(activeSungMode === 'chromatic' ? 'natural_minor' : activeSungMode); setIsEditingScale((v) => !v); }} className="px-2 py-1 rounded cordel-btn font-bold flex items-center gap-1 cursor-pointer">
           <RefreshCw className="w-3 h-3 text-[#9a3412] dark:text-amber-300" /><span>{isBr ? 'Alterar ▾' : 'Changer ▾'}</span>
         </button>
         {isEditingScale && (
@@ -122,14 +112,27 @@ export const PreTakeSetupAssistantBar: React.FC = () => {
             <select value={selMode} onChange={(e) => setSelMode(e.target.value as ScaleType)} className="bg-transparent font-bold text-[#9a3412] dark:text-amber-300 cursor-pointer">
               {modeList.map((m) => <option key={m.key} value={m.key}>{m.label}</option>)}
             </select>
-            <button type="button" onClick={() => applyScale(selTonic, selMode)} className="px-1.5 py-0.5 rounded bg-emerald-700 text-white font-bold cursor-pointer">OK</button>
+            <button type="button" onClick={() => applyDual(selTonic, selMode, shiftSt)} className="px-1.5 py-0.5 rounded bg-emerald-700 text-white font-bold cursor-pointer">OK</button>
           </div>
         )}
-        <button type="button" onClick={() => projectAnalysis.analyzedPatternsCount > 0 ? applyScale(projectAnalysis.tonic, projectAnalysis.scaleType) : startQuickScaleListen()} className="px-2 py-1 rounded cordel-card-sm font-bold flex items-center gap-1 cursor-pointer">
-          {isListeningScale ? <Loader2 className="w-3 h-3 animate-spin text-red-600" /> : <HelpCircle className="w-3 h-3 text-[#9a3412] dark:text-amber-300" />}
-          <span>{isListeningScale ? (isBr ? 'Cante 4s...' : 'Chantez 4s...') : (isBr ? 'Não sei' : 'Je ne sais pas')}</span>
+        <div className="flex items-center gap-1 px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/40">
+          <Target className="w-3.5 h-3.5 text-[#9a3412] dark:text-amber-300" />
+          <span className="font-bold">{isBr ? 'Tropa :' : 'Troupe :'}</span>
+          <button type="button" onClick={() => applyDual(activeSungTonic, activeSungMode, clampTranspositionSemitones(shiftSt - 1))} className="px-1 cordel-btn rounded font-bold flex items-center cursor-pointer"><ChevronLeft className="w-3 h-3" />-1</button>
+          <select value={dualScale.troupeScaleRoot} onChange={(e) => applyDual(activeSungTonic, activeSungMode, computeSemitoneDistance(activeSungTonic, e.target.value))} className="bg-transparent font-bold text-[#9a3412] dark:text-amber-300 cursor-pointer">
+            {NOTE_NAMES.map((n, i) => <option key={n} value={n}>{solfegeNames[i]}</option>)}
+          </select>
+          <span className="font-bold text-[#9a3412] dark:text-amber-300">({stBadge})</span>
+          <button type="button" onClick={() => applyDual(activeSungTonic, activeSungMode, clampTranspositionSemitones(shiftSt + 1))} className="px-1 cordel-btn rounded font-bold flex items-center cursor-pointer">+1<ChevronRight className="w-3 h-3" /></button>
+        </div>
+        <button type="button" onClick={() => { const next = listenTarget === 'sung' ? 'troupe' : 'sung'; loadProject({ ...project, previewListenTarget: next }); engine.playReferencePitchPreview(next === 'troupe' ? dualScale.troupeReferencePitch : dualScale.sungReferencePitch, 1.2, selectedOutputDeviceId); }} className="px-2 py-1 rounded cordel-card-sm font-bold flex items-center gap-1 cursor-pointer" title={isBr ? 'Alternar escuta entre Gravação e Tropa' : "Basculer l'écoute entre Prise et Troupe"}>
+          <Ear className="w-3.5 h-3.5 text-theme-accent" /><span>{listenTarget === 'troupe' ? `${isBr ? 'Tropa' : 'Troupe'} (${dualScale.troupeSolfegeRoot})` : `${isBr ? 'Gravação' : 'Prise'} (${dualScale.sungSolfegeRoot})`}</span>
         </button>
-        <button type="button" onClick={() => applyScale(activeTonic, 'chromatic')} className="px-2 py-1 rounded bg-[#451a03] text-[#f4ecd8] font-bold flex items-center gap-1 cursor-pointer">
+        <button type="button" onClick={() => projectAnalysis.analyzedPatternsCount > 0 ? applyDual(projectAnalysis.tonic, projectAnalysis.scaleType, shiftSt) : startQuickScaleListen()} className="px-2 py-1 rounded cordel-card-sm font-bold flex items-center gap-1 cursor-pointer">
+          {isListeningScale ? <Loader2 className="w-3 h-3 animate-spin text-red-600" /> : <HelpCircle className="w-3 h-3 text-[#9a3412] dark:text-amber-300" />}
+          <span>{isListeningScale ? '4s...' : (isBr ? 'Não sei' : 'Je ne sais pas')}</span>
+        </button>
+        <button type="button" onClick={() => applyDual(activeSungTonic, 'chromatic', shiftSt)} className="px-2 py-1 rounded bg-[#451a03] text-[#f4ecd8] font-bold flex items-center gap-1 cursor-pointer">
           <Unlock className="w-3 h-3" /><span>{isBr ? 'Desativar' : 'Débrayer'}</span>
         </button>
       </div>

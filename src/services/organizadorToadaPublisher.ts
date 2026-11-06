@@ -1,7 +1,7 @@
 /**
  * organizadorToadaPublisher.ts
- * Publication et synchronisation bidirectionnelle Cantador ➔ Organizador vers Firestore /documents (< 125 lignes).
- * Met à jour rawTxtCode ([1]..[4], _), parolesOriginales (<u>L</u>), bpmDefaut, tonaliteDefaut (scaleRoot/scaleMode) et métadonnées.
+ * Publication et synchronisation bidirectionnelle Cantador ➔ Organizador vers Firestore /documents (< 130 lignes).
+ * Envoie tonaliteDefaut (Troupe), tonaliteChanteeOrigine (Prise), transpositionSemitones, bpmDefaut, rawTxtCode et parolesOriginales (<u>).
  */
 import { doc, collection, addDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../firebase/config';
@@ -9,7 +9,8 @@ import { type ToadaProject, DEFAULT_TOADA_BPM } from '../types/toadaProject.type
 import { reconstituteToadaTxt } from '../utils/toadaTxtReconstitutor';
 import { detectToadaLexicon } from '../utils/toadaLexiconDetector';
 import { generateQuizFromLexicon } from '../utils/toadaQuizGenerator';
-import { analyzeFullProjectScale, resolveProjectActiveScale } from '../audio/projectScaleAnalyzer';
+import { analyzeFullProjectScale } from '../audio/projectScaleAnalyzer';
+import { resolveProjectDualScale } from '../utils/scaleTranspositionHelper';
 
 export interface OrganizadorPublishPayloadResult {
   payload: Record<string, any>;
@@ -17,6 +18,8 @@ export interface OrganizadorPublishPayloadResult {
   parolesOriginales: string;
   resolvedBpm: number;
   formattedScaleLabel: string;
+  tonaliteChanteeOrigine: string;
+  transpositionSemitones: number;
   scaleRoot: string;
   scaleMode: string;
   targetGroupId: string;
@@ -45,12 +48,12 @@ export function buildOrganizadorDocumentPayload(
   const resolvedHarmony = project.globalHarmonyGrid || project.toadaMeta?.harmonyGrid || project.patterns[0]?.harmonyGrid || null;
 
   const detected = (project as any).detectedScale || analyzeFullProjectScale(project.patterns || [], 'fr');
-  const resolvedScale = resolveProjectActiveScale(project, 'fr', detected);
-  const formattedScaleLabel = project.toadaMeta?.tonaliteDefaut && !/^[A-G][#b]?\d?$/i.test(project.toadaMeta.tonaliteDefaut.trim())
-    ? project.toadaMeta.tonaliteDefaut.trim()
-    : resolvedScale.label;
-  const scaleRoot = resolvedScale.tonic;
-  const scaleMode = resolvedScale.scaleType;
+  const dualScale = resolveProjectDualScale(project, 'fr', detected);
+  const formattedScaleLabel = dualScale.troupeScaleLabel;
+  const tonaliteChanteeOrigine = dualScale.sungScaleLabel;
+  const transpositionSemitones = dualScale.transpositionSemitones;
+  const scaleRoot = dualScale.troupeScaleRoot;
+  const scaleMode = dualScale.troupeScaleMode;
 
   const meta: any = project.toadaMeta || {};
   const payload: Record<string, any> = {
@@ -69,9 +72,15 @@ export function buildOrganizadorDocumentPayload(
     bpmDefaut: resolvedBpm,
     bpm: resolvedBpm,
     tonaliteDefaut: formattedScaleLabel,
+    tonaliteChanteeOrigine,
+    transpositionSemitones,
+    sungScaleRoot: dualScale.sungScaleRoot,
+    sungScaleMode: dualScale.sungScaleMode,
+    troupeScaleRoot: dualScale.troupeScaleRoot,
     scaleRoot,
     scaleMode,
     cantadorToadaId: project.id,
+    cantadorValidated: true,
     traduction: meta.traduction || '',
     anecdote: meta.anecdote || '',
     notesLexique,
@@ -90,7 +99,8 @@ export function buildOrganizadorDocumentPayload(
 
   return {
     payload, rawTxtCode, parolesOriginales: payload.parolesOriginales,
-    resolvedBpm, formattedScaleLabel, scaleRoot, scaleMode, targetGroupId,
+    resolvedBpm, formattedScaleLabel, tonaliteChanteeOrigine, transpositionSemitones,
+    scaleRoot, scaleMode, targetGroupId,
   };
 }
 
@@ -98,7 +108,7 @@ export async function publishToadaToOrganizador(
   project: ToadaProject,
   groupId: string = 'samambaia'
 ): Promise<{ success: boolean; documentId: string; bpm: number; scaleLabel: string }> {
-  const { payload, resolvedBpm, formattedScaleLabel, targetGroupId } = buildOrganizadorDocumentPayload(project, groupId);
+  const { payload, resolvedBpm, formattedScaleLabel, tonaliteChanteeOrigine, transpositionSemitones, targetGroupId } = buildOrganizadorDocumentPayload(project, groupId);
 
   const existingDocId = project.toadaMeta?.id;
   if (existingDocId) {
@@ -117,6 +127,8 @@ export async function publishToadaToOrganizador(
         toadaDocId: newDocRef.id,
         bpmDefaut: resolvedBpm,
         tonaliteDefaut: formattedScaleLabel,
+        tonaliteChanteeOrigine,
+        transpositionSemitones,
       });
     } catch {}
   }

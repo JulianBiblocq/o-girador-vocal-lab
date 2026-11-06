@@ -1,7 +1,6 @@
 /**
- * slicerAlignmentHelper.ts
- * Calquage des tranches sur les motifs Organizador, gestion des trous Puxador/Coro (with_gaps vs chained),
- * calcul de T1 Maître avec soustraction des silences initiaux et auto-calage (< 145 lignes).
+ * slicerAlignmentHelper.ts — Calquage des tranches sur les motifs Organizador, gestion des trous Puxador/Coro (with_gaps vs chained),
+ * calcul de T1 Maître avec soustraction des silences initiaux et auto-calage (< 142 lignes).
  */
 import type { VocalPatternItem, VocalRole, ToadaArrangementSlot } from '../types/toadaProject.types';
 import type { TimeAnchor } from '../types/toadaDocument.types';
@@ -9,10 +8,8 @@ import type { SliceSegment } from '../types/slicerSegments.types';
 import { resolveFreshTimeAnchors, computeMeasuresCountFromAnchors } from './timeAnchorParser';
 import { computePatternVocalOffsetsBeats } from './subbeatAnchorHelper';
 import { findOptimalAcousticCutSec, findOptimalMasterGridOffsetSec, findVocalTailExtinctionSec } from './slicerBoundaryOptimizer';
-
 export { findOptimalAcousticCutSec, findOptimalMasterGridOffsetSec, findVocalTailExtinctionSec };
 export type SlicerGapMode = 'with_gaps' | 'chained';
-
 function windowRms(pcm: Float32Array, sampleRate: number, t0: number, t1: number): number {
   const i0 = Math.max(0, Math.floor(t0 * sampleRate)), i1 = Math.min(pcm.length, Math.ceil(t1 * sampleRate));
   if (i1 <= i0) return 0;
@@ -89,9 +86,7 @@ function computeGapMeasuresInSlots(slots: ToadaArrangementSlot[] | undefined, al
   return gapM;
 }
 
-export function calculateInitialMasterGridOffsetSec(
-  patterns: VocalPatternItem[], defaultRole: VocalRole, bpm: number, detected: SliceSegment[], slots?: ToadaArrangementSlot[], beatsPerMeasure = 4
-): number {
+export function calculateInitialMasterGridOffsetSec(patterns: VocalPatternItem[], defaultRole: VocalRole, bpm: number, detected: SliceSegment[], slots?: ToadaArrangementSlot[], beatsPerMeasure = 4): number {
   const beatDur = 60 / (bpm || 88), rolePats = patterns.filter((p) => p.role === (defaultRole === 'coro' ? 'coro' : 'puxador')), targetList = rolePats.length > 0 ? rolePats : patterns;
   if (targetList.length === 0 || !detected || detected.length === 0) return 0.1;
   const firstPat = targetList[0], anchors = resolveFreshTimeAnchors(firstPat.rawLineCode, firstPat.timeAnchors, beatsPerMeasure, firstPat.hasAnacrusis === false, firstPat.assignedLyricsText);
@@ -100,7 +95,6 @@ export function calculateInitialMasterGridOffsetSec(
   const initialGapMeasures = computeGapMeasuresInSlots(slots, patterns, null, firstPat.id), firstAudioOnsetSec = detected[0].onsetSec ?? detected[0].startSec ?? 0.8;
   return Math.round(Math.max(0, firstAudioOnsetSec - (initialGapMeasures * beatsPerMeasure + firstVocalOffsetBeats) * beatDur) * 100) / 100;
 }
-
 export function buildOrganizadorSlices(
   patterns: VocalPatternItem[], defaultRole: VocalRole, bpm: number, detected: SliceSegment[],
   gridOffsetSec?: number, slots?: ToadaArrangementSlot[], pcm?: Float32Array | null, sampleRate = 44100, gapMode: SlicerGapMode = 'with_gaps'

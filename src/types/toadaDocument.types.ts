@@ -35,6 +35,11 @@ export interface ToadaDocument {
   notesLexique?: ToadaLexiconEntry[];
   questionsQcm?: ToadaQuizItem[];
   tonaliteDefaut?: string;
+  tonaliteChanteeOrigine?: string;
+  transpositionSemitones?: number;
+  sungScaleRoot?: string;
+  sungScaleMode?: string;
+  troupeScaleRoot?: string;
   bpmDefaut?: number;
   repertoireId?: string;
   harmonyGrid?: PatternHarmonyGrid;

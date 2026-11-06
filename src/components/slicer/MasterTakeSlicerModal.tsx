@@ -1,7 +1,5 @@
 /**
- * MasterTakeSlicerModal.tsx
- * Modale Cordel du Banc de Decoupe Multi-Blocs & Calage Fin avec mémorisation séparée
- * Puxador / Coro et enchaînement guidé (< 145 lignes).
+ * MasterTakeSlicerModal.tsx — Modale Cordel du Banc de Decoupe Multi-Blocs & Calage Fin (< 143 lignes).
  */
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useToadaProject } from '../../context/ToadaProjectContext';
@@ -73,7 +71,6 @@ export const MasterTakeSlicerModal: React.FC<SlicerModalProps> = ({ isOpen, onCl
       if (saved) { setAudio(saved.audio); setSegments(saved.segments); setGridOffsetSec(saved.gridOffsetSec); }
     }
   }, [isOpen, initialAudio, audio, activeRole, defaultRole, project.id, loadAudioWithAutoSlices]);
-
   useEffect(() => {
     if (!isPlaying) { setPlayheadSec(-1); return; }
     let id: number;
@@ -84,7 +81,6 @@ export const MasterTakeSlicerModal: React.FC<SlicerModalProps> = ({ isOpen, onCl
     id = requestAnimationFrame(tick); return () => cancelAnimationFrame(id);
   }, [isPlaying, engine, trimIn]);
   useEffect(() => () => { engine.stop(); }, [engine]);
-
   const handleBatchAssign = async () => {
     if (!audio || isAssigning) return;
     setIsAssigning(true);
@@ -97,7 +93,6 @@ export const MasterTakeSlicerModal: React.FC<SlicerModalProps> = ({ isOpen, onCl
       else { setPostAssignBanner(null); onClose(); }
     } finally { setIsAssigning(false); }
   };
-
   const handleSinglePlay = async () => {
     if (!audio) return;
     if (isPlaying) { engine.stop(); setIsPlaying(false); return; }
@@ -105,7 +100,6 @@ export const MasterTakeSlicerModal: React.FC<SlicerModalProps> = ({ isOpen, onCl
     const slice = piecewiseTimeWarp(audio.pcm, audio.sampleRate, trimIn, trimOut, beatPegs, warpPct, phraseBpm);
     await engine.play({ pcm: slice, sampleRate: audio.sampleRate, loop, witnessClick, targetPegsRelativeSec: targetPegs.map((p) => p - trimIn), onEnded: () => setIsPlaying(false) });
   };
-
   const handleSingleExtract = async () => {
     if (!audio || isExtracting || beatPegs.length < 2) return;
     setIsExtracting(true);

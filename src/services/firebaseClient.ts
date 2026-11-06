@@ -108,11 +108,17 @@ export async function fetchToadaPackById(toadaId: string): Promise<ToadaProject 
     const d = snap.data();
     const globalHarmonyGrid = normalizeHarmonyGrid(d.globalHarmonyGrid || d.harmonyGrid || d.metadata?.globalHarmonyGrid);
     const resolvedBpm = Number(d.bpm || d.metadata?.bpm || d.project?.bpm || DEFAULT_TOADA_BPM);
+    const transpositionSemitones = Number(d.transpositionSemitones ?? d.metadata?.transpositionSemitones ?? d.toadaMeta?.transpositionSemitones ?? 0);
     const toadaMeta = d.toadaMeta || {
       id: d.id || snap.id, titre: d.title || d.metadata?.title || 'Toada Cloud', bpmDefaut: resolvedBpm,
+      tonaliteDefaut: d.troupeKey || d.metadata?.troupeKey, tonaliteChanteeOrigine: d.sungKey || d.metadata?.sungKey,
+      transpositionSemitones,
       notesLexique: normalizeLexiconList(d.notesLexique || d.metadata?.notesLexique),
       questionsQcm: normalizeQuizList(d.questionsQcm || d.metadata?.questionsQcm),
     };
+    if (d.troupeKey) toadaMeta.tonaliteDefaut = d.troupeKey;
+    if (d.sungKey) toadaMeta.tonaliteChanteeOrigine = d.sungKey;
+    toadaMeta.transpositionSemitones = transpositionSemitones;
     if (!toadaMeta.notesLexique?.length && (d.notesLexique || d.metadata?.notesLexique)) toadaMeta.notesLexique = normalizeLexiconList(d.notesLexique || d.metadata?.notesLexique);
     if (!toadaMeta.questionsQcm?.length && (d.questionsQcm || d.metadata?.questionsQcm)) toadaMeta.questionsQcm = normalizeQuizList(d.questionsQcm || d.metadata?.questionsQcm);
     if (globalHarmonyGrid && !toadaMeta.harmonyGrid) toadaMeta.harmonyGrid = globalHarmonyGrid;
@@ -120,6 +126,8 @@ export async function fetchToadaPackById(toadaId: string): Promise<ToadaProject 
     return {
       id: d.id || snap.id, title: d.title || d.metadata?.title || 'Toada Cloud', bpm: resolvedBpm,
       timeSignature: d.timeSignature || d.metadata?.timeSignature || d.project?.timeSignature || '4/4',
+      sungScaleRoot: d.sungScaleRoot || toadaMeta.sungScaleRoot, sungScaleMode: d.sungScaleMode || toadaMeta.sungScaleMode,
+      troupeScaleRoot: d.troupeScaleRoot || toadaMeta.troupeScaleRoot, transpositionSemitones,
       patterns: (d.patterns || []).map((p: any, idx: number) => ({ ...p, cardIndex: p.cardIndex ?? idx, bpm: p.bpm ?? p.baseBpm ?? resolvedBpm, baseBpm: p.baseBpm ?? p.bpm ?? resolvedBpm })),
       slots: d.slots || d.arrangementSlots || [], activePatternId: (d.patterns && d.patterns[0]?.id) || 'pattern_puxador_1',
       toadaMeta, globalHarmonyGrid, harmonyConfig: d.harmonyConfig,

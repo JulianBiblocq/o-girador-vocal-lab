@@ -16,10 +16,12 @@ import { BlockMusicalSettingsCard } from './BlockMusicalSettingsCard';
 import { ScaleProposalBanner } from '../common/ScaleProposalBanner';
 import {
   analyzeFullProjectScale,
-  applyDetectedScaleToProject,
-  resolveProjectActiveScale,
   type ProjectScaleAnalysisResult,
 } from '../../audio/projectScaleAnalyzer';
+import {
+  resolveProjectDualScale,
+  applyDualScaleToProject,
+} from '../../utils/scaleTranspositionHelper';
 import type { ScaleType } from '../../audio/scaleQuantizer';
 
 export function resolveDefaultManualStructureEdit(project: ToadaProject): boolean {
@@ -57,14 +59,14 @@ export const LivretStructure: React.FC = () => {
 
   const timeSignature = project.timeSignature || '4/4';
   const bpm = activePattern.bpm ?? activePattern.baseBpm ?? project.bpm ?? DEFAULT_TOADA_BPM;
-  const resolvedScale = useMemo(
-    () => resolveProjectActiveScale(project, language, scaleProposal || undefined),
+  const dualScale = useMemo(
+    () => resolveProjectDualScale(project, language, scaleProposal || undefined),
     [project, language, scaleProposal]
   );
-  const referencePitch = resolvedScale.referencePitch;
+  const referencePitch = dualScale.troupeReferencePitch;
   const activeScaleLabel =
     project.toadaMeta?.tonaliteDefaut || scaleProposal
-      ? resolvedScale.label
+      ? (dualScale.transpositionSemitones !== 0 ? `${dualScale.troupeScaleLabel} (${dualScale.transpositionSemitones > 0 ? '+' : ''}${dualScale.transpositionSemitones} st)` : dualScale.troupeScaleLabel)
       : (language === 'br' ? 'Auto (Não travada)' : 'Auto (Non verrouillée)');
 
   const handleAnalyzeProjectScale = useCallback(() => {
@@ -77,18 +79,18 @@ export const LivretStructure: React.FC = () => {
   }, [project, loadProject, language]);
 
   const handleApplyScale = useCallback((tonic: string, scaleType: ScaleType, refPitch?: string) => {
-    const updated = applyDetectedScaleToProject(project, tonic, scaleType, refPitch, language);
+    const updated = applyDualScaleToProject(project, tonic, scaleType, dualScale.transpositionSemitones, refPitch, language);
     loadProject(updated);
     setScaleProposal(null);
-  }, [project, loadProject, language]);
+  }, [project, loadProject, dualScale.transpositionSemitones, language]);
 
   const handleDisengageFreeMode = useCallback(() => {
-    const tonic = scaleProposal?.tonic || resolvedScale.tonic || 'A';
-    const refPitch = scaleProposal?.referencePitch || referencePitch;
-    const updated = applyDetectedScaleToProject(project, tonic, 'chromatic', refPitch, language);
+    const tonic = scaleProposal?.tonic || dualScale.sungScaleRoot || 'A';
+    const refPitch = scaleProposal?.referencePitch || dualScale.sungReferencePitch;
+    const updated = applyDualScaleToProject(project, tonic, 'chromatic', dualScale.transpositionSemitones, refPitch, language);
     loadProject(updated);
     setScaleProposal(null);
-  }, [project, loadProject, scaleProposal, resolvedScale.tonic, referencePitch, language]);
+  }, [project, loadProject, scaleProposal, dualScale, language]);
 
   return (
     <div className="flex flex-col gap-3.5 w-full">
