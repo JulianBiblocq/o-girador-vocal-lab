@@ -24,10 +24,11 @@ export interface ScaleLockBarProps {
   tonic: string; scaleType: ScaleType; customPitchClasses?: number[] | null;
   pitchCurve: PitchCurvePoint[]; defaultKeyStr?: string;
   onUpdateScale: (tonic: string, scaleType: ScaleType, customPitchClasses: number[] | null) => void;
+  onAnalyzeFullProjectScale?: () => void;
 }
 
 export const ScaleLockBar: React.FC<ScaleLockBarProps> = ({
-  tonic, scaleType, customPitchClasses = null, pitchCurve, defaultKeyStr, onUpdateScale,
+  tonic, scaleType, customPitchClasses = null, pitchCurve, defaultKeyStr, onUpdateScale, onAnalyzeFullProjectScale,
 }) => {
   const [isLearning, setIsLearning] = useState(false), [countdown, setCountdown] = useState(5);
   const [lastActiveMode, setLastActiveMode] = useState<ScaleType>('natural_minor');
@@ -116,11 +117,15 @@ export const ScaleLockBar: React.FC<ScaleLockBarProps> = ({
 
         <button
           type="button"
-          onClick={() => { const det = detectBestScaleFromPitchCurve(pitchCurve, defaultKeyStr); onUpdateScale(det.tonic, det.scaleType, null); }}
+          onClick={() => {
+            if (onAnalyzeFullProjectScale) onAnalyzeFullProjectScale();
+            const det = detectBestScaleFromPitchCurve(pitchCurve, defaultKeyStr);
+            onUpdateScale(det.tonic, det.scaleType, null);
+          }}
           className="px-2.5 py-1 rounded cordel-card-sm hover:border-amber-500 font-bold flex items-center gap-1 cursor-pointer text-amber-600 dark:text-amber-300"
-          title="Détecter la tonique et le mode depuis la courbe verte de la voix"
+          title="Analyser la gamme sur l'ensemble des phrases enregistrées du chant"
         >
-          <Target className="w-3.5 h-3.5" /><span>🎯 Détecter la gamme sur la voix</span>
+          <Target className="w-3.5 h-3.5" /><span>🔍 Analyser la gamme du chant</span>
         </button>
       </div>
 

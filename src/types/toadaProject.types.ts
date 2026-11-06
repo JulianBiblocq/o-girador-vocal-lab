@@ -74,7 +74,7 @@ export interface VocalPatternItem {
   melodyneRegions?: MelodyneRegion[]; assignedLyricsText?: string; assignedPhoneticText?: string;
   variantPitchesConfig?: VariantPitchesConfig; variantSpeedsConfig?: VariantSpeedsConfig;
   harmonyGrid?: PatternHarmonyGrid;
-  timeAnchors?: TimeAnchor[]; exitBeat?: number;
+  timeAnchors?: TimeAnchor[]; exitBeat?: number; hasTailBeat?: boolean;
 }
 
 export interface VariantPitchesConfig {
@@ -95,6 +95,7 @@ export interface ToadaArrangementSlot {
 export interface ToadaProject {
   id: string;
   title: string;
+  source?: 'organizador' | 'local';
   bpm: number;
   timeSignature: TimeSignatureString;
   patterns: VocalPatternItem[];

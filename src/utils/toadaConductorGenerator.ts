@@ -110,6 +110,7 @@ export function generateToadaFromSheet(project: ToadaProject, parsed: ParsedToad
   const globalHarmony = parsed.docMeta?.globalHarmonyGrid || parsed.docMeta?.harmonyGrid || project.globalHarmonyGrid;
   const generated: ToadaProject = {
     ...project,
+    source: 'organizador',
     title: parsed.docMeta?.titre || project.title,
     bpm: targetBpm,
     timeSignature: (parsed.docMeta?.signature as any) || project.timeSignature,

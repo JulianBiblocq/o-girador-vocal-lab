@@ -51,6 +51,7 @@ export const ToadaLibraryDropdown: React.FC<Props> = ({ onOpenOrganizador, group
     if (ok) {
       const fresh = createDefaultToadaProject();
       fresh.title = `Toada ${toadas.length + 1}`;
+      fresh.source = 'local';
       loadProject(fresh);
     }
   };

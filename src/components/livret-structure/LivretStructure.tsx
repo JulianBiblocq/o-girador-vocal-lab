@@ -1,83 +1,127 @@
 /**
  * LivretStructure.tsx
- * Livret 1 : Structure & Chant (Bibliothèque, Conducteur, Grille d'accords, Paroles & Réglages Métriques) (< 90 lignes).
+ * Livret 1 : Structure & Chant épuré (Mode Organizador par défaut vs Mode Création / Édition Manuelle,
+ * Bandeau Tempo/Batuque/Gamme, Bibliothèque avec badges [XM] [+Ana] [+1T], Conducteur et Paroles) (< 130 lignes).
  */
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import type { ToadaProject } from '../../types/toadaProject.types';
+import { DEFAULT_TOADA_BPM } from '../../types/toadaProject.types';
 import { useToadaProject } from '../../context/ToadaProjectContext';
 import { useAudioHardware } from '../../context/AudioHardwareContext';
 import { PatternLibraryBar } from '../conductor/PatternLibraryBar';
 import { ToadaConductorStrip } from '../conductor/ToadaConductorStrip';
-import { ChordGridBar } from '../common/ChordGridBar';
-import { PatternLyricsBanner } from '../livret-prise/PatternLyricsBanner';
-import { StructureMusicConfigPanel } from './StructureMusicConfigPanel';
-import { PreTakeSetupAssistantBar } from '../prise/PreTakeSetupAssistantBar';
-import { getDefaultBeatResolutions } from '../../utils/alignmentMath';
-import { getBeatsPerMeasure } from '../../utils/musicalMath';
-import { DEFAULT_TOADA_BPM } from '../../types/toadaProject.types';
+import { StructureTopControls } from './StructureTopControls';
+import { BlockMusicalSettingsCard } from './BlockMusicalSettingsCard';
+import { ScaleProposalBanner } from '../common/ScaleProposalBanner';
+import {
+  analyzeFullProjectScale,
+  applyDetectedScaleToProject,
+  type ProjectScaleAnalysisResult,
+} from '../../audio/projectScaleAnalyzer';
+import type { ScaleType } from '../../audio/scaleQuantizer';
+
+export function resolveDefaultManualStructureEdit(project: ToadaProject): boolean {
+  if (project.source === 'local') return true;
+  if (project.source === 'organizador' || project.toadaMeta?.id || project.toadaMeta?.repertoireId || project.sheetLines?.length) {
+    return false;
+  }
+  return false;
+}
 
 export const LivretStructure: React.FC = () => {
   const {
-    project, activePattern, updatePattern,
-    updateScopedBpm, updateScopedMeasuresCount, updateScopedHasAnacrusis,
-    updateScopedReferencePitch, updateScopedTimeSignature,
+    project, activePattern, loadProject, updatePattern,
+    updateScopedBpm, updateScopedMeasuresCount, updateScopedHasAnacrusis, updateScopedTimeSignature,
   } = useToadaProject();
   const { engine, selectedOutputDeviceId } = useAudioHardware();
 
+  const [isManualStructureEdit, setIsManualStructureEdit] = useState<boolean>(() =>
+    resolveDefaultManualStructureEdit(project)
+  );
+  const [scaleProposal, setScaleProposal] = useState<ProjectScaleAnalysisResult | null>(null);
+
+  useEffect(() => {
+    setIsManualStructureEdit(resolveDefaultManualStructureEdit(project));
+  }, [project.id, project.source]);
+
+  useEffect(() => {
+    if (project.toadaMeta?.tonaliteDefaut || scaleProposal) return;
+    const hasAnyAudio = project.patterns.some((p) => Boolean(p.rawPitchCurve?.length || p.pitchCurve?.length || p.rawAudioSamples?.length || p.recordingResult?.pcm?.length));
+    if (!hasAnyAudio) return;
+    const res = analyzeFullProjectScale(project.patterns);
+    if (res.analyzedPatternsCount > 0) setScaleProposal(res);
+  }, [project.patterns, project.toadaMeta?.tonaliteDefaut, scaleProposal]);
+
   const timeSignature = project.timeSignature || '4/4';
   const bpm = activePattern.bpm ?? activePattern.baseBpm ?? project.bpm ?? DEFAULT_TOADA_BPM;
-  const referencePitch = activePattern.referencePitch ?? 'C4';
-  const [beatResolutions, setBeatResolutions] = useState<number[]>(() => getDefaultBeatResolutions(timeSignature));
+  const referencePitch =
+    scaleProposal?.referencePitch ??
+    (activePattern.referencePitch && activePattern.referencePitch !== 'C4' ? activePattern.referencePitch : (project.patterns.find((p) => p.referencePitch && p.referencePitch !== 'C4')?.referencePitch || activePattern.referencePitch || 'A3'));
+  const activeScaleLabel = project.toadaMeta?.tonaliteDefaut || scaleProposal?.label || 'Auto (Non verrouillée)';
 
-  const measuresCount = activePattern.measuresCount;
-  const hasAnacrusis = activePattern.hasAnacrusis !== false;
-  const beatsPerMeasure = getBeatsPerMeasure(timeSignature);
+  const handleAnalyzeProjectScale = useCallback(() => {
+    const res = analyzeFullProjectScale(project.patterns);
+    setScaleProposal(res);
+    loadProject({
+      ...project,
+      patterns: res.updatedPatterns.map((p) => ({ ...p, referencePitch: res.referencePitch })),
+    });
+  }, [project, loadProject]);
+
+  const handleApplyScale = useCallback((tonic: string, scaleType: ScaleType, refPitch?: string) => {
+    const updated = applyDetectedScaleToProject(project, tonic, scaleType, refPitch);
+    loadProject(updated);
+    setScaleProposal(null);
+  }, [project, loadProject]);
+
+  const handleDisengageFreeMode = useCallback(() => {
+    const tonic = scaleProposal?.tonic || 'A';
+    const refPitch = scaleProposal?.referencePitch || referencePitch;
+    const updated = applyDetectedScaleToProject(project, tonic, 'chromatic', refPitch);
+    loadProject(updated);
+    setScaleProposal(null);
+  }, [project, loadProject, scaleProposal, referencePitch]);
 
   return (
-    <div className="flex flex-col gap-4 w-full">
-      <PreTakeSetupAssistantBar />
-
-      {/* 1. Bibliothèque de Patterns et Conducteur 2 rails */}
-      <div className="w-full grid grid-cols-1 xl:grid-cols-12 gap-4 items-stretch">
-        <div className="xl:col-span-5 h-full">
-          <PatternLibraryBar />
-        </div>
-        <div className="xl:col-span-7 h-full">
-          <ToadaConductorStrip outputDeviceId={selectedOutputDeviceId} />
-        </div>
-      </div>
-
-      {/* 2. Paroles & Grille Harmonique d'accords du pattern actif */}
-      <div className="flex flex-col gap-2">
-        <PatternLyricsBanner />
-        <div className="cordel-card p-2 rounded">
-          <ChordGridBar
-            harmonyGrid={activePattern.harmonyGrid}
-            measuresCount={measuresCount}
-            beatsPerMeasure={beatsPerMeasure}
-            hasAnacrusis={hasAnacrusis}
-            onUpdateGrid={(newGrid) => updatePattern(activePattern.id, { harmonyGrid: newGrid })}
-          />
-        </div>
-      </div>
-
-      {/* 3. Réglages musicaux (BPM, Signature, Mesures, Portée, Anacrouse, Tonalité) */}
-      <StructureMusicConfigPanel
-        timeSignature={timeSignature}
-        onTimeSignatureChange={(sig) => {
-          updateScopedTimeSignature(sig);
-          setBeatResolutions(getDefaultBeatResolutions(sig));
-        }}
+    <div className="flex flex-col gap-3.5 w-full">
+      <StructureTopControls
+        projectId={project.id}
         bpm={bpm}
         onBpmChange={(v) => updateScopedBpm(v)}
-        measuresCount={measuresCount}
-        onMeasuresCountChange={(c) => updateScopedMeasuresCount(c as 1 | 2 | 3 | 4)}
-        hasAnacrusis={hasAnacrusis}
-        onHasAnacrusisChange={(has) => updateScopedHasAnacrusis(has)}
+        activeScaleLabel={activeScaleLabel}
         referencePitch={referencePitch}
-        onReferencePitchChange={(p) => updateScopedReferencePitch(p)}
-        onPlayPitchPreview={() => engine.playReferencePitchPreview(referencePitch, 1.5, selectedOutputDeviceId)}
-        beatResolutions={beatResolutions}
-        onBeatResolutionsChange={setBeatResolutions}
+        onPlayTonicPreview={() => engine.playReferencePitchPreview(referencePitch, 1.5, selectedOutputDeviceId)}
+        onAnalyzeProjectScale={handleAnalyzeProjectScale}
+        isManualStructureEdit={isManualStructureEdit}
+        onToggleManualStructureEdit={() => setIsManualStructureEdit((prev) => !prev)}
+      />
+
+      <ScaleProposalBanner
+        proposal={scaleProposal}
+        onApplyScale={handleApplyScale}
+        onKeepUncertain={handleApplyScale}
+        onDisengageFreeMode={handleDisengageFreeMode}
+        onDismiss={() => setScaleProposal(null)}
+      />
+
+      <div className="w-full grid grid-cols-1 xl:grid-cols-12 gap-4 items-stretch">
+        <div className="xl:col-span-5 h-full">
+          <PatternLibraryBar isManualStructureEdit={isManualStructureEdit} />
+        </div>
+        <div className="xl:col-span-7 h-full">
+          <ToadaConductorStrip outputDeviceId={selectedOutputDeviceId} isManualStructureEdit={isManualStructureEdit} />
+        </div>
+      </div>
+
+      <BlockMusicalSettingsCard
+        activePattern={activePattern}
+        timeSignature={timeSignature}
+        isManualStructureEdit={isManualStructureEdit}
+        onTimeSignatureChange={(sig) => updateScopedTimeSignature(sig)}
+        onMeasuresCountChange={(cnt) => updateScopedMeasuresCount(cnt)}
+        onHasAnacrusisChange={(has) => updateScopedHasAnacrusis(has)}
+        onHasTailBeatChange={(has) => updatePattern(activePattern.id, { hasTailBeat: has, exitBeat: has ? 1 : undefined })}
+        onLyricsChange={(lyrics) => updatePattern(activePattern.id, { assignedLyricsText: lyrics })}
       />
     </div>
   );

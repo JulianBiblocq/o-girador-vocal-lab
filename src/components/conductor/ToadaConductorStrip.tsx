@@ -12,7 +12,9 @@ import { ConductorLiveTempoControl } from './ConductorLiveTempoControl';
 import { ConductorWaveformTimeline } from './ConductorWaveformTimeline';
 import { ConductorBackingAndLoopBar, type ConductorLoopRange } from './ConductorBackingAndLoopBar';
 
-export const ToadaConductorStrip: React.FC<{ outputDeviceId?: string }> = ({ outputDeviceId }) => {
+export const ToadaConductorStrip: React.FC<{ outputDeviceId?: string; isManualStructureEdit?: boolean }> = ({
+  outputDeviceId, isManualStructureEdit = false,
+}) => {
   const { project, addSlot, removeSlot, updateSlot, reorderSlots, loadProject } = useToadaProject();
   const { t } = useLanguage();
   const [isPlaying, setIsPlaying] = useState(false), [currentSlotIdx, setCurrentSlotIdx] = useState<number | null>(null);
@@ -28,16 +30,10 @@ export const ToadaConductorStrip: React.FC<{ outputDeviceId?: string }> = ({ out
   useEffect(() => () => { player.stop(); }, [player]);
 
   const handleTogglePlay = async () => {
-    if (isPlaying) {
-      player.stop(); setIsPlaying(false); setCurrentSlotIdx(null);
-    } else {
+    if (isPlaying) { player.stop(); setIsPlaying(false); setCurrentSlotIdx(null); }
+    else {
       setIsPlaying(true);
-      await player.play(
-        { ...project, bpm: liveBpm }, outputDeviceId,
-        (slotIdx) => setCurrentSlotIdx(slotIdx),
-        () => { setIsPlaying(false); setCurrentSlotIdx(null); },
-        loopRange
-      );
+      await player.play({ ...project, bpm: liveBpm }, outputDeviceId, (idx) => setCurrentSlotIdx(idx), () => { setIsPlaying(false); setCurrentSlotIdx(null); }, loopRange);
     }
   };
 
@@ -52,12 +48,16 @@ export const ToadaConductorStrip: React.FC<{ outputDeviceId?: string }> = ({ out
         </span>
         <div className="flex items-center gap-1.5 flex-wrap">
           <ConductorLiveTempoControl liveBpm={liveBpm} projectBpm={project.bpm || 88} onBpmChange={handleLiveBpmChange} onApplyBpmToProject={handleApplyLiveBpm} />
-          <button type="button" onClick={() => addSlot()} className="px-2 py-0.5 text-[11px] font-bold font-mono cordel-card-sm rounded flex items-center gap-1 cursor-pointer">
-            <Plus className="w-3 h-3 text-theme-accent" /><span>{t('addConductorBlock')}</span>
-          </button>
-          <button type="button" onClick={() => addSlot(2)} className="px-2 py-0.5 text-[11px] font-bold font-mono cordel-card-sm rounded flex items-center gap-1 cursor-pointer text-amber-800 dark:text-amber-300" title={t('conductorAddSilenceBtn')}>
-            <VolumeX className="w-3 h-3" /><span>{t('conductorAddSilenceBtn')}</span>
-          </button>
+          {isManualStructureEdit && (
+            <>
+              <button type="button" onClick={() => addSlot()} className="px-2 py-0.5 text-[11px] font-bold font-mono cordel-card-sm rounded flex items-center gap-1 cursor-pointer">
+                <Plus className="w-3 h-3 text-theme-accent" /><span>{t('addConductorBlock')}</span>
+              </button>
+              <button type="button" onClick={() => addSlot(2)} className="px-2 py-0.5 text-[11px] font-bold font-mono cordel-card-sm rounded flex items-center gap-1 cursor-pointer text-amber-800 dark:text-amber-300" title={t('conductorAddSilenceBtn')}>
+                <VolumeX className="w-3 h-3" /><span>{t('conductorAddSilenceBtn')}</span>
+              </button>
+            </>
+          )}
           <button type="button" onClick={handleTogglePlay} className={`px-2.5 py-0.5 text-[11px] font-bold font-mono rounded flex items-center gap-1.5 cursor-pointer ${isPlaying ? 'bg-red-800 text-white font-bold animate-pulse' : 'cordel-btn-primary'}`}>
             {isPlaying ? <Square className="w-3 h-3 fill-current" /> : <Play className="w-3 h-3 fill-current" />}
             <span>{isPlaying ? t('stopFullToada') : t('playFullToada')}</span>
@@ -109,7 +109,7 @@ export const ToadaConductorStrip: React.FC<{ outputDeviceId?: string }> = ({ out
                       {[1, 2, 3, 4, 5, 6, 7, 8].map((m) => <option key={m} value={m} className="bg-[var(--cordel-surface)] text-[var(--cordel-text)]">{m}M</option>)}
                     </select>
                   )}
-                  {project.slots.length > 1 && (
+                  {project.slots.length > 1 && isManualStructureEdit && (
                     <button type="button" onClick={() => removeSlot(slot.slotId)} className="p-0.5 text-[var(--cordel-text)]/50 hover:text-red-500 cursor-pointer"><X className="w-2.5 h-2.5" /></button>
                   )}
                 </div>

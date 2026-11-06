@@ -124,3 +124,4 @@ export function drawVariAudioPulledCurveOverlay(
     i += ties;
   }
 }
+

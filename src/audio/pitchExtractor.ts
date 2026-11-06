@@ -81,7 +81,7 @@ export function extractContinuousPitchCurve(pcm: Float32Array, options: PitchExt
         if (Number.isFinite(freq) && freq >= minFreq && freq <= maxFreq) {
           const midiFloat = frequencyToMidiFloat(freq);
           if (Number.isFinite(midiFloat)) {
-            const conf = Math.max(0.02, 1 - diff[tau]);
+            const conf = Math.max(0.02, 1 - diff[tau] - (tau / maxPeriod) * 0.035);
             frameCandidates.push({ midiFloat, aperiodicity: diff[tau], confidence: conf, folded: false });
 
           // Repliement d'harmonique dans la plage Plancher/Plafond

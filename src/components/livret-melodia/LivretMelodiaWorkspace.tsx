@@ -29,11 +29,12 @@ export interface LivretMelodiaWorkspaceProps {
   anacrusisDurationSec?: number; beatsPerMeasure?: number; measuresCount?: number; pitchCurve?: PitchCurvePoint[];
   initialSteps?: VocalStepData[]; outputDeviceId?: string; pitchShiftSemitones?: number;
   onBackToPrise?: () => void; onPackUpdated?: (pack: VocalPackExport) => void;
+  onAnalyzeFullProjectScale?: () => void;
 }
 
 export const LivretMelodiaWorkspace: React.FC<LivretMelodiaWorkspaceProps> = ({
   initialPack, cleanPCM, sampleRate = 44100, totalDurationSec = 4, anacrusisDurationSec = 0, beatsPerMeasure = 4,
-  measuresCount = 2, pitchCurve = [], initialSteps, outputDeviceId, pitchShiftSemitones = 0, onBackToPrise, onPackUpdated,
+  measuresCount = 2, pitchCurve = [], initialSteps, outputDeviceId, pitchShiftSemitones = 0, onBackToPrise, onPackUpdated, onAnalyzeFullProjectScale,
 }) => {
   const { t } = useLanguage(), { activePattern, updatePattern, project, updateHarmonyConfig } = useToadaProject();
   const [activeTool, setActiveTool] = useState<PianoRollTool>('pointer'), [selectedStepIdx, setSelectedStepIdx] = useState<number | null>(null);
@@ -116,7 +117,7 @@ export const LivretMelodiaWorkspace: React.FC<LivretMelodiaWorkspaceProps> = ({
     <div className="flex flex-col gap-3 w-full">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex-1 min-w-[280px]">
-          <ScaleLockBar tonic={tonic} scaleType={scaleType} customPitchClasses={customPitchClasses} pitchCurve={rawPitchCurve} defaultKeyStr={project.toadaMeta?.tonaliteDefaut || initialPack.metadata.referencePitch} onUpdateScale={(ton, st, cust) => { setTonic(ton); setScaleType(st); setCustomPitchClasses(cust); handleSnapToGreenLine(ton, st, cust); }} />
+          <ScaleLockBar tonic={tonic} scaleType={scaleType} customPitchClasses={customPitchClasses} pitchCurve={rawPitchCurve} defaultKeyStr={project.toadaMeta?.tonaliteDefaut || initialPack.metadata.referencePitch} onUpdateScale={(ton, st, cust) => { setTonic(ton); setScaleType(st); setCustomPitchClasses(cust); handleSnapToGreenLine(ton, st, cust); }} onAnalyzeFullProjectScale={onAnalyzeFullProjectScale} />
         </div>
         <HarmonyProfileSelector config={harmonyConfig} onChange={updateHarmonyConfig} />
       </div>
