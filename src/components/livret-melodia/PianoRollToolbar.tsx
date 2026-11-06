@@ -1,79 +1,87 @@
 /**
  * PianoRollToolbar.tsx
- * Barre d'outils du Piano Roll unifiée sur 1 seule ligne avec support i18n pur via t (< 130 lignes).
+ * Barre d'outils épurée façon Cubase VariAudio :
+ * 5 outils (Sélection, Crayon, Ciseaux, Colle, Gomme), [ 🎯 Poser les notes sur la ligne verte ],
+ * [ 🔄 Réinitialiser Rythme & Notes ] et Correction Voix Globale (0..100%) (< 120 lignes).
  */
 import React from 'react';
 import type { PianoRollTool } from './pianoRollInteractions';
-import { SCALE_DEFINITIONS, type ScaleType } from '../../audio/scaleQuantizer';
-import { NOTE_NAMES } from '../../utils/noteUtils';
-import { MousePointer, Link2, Scissors, Eraser, Type, ZoomIn, Undo2, Redo2, RefreshCw, Wand2, Ruler } from 'lucide-react';
+import { MousePointer, Pencil, Scissors, Link2, Eraser, ZoomIn, Undo2, Redo2, RefreshCw, Target, X } from 'lucide-react';
 import { useLanguage } from '../../i18n/LanguageContext';
-import type { TranslationKey } from '../../i18n/i18n.types';
 import { confirmAsync } from '../../stores/useCordelDialogStore';
 
-interface PianoRollToolbarProps {
-  activeTool: PianoRollTool; onSelectTool: (tool: PianoRollTool) => void;
-  zoomLevel: number; onSetZoom: (zoom: number) => void;
-  tonic: string; onSetTonic: (t: string) => void;
-  scaleType: ScaleType; onSetScaleType: (st: ScaleType) => void;
-  smoothingLevel: number; onSetSmoothingLevel: (lvl: number) => void;
-  canUndo?: boolean; canRedo?: boolean; historyCount?: number;
-  onUndo?: () => void; onRedo?: () => void; onReExtractNotes?: () => void;
-  onSimplifyMelody?: () => void; onWeldSelected?: () => void;
+export interface PianoRollToolbarProps {
+  activeTool: PianoRollTool;
+  onSelectTool: (tool: PianoRollTool) => void;
+  zoomLevel: number;
+  onSetZoom: (zoom: number) => void;
+  canUndo?: boolean;
+  canRedo?: boolean;
+  historyCount?: number;
+  onUndo?: () => void;
+  onRedo?: () => void;
+  onSnapToGreenLine?: () => void;
+  onReExtractNotes?: () => void;
+  globalVariAudioPct?: number;
+  onChangeGlobalVariAudioPct?: (pct: number) => void;
+  onPurgeVariAudio?: () => void;
 }
-
-const SCALE_I18N_KEYS: Record<ScaleType, TranslationKey> = {
-  chromatic: 'scaleChromatic', major: 'scaleMajor', minor: 'scaleNaturalMinor', natural_minor: 'scaleNaturalMinor',
-  mixolydian: 'scaleMixolydian', dorian: 'scaleDorian', harmonic_minor: 'scaleNaturalMinor', pentatonic_minor: 'scalePentatonicMinor', pentatonic_major: 'scalePentatonicMajor',
-};
 
 export const PianoRollToolbar: React.FC<PianoRollToolbarProps> = (props) => {
   const {
-    activeTool, onSelectTool, zoomLevel, onSetZoom, tonic, onSetTonic,
-    scaleType, onSetScaleType, smoothingLevel, onSetSmoothingLevel,
-    canUndo, canRedo, historyCount, onUndo, onRedo, onReExtractNotes, onSimplifyMelody, onWeldSelected,
+    activeTool, onSelectTool, zoomLevel, onSetZoom,
+    canUndo, canRedo, historyCount, onUndo, onRedo,
+    onSnapToGreenLine, onReExtractNotes,
+    globalVariAudioPct = 0, onChangeGlobalVariAudioPct, onPurgeVariAudio,
   } = props;
   const { t } = useLanguage();
 
   const tools: { id: PianoRollTool; label: string; icon: React.FC<{ className?: string }> }[] = [
-    { id: 'pointer', label: t('toolPointer'), icon: MousePointer }, { id: 'glue', label: t('toolGlue'), icon: Link2 },
-    { id: 'cut', label: t('toolCut'), icon: Scissors }, { id: 'melodyne_cut', label: t('toolMelodyneCut'), icon: Wand2 },
-    { id: 'erase', label: t('toolErase'), icon: Eraser }, { id: 'text', label: t('toolText'), icon: Type },
+    { id: 'pointer', label: '🖱️ Sélection', icon: MousePointer },
+    { id: 'draw_move', label: '✏️ Crayon', icon: Pencil },
+    { id: 'cut', label: '✂️ Ciseaux', icon: Scissors },
+    { id: 'glue', label: '🔗 Colle (Souder)', icon: Link2 },
+    { id: 'erase', label: '🗑️ Gomme', icon: Eraser },
   ];
 
   return (
-    <div className="cordel-card p-2 w-full flex flex-wrap items-center justify-between gap-3 select-none">
-      <div className="flex items-center gap-2">
+    <div className="cordel-card p-2 w-full flex flex-wrap items-center justify-between gap-2 select-none">
+      <div className="flex flex-wrap items-center gap-2">
         <div className="flex items-center border border-[var(--cordel-border-sub)] rounded overflow-hidden">
           {tools.map((item) => {
             const Icon = item.icon, isActive = activeTool === item.id;
             return (
-              <button key={item.id} type="button" onClick={() => onSelectTool(item.id)} title={item.label} className={`px-2 py-1 text-xs font-mono flex items-center gap-1 border-r last:border-r-0 border-[var(--cordel-border-sub)] transition-all cursor-pointer ${isActive ? 'bg-theme-wood text-[#f4ecd8] font-bold' : 'text-theme-ink/75 hover:bg-white/10 hover:text-theme-ink'}`}>
-                <Icon className="w-3.5 h-3.5" /><span className="hidden xl:inline">{item.label}</span>
+              <button
+                key={item.id} type="button" onClick={() => onSelectTool(item.id)} title={item.label}
+                className={`px-2 py-1 text-xs font-mono flex items-center gap-1 border-r last:border-r-0 border-[var(--cordel-border-sub)] transition-all cursor-pointer ${
+                  isActive ? 'bg-theme-wood text-[#f4ecd8] font-bold' : 'text-theme-ink/75 hover:bg-white/10 hover:text-theme-ink'
+                }`}
+              >
+                <Icon className="w-3.5 h-3.5" /><span className="hidden lg:inline">{item.label}</span>
               </button>
             );
           })}
         </div>
 
         <div className="flex items-center border border-[var(--cordel-border-sub)] rounded overflow-hidden">
-          <button type="button" onClick={onUndo} disabled={!canUndo} title={t('undo')} className={`px-2 py-1 text-xs font-mono flex items-center gap-1 border-r border-[var(--cordel-border-sub)] transition-all cursor-pointer ${canUndo ? 'text-theme-ink hover:bg-white/10' : 'text-stone-600 cursor-not-allowed opacity-40'}`}>
+          <button type="button" onClick={onUndo} disabled={!canUndo} title={t('undo')} className={`px-2 py-1 text-xs font-mono flex items-center gap-1 border-r border-[var(--cordel-border-sub)] cursor-pointer ${canUndo ? 'text-theme-ink hover:bg-white/10' : 'text-stone-600 cursor-not-allowed opacity-40'}`}>
             <Undo2 className="w-3.5 h-3.5" />{historyCount !== undefined && historyCount > 0 && <span className="text-[10px] text-theme-accent font-bold">({historyCount})</span>}
           </button>
-          <button type="button" onClick={onRedo} disabled={!canRedo} title={t('redo')} className={`px-2 py-1 text-xs font-mono flex items-center gap-1 transition-all cursor-pointer ${canRedo ? 'text-theme-ink hover:bg-white/10' : 'text-stone-600 cursor-not-allowed opacity-40'}`}>
+          <button type="button" onClick={onRedo} disabled={!canRedo} title={t('redo')} className={`px-2 py-1 text-xs font-mono flex items-center gap-1 cursor-pointer ${canRedo ? 'text-theme-ink hover:bg-white/10' : 'text-stone-600 cursor-not-allowed opacity-40'}`}>
             <Redo2 className="w-3.5 h-3.5" />
           </button>
         </div>
 
-        {onSimplifyMelody && (
-          <button type="button" onClick={onSimplifyMelody} title={t('simplifyMelodyTooltip')} className="px-2 py-1 text-xs font-mono font-bold flex items-center gap-1 border border-emerald-600/50 bg-emerald-600/15 text-emerald-900 dark:text-emerald-300 hover:bg-emerald-600/25 transition-all rounded cursor-pointer">
-            <Ruler className="w-3.5 h-3.5" /><span>{t('simplifyMelodyBtn')}</span>
+        {onSnapToGreenLine && (
+          <button
+            type="button" onClick={onSnapToGreenLine}
+            title="Garde le rythme et les syllabes intacts et pose chaque brique MIDI exactement sur la courbe verte de la voix"
+            className="px-2.5 py-1 text-xs font-mono font-bold flex items-center gap-1.5 border border-emerald-500/60 bg-emerald-600/15 text-emerald-900 dark:text-emerald-300 hover:bg-emerald-600/25 rounded cursor-pointer"
+          >
+            <Target className="w-3.5 h-3.5" /><span>🎯 Poser les notes sur la ligne verte</span>
           </button>
         )}
-        {onWeldSelected && (
-          <button type="button" onClick={onWeldSelected} title={t('weldBricksTooltip')} className="px-2 py-1 text-xs font-mono font-bold flex items-center gap-1 cordel-card-sm rounded cursor-pointer">
-            <Link2 className="w-3.5 h-3.5 text-theme-accent" /><span className="hidden lg:inline">{t('weldBricksBtn')}</span>
-          </button>
-        )}
+
         {onReExtractNotes && (
           <button
             type="button"
@@ -81,47 +89,40 @@ export const PianoRollToolbar: React.FC<PianoRollToolbarProps> = (props) => {
               const ok = await confirmAsync({ title: t('reExtractNotes'), message: t('reExtractNotesConfirm'), confirmLabel: t('dialogConfirm'), cancelLabel: t('dialogCancel'), variant: 'warning' });
               if (ok) onReExtractNotes();
             }}
-            title={t('reExtractNotesTooltip')}
-            className="px-2 py-1 text-xs font-mono flex items-center gap-1 border border-amber-500/50 bg-amber-500/15 dark:bg-amber-950/30 text-amber-900 dark:text-amber-300 hover:bg-amber-500/25 dark:hover:bg-amber-900/50 transition-all rounded cursor-pointer"
+            title="Recalcule le découpage rythmique Maracatu et les hauteurs depuis l'onde"
+            className="px-2.5 py-1 text-xs font-mono font-bold flex items-center gap-1.5 border border-amber-500/50 bg-amber-500/15 text-amber-900 dark:text-amber-300 hover:bg-amber-500/25 rounded cursor-pointer"
           >
-            <RefreshCw className="w-3.5 h-3.5" /><span className="hidden xl:inline">{t('reExtractNotes')}</span>
+            <RefreshCw className="w-3.5 h-3.5" /><span>🔄 Réinitialiser Rythme & Notes</span>
           </button>
         )}
       </div>
 
-      <div className="flex items-center gap-3 text-[11px] font-mono">
-        <div className="flex items-center gap-1.5">
-          <span className="text-theme-ink/75 font-bold">{t('scaleLabel')} :</span>
-          <select value={tonic} onChange={(e) => onSetTonic(e.target.value)} className="cordel-card-sm px-1.5 py-0.5 text-theme-accent font-bold outline-none rounded cursor-pointer">
-            {NOTE_NAMES.map((n) => <option key={n} value={n} className="bg-theme-bg text-theme-ink">{n}</option>)}
-          </select>
-          <select value={scaleType} onChange={(e) => onSetScaleType(e.target.value as ScaleType)} className="cordel-card-sm px-1.5 py-0.5 text-theme-accent font-bold outline-none rounded cursor-pointer">
-            {Object.keys(SCALE_DEFINITIONS).map((key) => (
-              <option key={key} value={key} className="bg-theme-bg text-theme-ink">{t(SCALE_I18N_KEYS[key as ScaleType])}</option>
-            ))}
-          </select>
-        </div>
+      <div className="flex flex-wrap items-center gap-2 text-[11px] font-mono">
+        {onChangeGlobalVariAudioPct && (
+          <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-[var(--cordel-subcard-bg)] border border-[var(--cordel-border-sub)]">
+            <span className="font-bold text-theme-ink/85">Correction Voix Globale :</span>
+            <input
+              type="range" min={0} max={100} step={5} value={globalVariAudioPct}
+              onChange={(e) => onChangeGlobalVariAudioPct(Number(e.target.value))}
+              className="w-20 accent-amber-500 cursor-pointer"
+            />
+            <span className={`font-bold min-w-[78px] ${globalVariAudioPct > 0 ? 'text-amber-500' : 'text-emerald-500'}`}>
+              {globalVariAudioPct === 0 ? '0 % (Voix brute)' : `${globalVariAudioPct} %`}
+            </span>
+            {onPurgeVariAudio && globalVariAudioPct > 0 && (
+              <button type="button" onClick={onPurgeVariAudio} className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-600/20 text-red-400 border border-red-500/40 hover:bg-red-600/30 flex items-center gap-0.5 cursor-pointer">
+                <X className="w-3 h-3" /><span>Purger (0 %)</span>
+              </button>
+            )}
+          </div>
+        )}
 
-        <div className="flex items-center gap-1.5">
-          <span className="text-theme-ink/75 font-bold">{t('smoothingLabel')} :</span>
-          <span className="text-[10px] text-theme-ink/50">{t('smoothingFine')}</span>
-          <input type="range" min={0} max={1} step={0.1} value={smoothingLevel} onChange={(e) => onSetSmoothingLevel(parseFloat(e.target.value))} onMouseUp={(e) => e.currentTarget.blur()} onTouchEnd={(e) => e.currentTarget.blur()} className="w-16 accent-[var(--cordel-wood)] cursor-pointer" />
-          <span className="text-[10px] text-theme-ink/50">{t('smoothingWide')}</span>
+        <div className="flex items-center border border-theme-border/60 rounded overflow-hidden">
+          <span className="px-1.5 py-0.5 text-xs text-theme-ink/60 border-r border-theme-border/40"><ZoomIn className="w-3.5 h-3.5" /></span>
+          {[1, 2, 4, 8].map((z) => (
+            <button key={z} type="button" onClick={() => onSetZoom(z)} className={`px-2 py-0.5 text-[11px] font-mono border-r last:border-r-0 border-theme-border/40 cursor-pointer ${zoomLevel === z ? 'bg-theme-wood text-[#f4ecd8] font-bold' : 'text-theme-ink/70 hover:bg-white/10'}`}>{z}x</button>
+          ))}
         </div>
-      </div>
-
-      <div className="flex items-center border border-theme-border/60">
-        <span className="px-1.5 py-0.5 text-xs text-theme-ink/60 border-r border-theme-border/40"><ZoomIn className="w-3.5 h-3.5" /></span>
-        {[1, 2, 4, 8].map((z) => (
-          <button
-            key={z} type="button" onClick={() => onSetZoom(z)}
-            className={`px-2 py-0.5 text-[11px] font-mono border-r last:border-r-0 border-theme-border/40 transition-all rounded-none cursor-pointer ${
-              zoomLevel === z ? 'bg-theme-wood text-[#f4ecd8] font-bold' : 'text-theme-ink/70 hover:bg-white/10'
-            }`}
-          >
-            {z}x
-          </button>
-        ))}
       </div>
     </div>
   );

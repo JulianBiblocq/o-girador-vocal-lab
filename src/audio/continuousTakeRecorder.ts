@@ -1,7 +1,7 @@
 /**
  * continuousTakeRecorder.ts
  * Enregistrement continu d'un rôle vocal entier sur la Frise Conducteur avec Voix Témoin auto,
- * double clic clave 1400 Hz sur les 2 temps avant chaque entrée et statut 60 FPS (< 138 lignes).
+ * double clic clave 1400 Hz sur les 2 temps avant chaque entrée et statut 60 FPS (< 130 lignes).
  */
 import type { ToadaProject, VocalRole } from '../types/toadaProject.types';
 import type { MetronomeEngine, ListeningMode } from './MetronomeEngine';
@@ -42,14 +42,9 @@ export class ContinuousTakeSession {
   private totalBeatsCount = 16;
 
   public getLiveStatus(): ContinuousLiveStatus {
-    if (!this.isRunning || !this.ctxRef) {
-      return { isRunning: false, currentBeatGlobal: 0, beatProgress: 0, totalBeats: this.totalBeatsCount };
-    }
-    const elapsed = Math.max(0, this.ctxRef.currentTime - this.m0StartTime);
-    const frac = elapsed / Math.max(0.1, this.beatDurSec);
-    const currentBeatGlobal = Math.min(this.totalBeatsCount - 1, Math.floor(frac));
-    const beatProgress = Math.max(0, Math.min(1, frac - Math.floor(frac)));
-    return { isRunning: true, currentBeatGlobal, beatProgress, totalBeats: this.totalBeatsCount };
+    if (!this.isRunning || !this.ctxRef) return { isRunning: false, currentBeatGlobal: 0, beatProgress: 0, totalBeats: this.totalBeatsCount };
+    const elapsed = Math.max(0, this.ctxRef.currentTime - this.m0StartTime), frac = elapsed / Math.max(0.1, this.beatDurSec);
+    return { isRunning: true, currentBeatGlobal: Math.min(this.totalBeatsCount - 1, Math.floor(frac)), beatProgress: Math.max(0, Math.min(1, frac - Math.floor(frac))), totalBeats: this.totalBeatsCount };
   }
 
   public async start(params: ContinuousRecordParams): Promise<void> {

@@ -75,17 +75,22 @@ export function computeTrimmedMedianMidi(
 
 export function recalibrateBricksToLocalPitchCurve(
   steps: VocalStepData[], pitchCurve: PitchCurvePoint[], gridStartSec: number, stepDurationSec: number,
-  tonic = 'C', scaleType: ScaleType = 'chromatic', smoothingLevel = 0.15, allowedPitchClasses?: Set<number> | number[] | null
+  tonic = 'C', scaleType: ScaleType = 'chromatic', _smoothingLevel = 0, allowedPitchClasses?: Set<number> | number[] | null
 ): VocalStepData[] {
   if (!pitchCurve || pitchCurve.length === 0 || !steps.length || stepDurationSec <= 0) return steps;
-  const cleanCurve = filterConsonantPitchDips(pitchCurve), inferred = inferBestDiatonicScale(cleanCurve, tonic), tuningOffset = inferred.tuningOffset;
+  const cleanCurve = filterConsonantPitchDips(pitchCurve);
+  const allowedSize = allowedPitchClasses instanceof Set ? allowedPitchClasses.size : (Array.isArray(allowedPitchClasses) ? allowedPitchClasses.length : 12);
+  const isScaleLocked = scaleType !== 'chromatic' || ( Boolean(allowedPitchClasses) && allowedSize > 0 && allowedSize < 12 );
+  const scaleSet = isScaleLocked
+    ? (allowedPitchClasses instanceof Set ? allowedPitchClasses : (Array.isArray(allowedPitchClasses) ? new Set(allowedPitchClasses) : null))
+    : null;
   const result = steps.map((s) => ({ ...s })), bricks: Array<{ startIdx: number; endIdx: number; midiFloat: number }> = [];
 
   for (let i = 0; i < result.length; i++) {
     if (!result[i].active || result[i].note === '───') continue;
     let endIdx = i;
     while (endIdx + 1 < result.length && result[endIdx + 1].active && result[endIdx + 1].note === '───') endIdx++;
-    const local = computeVowelCoreMidi(cleanCurve, gridStartSec + i * stepDurationSec, gridStartSec + (endIdx + 1) * stepDurationSec, tuningOffset, inferred.allowedPitchClasses);
+    const local = computeVowelCoreMidi(cleanCurve, gridStartSec + i * stepDurationSec, gridStartSec + (endIdx + 1) * stepDurationSec, 0, scaleSet);
     bricks.push({ startIdx: i, endIdx, midiFloat: local ? local.midiFloat : result[i].midiNumber });
     i = endIdx;
   }
@@ -94,19 +99,18 @@ export function recalibrateBricksToLocalPitchCurve(
     const cur = bricks[b], spanSteps = cur.endIdx - cur.startIdx + 1;
     let effFloat = cur.midiFloat;
     const prevF = b > 0 ? bricks[b - 1].midiFloat : cur.midiFloat, nextF = b + 1 < bricks.length ? bricks[b + 1].midiFloat : cur.midiFloat;
-    if (spanSteps <= 1 && bricks.length > 1 && (prevF - effFloat >= 3.2 || nextF - effFloat >= 3.2)) {
+    if (spanSteps <= 1 && bricks.length > 1 && (prevF - effFloat >= 3.5 || nextF - effFloat >= 3.5)) {
       effFloat = b > 0 && b + 1 < bricks.length ? (prevF + nextF) / 2 : (b > 0 ? prevF : nextF);
-    } else if (smoothingLevel > 0.25 && bricks.length > 1) {
-      const maxJump = 0.6 + smoothingLevel * 1.4;
-      const pWeight = Math.abs(prevF - effFloat) <= maxJump ? (smoothingLevel - 0.25) * 0.45 : 0;
-      const nWeight = Math.abs(nextF - effFloat) <= maxJump ? (smoothingLevel - 0.25) * 0.45 : 0;
-      effFloat = (effFloat + prevF * pWeight + nextF * nWeight) / (1 + pWeight + nWeight);
     }
-    const targetMidi = (scaleType !== 'chromatic' || allowedPitchClasses)
-      ? snapMidiToScale(effFloat, tonic, scaleType, allowedPitchClasses)
-      : snapMidiWithBayesianScalePrior(effFloat, inferred.allowedPitchClasses, 0, 0.32);
-    result[cur.startIdx] = { ...result[cur.startIdx], midiNumber: targetMidi, note: midiToNoteName(targetMidi), isTie: false };
-    for (let k = cur.startIdx + 1; k <= cur.endIdx; k++) result[k] = { ...result[k], midiNumber: targetMidi, note: '───', isTie: true };
+    const targetMidi = isScaleLocked ? snapMidiToScale(effFloat, tonic, scaleType, allowedPitchClasses) : Math.round(effFloat);
+    const origVoice = Math.round(cur.midiFloat * 100) / 100;
+    result[cur.startIdx] = {
+      ...result[cur.startIdx], midiNumber: targetMidi, note: midiToNoteName(targetMidi),
+      isTie: false, originalVoiceMidi: origVoice, manualPitchMoved: false,
+    };
+    for (let k = cur.startIdx + 1; k <= cur.endIdx; k++) {
+      result[k] = { ...result[k], midiNumber: targetMidi, note: '───', isTie: true, originalVoiceMidi: origVoice };
+    }
   }
   return result;
 }

@@ -86,6 +86,10 @@ export function upgradeStalePatternStepsIfNeeded(params: {
     isTie: s.active ? s.note === '───' : false,
   }));
   if (activePattern.midiLocked || normalizedExisting.some((s) => s.active && s.note !== '───')) {
+    if (!activePattern.midiLocked && rawPitchCurve.length > 0 && normalizedExisting.every((s) => !s.manualPitchMoved)) {
+      const stepDur = (60 / (initialPack.metadata.bpm || 88)) / resPerBeat;
+      return recalibrateBricksToLocalPitchCurve(normalizedExisting, rawPitchCurve, hasAnac ? 0 : t1OffsetSec, stepDur, tonic, scaleType);
+    }
     return normalizedExisting;
   }
   const anchors = resolveFreshTimeAnchors(activePattern.rawLineCode, activePattern.timeAnchors, beatsPerMeasure, !hasAnac, activePattern.assignedLyricsText, rawTxtCode);

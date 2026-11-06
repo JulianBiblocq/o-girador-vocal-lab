@@ -122,7 +122,7 @@ export const treinoSubTranslationsBr = {
   culturalAnecdoteLabel: 'História e Contexto :',
   culturalLexiqueLabel: 'Léxico e Símbolos (notesLexique) :',
   customTeacherTip: 'Conselho vocal do Mestre para esta Toada',
-  calageAutoSnapVoiceBtn: '🎯 Auto-alinhar na voz', conductorAddSilenceBtn: '🔇 Pausa do Baque', conductorPauseShort: 'Pausa do Baque',
+  calageAutoSnapVoiceBtn: '🎯 Auto-alinhar na voz', conductorAddSilenceBtn: '🔇 Pausa do Batuque', conductorPauseShort: 'Pausa do Batuque',
   trainerLoopBtn: 'Loop', studentDiagCentered: 'No centro exato', studentDiagOnTime: 'No tempo',
   studentDiagPitchTitle: '🎯 Afinação Melódica', studentDiagAttackTitle: '🥁 Ataque Rítmico', studentDiagStabilityTitle: '🌬️ Sustentação & Estabilidade',
   studentDiagScoreGlobal: 'Score global : {score}%', studentListenMixBtn: 'Mix Mestre + Eu', studentListenMestreBtn: 'Mestre Só',

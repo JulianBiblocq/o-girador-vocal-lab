@@ -32,16 +32,17 @@ export function useMelodyneAudioProcessor(options: UseMelodyneOptions) {
 
   const triggerAudioProcessing = useCallback((updatedRegions: MelodyneRegion[], stepsOverride?: VocalStepData[]) => {
     if (debounceTimerRef.current) window.clearTimeout(debounceTimerRef.current);
-    const hasActive = updatedRegions.length > 0 && updatedRegions.some((r) => (r.pitchCenterPct ?? 0) > 0 || (r.driftCorrectionPct ?? 0) > 0 || (r.flattenPct ?? 0) > 0);
-    if (!hasActive) { setIsProcessing(false); onAudioUpdated(null, updatedRegions); return; }
+    const targetSteps = stepsOverride ?? allSteps;
+    const hasRegionActive = updatedRegions.length > 0 && updatedRegions.some((r) => (r.pitchCenterPct ?? 0) > 0 || (r.driftCorrectionPct ?? 0) > 0 || (r.flattenPct ?? 0) > 0);
+    const hasBrickPull = targetSteps.some((s) => s.active && s.note !== '───' && (s.melodynePullPct ?? 0) > 0);
+    if (!hasRegionActive && !hasBrickPull) { setIsProcessing(false); onAudioUpdated(null, updatedRegions); return; }
     setIsProcessing(true);
     debounceTimerRef.current = window.setTimeout(() => {
-      const targetSteps = stepsOverride ?? allSteps;
       const targetBricks = stepsOverride ? buildNoteBrickSpans(stepsOverride, rawPitchCurve, totalDurationSec) : bricks;
       const newPCM = correctAudioPitchWithMelodyne(rawAudio, sampleRate, totalDurationSec, rawPitchCurve, targetSteps, updatedRegions, undefined, undefined, tdPsolaAnalysis, targetBricks);
       onAudioUpdated(newPCM, updatedRegions);
       setIsProcessing(false);
-    }, 110);
+    }, 90);
   }, [rawAudio, sampleRate, totalDurationSec, rawPitchCurve, allSteps, bricks, tdPsolaAnalysis, onAudioUpdated]);
 
   const addRegion = useCallback((startSec: number, endSec: number) => {
@@ -105,9 +106,7 @@ export function useMelodyneAudioProcessor(options: UseMelodyneOptions) {
   useEffect(() => {
     if (prevStepsRef.current !== allSteps) {
       prevStepsRef.current = allSteps;
-      if (regions.some((r) => (r.pitchCenterPct ?? 0) > 0 || (r.driftCorrectionPct ?? 0) > 0 || (r.flattenPct ?? 0) > 0)) {
-        triggerAudioProcessing(regions, allSteps);
-      }
+      triggerAudioProcessing(regions, allSteps);
     }
   }, [allSteps, regions, triggerAudioProcessing]);
 

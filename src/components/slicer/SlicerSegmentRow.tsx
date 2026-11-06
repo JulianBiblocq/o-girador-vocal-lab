@@ -1,6 +1,6 @@
 /**
  * SlicerSegmentRow.tsx
- * Ligne de contrôle d'une tranche ou Pause Baque : Drag & Drop, ▲/▼, -1M/+1M, 1M..4M et cible (< 140 lignes).
+ * Ligne de contrôle d'une tranche ou Pause Batuque : Drag & Drop, ▲/▼, -1M/+1M, 1M..4M et cible (< 140 lignes).
  */
 import React from 'react';
 import type { VocalPatternItem } from '../../types/toadaProject.types';

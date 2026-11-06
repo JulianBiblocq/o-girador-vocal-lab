@@ -1,6 +1,6 @@
 /**
  * SlicerSegmentList.tsx
- * Liste des tranches et Pauses Baque avec déplacement en cascade, -1M/+1M et pré-assignation (< 115 lignes).
+ * Liste des tranches et Pauses Batuque avec déplacement en cascade, -1M/+1M et pré-assignation (< 115 lignes).
  */
 import React, { useMemo } from 'react';
 import type { VocalPatternItem } from '../../types/toadaProject.types';

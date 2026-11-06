@@ -69,7 +69,7 @@ export const ContinuousPrompterBanner: React.FC<ContinuousPrompterBannerProps> =
           <span className="text-stone-400 italic text-sm font-mono">
             {info.counterRoleLyrics
               ? `🔊 (${gapRoleName} chante : « ${info.counterRoleLyrics} » — Ne chantez pas, préparez votre prochaine entrée)`
-              : `⏸️ Pause instrumentale Baque (${info.gapMeasures ?? 1} M)`}
+              : `🔇 Pause Batuque (${info.gapMeasures ?? 1} M)`}
           </span>
         ) : (
           info.lyrics ? `« ${info.lyrics} »` : <em>({t('continuousPrompterRest')})</em>
