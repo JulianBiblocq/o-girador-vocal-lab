@@ -1,32 +1,57 @@
 /**
  * SlicerMultiSegmentToolbar.tsx
- * Barre d'outils Slicer : Métronome ON/OFF, Décalage T1 Maître, Commutateur [ 🕳️ Avec les trous | 🔗 Phrases à la suite ], Calquage Organizador (< 138 lignes).
+ * Barre d'outils Slicer : Sélection par rôle (Puxador / Coro), Métronome ON/OFF, Décalage T1 Maître,
+ * Commutateur [ 🕳️ Avec les trous | 🔗 Phrases à la suite ], Calquage Organizador (< 142 lignes).
  */
 import React from 'react';
-import { Volume2, VolumeX, Sparkles, Plus, Trash2, FolderOpen, RefreshCw, Magnet, LayoutGrid } from 'lucide-react';
+import { Volume2, VolumeX, Sparkles, Plus, Trash2, RefreshCw, Magnet, LayoutGrid } from 'lucide-react';
 import { useLanguage } from '../../i18n/LanguageContext';
 import type { SlicerGapMode } from '../../utils/slicerAlignmentHelper';
+import type { VocalRole } from '../../types/toadaProject.types';
+import type { RoleReadinessCounts } from '../../utils/slicerSessionStore';
+import { SlicerRoleSessionBar, type PostAssignBannerState } from './SlicerRoleSessionBar';
 
 interface SlicerMultiSegmentToolbarProps {
   segmentCount: number; durationSec: number; bpm: number; gridOffsetSec: number;
   metronomeActive: boolean; cascadeMove: boolean; isSyncing?: boolean;
   gapMode?: SlicerGapMode; onGapModeChange?: (mode: SlicerGapMode) => void;
+  activeRole: VocalRole; roleCounts: RoleReadinessCounts;
+  hasPuxadorMaster: boolean; hasCoroMaster: boolean;
+  postAssignBanner?: PostAssignBannerState | null;
+  onSelectRoleSession: (role: VocalRole) => void;
+  onLoadRoleFile: (role: VocalRole) => void;
+  onCloseModal?: () => void;
   onToggleMetronome: () => void; onBpmChange?: (newBpm: number) => void;
   onNudgeOffset: (deltaSec: number) => void;
   onToggleCascade: () => void; onAlignOrganizador: () => void; onSyncOrganizador: () => void;
-  onDetectSilences: () => void; onAddSegment: () => void; onAddPauseSegment?: () => void; onClearSegments: () => void; onChangeFile: () => void;
+  onDetectSilences: () => void; onAddSegment: () => void; onAddPauseSegment?: () => void; onClearSegments: () => void;
 }
 
 export const SlicerMultiSegmentToolbar: React.FC<SlicerMultiSegmentToolbarProps> = ({
   durationSec, bpm, gridOffsetSec, metronomeActive, cascadeMove, isSyncing,
   gapMode = 'with_gaps', onGapModeChange,
+  activeRole, roleCounts, hasPuxadorMaster, hasCoroMaster, postAssignBanner,
+  onSelectRoleSession, onLoadRoleFile, onCloseModal,
   onToggleMetronome, onBpmChange, onNudgeOffset, onToggleCascade, onAlignOrganizador, onSyncOrganizador,
-  onDetectSilences, onAddSegment, onAddPauseSegment, onClearSegments, onChangeFile,
+  onDetectSilences, onAddSegment, onAddPauseSegment, onClearSegments,
 }) => {
   const { t } = useLanguage();
 
   return (
     <div className="flex flex-col gap-1.5 p-2 bg-theme-bg/60 border border-theme-border/60 rounded text-xs font-mono">
+      <div className="pb-1.5 border-b border-[var(--cordel-border-sub)]">
+        <SlicerRoleSessionBar
+          activeRole={activeRole}
+          counts={roleCounts}
+          hasPuxadorMaster={hasPuxadorMaster}
+          hasCoroMaster={hasCoroMaster}
+          postAssignBanner={postAssignBanner}
+          onSelectRoleSession={onSelectRoleSession}
+          onLoadRoleFile={onLoadRoleFile}
+          onCloseModal={onCloseModal}
+        />
+      </div>
+
       <div className="flex flex-wrap items-center justify-between gap-2 pb-1.5 border-b border-[var(--cordel-border-sub)]">
         <div className="flex flex-wrap items-center gap-1.5">
           <button
@@ -90,19 +115,11 @@ export const SlicerMultiSegmentToolbar: React.FC<SlicerMultiSegmentToolbarProps>
             <Magnet className="w-3 h-3" /><span className="hidden sm:inline">{t('slicerCascadeBtn')}</span>
           </button>
 
-          <button
-            type="button" onClick={onAlignOrganizador}
-            className="h-7 px-2.5 cordel-btn-primary font-bold flex items-center gap-1.5 cursor-pointer bg-theme-wood text-[#f4ecd8]"
-            title={t('slicerAlignOrganizadorTitle')}
-          >
+          <button type="button" onClick={onAlignOrganizador} className="h-7 px-2.5 cordel-btn-primary font-bold flex items-center gap-1.5 cursor-pointer bg-theme-wood text-[#f4ecd8]" title={t('slicerAlignOrganizadorTitle')}>
             <LayoutGrid className="w-3.5 h-3.5" /><span>{t('slicerAlignOrganizadorBtn')}</span>
           </button>
 
-          <button
-            type="button" onClick={onSyncOrganizador} disabled={isSyncing}
-            className="h-7 px-2 cordel-card-sm text-[11px] font-bold flex items-center gap-1 cursor-pointer text-amber-600 dark:text-amber-400 hover:bg-amber-500/10 rounded"
-            title={t('slicerSyncFirestoreTitle')}
-          >
+          <button type="button" onClick={onSyncOrganizador} disabled={isSyncing} className="h-7 px-2 cordel-card-sm text-[11px] font-bold flex items-center gap-1 cursor-pointer text-amber-600 dark:text-amber-400 hover:bg-amber-500/10 rounded" title={t('slicerSyncFirestoreTitle')}>
             <RefreshCw className={`w-3 h-3 ${isSyncing ? 'animate-spin' : ''}`} /><span className="hidden md:inline">Sync</span>
           </button>
         </div>
@@ -125,12 +142,7 @@ export const SlicerMultiSegmentToolbar: React.FC<SlicerMultiSegmentToolbarProps>
             <Trash2 className="w-3 h-3" /><span className="hidden sm:inline">{t('slicerClearSegmentsBtn')}</span>
           </button>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="text-[11px] text-[var(--cordel-secondary-text)]">Total : <strong>{durationSec.toFixed(1)}s</strong></span>
-          <button type="button" onClick={onChangeFile} className="h-7 px-2 cordel-card-sm flex items-center gap-1 cursor-pointer text-theme-accent text-xs">
-            <FolderOpen className="w-3 h-3" /><span>{t('slicerChangeFileBtn')}</span>
-          </button>
-        </div>
+        <span className="text-[11px] text-[var(--cordel-secondary-text)]">Total ({activeRole === 'puxador' ? 'Puxador' : 'Coro'}) : <strong>{durationSec.toFixed(1)}s</strong></span>
       </div>
     </div>
   );

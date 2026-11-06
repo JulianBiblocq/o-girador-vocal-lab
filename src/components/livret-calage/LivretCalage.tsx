@@ -44,9 +44,9 @@ export const LivretCalage: React.FC = () => {
   const isLongAudio = rawPCM !== null && (audioDurationSec > 10 || audioDurationSec > totalDurationSec * 1.8);
 
   const activeAudio = useMemo(() => {
-    if (!rawPCM) return null;
+    if (!rawPCM || !isLongAudio) return null;
     return { pcm: rawPCM, sampleRate, durationSec: audioDurationSec, fileName: `${activePattern.name}.wav` };
-  }, [rawPCM, sampleRate, audioDurationSec, activePattern.name]);
+  }, [rawPCM, isLongAudio, sampleRate, audioDurationSec, activePattern.name]);
 
   const syncCalageState = useCallback((nextTrimStart: number, nextTrimEnd: number, nextT1: number) => {
     if (!rawPCM) return;
