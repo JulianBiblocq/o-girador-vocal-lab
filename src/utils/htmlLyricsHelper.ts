@@ -1,13 +1,14 @@
 /**
  * htmlLyricsHelper.ts
- * Découpe et extraction des fragments HTML (<strong>, <b>, <u>) et Markdown (**...**) (< 85 lignes).
- * Préserve les balises <u>...</u> pour le découpage syllabique explicite.
+ * Découpe et extraction des fragments HTML (<strong>, <b>, <em>, <i>, <u>) et Markdown (*...*, ***...***) (< 95 lignes).
+ * Préserve les balises <u>...</u> pour le découpage syllabique explicite et détecte le mode Tutti (Gras + Italique).
  */
 import type { VocalRole } from '../types/toadaProject.types';
 
 export interface RawTextSegment {
   role: VocalRole;
   text: string;
+  isSimultaneousTutti?: boolean;
 }
 
 export function splitHtmlOrTextIntoRawLines(input: string): string[] {
@@ -56,7 +57,12 @@ export function cleanHtmlText(text: string, preserveUnderline = true): string {
 }
 
 export function parseRichLineIntoSegments(rawLine: string, boldRole: VocalRole): RawTextSegment[] {
-  let line = rawLine.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>').replace(/\*([^*]+)\*/g, '<b>$1</b>');
+  let line = rawLine
+    .replace(/\*\*\*(.*?)\*\*\*/g, '<tutti>$1</tutti>')
+    .replace(/<(?:em|i)\b[^>]*>\s*<(?:strong|b)\b[^>]*>(.*?)<\/(?:strong|b)>\s*<\/(?:em|i)>/gi, '<tutti>$1</tutti>')
+    .replace(/<(?:strong|b)\b[^>]*>\s*<(?:em|i)\b[^>]*>(.*?)<\/(?:em|i)>\s*<\/(?:strong|b)>/gi, '<tutti>$1</tutti>')
+    .replace(/\*\*(.*?)\*\*/g, '<b>$1</b>')
+    .replace(/\*([^*]+)\*/g, '<b>$1</b>');
 
   let forcedRole: VocalRole | null = null;
   const puxMatch = line.match(/^(puxador|solo)\s*[:\-]\s*/i);
@@ -65,25 +71,29 @@ export function parseRichLineIntoSegments(rawLine: string, boldRole: VocalRole):
   else if (coroMatch) { forcedRole = 'coro'; line = line.slice(coroMatch[0].length); }
 
   const segments: RawTextSegment[] = [];
-  const regex = /(<(?:strong|b)>.*?<\/(?:strong|b)>|[^<]+|<[^>]+>)/gi;
+  const regex = /(<tutti>.*?<\/tutti>|<(?:strong|b)>.*?<\/(?:strong|b)>|[^<]+|<[^>]+>)/gi;
   let match: RegExpExecArray | null;
 
   while ((match = regex.exec(line)) !== null) {
     const chunk = match[0];
-    if (chunk.startsWith('<') && !/<(?:strong|b|u)>/i.test(chunk)) continue;
-    const isBold = /<(?:strong|b)>/i.test(chunk);
+    if (chunk.startsWith('<') && !/<(?:tutti|strong|b|u)>/i.test(chunk)) continue;
+    const isTutti = /<tutti>/i.test(chunk) || (/<(?:strong|b)\b/i.test(chunk) && /<(?:em|i)\b/i.test(chunk));
+    const isBold = isTutti || /<(?:strong|b)>/i.test(chunk);
     const cleaned = cleanHtmlText(chunk, true);
     if (!cleaned) continue;
 
     const role: VocalRole = forcedRole ?? (isBold ? boldRole : (boldRole === 'coro' ? 'puxador' : 'coro'));
-    segments.push({ role, text: cleaned });
+    segments.push({ role, text: cleaned, isSimultaneousTutti: isTutti || undefined });
   }
 
   const merged: RawTextSegment[] = [];
   for (const seg of segments) {
     const last = merged[merged.length - 1];
-    if (last && last.role === seg.role) last.text += ` ${seg.text}`;
-    else merged.push({ ...seg });
+    if (last && last.role === seg.role && Boolean(last.isSimultaneousTutti) === Boolean(seg.isSimultaneousTutti)) {
+      last.text += ` ${seg.text}`;
+    } else {
+      merged.push({ ...seg });
+    }
   }
   return merged;
 }

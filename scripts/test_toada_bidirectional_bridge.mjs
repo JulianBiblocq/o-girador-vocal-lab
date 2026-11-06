@@ -97,7 +97,28 @@ assert.strictEqual(genDeNorte.patterns[0].measuresCount, 2, 'Puxador doit avoir 
 assert.strictEqual(genDeNorte.patterns[0].hasAnacrusis, true, 'Puxador doit avoir anacrouse');
 assert.strictEqual(genDeNorte.patterns[1].measuresCount, 2, 'Coro doit avoir 2 mesures');
 assert.strictEqual(genDeNorte.patterns[1].hasAnacrusis, true, 'Coro doit avoir anacrouse');
-console.log('  ✅ Test 1.4 & 1.4b validés : 1 carte = 1 pattern et De Norte a Sul (2M + Ana) confirmés.\n');
+assert.strictEqual(genDeNorte.slots.length, 2, 'Appel-Réponse 1 ligne (sans ***) doit conserver 2 slots séquentiels');
+
+// 5c. Test Superposition Tutti / Ensemble (K >= 2 lignes Puxador + Coro identiques & notation ***...***)
+console.log('▶️ Test 1.4c : Superposition Tutti / Ensemble (Vovó falou K=2 & notation ***...***)');
+const vovoTuttiLyrics = [
+  "*[1] _ [2]Vovó falou [3]e'o [4]barão [1]assinou*",
+  "*[2]Princesa Isabel [3]escreveu [4]a lei [1]áurea*",
+  "[1] _ [2]Vovó falou [3]e'o [4]barão [1]assinou",
+  "[2]Princesa Isabel [3]escreveu [4]a lei [1]áurea"
+].join('\n');
+const genVovoTutti = generateToadaFromSheet(baseProject, { segments: parseRichTextLyricsAndPhonetics(vovoTuttiLyrics, undefined, 'puxador') });
+assert.strictEqual(genVovoTutti.patterns.length, 4, 'Doit créer 2 motifs Puxador + 2 motifs Coro distincts (4 au total)');
+assert.strictEqual(genVovoTutti.slots.length, 2, 'Doit superposer Puxador et Coro sur 2 slots partagés au lieu de 4');
+assert(genVovoTutti.slots[0].puxadorPatternId && genVovoTutti.slots[0].coroPatternId, 'Slot 1 doit avoir Puxador ET Coro');
+assert(genVovoTutti.slots[1].puxadorPatternId && genVovoTutti.slots[1].coroPatternId, 'Slot 2 doit avoir Puxador ET Coro');
+
+const explicitTuttiLyrics = "***[1] _ [2]Vovó falou [3]e'o [4]barão [1]assinou***";
+const genExplicitTutti = generateToadaFromSheet(baseProject, { segments: parseRichTextLyricsAndPhonetics(explicitTuttiLyrics, undefined, 'puxador') });
+assert.strictEqual(genExplicitTutti.patterns.length, 2, 'Notation ***...*** sur 1 ligne doit créer 1 motif Puxador + 1 motif Coro');
+assert.strictEqual(genExplicitTutti.slots.length, 1, 'Notation ***...*** sur 1 ligne doit les placer sur 1 seul slot partagé');
+assert(genExplicitTutti.slots[0].puxadorPatternId && genExplicitTutti.slots[0].coroPatternId, 'Le slot unique doit avoir Puxador ET Coro');
+console.log('  ✅ Test 1.4, 1.4b & 1.4c validés : 1 carte = 1 pattern, Appel-Réponse et Tutti simultanés confirmés.\n');
 
 // 6. Test Nettoyage HTML Varal (1.5)
 console.log('▶️ Test 1.5 : Nettoyage HTML Varal (zéro [1]..[12], zéro _)');
@@ -117,6 +138,7 @@ const files = [
   'src/utils/toadaCardParser.ts',
   'src/utils/toadaSheetParser.ts',
   'src/utils/syllableAligner.ts',
+  'src/utils/sheetSlotBuilder.ts',
   'src/utils/toadaConductorGenerator.ts',
   'src/utils/toadaTxtReconstitutor.ts',
   'src/services/organizadorToadaPublisher.ts',

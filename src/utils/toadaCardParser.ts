@@ -100,7 +100,8 @@ export function parseOrganizadorCardLine(lineText: string, boldRole: VocalRole =
   if (puxMatch) { forcedRole = 'puxador'; cleanLine = cleanLine.slice(puxMatch[0].length); }
   else if (coroMatch) { forcedRole = 'coro'; cleanLine = cleanLine.slice(coroMatch[0].length); }
 
-  const isBold = (cleanLine.startsWith('*') && cleanLine.endsWith('*')) || /\*[^*]+\*/.test(cleanLine) || /<(?:strong|b)>/i.test(cleanLine);
+  const isSimultaneousTutti = /\*{3}[^*]+\*{3}/.test(cleanLine) || (/<(?:strong|b)\b/i.test(cleanLine) && /<(?:em|i)\b/i.test(cleanLine));
+  const isBold = isSimultaneousTutti || (cleanLine.startsWith('*') && cleanLine.endsWith('*')) || /\*[^*]+\*/.test(cleanLine) || /<(?:strong|b)>/i.test(cleanLine);
   const role: VocalRole = forcedRole ?? (isBold ? boldRole : (boldRole === 'coro' ? 'puxador' : 'coro'));
   const dir = extractInlineLineDirectives(cleanLine, beatsPerMeasure);
 
@@ -116,6 +117,7 @@ export function parseOrganizadorCardLine(lineText: string, boldRole: VocalRole =
     sectionName: dir.sectionName,
     sectionBpm: dir.sectionBpm,
     isLinkedMeasure: dir.isLinkedMeasure ?? false,
+    isSimultaneousTutti: isSimultaneousTutti || undefined,
   };
 }
 

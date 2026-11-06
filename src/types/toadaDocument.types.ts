@@ -68,6 +68,7 @@ export interface ParsedLyricsSegment {
   anacrusisBeats?: number;
   isLinkedMeasure?: boolean;
   isMixedPair?: boolean;
+  isSimultaneousTutti?: boolean;
   chords?: string[];
   sectionBpm?: number;
   sectionName?: string;

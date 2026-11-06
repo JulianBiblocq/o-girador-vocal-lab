@@ -61,10 +61,7 @@ export function parseRichTextLyricsAndPhonetics(
     rawSegs.forEach((seg, sIdx) => {
       const dir = extractInlineLineDirectives(seg.text, beatsPerMeasure);
 
-      if (dir.sectionName) {
-        currentSectionName = dir.sectionName;
-        currentSectionBpm = dir.sectionBpm;
-      }
+      if (dir.sectionName) { currentSectionName = dir.sectionName; currentSectionBpm = dir.sectionBpm; }
       if (!dir.cleanText) return;
 
       segments.push({
@@ -79,6 +76,7 @@ export function parseRichTextLyricsAndPhonetics(
         anacrusisBeats: dir.anacrusisBeats,
         isLinkedMeasure: dir.isLinkedMeasure ?? (sIdx === 0 ? isLineLinked : false),
         isMixedPair: isMixedLine && (sIdx === 0 || sIdx === 1),
+        isSimultaneousTutti: seg.isSimultaneousTutti,
         chords: dir.chords,
         sectionName: currentSectionName,
         sectionBpm: currentSectionBpm,
