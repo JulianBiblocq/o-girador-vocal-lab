@@ -50,7 +50,8 @@ export function computeExpectedVocalEntryOffsetSec(
   if (firstSung) {
     const m = Math.max(0, firstSung.measureOffset || 0);
     const b = Math.max(1, firstSung.beat || 1);
-    return (m * B + (b - 1)) * beatDur;
+    const s0 = firstSung.syllableSubdivs?.[0] ?? (firstSung.hasLeadingRest ? 1 : 0);
+    return (m * B + (b - 1) + s0 / 4) * beatDur;
   }
 
   return 0;

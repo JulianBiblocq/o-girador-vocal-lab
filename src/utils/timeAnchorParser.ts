@@ -73,7 +73,8 @@ export function extractTimeAnchors(rawText: string, beatsPerMeasure = 4, forceTh
       } else if (k > 0 && (cur.beat === 1 || cur.beat <= matches[k - 1].beat)) measureOffset++;
     }
     const hasLeadingRest = (!isRestSymbol && /^[_𝄽]\s*/.test(trimmedChunk)) || Boolean(isSameBeatAfterRest);
-    const isDownbeatLocked = !hasLeadingRest && isIntraWordBadgeBoundary(rawText, cur.index, cur.fullLength);
+    const isGluedToSyl = /^[\p{L}\p{M}]/u.test(chunk.replace(/\*/g, ''));
+    const isDownbeatLocked = !hasLeadingRest && !isRestSymbol && (isIntraWordBadgeBoundary(rawText, cur.index, cur.fullLength) || Boolean(prevAnchor?.hasLeadingRest) || isGluedToSyl);
     const hasTrailingPickup = k + 1 < matches.length && isIntraWordBadgeBoundary(rawText, matches[k + 1].index, matches[k + 1].fullLength);
     const textSlice = isRestSymbol ? '' : trimmedChunk.replace(/[_𝄽]/g, ' ').replace(/\s+/g, ' ').trim();
     const syllables = textSlice ? splitTextIntoLetraSyllables(textSlice) : [];

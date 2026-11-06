@@ -16,8 +16,7 @@ export type SlicerGapMode = 'with_gaps' | 'chained';
 function windowRms(pcm: Float32Array, sampleRate: number, t0: number, t1: number): number {
   const i0 = Math.max(0, Math.floor(t0 * sampleRate)), i1 = Math.min(pcm.length, Math.ceil(t1 * sampleRate));
   if (i1 <= i0) return 0;
-  let sumSq = 0;
-  for (let i = i0; i < i1; i++) sumSq += pcm[i] * pcm[i];
+  let sumSq = 0; for (let i = i0; i < i1; i++) sumSq += pcm[i] * pcm[i];
   return Math.sqrt(sumSq / (i1 - i0));
 }
 
@@ -37,8 +36,7 @@ export function alignT1ByAnchorCrossCorrelation(
   if (pulses.length === 0) return nominalT1Sec;
   let bestDelta = 0, bestScore = -Infinity;
   for (let dt = -maxShiftSec; dt <= maxShiftSec + 1e-6; dt += 0.01) {
-    const candT1 = nominalT1Sec + dt;
-    if (candT1 < 0) continue;
+    const candT1 = nominalT1Sec + dt; if (candT1 < 0) continue;
     let corr = 0;
     for (const p of pulses) {
       const t = candT1 + p.relSec, eCur = windowRms(pcm, sampleRate, t, t + p.durSec), ePre = windowRms(pcm, sampleRate, Math.max(0, t - 0.07), t);
@@ -51,13 +49,16 @@ export function alignT1ByAnchorCrossCorrelation(
 }
 
 export function calculateSliceMetricT1Sec(
-  startSec: number, bpm: number, gridOffsetSec = 0.8, hasAnacrusis = false, anacrusisBeats = 2, existingMetricT1Sec?: number
+  startSec: number, bpm: number, gridOffsetSec = 0.8, hasAnacrusis = false, anacrusisBeats = 2,
+  existingMetricT1Sec?: number, firstVocalOffsetBeats?: number
 ): number {
   const beatDur = 60 / (bpm || 88), measureDur = beatDur * 4, anacDur = hasAnacrusis && anacrusisBeats > 0 ? anacrusisBeats * beatDur : 0;
-  if (typeof existingMetricT1Sec === 'number' && existingMetricT1Sec >= 0) {
-    if (startSec >= existingMetricT1Sec - anacDur - 0.45 * measureDur && startSec <= existingMetricT1Sec + 0.65 * measureDur) return existingMetricT1Sec;
+  const postT1VocalDur = typeof firstVocalOffsetBeats === 'number' && firstVocalOffsetBeats > 0 ? firstVocalOffsetBeats * beatDur : 0;
+  if (typeof existingMetricT1Sec === 'number' && existingMetricT1Sec >= 0 && startSec >= existingMetricT1Sec - anacDur - 0.45 * measureDur && startSec <= existingMetricT1Sec + postT1VocalDur + 0.65 * measureDur) {
+    return existingMetricT1Sec;
   }
-  return Math.max(0, Math.round((startSec + anacDur - gridOffsetSec) / measureDur) * measureDur + gridOffsetSec);
+  const refT1Sec = postT1VocalDur > 0 ? startSec - postT1VocalDur : startSec + anacDur;
+  return Math.max(0, Math.round((refT1Sec - gridOffsetSec) / measureDur) * measureDur + gridOffsetSec);
 }
 
 export function splitSliceSegment(seg: SliceSegment, cutSec: number, bpm: number, gridOffsetSec = 0.8): [SliceSegment, SliceSegment] {
@@ -105,17 +106,19 @@ export function buildOrganizadorSlices(
   let prevT1 = gridOffsetSec, prevMCount = 0;
 
   targetList.forEach((pat, idx) => {
-    const hasAna = pat.hasAnacrusis !== false, anacDur = hasAna ? (pat.anacrusisBeats ?? 2) * beatDur : 0, mCount = pat.measuresCount ?? 1;
-    const anchors = resolveFreshTimeAnchors(pat.rawLineCode, pat.timeAnchors, 4, !hasAna, pat.assignedLyricsText);
+    const anchors = resolveFreshTimeAnchors(pat.rawLineCode, pat.timeAnchors, 4, pat.hasAnacrusis === false, pat.assignedLyricsText);
+    const isTheticByAnchors = Boolean(anchors && anchors.length > 0 && anchors[0].beat === 1 && anchors[0].measureOffset === 0);
+    const hasAna = isTheticByAnchors ? false : pat.hasAnacrusis !== false, anacDur = hasAna ? (pat.anacrusisBeats ?? 2) * beatDur : 0, mCount = pat.measuresCount ?? 1;
     const { firstVocalOffsetBeats, hasBoundaryExitAnchor } = computePatternVocalOffsetsBeats(anchors, hasAna, 4, mCount);
     const pauseMeasures = gapMode === 'with_gaps' ? computeGapMeasuresInSlots(slots, patterns, idx > 0 ? targetList[idx - 1].id : null, pat.id) : 0;
     const pauseStartT1 = idx === 0 ? gridOffsetSec : prevT1 + prevMCount * measureDur;
     let t1 = pauseStartT1 + pauseMeasures * measureDur, isIslandStart = idx === 0 || pauseMeasures > 0;
+    const detOffsetSec = firstVocalOffsetBeats > 0 ? -firstVocalOffsetBeats * beatDur : anacDur * 0.5;
     if (gapMode === 'chained' && detected[idx]) {
-      const snapM = Math.max(anacDur, Math.round((detected[idx].startSec + anacDur * 0.5 - gridOffsetSec) / measureDur) * measureDur + gridOffsetSec);
+      const snapM = Math.max(anacDur, Math.round((detected[idx].startSec + detOffsetSec - gridOffsetSec) / measureDur) * measureDur + gridOffsetSec);
       if (idx === 0 || snapM >= prevT1 + prevMCount * measureDur) { t1 = snapM; isIslandStart = idx === 0 || snapM > prevT1 + prevMCount * measureDur; }
     } else if (idx === 0 && pauseMeasures === 0 && detected[0]) {
-      t1 = Math.max(anacDur, Math.round((detected[0].startSec + anacDur * 0.5 - gridOffsetSec) / measureDur) * measureDur + gridOffsetSec);
+      t1 = Math.max(anacDur, Math.round((detected[0].startSec + detOffsetSec - gridOffsetSec) / measureDur) * measureDur + gridOffsetSec);
     }
     metaList.push({ pat, t1, mCount, hasAna, anacDur, isIslandStart, pauseMeasures, pauseStartT1, firstVocalOffsetBeats, hasBoundaryExitAnchor });
     prevT1 = t1; prevMCount = mCount;

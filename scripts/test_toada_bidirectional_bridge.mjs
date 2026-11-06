@@ -9,6 +9,8 @@ import { stitchSyllablesFromSteps, reconstituteToadaTxt, toadaToCleanHtml } from
 import { syllabifySingleWord } from '../src/utils/syllableSplitter.ts';
 import { convertTwoLineNotationToBrackets, extractTimeAnchors } from '../src/utils/timeAnchorParser.ts';
 import { applyLyricsSyllablesToSteps } from '../src/utils/syllableAligner.ts';
+import { computePatternVocalOffsetsBeats } from '../src/utils/subbeatAnchorHelper.ts';
+import { calculateSliceMetricT1Sec } from '../src/utils/slicerAlignmentHelper.ts';
 
 console.log('========================================================================');
 console.log('🧪 TEST AUTOMATISÉ : PASSERELLE BIDIRECTIONNELLE CANTADOR <-> ORGANIZADOR');
@@ -72,7 +74,26 @@ assert.strictEqual(alignedSteps[8].active, true, 'Temps 3 début (e\'o)');
 assert.strictEqual(alignedSteps[8].syllable.trim(), "e'o");
 assert.strictEqual(alignedSteps[16].active, true, 'Temps 1 de la mesure suivante (step 16)');
 assert.strictEqual(alignedSteps[16].syllable, 'as');
-console.log('  ✅ Test 1.3 validé : Calage syllabique mathématiquement parfait.\n');
+
+// 4b. Test Départ après soupir sur le Temps 2 ([1]_ [2]_ Na marca[3]ção / [1]_ [2]_ No tilin[3]tar)
+const marcacaoParsed = extractTimeAnchors('[1]_ [2]_ Na marca[3]ção [4]do meu [1]ganzá');
+assert.strictEqual(marcacaoParsed.hasAnacrusis, false, '[1]_ [2]_ ne doit pas être en anacrouse');
+assert.strictEqual(marcacaoParsed.timeAnchors[0].isInitialRest, true, '[1]_ doit être un silence initial');
+assert.strictEqual(marcacaoParsed.timeAnchors[1].hasLeadingRest, true, '[2]_ doit avoir hasLeadingRest: true');
+assert.deepStrictEqual(marcacaoParsed.timeAnchors[1].syllableSubdivs, [1, 2, 3], 'Na mar-ca doit occuper s = 1, 2, 3 du Temps 2');
+assert.strictEqual(marcacaoParsed.timeAnchors[2].isDownbeatLocked, true, 'ção sur [3] doit avoir isDownbeatLocked: true (s = 0)');
+const marcacaoOffsets = computePatternVocalOffsetsBeats(marcacaoParsed.timeAnchors, false, 4, 2);
+assert.strictEqual(marcacaoOffsets.firstVocalOffsetBeats, 1.25, 'firstVocalOffsetBeats doit valoir +1.25 temps après M•T1');
+const marcacaoSteps = applyLyricsSyllablesToSteps([], marcacaoParsed.cleanText, marcacaoParsed.timeAnchors, 4, 4);
+assert.strictEqual(marcacaoSteps[0].active, false, 'Temps 1 (s=0..3) doit être muet');
+assert.strictEqual(marcacaoSteps[4].active, false, 'Temps 2 s=0 doit être un soupir muet');
+assert.strictEqual(marcacaoSteps[5].syllable.trim(), 'Na', 'Temps 2 s=1 = Na');
+assert.strictEqual(marcacaoSteps[6].syllable.trim(), 'mar', 'Temps 2 s=2 = mar');
+assert.strictEqual(marcacaoSteps[7].syllable.trim(), 'ca', 'Temps 2 s=3 = ca');
+assert.strictEqual(marcacaoSteps[8].syllable.trim(), 'ção', 'Temps 3 s=0 = ção verrouillé sur le temps');
+const snappedT1 = calculateSliceMetricT1Sec(0.8 + 1.25 * (60 / 88), 88, 0.8, false, 0, undefined, marcacaoOffsets.firstVocalOffsetBeats);
+assert.strictEqual(snappedT1, 0.8, 'metricT1Sec doit rester calé 1.25 temps à gauche de Na');
+console.log('  ✅ Test 1.3 & 1.3b validés : Calage syllabique et départ après soupir [1]_ [2]_ Na marca[3]ção parfaits.\n');
 
 // 5. Test 1 Carte = 1 Pattern (cardIndex) & Tuilage Horizontal (1.4)
 console.log('▶️ Test 1.4 : Identité stable 1 carte = 1 pattern (cardIndex) et tuilage horizontal advanceMeasures');

@@ -75,15 +75,16 @@ export function computePatternVocalOffsetsBeats(
   if (sungAnchors.length === 0) {
     return { firstVocalOffsetBeats: defaultFirst, lastVocalEndOffsetBeats: defaultLast, hasBoundaryExitAnchor: false };
   }
+  const anchorsHaveAnac = Boolean(hasAnacrusis && timeAnchors.some((a) => a.measureOffset === 0 && a.beat > 1) && timeAnchors.some((a) => a.measureOffset >= 1));
   const first = sungAnchors[0];
   const s0 = first.syllableSubdivs?.[0] ?? (first.hasLeadingRest ? 1 : 0);
-  const firstRelMeasure = hasAnacrusis ? first.measureOffset - 1 : first.measureOffset;
+  const firstRelMeasure = anchorsHaveAnac ? first.measureOffset - 1 : first.measureOffset;
   const firstVocalOffsetBeats = firstRelMeasure * beatsPerMeasure + (first.beat - 1) + s0 / 4;
 
   const last = sungAnchors[sungAnchors.length - 1];
   const lastSubdivs = last.syllableSubdivs || [];
   const sLast = lastSubdivs.length > 0 ? lastSubdivs[lastSubdivs.length - 1] : 2;
-  const lastRelMeasure = hasAnacrusis ? last.measureOffset - 1 : last.measureOffset;
+  const lastRelMeasure = anchorsHaveAnac ? last.measureOffset - 1 : last.measureOffset;
   const lastStartBeat = lastRelMeasure * beatsPerMeasure + (last.beat - 1);
   const lastVocalEndOffsetBeats = lastStartBeat + Math.min(1, (sLast + 1.5) / 4);
   const hasBoundaryExitAnchor = last.beat === 1 && lastRelMeasure >= measuresCount - 1;

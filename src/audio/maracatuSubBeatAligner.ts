@@ -84,7 +84,7 @@ export function scoreMaracatuSubBeatPattern(params: {
   const { syllableCount, profile, hasLeadingRest = false, hasTrailingPickup = false, isDownbeatLocked = false, explicitSubdivs, hasExplicitUnderscore = false } = params;
   if (syllableCount <= 0) return { subdivs: [], impulseCount: 0 };
   const maxE = Math.max(0, ...profile.energies), maxO = Math.max(1e-6, ...profile.onsets), hasAudio = maxE > 1e-4;
-  if (hasExplicitUnderscore && explicitSubdivs && explicitSubdivs.length === syllableCount && (!hasAudio || profile.impulseCount >= syllableCount)) {
+  if ((hasExplicitUnderscore || hasLeadingRest || isDownbeatLocked) && explicitSubdivs && explicitSubdivs.length === syllableCount && (hasLeadingRest || isDownbeatLocked || !hasAudio || profile.impulseCount >= syllableCount)) {
     return { subdivs: explicitSubdivs, impulseCount: syllableCount };
   }
   const effCount = hasAudio && profile.impulseCount >= 1 && profile.impulseCount < syllableCount ? profile.impulseCount : Math.min(4, syllableCount);

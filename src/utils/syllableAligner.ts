@@ -43,8 +43,8 @@ export function alignSyllablesWithTimeAnchors(
     const syls = anchor.syllables?.length ? anchor.syllables : (anchor.textSlice ? splitTextIntoLetraSyllables(anchor.textSlice) : []);
     if (syls.length === 0) continue;
     const subdivs = anchor.syllableSubdivs?.length === syls.length ? anchor.syllableSubdivs : computeBeatSyllableSubdivs(anchor.textSlice || '', syls, Boolean(anchor.hasLeadingRest), Boolean(anchor.hasTrailingPickup));
-    const firstSub = Math.max(0, Math.min(stepsPerBeat - 1, subdivs[0] ?? (anchor.hasLeadingRest ? 1 : 0)));
-    const tiePrev = seenSung && stepStart > 0 && result[stepStart - 1].active;
+    const firstSub = anchor.isDownbeatLocked ? 0 : Math.max(0, Math.min(stepsPerBeat - 1, subdivs[0] ?? (anchor.hasLeadingRest ? 1 : 0)));
+    const tiePrev = !anchor.hasLeadingRest && !anchor.isDownbeatLocked && seenSung && stepStart > 0 && result[stepStart - 1].active;
     for (let s = stepStart; s < stepStart + firstSub && s < stepEnd; s++) {
       result[s] = { ...result[s], active: tiePrev, note: tiePrev ? '───' : '', isTie: tiePrev, syllable: '' };
     }
@@ -82,15 +82,16 @@ export function alignAudioStepsWithTimeAnchors(
     if (syls.length === 0) continue;
 
     const detectedHeads: number[] = [];
-    for (let i = beatStart; i < beatEnd; i++) if (origAttacks[i]) detectedHeads.push(i);
-    const useDetected = detectedHeads.length >= 1 && detectedHeads.length <= syls.length;
+    for (let i = beatStart + (anchor.hasLeadingRest ? 1 : 0); i < beatEnd; i++) if (origAttacks[i]) detectedHeads.push(i);
+    const forceExplicitSubdivs = Boolean((anchor.hasLeadingRest || anchor.isDownbeatLocked) && anchor.syllableSubdivs?.length === syls.length);
+    const useDetected = !forceExplicitSubdivs && detectedHeads.length >= 1 && detectedHeads.length <= syls.length;
 
     const subdivs = useDetected ? detectedHeads.map((h) => h - beatStart) : (anchor.syllableSubdivs?.length === syls.length ? anchor.syllableSubdivs : computeBeatSyllableSubdivs(anchor.textSlice || '', syls, Boolean(anchor.hasLeadingRest), Boolean(anchor.hasTrailingPickup)));
-    const firstSub = Math.max(0, Math.min(stepsPerBeat - 1, subdivs[0] ?? (anchor.hasLeadingRest ? 1 : 0)));
+    const firstSub = anchor.isDownbeatLocked ? 0 : Math.max(0, Math.min(stepsPerBeat - 1, subdivs[0] ?? (anchor.hasLeadingRest ? 1 : 0)));
     const nextAct = result.find((s, idx) => idx >= beatStart && s.active && s.midiNumber > 0);
     const prevAct = result.slice(0, beatStart).reverse().find((s) => s.active && s.midiNumber > 0);
     const fbMidi = nextAct?.midiNumber ?? prevAct?.midiNumber ?? 60;
-    const tiePrev = seenSung && beatStart > 0 && result[beatStart - 1].active;
+    const tiePrev = !anchor.hasLeadingRest && !anchor.isDownbeatLocked && seenSung && beatStart > 0 && result[beatStart - 1].active;
 
     for (let i = beatStart; i < beatStart + firstSub && i < beatEnd; i++) {
       result[i] = tiePrev ? { ...result[i], active: true, note: '───', midiNumber: result[beatStart - 1].midiNumber || fbMidi, isTie: true, syllable: '' } : { ...result[i], active: false, note: '', midiNumber: 0, isTie: false, syllable: '' };

@@ -44,10 +44,11 @@ export function quantizePitchToSteps(params: QuantizerParams): QuantizedGridResu
   const allSteps: VocalStepData[] = [], beatMap = buildBeatLyricsMap(timeAnchors, hasAnac);
   let globalStepIndex = 0, prevMidiFloat = 0;
   const segments = segmentPitchCurve(pitchCurve, { minDurationSec: 0.04, pitchJumpThreshold: pitchDiffLimit });
+  const anchorsHaveAnac = timeAnchors.length > 0 && timeAnchors[0].measureOffset === 0 && timeAnchors[0].beat > 1 && timeAnchors.some((a) => a.measureOffset >= 1);
 
   for (let m = startM; m <= measuresCount; m++) {
     const mBaseSec = m === -1 ? (t1 - measureDuration) : (t1 + m * measureDuration);
-    const beatsInThisM = (m === measuresCount) ? 1 : beatsPerMeasure, mOffset = hasAnac ? (m === -1 ? 0 : m + 1) : m;
+    const beatsInThisM = (m === measuresCount) ? 1 : beatsPerMeasure, mOffset = (hasAnac && anchorsHaveAnac) ? (m === -1 ? 0 : m + 1) : m;
 
     for (let b = 0; b < beatsInThisM; b++) {
       const beatStartTime = mBaseSec + b * beatDuration, resolution = beatResolutions[b] || 4, stepDuration = beatDuration / resolution;
@@ -55,7 +56,7 @@ export function quantizePitchToSteps(params: QuantizerParams): QuantizedGridResu
       const isInitialRest = anchor?.isInitialRest === true, isSustainedHold = anchor?.isSustainedHold === true, hasLeadingRest = anchor?.hasLeadingRest === true;
       const sylCount = anchor?.syllables?.length || 0;
       const onsetProfile = computeVowelOnsetStrength(pcm, sampleRate, pitchCurve, beatStartTime, beatDuration, resolution);
-      const hasExplicitUnderscore = Boolean(anchor?.textSlice && /[_𝄽]/.test(anchor.textSlice)) || Boolean(anchor?.isDownbeatLocked) || Boolean(anchor?.hasTrailingPickup);
+      const hasExplicitUnderscore = Boolean(hasLeadingRest || anchor?.isDownbeatLocked || anchor?.hasTrailingPickup || (anchor?.textSlice && /[_𝄽]/.test(anchor.textSlice)));
       const maracatuFit = scoreMaracatuSubBeatPattern({
         syllableCount: sylCount, profile: onsetProfile, hasLeadingRest, hasTrailingPickup: anchor?.hasTrailingPickup,
         isDownbeatLocked: anchor?.isDownbeatLocked, explicitSubdivs: anchor?.syllableSubdivs, hasExplicitUnderscore,
@@ -67,13 +68,13 @@ export function quantizePitchToSteps(params: QuantizerParams): QuantizedGridResu
 
       for (let s = 0; s < resolution; s++) {
         const stepStart = beatStartTime + s * stepDuration, stepEnd = stepStart + stepDuration, prevStep = allSteps[allSteps.length - 1];
-        if (isInitialRest || stepStart >= trimEndSec) {
+        if (isInitialRest || stepStart >= trimEndSec || (hasLeadingRest && s === 0)) {
           allSteps.push({ stepIndex: globalStepIndex++, active: false, note: '', midiNumber: 0, velocity: 0, decay: stepDuration });
           prevMidiFloat = 0; continue;
         }
-        if ((hasLeadingRest && s === 0) || (sylCount > 0 && s < startSub)) {
+        if (sylCount > 0 && s < startSub) {
           const sVoiced = computeVowelCoreMidi(pitchCurve, stepStart, stepEnd, 0) !== null;
-          if (prevStep?.active && prevStep.midiNumber > 0 && sVoiced) {
+          if (!hasLeadingRest && prevStep?.active && prevStep.midiNumber > 0 && sVoiced) {
             allSteps.push({ stepIndex: globalStepIndex++, active: true, note: '───', midiNumber: prevStep.midiNumber, syllable: '', syllableAttack: false, isTie: true, velocity: 90, decay: stepDuration });
           } else {
             allSteps.push({ stepIndex: globalStepIndex++, active: false, note: '', midiNumber: 0, velocity: 0, decay: stepDuration });
@@ -96,7 +97,7 @@ export function quantizePitchToSteps(params: QuantizerParams): QuantizedGridResu
         const targetMidi = isScaleLocked ? snapMidiToScale(curFloat, tonic, scaleType, allowedPitchClasses) : Math.round(curFloat);
         const isFirstVoicedWithSyl = !hasVoicedInBeat && sylCount > 0;
         hasVoicedInBeat = true;
-        const isSubdivAttack = sylCount > 0 && subdivTargets.has(s);
+        const isSubdivAttack = (sylCount > 0 && subdivTargets.has(s)) || Boolean(anchor?.isDownbeatLocked && s === 0);
         const acousticAttack = (pcm && sampleRate ? hasSyllableAttack(pcm, sampleRate, stepStart, stepEnd) : false) || onsetProfile.hasImpulse[s];
         const allowAcousticSplit = timeAnchors.length === 0 || (sylCount === 0 && !isSustainedHold);
         const hasAttack = !isSustainedHold && (isFirstVoicedWithSyl || isSubdivAttack || (allowAcousticSplit && acousticAttack));

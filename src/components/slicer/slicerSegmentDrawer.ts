@@ -100,7 +100,7 @@ export function drawSegmentWaveform(ctx: CanvasRenderingContext2D, opts: DrawSeg
       ctx.fillText(`🔇 Pause (${pauseM}M)`, xGapStart + 4, midY + 3);
     }
 
-    if (xT1 >= xStart - 10 && xT1 <= xEnd) {
+    if (xT1 >= 0 && xT1 <= width && xT1 <= xEnd) {
       ctx.strokeStyle = '#ef4444'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(xT1, 0); ctx.lineTo(xT1, height); ctx.stroke();
       ctx.fillStyle = '#b91c1c'; ctx.fillRect(xT1 - 8, 2, 16, 12);
       ctx.fillStyle = '#ffffff'; ctx.font = 'bold 8px monospace'; ctx.fillText('T1', xT1 - 5, 11);
