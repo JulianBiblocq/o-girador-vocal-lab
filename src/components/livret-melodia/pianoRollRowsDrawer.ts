@@ -21,22 +21,22 @@ export interface DrawRowsOptions {
   beatDurationSec: number;
   hasAnacrusis?: boolean;
   pitchShiftSemitones?: number;
+  allowedPitchClasses?: Set<number> | null;
 }
 
 export function drawPianoRollRows(opts: DrawRowsOptions): void {
   const {
     ctx, width, minMidi, maxMidi, rowHeight, harmonyGrid,
     playheadSec, seekStartSec, isPlaying, beatsPerMeasure, beatDurationSec,
-    hasAnacrusis = true, pitchShiftSemitones = 0,
+    hasAnacrusis = true, pitchShiftSemitones = 0, allowedPitchClasses,
   } = opts;
 
-  // Calcul de l'accord actif au point d'écoute actuel
   const currentSec = isPlaying && playheadSec >= 0 ? playheadSec : seekStartSec;
   const activeChord = getChordAtTime(harmonyGrid, currentSec, beatsPerMeasure, beatDurationSec, hasAnacrusis, pitchShiftSemitones);
   const activePitchClasses = activeChord ? new Set(activeChord.pitchClasses) : null;
   const rootPc = activeChord ? ((activeChord.rootMidi % 12) + 12) % 12 : null;
   const fifthPc = rootPc !== null ? (rootPc + 7) % 12 : null;
-
+  const hasScaleLock = Boolean(allowedPitchClasses && allowedPitchClasses.size > 0 && allowedPitchClasses.size < 12);
   const isLight = typeof document !== 'undefined' && document.documentElement.getAttribute('data-theme') === 'light';
 
   for (let midi = maxMidi; midi >= minMidi; midi--) {
@@ -45,8 +45,11 @@ export function drawPianoRollRows(opts: DrawRowsOptions): void {
     const isBlack = BLACK_KEYS.has(pc);
     const isChordTone = activePitchClasses ? activePitchClasses.has(pc) : false;
     const isRootOrFifth = isChordTone && (pc === rootPc || pc === fifthPc);
+    const isInScale = !hasScaleLock || allowedPitchClasses!.has(pc);
 
-    if (isRootOrFifth) {
+    if (!isInScale) {
+      ctx.fillStyle = isLight ? 'rgba(30, 25, 20, 0.16)' : 'rgba(0, 0, 0, 0.58)';
+    } else if (isRootOrFifth) {
       ctx.fillStyle = isLight
         ? (isBlack ? 'rgba(217, 119, 6, 0.18)' : 'rgba(217, 119, 6, 0.24)')
         : (isBlack ? 'rgba(200, 138, 43, 0.16)' : 'rgba(200, 138, 43, 0.22)');
@@ -54,6 +57,8 @@ export function drawPianoRollRows(opts: DrawRowsOptions): void {
       ctx.fillStyle = isLight
         ? (isBlack ? 'rgba(217, 119, 6, 0.10)' : 'rgba(217, 119, 6, 0.14)')
         : (isBlack ? 'rgba(200, 138, 43, 0.08)' : 'rgba(200, 138, 43, 0.12)');
+    } else if (hasScaleLock) {
+      ctx.fillStyle = isLight ? 'rgba(16, 185, 129, 0.08)' : 'rgba(16, 185, 129, 0.07)';
     } else if (isBlack) {
       ctx.fillStyle = isLight ? 'rgba(42, 33, 27, 0.07)' : 'rgba(0, 0, 0, 0.42)';
     } else if (pc === 0) {
@@ -64,7 +69,6 @@ export function drawPianoRollRows(opts: DrawRowsOptions): void {
 
     ctx.fillRect(0, y, width, rowHeight);
 
-    // Ligne de démarcation horizontale
     ctx.strokeStyle = isChordTone
       ? 'rgba(200, 138, 43, 0.35)'
       : pc === 0

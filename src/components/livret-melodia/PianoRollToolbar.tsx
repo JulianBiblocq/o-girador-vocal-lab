@@ -23,8 +23,8 @@ interface PianoRollToolbarProps {
 }
 
 const SCALE_I18N_KEYS: Record<ScaleType, TranslationKey> = {
-  chromatic: 'scaleChromatic', major: 'scaleMajor', natural_minor: 'scaleNaturalMinor',
-  mixolydian: 'scaleMixolydian', dorian: 'scaleDorian', pentatonic_minor: 'scalePentatonicMinor', pentatonic_major: 'scalePentatonicMajor',
+  chromatic: 'scaleChromatic', major: 'scaleMajor', minor: 'scaleNaturalMinor', natural_minor: 'scaleNaturalMinor',
+  mixolydian: 'scaleMixolydian', dorian: 'scaleDorian', harmonic_minor: 'scaleNaturalMinor', pentatonic_minor: 'scalePentatonicMinor', pentatonic_major: 'scalePentatonicMajor',
 };
 
 export const PianoRollToolbar: React.FC<PianoRollToolbarProps> = (props) => {

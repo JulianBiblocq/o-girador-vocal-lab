@@ -1,126 +1,109 @@
 /**
  * PianoRollSyllablesRow.tsx
- * Ligne d'édition directe des syllabes sous la grille du Piano Roll (bilingue + contraste Jour/Nuit) (< 125 lignes).
+ * Ligne d'édition directe des syllabes sous le Piano Roll avec Fusion (🔗) et Scission (✂️) en 1 clic (< 125 lignes).
  */
 import React, { useState, useRef, useMemo, useEffect } from 'react';
 import type { VocalStepData } from '../../types/vocalPack.types';
-import { Scissors, CornerDownLeft } from 'lucide-react';
+import { joinSyllableWithPrevious, splitBrickAndSyllableAt } from '../../utils/syllableImpulseMerger';
+import { Scissors, CornerDownLeft, Link2 } from 'lucide-react';
 import { useLanguage } from '../../i18n/LanguageContext';
 
 interface PianoRollSyllablesRowProps {
-  allSteps: VocalStepData[];
-  gridWidth: number;
-  readOnly?: boolean;
+  allSteps: VocalStepData[]; gridWidth: number; readOnly?: boolean;
   onUpdateSteps: (newSteps: VocalStepData[], commit?: boolean) => void;
 }
 
 export const PianoRollSyllablesRow: React.FC<PianoRollSyllablesRowProps> = ({
   allSteps, gridWidth, readOnly, onUpdateSteps,
 }) => {
-  const { t } = useLanguage();
-  const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
+  const { t } = useLanguage(), inputRefs = useRef<(HTMLInputElement | null)[]>([]);
   const activeNotes = useMemo(() => {
-    const list: { stepIndex: number; note: string; syllable: string; width: number; x: number }[] = [];
+    const list: { stepIndex: number; note: string; syllable: string; spanSteps: number; width: number; x: number }[] = [];
     const stepW = allSteps.length > 0 ? gridWidth / allSteps.length : 0;
     for (let i = 0; i < allSteps.length; i++) {
       const s = allSteps[i];
       if (s.active && s.note !== '───') {
         let ties = 0;
         while (i + 1 + ties < allSteps.length && allSteps[i + 1 + ties].note === '───') ties++;
-        const x = i * stepW;
-        const w = Math.max(stepW * (1 + ties), 36);
-        list.push({ stepIndex: i, note: s.note, syllable: s.syllable || '', width: w, x });
+        const spanSteps = 1 + ties, x = i * stepW, w = Math.max(stepW * spanSteps, 36);
+        list.push({ stepIndex: i, note: s.note, syllable: s.syllable || '', spanSteps, width: w, x });
         i += ties;
       }
     }
     return list;
   }, [allSteps, gridWidth]);
 
-  const defaultPhrase = useMemo(() => {
-    return activeNotes.map((n, idx) => {
-      const s = n.syllable || '-';
-      if (idx === activeNotes.length - 1) return s.trimEnd();
-      return s.endsWith(' ') ? s : `${s}-`;
-    }).join('');
-  }, [activeNotes]);
+  const defaultPhrase = useMemo(() => activeNotes.map((n, idx) => {
+    const s = n.syllable || '-';
+    return idx === activeNotes.length - 1 ? s.trimEnd() : (s.endsWith(' ') ? s : `${s}-`);
+  }).join(''), [activeNotes]);
   const [cutterText, setCutterText] = useState(defaultPhrase);
-
   useEffect(() => { setCutterText(defaultPhrase); }, [defaultPhrase]);
 
-  const handleSyllableChange = (stepIdx: number, val: string) => {
+  const handleSyllableChange = (stepIdx: number, val: string) =>
     onUpdateSteps(allSteps.map((st, i) => (i === stepIdx ? { ...st, syllable: val } : st)), false);
+
+  const handleJoinPrev = (stepIdx: number, focusPrevIdx?: number) => {
+    onUpdateSteps(joinSyllableWithPrevious(allSteps, stepIdx, 4), true);
+    if (focusPrevIdx !== undefined && focusPrevIdx >= 0) setTimeout(() => inputRefs.current[focusPrevIdx]?.focus(), 10);
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>, idx: number) => {
+  const handleSplitBrick = (stepIdx: number, customVal?: string) =>
+    onUpdateSteps(splitBrickAndSyllableAt(allSteps, stepIdx, customVal), true);
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>, idx: number, n: { stepIndex: number; spanSteps: number }) => {
     if (e.key === 'Tab') {
       e.preventDefault();
       const nextIdx = e.shiftKey ? idx - 1 : idx + 1;
-      if (nextIdx >= 0 && nextIdx < activeNotes.length) {
-        inputRefs.current[nextIdx]?.focus();
-        inputRefs.current[nextIdx]?.select();
-      }
+      if (nextIdx >= 0 && nextIdx < activeNotes.length) { inputRefs.current[nextIdx]?.focus(); inputRefs.current[nextIdx]?.select(); }
+    } else if (e.key === 'Backspace' && idx > 0 && e.currentTarget.selectionStart === 0 && e.currentTarget.selectionEnd === 0) {
+      e.preventDefault(); handleJoinPrev(n.stepIndex, idx - 1);
     } else if (e.key === 'Enter') {
-      e.currentTarget.blur();
+      const val = e.currentTarget.value;
+      if (n.spanSteps >= 2 && /\S+\s+\S+/.test(val)) { e.preventDefault(); handleSplitBrick(n.stepIndex, val); }
+      else e.currentTarget.blur();
     }
   };
 
   const handleDistributeCut = () => {
     if (!cutterText.trim()) return;
-    const words = cutterText.trim().split(/\s+/).filter(Boolean);
-    const parts: string[] = [];
+    const words = cutterText.trim().split(/\s+/).filter(Boolean), parts: string[] = [];
     for (const word of words) {
       if (word === '-' || word === '~') { parts.push('-'); continue; }
       const syls = word.split('-').filter(Boolean);
       syls.forEach((s, i) => parts.push(i === syls.length - 1 ? `${s} ` : s));
     }
     const next = [...allSteps];
-    activeNotes.forEach((n, idx) => {
-      const syl = parts[idx] ?? '';
-      next[n.stepIndex] = { ...next[n.stepIndex], syllable: syl };
-    });
+    activeNotes.forEach((n, idx) => { next[n.stepIndex] = { ...next[n.stepIndex], syllable: parts[idx] ?? '' }; });
     onUpdateSteps(next, true);
   };
 
   return (
     <div className="flex flex-col gap-1 border-t border-[var(--cordel-border-sub)] bg-[var(--cordel-subcard-bg)] pt-1">
-      <div className="relative h-7" style={{ width: `${gridWidth}px`, marginLeft: '64px' }}>
+      <div className="relative h-8" style={{ width: `${gridWidth}px`, marginLeft: '64px' }}>
         {activeNotes.map((n, idx) => (
-          <div
-            key={n.stepIndex}
-            className="absolute top-0 flex flex-col justify-center"
-            style={{ left: `${n.x}px`, width: `${n.width - 2}px` }}
-          >
-            <input
-              ref={(el) => { inputRefs.current[idx] = el; }}
-              type="text" disabled={readOnly} value={n.syllable} placeholder={n.note}
-              onChange={(e) => handleSyllableChange(n.stepIndex, e.target.value)}
-              onBlur={() => onUpdateSteps(allSteps, true)}
-              onKeyDown={(e) => handleKeyDown(e, idx)}
-              className="letra-syllable-input w-full text-center text-[10px] font-mono font-bold px-0.5 py-0.5 focus:outline-none transition-colors rounded-none"
-              title={t('syllableInputTitle', { note: n.note })}
-            />
+          <div key={n.stepIndex} className="absolute top-0 flex items-center" style={{ left: `${n.x}px`, width: `${n.width - 2}px` }}>
+            {!readOnly && idx > 0 && (
+              <button type="button" tabIndex={-1} onClick={() => handleJoinPrev(n.stepIndex, idx - 1)} title="🔗 Joindre cette syllabe à la précédente (ou Backspace en début de case)" className="px-0.5 py-0.5 bg-amber-600/20 hover:bg-amber-600 text-amber-700 dark:text-amber-300 hover:text-white text-[9px] font-bold cursor-pointer shrink-0 border-y border-l border-amber-500/40">
+                <Link2 className="w-2.5 h-2.5" />
+              </button>
+            )}
+            <input ref={(el) => { inputRefs.current[idx] = el; }} type="text" disabled={readOnly} value={n.syllable} placeholder={n.note} onChange={(e) => handleSyllableChange(n.stepIndex, e.target.value)} onBlur={() => onUpdateSteps(allSteps, true)} onKeyDown={(e) => handleKeyDown(e, idx, n)} className="letra-syllable-input w-full text-center text-[10px] font-mono font-bold px-0.5 py-0.5 focus:outline-none transition-colors rounded-none" title={t('syllableInputTitle', { note: n.note })} />
+            {!readOnly && n.spanSteps >= 2 && (
+              <button type="button" tabIndex={-1} onClick={() => handleSplitBrick(n.stepIndex)} title="✂️ Scinder cette brique tenue en 2 impulsions/syllabes" className="px-0.5 py-0.5 bg-emerald-600/20 hover:bg-emerald-600 text-emerald-700 dark:text-emerald-300 hover:text-white text-[9px] font-bold cursor-pointer shrink-0 border-y border-r border-emerald-500/40">
+                <Scissors className="w-2.5 h-2.5" />
+              </button>
+            )}
           </div>
         ))}
       </div>
-
       {!readOnly && activeNotes.length > 0 && (
         <div className="flex items-center gap-2 px-2 py-1 bg-[var(--cordel-surface)] border-t border-[var(--cordel-border-sub)] text-[10px] font-mono" style={{ width: `${64 + gridWidth}px` }}>
           <Scissors className="w-3.5 h-3.5 text-amber-700 dark:text-amber-400 shrink-0" />
           <span className="text-[var(--cordel-secondary-text)] shrink-0">{t('syllableQuickSplitLabel')}</span>
-          <input
-            type="text" value={cutterText}
-            onChange={(e) => setCutterText(e.target.value)}
-            onKeyDown={(e) => { if (e.key === 'Enter') handleDistributeCut(); }}
-            placeholder={t('syllableQuickSplitPlaceholder')}
-            className="letra-phrase-input flex-1 min-w-[200px] px-2 py-0.5 text-[10.5px] font-mono rounded-none focus:outline-none"
-          />
-          <button
-            type="button" onClick={handleDistributeCut}
-            className="px-2 py-0.5 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-none flex items-center gap-1 cursor-pointer shrink-0"
-            title={t('syllableDistributeTitle')}
-          >
-            <CornerDownLeft className="w-3 h-3" />
-            <span>{t('syllableDistributeBtn', { count: activeNotes.length })}</span>
+          <input type="text" value={cutterText} onChange={(e) => setCutterText(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') handleDistributeCut(); }} placeholder={t('syllableQuickSplitPlaceholder')} className="letra-phrase-input flex-1 min-w-[200px] px-2 py-0.5 text-[10.5px] font-mono rounded-none focus:outline-none" />
+          <button type="button" onClick={handleDistributeCut} className="px-2 py-0.5 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-none flex items-center gap-1 cursor-pointer shrink-0" title={t('syllableDistributeTitle')}>
+            <CornerDownLeft className="w-3 h-3" /><span>{t('syllableDistributeBtn', { count: activeNotes.length })}</span>
           </button>
         </div>
       )}

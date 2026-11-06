@@ -59,7 +59,7 @@ export function computeTrimmedMedianMidi(
 
 export function recalibrateBricksToLocalPitchCurve(
   steps: VocalStepData[], pitchCurve: PitchCurvePoint[], gridStartSec: number, stepDurationSec: number,
-  tonic = 'C', scaleType: ScaleType = 'chromatic', smoothingLevel = 0.15
+  tonic = 'C', scaleType: ScaleType = 'chromatic', smoothingLevel = 0.15, allowedPitchClasses?: Set<number> | number[] | null
 ): VocalStepData[] {
   if (!pitchCurve || pitchCurve.length === 0 || !steps.length || stepDurationSec <= 0) return steps;
   const cleanCurve = filterConsonantPitchDips(pitchCurve);
@@ -81,7 +81,6 @@ export function recalibrateBricksToLocalPitchCurve(
     let effFloat = cur.midiFloat;
     const prevF = b > 0 ? bricks[b - 1].midiFloat : cur.midiFloat;
     const nextF = b + 1 < bricks.length ? bricks[b + 1].midiFloat : cur.midiFloat;
-    // Protection anti-creux de consonne sur brique courte (1 double-croche plongeant de >= 3.2 st)
     if (spanSteps <= 1 && bricks.length > 1 && (prevF - effFloat >= 3.2 || nextF - effFloat >= 3.2)) {
       effFloat = b > 0 && b + 1 < bricks.length ? (prevF + nextF) / 2 : (b > 0 ? prevF : nextF);
     } else if (smoothingLevel > 0.25 && bricks.length > 1) {
@@ -90,8 +89,9 @@ export function recalibrateBricksToLocalPitchCurve(
       const nWeight = Math.abs(nextF - effFloat) <= maxJump ? (smoothingLevel - 0.25) * 0.45 : 0;
       effFloat = (effFloat + prevF * pWeight + nextF * nWeight) / (1 + pWeight + nWeight);
     }
-    let targetMidi = Math.round(effFloat);
-    if (scaleType !== 'chromatic') targetMidi = snapMidiToScale(targetMidi, tonic, scaleType);
+    const targetMidi = (scaleType !== 'chromatic' || allowedPitchClasses)
+      ? snapMidiToScale(effFloat, tonic, scaleType, allowedPitchClasses)
+      : Math.round(effFloat);
     result[cur.startIdx] = { ...result[cur.startIdx], midiNumber: targetMidi, note: midiToNoteName(targetMidi), isTie: false };
     for (let k = cur.startIdx + 1; k <= cur.endIdx; k++) {
       result[k] = { ...result[k], midiNumber: targetMidi, note: '───', isTie: true };

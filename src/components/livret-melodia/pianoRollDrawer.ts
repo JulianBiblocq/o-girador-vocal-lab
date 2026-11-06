@@ -13,10 +13,11 @@ export interface DrawGridOptions {
   rawPitchCurve?: PitchCurvePoint[]; totalDurationSec: number; anacrusisDurationSec: number; seekStartSec: number;
   playheadSec: number; isPlaying: boolean; hasAnacrusis?: boolean; t1OffsetSec?: number; bpm?: number;
   selectedStepIdx?: number | null; harmonyGrid?: PatternHarmonyGrid; pitchShiftSemitones?: number;
+  allowedPitchClasses?: Set<number> | null;
 }
 
 export function drawPianoRollGrid(ctx: CanvasRenderingContext2D, opts: DrawGridOptions): void {
-  const { width, height, dpr, minMidi, maxMidi, rowHeight, beatsPerMeasure, beatResolutions, allSteps, pitchCurve, totalDurationSec, anacrusisDurationSec, seekStartSec, playheadSec, isPlaying, hasAnacrusis = true, bpm, selectedStepIdx, harmonyGrid, pitchShiftSemitones } = opts;
+  const { width, height, dpr, minMidi, maxMidi, rowHeight, beatsPerMeasure, beatResolutions, allSteps, pitchCurve, totalDurationSec, anacrusisDurationSec, seekStartSec, playheadSec, isPlaying, hasAnacrusis = true, bpm, selectedStepIdx, harmonyGrid, pitchShiftSemitones, allowedPitchClasses } = opts;
   ctx.save(); ctx.scale(dpr, dpr); ctx.clearRect(0, 0, width, height);
 
   const beatDur = bpm ? 60 / bpm : (hasAnacrusis && beatsPerMeasure > 0 ? anacrusisDurationSec / beatsPerMeasure : 0.6);
@@ -29,7 +30,7 @@ export function drawPianoRollGrid(ctx: CanvasRenderingContext2D, opts: DrawGridO
   // 1. Rangées de demi-tons et surbrillance harmonique dynamique
   drawPianoRollRows({
     ctx, width, minMidi, maxMidi, rowHeight, harmonyGrid, playheadSec, seekStartSec,
-    isPlaying, beatsPerMeasure, beatDurationSec: beatDur, hasAnacrusis, pitchShiftSemitones,
+    isPlaying, beatsPerMeasure, beatDurationSec: beatDur, hasAnacrusis, pitchShiftSemitones, allowedPitchClasses,
   });
 
   // 2. Grille temporelle discrète 1:1 avec les pas MIDI

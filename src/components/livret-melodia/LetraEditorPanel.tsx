@@ -1,11 +1,12 @@
 /**
  * LetraEditorPanel.tsx
- * Éditeur « Letra da Toada » avec navigation 1-Tab entre syllabes et alignement strict non-destructif (< 142 lignes).
+ * Éditeur « Letra da Toada » avec navigation 1-Tab, Fusion (🔗) et Scission (✂️) en 1 clic (< 142 lignes).
  */
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import type { VocalStepData } from '../../types/vocalPack.types';
 import { assignSyllablesStrictlyToExistingBricks, reconstructWordsFromSteps } from '../../utils/syllableAligner';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { joinSyllableWithPrevious, splitBrickAndSyllableAt } from '../../utils/syllableImpulseMerger';
+import { ChevronLeft, ChevronRight, Link2, Scissors } from 'lucide-react';
 import { CordelScroll, CordelBulb, CordelSpark } from '../common/CordelIcons';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { useToadaProject } from '../../context/ToadaProjectContext';
@@ -62,13 +63,21 @@ export const LetraEditorPanel: React.FC<LetraEditorPanelProps> = ({ allSteps, on
     onUpdateSteps(next, true);
   };
 
-  const activeStepEntries = useMemo(
-    () => allSteps.map((step, arrayIdx) => ({ step, arrayIdx })).filter(({ step }) => step.active && step.note !== '───' && !step.isTie),
-    [allSteps]
-  );
+  const activeStepEntries = useMemo(() => {
+    const list: Array<{ step: VocalStepData; arrayIdx: number; spanSteps: number }> = [];
+    for (let i = 0; i < allSteps.length; i++) {
+      const step = allSteps[i];
+      if (step.active && step.note !== '───' && !step.isTie) {
+        let ties = 0;
+        while (i + 1 + ties < allSteps.length && allSteps[i + 1 + ties].note === '───') ties++;
+        list.push({ step, arrayIdx: i, spanSteps: 1 + ties });
+      }
+    }
+    return list;
+  }, [allSteps]);
   const reconstructedWords = useMemo(() => reconstructWordsFromSteps(allSteps), [allSteps]);
 
-  const handleSyllableKeyDown = (e: React.KeyboardEvent<HTMLInputElement>, cardIdx: number) => {
+  const handleSyllableKeyDown = (e: React.KeyboardEvent<HTMLInputElement>, cardIdx: number, entry: { arrayIdx: number; spanSteps: number }) => {
     if (e.key === 'Tab') {
       const nextIdx = e.shiftKey ? cardIdx - 1 : cardIdx + 1;
       if (nextIdx >= 0 && nextIdx < activeStepEntries.length) {
@@ -77,7 +86,16 @@ export const LetraEditorPanel: React.FC<LetraEditorPanelProps> = ({ allSteps, on
         const targetEl = sylInputRefs.current[nextIdx];
         if (targetEl) { targetEl.focus(); targetEl.select(); targetEl.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' }); }
       }
-    } else if (e.key === 'Enter') { e.currentTarget.blur(); }
+    } else if (e.key === 'Backspace' && cardIdx > 0 && e.currentTarget.selectionStart === 0 && e.currentTarget.selectionEnd === 0) {
+      e.preventDefault(); onCommitHistory?.();
+      onUpdateSteps(joinSyllableWithPrevious(allSteps, entry.arrayIdx, 4), true);
+      setTimeout(() => sylInputRefs.current[cardIdx - 1]?.focus(), 10);
+    } else if (e.key === 'Enter') {
+      if (entry.spanSteps >= 2 && /\S+\s+\S+/.test(e.currentTarget.value)) {
+        e.preventDefault(); onCommitHistory?.();
+        onUpdateSteps(splitBrickAndSyllableAt(allSteps, entry.arrayIdx, e.currentTarget.value), true);
+      } else e.currentTarget.blur();
+    }
   };
 
   return (
@@ -93,46 +111,27 @@ export const LetraEditorPanel: React.FC<LetraEditorPanelProps> = ({ allSteps, on
             {availablePhrases.map((phrase, i) => <option key={i} value={phrase}>{phrase}</option>)}
           </select>
         )}
-        <input
-          type="text" value={rawText} placeholder="Ex: Eu vou va-di-ar..." onFocus={(e) => setFocusPhrase(e.target.value)}
-          onChange={(e) => { setRawText(e.target.value); updatePattern(activePattern.id, { assignedLyricsText: e.target.value }); }}
-          onBlur={(e) => { if (e.target.value !== focusPhrase) onCommitHistory?.(); }} onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
-          className="letra-phrase-input flex-1 px-3 py-1.5 text-xs font-mono focus:outline-none focus:border-theme-accent rounded"
-        />
-        <button type="button" onClick={handleAlign} className="cordel-btn-primary px-3 py-1.5 text-xs font-mono flex items-center gap-1 font-bold rounded cursor-pointer">
-          <CordelSpark className="w-3.5 h-3.5" /><span>{t('alignBtn')}</span>
-        </button>
+        <input type="text" value={rawText} placeholder="Ex: Eu vou va-di-ar..." onFocus={(e) => setFocusPhrase(e.target.value)} onChange={(e) => { setRawText(e.target.value); updatePattern(activePattern.id, { assignedLyricsText: e.target.value }); }} onBlur={(e) => { if (e.target.value !== focusPhrase) onCommitHistory?.(); }} onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }} className="letra-phrase-input flex-1 px-3 py-1.5 text-xs font-mono focus:outline-none focus:border-theme-accent rounded" />
+        <button type="button" onClick={handleAlign} className="cordel-btn-primary px-3 py-1.5 text-xs font-mono flex items-center gap-1 font-bold rounded cursor-pointer"><CordelSpark className="w-3.5 h-3.5" /><span>{t('alignBtn')}</span></button>
       </div>
-      {activePattern.assignedPhoneticText && (
-        <div className="text-[10px] font-mono text-stone-400 italic px-1 flex items-center gap-1"><span className="text-stone-500">🔤</span><span>{activePattern.assignedPhoneticText}</span></div>
-      )}
       <p className="text-[10px] font-mono text-theme-ink/80 leading-snug px-0.5 flex items-center gap-1"><CordelBulb className="w-3.5 h-3.5 text-theme-accent shrink-0" /><span>{t('syntaxGuide')}</span></p>
       <div className="flex items-center gap-1.5 overflow-x-auto py-1 cordel-scrollbar">
-        {activeStepEntries.length === 0 ? (
-          <span className="text-[11px] font-mono text-theme-ink/50 italic">{t('letraNoActiveNotes')}</span>
-        ) : (
-          activeStepEntries.map(({ step: st, arrayIdx }, cardIdx) => {
-            const hasSpace = (st.syllable ?? '').endsWith(' ');
-            return (
-              <div key={arrayIdx} className="flex flex-col items-center bg-white/5 border border-theme-border/60 p-1 min-w-[62px] shrink-0 rounded-none">
-                <div className="flex items-center justify-between w-full px-0.5 text-[9px] font-mono"><span className="opacity-50">#{cardIdx + 1}</span><span className="text-theme-accent font-black">{st.note}</span></div>
-                <input
-                  ref={(el) => { sylInputRefs.current[cardIdx] = el; }} data-syllable-idx={cardIdx} type="text" value={st.syllable ?? ''}
-                  onFocus={(e) => setFocusSyl(e.target.value)} onChange={(e) => handleSyllableChange(arrayIdx, e.target.value)}
-                  onBlur={(e) => { if (e.target.value !== focusSyl) onCommitHistory?.(); }} onKeyDown={(e) => handleSyllableKeyDown(e, cardIdx)}
-                  className="letra-syllable-input w-full text-center text-[11px] font-mono px-0.5 py-0.5 mt-0.5 focus:outline-none rounded-none"
-                />
-                <button type="button" tabIndex={-1} onClick={() => handleToggleTrailingSpace(arrayIdx)} className={`mt-1 px-1 py-0.5 text-[8.5px] font-mono w-full transition-all rounded-none cursor-pointer ${hasSpace ? 'letra-space-btn-active' : 'bg-white/5 text-theme-ink/60 hover:bg-white/10'}`} title={hasSpace ? t('letraSpaceTooltip') : t('letraTiedTooltip')}>
-                  {hasSpace ? t('letraSpaceBadge') : t('letraTiedBadge')}
-                </button>
-                <div className="flex items-center justify-between w-full mt-1 px-0.5">
-                  <button type="button" tabIndex={-1} onClick={() => handleShiftSyllable(arrayIdx, -1)} className="p-0.5 hover:bg-white/10 rounded-none cursor-pointer"><ChevronLeft className="w-3 h-3 text-theme-ink/60" /></button>
-                  <button type="button" tabIndex={-1} onClick={() => handleShiftSyllable(arrayIdx, 1)} className="p-0.5 hover:bg-white/10 rounded-none cursor-pointer"><ChevronRight className="w-3 h-3 text-theme-ink/60" /></button>
-                </div>
+        {activeStepEntries.length === 0 ? <span className="text-[11px] font-mono text-theme-ink/50 italic">{t('letraNoActiveNotes')}</span> : activeStepEntries.map((entry, cardIdx) => {
+          const { step: st, arrayIdx, spanSteps } = entry, hasSpace = (st.syllable ?? '').endsWith(' ');
+          return (
+            <div key={arrayIdx} className="flex flex-col items-center bg-white/5 border border-theme-border/60 p-1 min-w-[66px] shrink-0 rounded-none">
+              <div className="flex items-center justify-between w-full px-0.5 text-[9px] font-mono"><span className="opacity-50">#{cardIdx + 1}</span><span className="text-theme-accent font-black">{st.note}</span></div>
+              <input ref={(el) => { sylInputRefs.current[cardIdx] = el; }} data-syllable-idx={cardIdx} type="text" value={st.syllable ?? ''} onFocus={(e) => setFocusSyl(e.target.value)} onChange={(e) => handleSyllableChange(arrayIdx, e.target.value)} onBlur={(e) => { if (e.target.value !== focusSyl) onCommitHistory?.(); }} onKeyDown={(e) => handleSyllableKeyDown(e, cardIdx, entry)} className="letra-syllable-input w-full text-center text-[11px] font-mono px-0.5 py-0.5 mt-0.5 focus:outline-none rounded-none" />
+              <button type="button" tabIndex={-1} onClick={() => handleToggleTrailingSpace(arrayIdx)} className={`mt-1 px-1 py-0.5 text-[8.5px] font-mono w-full transition-all rounded-none cursor-pointer ${hasSpace ? 'letra-space-btn-active' : 'bg-white/5 text-theme-ink/60 hover:bg-white/10'}`} title={hasSpace ? t('letraSpaceTooltip') : t('letraTiedTooltip')}>{hasSpace ? t('letraSpaceBadge') : t('letraTiedBadge')}</button>
+              <div className="flex items-center justify-between w-full mt-1 px-0.5">
+                <button type="button" tabIndex={-1} onClick={() => handleShiftSyllable(arrayIdx, -1)} className="p-0.5 hover:bg-white/10 rounded-none cursor-pointer" title="Décaler syllabe à gauche"><ChevronLeft className="w-3 h-3 text-theme-ink/60" /></button>
+                {cardIdx > 0 && <button type="button" tabIndex={-1} onClick={() => { onCommitHistory?.(); onUpdateSteps(joinSyllableWithPrevious(allSteps, arrayIdx, 4), true); }} className="p-0.5 hover:bg-amber-500/20 text-amber-500 rounded-none cursor-pointer" title="🔗 Joindre avec la syllabe précédente"><Link2 className="w-3 h-3" /></button>}
+                {spanSteps >= 2 && <button type="button" tabIndex={-1} onClick={() => { onCommitHistory?.(); onUpdateSteps(splitBrickAndSyllableAt(allSteps, arrayIdx), true); }} className="p-0.5 hover:bg-emerald-500/20 text-emerald-500 rounded-none cursor-pointer" title="✂️ Scinder cette brique en 2 syllabes"><Scissors className="w-3 h-3" /></button>}
+                <button type="button" tabIndex={-1} onClick={() => handleShiftSyllable(arrayIdx, 1)} className="p-0.5 hover:bg-white/10 rounded-none cursor-pointer" title="Décaler syllabe à droite"><ChevronRight className="w-3 h-3 text-theme-ink/60" /></button>
               </div>
-            );
-          })
-        )}
+            </div>
+          );
+        })}
       </div>
       <div className="flex items-center gap-2 pt-1 border-t border-theme-border/30 text-[11px] font-mono">
         <span className="text-theme-ink/70">{t('letraWordsLabel')}</span>

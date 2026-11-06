@@ -6,6 +6,7 @@ import type { VocalStepData } from '../types/vocalPack.types';
 import type { TimeAnchor } from '../types/toadaDocument.types';
 import { splitTextIntoLetraSyllables } from './syllableSplitter';
 import { computeBeatSyllableSubdivs } from './subbeatAnchorHelper';
+import { mergeSyllablesToImpulseCount } from './syllableImpulseMerger';
 import { midiToNoteName } from './noteUtils';
 
 export function mapSyllablesToSteps(steps: VocalStepData[], syllables: string[]): VocalStepData[] {
@@ -14,16 +15,14 @@ export function mapSyllablesToSteps(steps: VocalStepData[], syllables: string[])
 }
 
 export function assignSyllablesStrictlyToExistingBricks(steps: VocalStepData[], lyricsText: string): VocalStepData[] {
-  const syllables = splitTextIntoLetraSyllables(lyricsText || '');
+  const rawSyllables = splitTextIntoLetraSyllables(lyricsText || '');
   const attackIndices = steps.map((st, idx) => (st.active && st.note !== '───' && !st.isTie ? idx : -1)).filter((idx) => idx !== -1);
   if (attackIndices.length === 0) return steps;
+  const syllables = rawSyllables.length > attackIndices.length
+    ? mergeSyllablesToImpulseCount(rawSyllables, attackIndices.length)
+    : rawSyllables;
   const result = steps.map((st) => ({ ...st, syllable: '' }));
-  if (syllables.length <= attackIndices.length) {
-    for (let k = 0; k < attackIndices.length; k++) result[attackIndices[k]].syllable = syllables[k] ?? '';
-  } else {
-    for (let k = 0; k < attackIndices.length - 1; k++) result[attackIndices[k]].syllable = syllables[k];
-    result[attackIndices[attackIndices.length - 1]].syllable = syllables.slice(attackIndices.length - 1).join('');
-  }
+  for (let k = 0; k < attackIndices.length; k++) result[attackIndices[k]].syllable = syllables[k] ?? '';
   return result;
 }
 
@@ -102,8 +101,8 @@ export function alignAudioStepsWithTimeAnchors(
       heads.push(Math.min(beatEnd - 1, beatStart + Math.max(prevHead + 1, Math.min(stepsPerBeat - (maxHeads - k), subdivs[k] ?? (firstSub + k)))));
     }
     if (heads.length > 0) {
-      for (let k = 0; k < heads.length - 1; k++) result[heads[k]].syllable = syls[k];
-      result[heads[heads.length - 1]].syllable = syls.slice(heads.length - 1).join('');
+      const mergedSyls = syls.length > heads.length ? mergeSyllablesToImpulseCount(syls, heads.length) : syls;
+      for (let k = 0; k < heads.length; k++) result[heads[k]].syllable = mergedSyls[k] ?? '';
     }
     seenSung = true; lastSungBeatEnd = Math.max(lastSungBeatEnd, beatEnd);
   }

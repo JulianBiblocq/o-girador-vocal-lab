@@ -25,7 +25,7 @@ export interface PianoRollEditorProps {
   hasAnacrusis?: boolean; bpm?: number; t1OffsetSec?: number; measuresCount?: number; getPlayheadSec?: () => number; onSeek: (sec: number) => void; onUndo?: () => void; onRedo?: () => void; onSetTonic: (t: string) => void; onSetScaleType: (st: ScaleType) => void;
   onSetSmoothingLevel: (lvl: number) => void; onUpdateSteps: (newSteps: VocalStepData[], commit?: boolean) => void; onPlayNotePreview: (midi: number) => void; onReExtractNotes?: () => void; onSimplifyMelody?: () => void; onWeldSelected?: () => void; onSelectRegion?: (id: string | null) => void; onAddRegion?: (start: number, end: number) => void;
   onUpdateRegionBounds?: (id: string, start: number, end: number) => void; onDeleteSelectedRegion?: () => void; selectedStepIdx?: number | null; onSelectStep?: (idx: number | null) => void; onBrickMoved?: (rootIdx: number, newSteps: VocalStepData[]) => void;
-  harmonyGrid?: PatternHarmonyGrid; onUpdateHarmonyGrid?: (grid: PatternHarmonyGrid) => void; pitchShiftSemitones?: number; readOnly?: boolean;
+  harmonyGrid?: PatternHarmonyGrid; onUpdateHarmonyGrid?: (grid: PatternHarmonyGrid) => void; pitchShiftSemitones?: number; allowedPitchClasses?: Set<number> | null; readOnly?: boolean;
 }
 
 const ROW_HEIGHT = 20;

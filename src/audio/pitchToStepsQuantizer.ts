@@ -14,8 +14,8 @@ export interface QuantizerParams {
   pitchCurve: PitchCurvePoint[]; bpm: number; beatsPerMeasure: number; measuresCount: number;
   beatResolutions: number[]; trimStartSec: number; trimEndSec: number; hasAnacrusis?: boolean;
   t1OffsetSec?: number; pitchOffsetSemitones?: number; smoothingLevel?: number;
-  tonic?: string; scaleType?: ScaleType; pcm?: Float32Array; sampleRate?: number;
-  timeAnchors?: TimeAnchor[];
+  tonic?: string; scaleType?: ScaleType; allowedPitchClasses?: Set<number> | number[] | null;
+  pcm?: Float32Array; sampleRate?: number; timeAnchors?: TimeAnchor[];
 }
 
 export interface QuantizedGridResult {
@@ -32,7 +32,7 @@ function findSegmentForStep(segments: PitchSegment[], sStart: number, sEnd: numb
 }
 
 export function quantizePitchToSteps(params: QuantizerParams): QuantizedGridResult {
-  const { bpm, beatsPerMeasure, measuresCount, beatResolutions, trimStartSec, trimEndSec, hasAnacrusis = true, tonic = 'C', scaleType = 'chromatic', pcm, sampleRate, timeAnchors = [] } = params;
+  const { bpm, beatsPerMeasure, measuresCount, beatResolutions, trimStartSec, trimEndSec, hasAnacrusis = true, tonic = 'C', scaleType = 'chromatic', allowedPitchClasses, pcm, sampleRate, timeAnchors = [] } = params;
   const pitchCurve = filterConsonantPitchDips(params.pitchCurve);
   const beatDuration = 60 / bpm, measureDuration = beatsPerMeasure * beatDuration;
   const t1 = params.t1OffsetSec ?? getPatternT1OffsetSec(hasAnacrusis, measureDuration);
@@ -89,8 +89,9 @@ export function quantizePitchToSteps(params: QuantizerParams): QuantizedGridResu
         }
 
         const curFloat = localPitch ? localPitch.midiFloat : bestSegment!.medianMidiFloat;
-        let targetMidi = localPitch ? localPitch.midi : bestSegment!.medianMidi;
-        if (scaleType !== 'chromatic') targetMidi = snapMidiToScale(targetMidi, tonic, scaleType);
+        const targetMidi = (scaleType !== 'chromatic' || allowedPitchClasses)
+          ? snapMidiToScale(curFloat, tonic, scaleType, allowedPitchClasses)
+          : (localPitch ? localPitch.midi : bestSegment!.medianMidi);
 
         const isFirstVoicedWithSyl = !hasVoicedInBeat && sylCount > 0;
         hasVoicedInBeat = true;
@@ -113,7 +114,7 @@ export function quantizePitchToSteps(params: QuantizerParams): QuantizedGridResu
   }
 
   const baseStepDur = beatDuration / (beatResolutions[0] || 4);
-  const calibrated = recalibrateBricksToLocalPitchCurve(allSteps, pitchCurve, gridStartSec, baseStepDur, tonic, scaleType, params.smoothingLevel ?? 0.15);
+  const calibrated = recalibrateBricksToLocalPitchCurve(allSteps, pitchCurve, gridStartSec, baseStepDur, tonic, scaleType, params.smoothingLevel ?? 0.15, allowedPitchClasses);
   const anacrusisCount = hasAnac ? beatsPerMeasure * (beatResolutions[0] || 4) : 0;
   return {
     anacrusisSteps: hasAnac ? calibrated.slice(0, anacrusisCount) : [],
