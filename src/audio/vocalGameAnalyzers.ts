@@ -111,7 +111,7 @@ export function analyzeVozNoPasso(
 }
 
 /**
- * Défi 4 : 🔔 A Voz na Roda — Hauteur juste (±35 cents) + Résonance du masque 2.5–3.5 kHz >= 45 % sans forçage.
+ * Défi 4 : A Voz na Roda — Hauteur juste (±35 cents) + Résonance du masque 2.5–3.5 kHz >= 45 % sans forçage.
  */
 export function analyzeAVozNaRoda(targetMidi: number, samples: VocalGameSample[]): VocalGameEvaluation {
   const voiced = samples.filter((s) => s.pitchMidi > 0 && s.rms >= 0.02);

@@ -4,6 +4,7 @@
  */
 import type { PatternHarmonyGrid } from '../../types/harmony.types';
 import { getChordAtTime } from '../../utils/chordParser';
+import { midiToRowY } from './PianoRollKeyboard';
 
 const BLACK_KEYS = new Set([1, 3, 6, 8, 10]);
 
@@ -40,7 +41,7 @@ export function drawPianoRollRows(opts: DrawRowsOptions): void {
   const isLight = typeof document !== 'undefined' && document.documentElement.getAttribute('data-theme') === 'light';
 
   for (let midi = maxMidi; midi >= minMidi; midi--) {
-    const y = (maxMidi - midi) * rowHeight;
+    const y = midiToRowY(midi, maxMidi, rowHeight);
     const pc = ((midi % 12) + 12) % 12;
     const isBlack = BLACK_KEYS.has(pc);
     const isChordTone = activePitchClasses ? activePitchClasses.has(pc) : false;

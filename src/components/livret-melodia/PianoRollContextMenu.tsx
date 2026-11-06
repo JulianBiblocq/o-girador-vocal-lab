@@ -1,7 +1,7 @@
 /**
  * PianoRollContextMenu.tsx
  * Menu d'outils bilingue (FR / PT-BR) au Clic Droit façon Cubase (Maintenir ➔ Glisser ➔ Relâcher ou Clic rapide) :
- * 🖱️ Sélection, ✏️ Crayon, ✂️ Ciseaux, 🔗 Colle, 🗑️ Gomme (< 98 lignes).
+ * Sélection, Crayon, Ciseaux, Colle, Gomme (< 98 lignes).
  */
 import React, { useEffect, useRef, useState } from 'react';
 import type { PianoRollTool } from './pianoRollInteractions';

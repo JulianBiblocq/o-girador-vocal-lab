@@ -1,7 +1,7 @@
 /**
  * ToadaPhoneticLinesCard.tsx
- * Phrases de la Toada (parolesOriginales + parolesPhonetiques), écoute découpée du Mestre (100% / 🐢 75% WSOLA)
- * et Miroir Audio [ 🎙️ S'enregistrer & Comparer (Mestre ➔ Moi) ] (< 120 lignes).
+ * Phrases de la Toada (parolesOriginales + parolesPhonetiques), écoute découpée du Mestre (100% / 75% WSOLA)
+ * et Miroir Audio [ S'enregistrer & Comparer (Mestre ➔ Moi) ] (< 120 lignes).
  */
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { useLanguage } from '../../i18n/LanguageContext';

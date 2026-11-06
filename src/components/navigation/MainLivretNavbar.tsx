@@ -1,6 +1,6 @@
 /**
  * MainLivretNavbar.tsx
- * Barre de navigation principale permanente : 5 Livrets + ⚙️ Réglages (< 85 lignes).
+ * Barre de navigation principale permanente : 5 Livrets + Réglages (< 85 lignes).
  */
 import React from 'react';
 import { Layers, Mic, Scissors, Music, Headphones, Settings } from 'lucide-react';

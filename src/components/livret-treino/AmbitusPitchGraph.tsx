@@ -17,18 +17,23 @@ export const AmbitusPitchGraph: React.FC<Props> = ({
   mode, targetMidi, samples, staircaseSteps = [], targetHoldSec = 2.0,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null), [themeTick, setThemeTick] = React.useState(0);
+  const [canvasWidth, setCanvasWidth] = React.useState(640);
 
   React.useEffect(() => {
     const obs = new MutationObserver(() => setThemeTick((t) => t + 1));
     obs.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
-    return () => obs.disconnect();
+    const el = canvasRef.current;
+    const ro = el ? new ResizeObserver(([e]) => { if (e && e.contentRect.width > 0) setCanvasWidth(Math.max(300, Math.floor(e.contentRect.width))); }) : null;
+    if (el && ro) ro.observe(el);
+    return () => { obs.disconnect(); ro?.disconnect(); };
   }, []);
 
   useEffect(() => {
     const canvas = canvasRef.current, ctx = canvas?.getContext('2d');
     if (!canvas || !ctx) return;
-    const w = canvas.width, h = canvas.height;
-    ctx.clearRect(0, 0, w, h);
+    const dpr = window.devicePixelRatio || 1, w = Math.max(300, canvasWidth), h = 240;
+    if (canvas.width !== Math.floor(w * dpr) || canvas.height !== Math.floor(h * dpr)) { canvas.width = Math.floor(w * dpr); canvas.height = Math.floor(h * dpr); }
+    ctx.save(); ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, w, h);
 
     const isLight = document.documentElement.getAttribute('data-theme') === 'light';
     const bgFill = isLight ? '#fbf8f0' : '#1e1813', textFill = isLight ? '#2a211b' : '#efe6d2';
@@ -123,11 +128,12 @@ export const AmbitusPitchGraph: React.FC<Props> = ({
     }
 
     ctx.strokeStyle = borderStroke; ctx.lineWidth = 1; ctx.strokeRect(0, 0, w, h);
-  }, [mode, targetMidi, samples, staircaseSteps, targetHoldSec, themeTick]);
+    ctx.restore();
+  }, [mode, targetMidi, samples, staircaseSteps, targetHoldSec, themeTick, canvasWidth]);
 
   return (
     <div className="w-full cordel-card-sm overflow-hidden rounded">
-      <canvas ref={canvasRef} width={640} height={240} className="w-full h-[240px] block" />
+      <canvas ref={canvasRef} className="w-full h-[240px] block" />
     </div>
   );
 };

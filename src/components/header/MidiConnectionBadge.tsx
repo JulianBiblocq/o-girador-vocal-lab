@@ -5,7 +5,7 @@
 import React from 'react';
 import { useVocalTransportStore } from '../../stores/useVocalTransportStore';
 import { useLanguage } from '../../i18n/LanguageContext';
-import { CordelPiano } from '../common/CordelIcons';
+import { Piano } from 'lucide-react';
 
 export const MidiConnectionBadge: React.FC = () => {
   const isMidiConnected = useVocalTransportStore((s) => s.isMidiConnected);
@@ -20,7 +20,7 @@ export const MidiConnectionBadge: React.FC = () => {
       title={t('midiConnectedTitle', { device: activeMidiDeviceName || 'MIDI Controller' })}
     >
       <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-      <CordelPiano className="w-3.5 h-3.5" />
+      <Piano className="w-3.5 h-3.5" />
       <span>{t('midiBadge')}</span>
     </div>
   );

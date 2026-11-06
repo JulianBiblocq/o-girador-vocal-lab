@@ -84,11 +84,11 @@ export const AmbitusWizardStepToneCheck: React.FC<AmbitusWizardStepToneCheckProp
       <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
         <div className="flex flex-wrap items-center gap-1">
           <span className="font-bold text-[var(--cordel-text)] mr-1">{label} :</span>
-          <button type="button" disabled={isTesting} onClick={() => onSetCurrentMidi((m) => Math.max(36, m - 12))} className="cordel-btn px-2 py-1 font-mono font-bold cursor-pointer rounded text-[11px]" title="-1 Octave">◀ -1 Oct</button>
+          <button type="button" disabled={isTesting} onClick={() => onSetCurrentMidi((m) => Math.max(36, m - 12))} className="cordel-btn px-2 py-1 font-mono font-bold cursor-pointer rounded text-[11px]" title="-1 Octave">‹ -1 Oct</button>
           <button type="button" disabled={isTesting} onClick={() => onSetCurrentMidi((m) => Math.max(36, m - 1))} className="cordel-btn px-2 py-1 font-mono font-bold cursor-pointer flex items-center gap-0.5 rounded" title="-1 demi-ton"><ChevronLeft className="w-3 h-3" /><span>½</span></button>
           <span className="font-mono font-bold text-base px-2.5 py-0.5 cordel-card-sm rounded border border-[var(--cordel-border-panel)] text-[var(--cordel-text)]">{noteName}</span>
           <button type="button" disabled={isTesting} onClick={() => onSetCurrentMidi((m) => Math.min(84, m + 1))} className="cordel-btn px-2 py-1 font-mono font-bold cursor-pointer flex items-center gap-0.5 rounded" title="+1 demi-ton"><span>½</span><ChevronRight className="w-3 h-3" /></button>
-          <button type="button" disabled={isTesting} onClick={() => onSetCurrentMidi((m) => Math.min(84, m + 12))} className="cordel-btn px-2 py-1 font-mono font-bold cursor-pointer rounded text-[11px]" title="+1 Octave">+1 Oct ▶</button>
+          <button type="button" disabled={isTesting} onClick={() => onSetCurrentMidi((m) => Math.min(84, m + 12))} className="cordel-btn px-2 py-1 font-mono font-bold cursor-pointer rounded text-[11px]" title="+1 Octave">+1 Oct ›</button>
           {typeof medianMidi === 'number' && medianMidi !== currentMidi && (
             <button type="button" disabled={isTesting} onClick={() => onSetCurrentMidi(() => medianMidi)} className="px-2 py-1 rounded bg-amber-500/15 text-amber-600 dark:text-amber-300 border border-amber-500/40 font-mono font-bold text-[10px] cursor-pointer">
               Médiane ({midiToNoteName(medianMidi)})

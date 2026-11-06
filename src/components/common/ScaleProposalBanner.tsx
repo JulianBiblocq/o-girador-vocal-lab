@@ -13,7 +13,7 @@ import {
 } from '../../audio/projectScaleAnalyzer';
 import { NOTE_NAMES } from '../../utils/noteUtils';
 import { useLanguage } from '../../i18n/LanguageContext';
-import { Check, RefreshCw, HelpCircle, Unlock, X } from 'lucide-react';
+import { Check, RefreshCw, HelpCircle, Unlock, X, Music2 } from 'lucide-react';
 
 export interface ScaleProposalBannerProps {
   proposal: ProjectScaleAnalysisResult | null;
@@ -68,9 +68,12 @@ export const ScaleProposalBanner: React.FC<ScaleProposalBannerProps> = ({
     <div className="cordel-card p-2.5 rounded border-2 border-amber-500/70 bg-amber-500/10 flex flex-col gap-2 text-xs font-mono shadow-sm">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="font-bold text-amber-900 dark:text-amber-200">
-            {isBr ? 'Escala detectada na sua voz :' : 'Gamme détectée sur vos voix :'}{' '}
-            <strong className="text-theme-accent underline">{activeLabel}</strong> ({isBr ? 'Tônica :' : 'Tonique :'} <strong>{tonicSolfege}</strong> • {isBr ? 'Referência :' : 'Repère :'} <strong>{tonicSolfege}{oct}</strong>)
+          <span className="font-bold text-amber-900 dark:text-amber-200 inline-flex items-center gap-1.5 flex-wrap">
+            <Music2 className="w-3.5 h-3.5 text-theme-accent shrink-0" />
+            <span>
+              {isBr ? 'Escala detectada na sua voz :' : 'Gamme détectée sur vos voix :'}{' '}
+              <strong className="text-theme-accent underline">{activeLabel}</strong> ({isBr ? 'Tônica :' : 'Tonique :'} <strong>{tonicSolfege}</strong> • {isBr ? 'Referência :' : 'Repère :'} <strong>{tonicSolfege}{oct}</strong>)
+            </span>
           </span>
           {count > 0 && (
             <span className="px-1.5 py-0.5 rounded bg-amber-600/20 text-[10px] font-bold text-amber-800 dark:text-amber-300">

@@ -3,7 +3,7 @@
  * Panneau du Mode d'Écoute (Casque / Visuel) et de la Note Repère avec rappel de portée (< 125 lignes).
  */
 import React, { useState } from 'react';
-import { Headphones, VolumeX, Volume2, Play, Sliders } from 'lucide-react';
+import { Headphones, VolumeX, Volume2, Play, Sliders, Globe, Crosshair } from 'lucide-react';
 import type { ListeningMode } from '../../audio/MetronomeEngine';
 import { getSavedClickVolume, saveClickVolume } from '../../utils/clickVolumeStorage';
 import { useLanguage } from '../../i18n/LanguageContext';
@@ -90,7 +90,10 @@ export const ListeningModePanel: React.FC<ListeningModePanelProps> = ({
             <Volume2 className="w-3.5 h-3.5 text-theme-accent" />
             <span>{t('referencePitch')}</span>
           </span>
-          <span className="text-[10px] font-mono text-[#9a3412] dark:text-amber-300 font-bold">{scopeLabel}</span>
+          <span className="text-[10px] font-mono text-[#9a3412] dark:text-amber-300 font-bold inline-flex items-center gap-1">
+            {applyScope === 'all' ? <Globe className="w-3.5 h-3.5 inline" /> : <Crosshair className="w-3.5 h-3.5 inline" />}
+            <span>{scopeLabel}</span>
+          </span>
         </div>
         <div className="flex items-center gap-2">
           <select

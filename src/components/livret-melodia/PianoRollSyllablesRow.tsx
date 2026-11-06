@@ -1,7 +1,7 @@
 /**
  * PianoRollSyllablesRow.tsx
  * Ligne épinglée (Docked Footer) d'édition directe des syllabes sous les briques MIDI
- * avec navigation 1-Tab et bouton [ 🔗 ] de fusion 1-clic entre deux briques (< 95 lignes).
+ * avec navigation 1-Tab et bouton [ ] de fusion 1-clic entre deux briques (< 95 lignes).
  */
 import React, { useRef, useMemo } from 'react';
 import type { VocalStepData } from '../../types/vocalPack.types';

@@ -2,10 +2,10 @@
  * StructureTopControls.tsx
  * Bandeau supérieur épuré bilingue (FR / PT-BR) du Livret 1 : Tempo (BPM -/+ & saisie, Tap Tempo, Importer Batuque .wav),
  * Gamme & Tonique auto-détectée (Écouter la tonique ex. La3 / Lá3, Analyser/Relancer la gamme du chant)
- * et bouton interrupteur [ 🔒 Structure Organizador ] ⟷ [ ✏️ Modifier la structure ] (< 130 lignes).
+ * et bouton interrupteur [ Structure Organizador ] ⟷ [ Modifier la structure ] (< 130 lignes).
  */
 import React, { useRef, useState, useCallback, useEffect } from 'react';
-import { Drum, Volume2, Search, Lock, Edit3, Minus, Plus, Hand, Music } from 'lucide-react';
+import { Drum, Volume2, Search, Lock, Edit3, Minus, Plus, Hand, Music2 } from 'lucide-react';
 import { NumericDraftInput } from '../ui/NumericDraftInput';
 import { decodeAudioFile } from '../../utils/directAudioImporter';
 import {
@@ -98,7 +98,7 @@ export const StructureTopControls: React.FC<StructureTopControlsProps> = ({
       {/* 2. Gamme & Tonique du Chant (Auto-détectée) */}
       <div className="flex flex-wrap items-center gap-1.5">
         <span className="px-2 py-1 cordel-card-sm rounded font-bold inline-flex items-center gap-1">
-          <Music className="w-3.5 h-3.5 text-theme-accent" />
+          <Music2 className="w-3.5 h-3.5 text-theme-accent" />
           <span>{isBr ? 'Escala :' : 'Gamme :'} <strong className="text-theme-accent">{activeScaleLabel}</strong></span>
         </span>
         <button type="button" onClick={onPlayTonicPreview} className="px-2.5 py-1 cordel-btn font-bold flex items-center gap-1 rounded cursor-pointer" title={isBr ? `Ouvir a tônica da toada (${tonicSolfege} / ${referencePitch})` : `Écouter la tonique du chant (${tonicSolfege} / ${referencePitch})`}>

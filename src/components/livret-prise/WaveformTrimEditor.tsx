@@ -117,11 +117,11 @@ export const WaveformTrimEditor: React.FC<WaveformTrimEditorProps> = (props) => 
           </button>
         </div>
         <div className="flex items-center gap-1">
-          <button type="button" onClick={() => commitT1Offset(t1OffsetSec - 0.05)} className="cordel-btn px-1.5 py-0.5 text-xs font-mono font-bold cursor-pointer">◀◀ -50ms</button>
-          <button type="button" onClick={() => commitT1Offset(t1OffsetSec - 0.01)} className="cordel-btn px-1.5 py-0.5 text-xs font-mono font-bold cursor-pointer">◀ -10ms</button>
+          <button type="button" onClick={() => commitT1Offset(t1OffsetSec - 0.05)} className="cordel-btn px-1.5 py-0.5 text-xs font-mono font-bold cursor-pointer">‹‹ -50ms</button>
+          <button type="button" onClick={() => commitT1Offset(t1OffsetSec - 0.01)} className="cordel-btn px-1.5 py-0.5 text-xs font-mono font-bold cursor-pointer">‹ -10ms</button>
           <span className="font-bold text-theme-wood px-1.5">{t1OffsetSec.toFixed(3)}s</span>
-          <button type="button" onClick={() => commitT1Offset(t1OffsetSec + 0.01)} className="cordel-btn px-1.5 py-0.5 text-xs font-mono font-bold cursor-pointer">+10ms ▶</button>
-          <button type="button" onClick={() => commitT1Offset(t1OffsetSec + 0.05)} className="cordel-btn px-1.5 py-0.5 text-xs font-mono font-bold cursor-pointer">+50ms ▶▶</button>
+          <button type="button" onClick={() => commitT1Offset(t1OffsetSec + 0.01)} className="cordel-btn px-1.5 py-0.5 text-xs font-mono font-bold cursor-pointer">+10ms ›</button>
+          <button type="button" onClick={() => commitT1Offset(t1OffsetSec + 0.05)} className="cordel-btn px-1.5 py-0.5 text-xs font-mono font-bold cursor-pointer">+50ms ››</button>
         </div>
       </div>
       <PreviewControls

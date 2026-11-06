@@ -1,6 +1,6 @@
 /**
  * LivretContentRenderer.tsx
- * Aiguillage et rendu du Livret actif parmi les 5 Livrets + ⚙️ Réglages (< 60 lignes).
+ * Aiguillage et rendu du Livret actif parmi les 5 Livrets + Réglages (< 60 lignes).
  */
 import React from 'react';
 import { useVocalTransportStore } from '../../stores/useVocalTransportStore';

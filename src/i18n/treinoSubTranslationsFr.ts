@@ -17,7 +17,7 @@ export const treinoSubTranslationsFr = {
   ambitusKeepGuideInEar: "Garder la note guide dans l'oreille",
   ambitusCoachingTooLow: '↑ Chante un peu plus haut (tu es en dessous de la note)',
   ambitusCoachingTooHigh: '↓ Chante un peu plus bas (tu es au-dessus de la note)',
-  ambitusCoachingSagging: '↘ Soutiens ton souffle : ta voix redescend à la fin de la note !',
+  ambitusCoachingSagging: 'Soutiens ton souffle : ta voix redescend à la fin de la note !',
   ambitusCoachingTooShort: 'Tiens la note un peu plus longtemps (2 secondes complètes)',
   ambitusCoachingNeedPower: 'Mets plus de coffre : projette davantage ta voix',
   ambitusNoteSolidSuccess: '✓ Note solide validée (tenue 2,0s + projection + fin stable) !',

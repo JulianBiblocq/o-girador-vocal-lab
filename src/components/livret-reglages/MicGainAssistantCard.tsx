@@ -2,7 +2,7 @@
  * MicGainAssistantCard.tsx
  * Assistant de Gain Micro en 3 Secondes (< 125 lignes) :
  * - Classification pure du niveau de crête en dBFS (too_hot > -1 dB, optimal [-18, -1] dB, too_low < -18 dB)
- * - Composant interactif de test vocal 3s dans ⚙️ Réglages.
+ * - Composant interactif de test vocal 3s dans Réglages.
  */
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Mic, CheckCircle2, AlertTriangle, Volume2 } from 'lucide-react';

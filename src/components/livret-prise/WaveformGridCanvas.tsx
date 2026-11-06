@@ -101,7 +101,7 @@ export const WaveformGridCanvas: React.FC<WaveformGridCanvasProps> = ({
       ctx.fillStyle = isLight ? '#451a03' : 'rgba(244, 236, 216, 0.85)';
       ctx.fillText(t('chordGridElanLabel'), 6, 13);
     }
-    const m1Txt = `${t('measure1')} ▶`;
+    const m1Txt = `${t('measure1')} ›`;
     const m1W = ctx.measureText(m1Txt).width + 10;
     ctx.fillStyle = '#9a3412';
     ctx.beginPath(); ctx.roundRect(xTemps1 + 3, 2, m1W, 15, 3); ctx.fill();

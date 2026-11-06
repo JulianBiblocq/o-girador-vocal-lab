@@ -74,8 +74,8 @@ export const SlicerSegmentRow: React.FC<SlicerSegmentRowProps> = ({
       <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
         {onShiftMeasures && (
           <div className="flex items-center gap-0.5">
-            <button type="button" onClick={() => onShiftMeasures(-1)} className="px-1.5 py-0.5 text-[9.5px] font-bold cordel-card-sm hover:bg-amber-500/20 rounded cursor-pointer" title={t('slicerShiftMinus1MTitle')}>◀ -1M</button>
-            <button type="button" onClick={() => onShiftMeasures(1)} className="px-1.5 py-0.5 text-[9.5px] font-bold cordel-card-sm hover:bg-amber-500/20 rounded cursor-pointer" title={t('slicerShiftPlus1MTitle')}>+1M ▶</button>
+            <button type="button" onClick={() => onShiftMeasures(-1)} className="px-1.5 py-0.5 text-[9.5px] font-bold cordel-card-sm hover:bg-amber-500/20 rounded cursor-pointer" title={t('slicerShiftMinus1MTitle')}>‹ -1M</button>
+            <button type="button" onClick={() => onShiftMeasures(1)} className="px-1.5 py-0.5 text-[9.5px] font-bold cordel-card-sm hover:bg-amber-500/20 rounded cursor-pointer" title={t('slicerShiftPlus1MTitle')}>+1M ›</button>
           </div>
         )}
 

@@ -98,7 +98,7 @@ export const PatternCompassBar: React.FC<{ className?: string; compact?: boolean
   return (
     <div className={`cordel-card p-1.5 sm:p-2 flex items-center justify-between gap-2 select-none rounded ${className}`}>
       <button type="button" onClick={handlePrev} title={t('compassPrevTooltip')} className="h-8 px-2 cordel-btn font-mono text-xs flex items-center gap-1 cursor-pointer shrink-0">
-        <ChevronLeft className="w-4 h-4 text-theme-accent" /><span className="hidden sm:inline">◀</span>
+        <ChevronLeft className="w-4 h-4 text-theme-accent" />
       </button>
       <div className="flex-1 flex items-center justify-center gap-2 min-w-0">
         <span className={`px-1.5 py-0.5 text-[9px] font-black tracking-wider uppercase rounded shrink-0 ${isPuxador ? 'bg-role-puxador text-white' : 'bg-role-coro text-white'}`}>
@@ -108,13 +108,13 @@ export const PatternCompassBar: React.FC<{ className?: string; compact?: boolean
         <span className="text-[10.5px] font-mono font-bold text-[var(--cordel-secondary-text)] shrink-0 hidden md:inline-flex items-center gap-1">
           <span>{safeIndex + 1}/{patterns.length}</span>
           <span>•</span>
-          <span className="inline-flex items-center gap-0.5"><Mic className="w-3 h-3 text-theme-accent" />{audioCount}/{patterns.length}</span>
+          <span className="inline-flex items-center gap-0.5"><Mic className="w-3.5 h-3.5 inline text-theme-accent" />{audioCount}/{patterns.length}</span>
           <span>•</span>
-          <span className="inline-flex items-center gap-0.5"><Music className="w-3 h-3 text-theme-accent" />{midiCount}/{patterns.length}</span>
+          <span className="inline-flex items-center gap-0.5"><Music className="w-3.5 h-3.5 inline text-theme-accent" />{midiCount}/{patterns.length}</span>
         </span>
       </div>
       <button type="button" onClick={handleNext} title={t('compassNextTooltip')} className="h-8 px-2 cordel-btn font-mono text-xs flex items-center gap-1 cursor-pointer shrink-0">
-        <span className="hidden sm:inline">▶</span><ChevronRight className="w-4 h-4 text-theme-accent" />
+        <ChevronRight className="w-4 h-4 text-theme-accent" />
       </button>
     </div>
   );

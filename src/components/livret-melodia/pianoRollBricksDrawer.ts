@@ -4,6 +4,7 @@
  * et courbes ambre/dorées de correction vocale par brique (< 130 lignes).
  */
 import type { PitchCurvePoint, VocalStepData } from '../../types/vocalPack.types';
+import { midiToRowY } from './PianoRollKeyboard';
 
 export interface DrawBricksParams {
   ctx: CanvasRenderingContext2D;
@@ -36,7 +37,7 @@ export function drawPianoRollBricks(params: DrawBricksParams): void {
     let ties = 0;
     while (i + 1 + ties < allSteps.length && allSteps[i + 1 + ties].note === '───') ties++;
     const x = i * stepW, w = Math.max(4, stepW * (1 + ties) - 2);
-    const y = (maxMidi - step.midiNumber) * rowHeight + 1.5, h = Math.max(4, rowHeight - 3);
+    const y = midiToRowY(step.midiNumber, maxMidi, rowHeight) + 1.5, h = Math.max(4, rowHeight - 3);
     const cutRatio = step.melodyneStartRatio !== undefined ? step.melodyneStartRatio : 0.25;
     const cutW = Math.max(0, Math.min(w, w * cutRatio));
     const pullPct = Math.max(0, Math.min(100, Math.round(step.melodynePullPct ?? 0)));

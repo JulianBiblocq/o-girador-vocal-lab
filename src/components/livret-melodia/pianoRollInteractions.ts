@@ -1,7 +1,7 @@
 /**
  * pianoRollInteractions.ts
  * Logique pure des opérations d'édition MIDI du Piano Roll :
- * Déplacement vertical, étirement horizontal, outil Colle 🔗 (souder avec la brique suivante), découpe, gomme et VariAudio %.
+ * Déplacement vertical, étirement horizontal, outil Colle (souder avec la brique suivante), découpe, gomme et VariAudio %.
  */
 import type { VocalStepData } from '../../types/vocalPack.types';
 import { midiToNoteName } from '../../utils/noteUtils';

@@ -1,6 +1,6 @@
 /**
  * MaracatuVocalGames.tsx
- * Atelier 2 : 4 Jeux de Voix Maracatu contextualisés sur la Toada active + Défi « 🔔 A Voz na Roda » (< 140 lignes).
+ * Atelier 2 : 4 Jeux de Voix Maracatu contextualisés sur la Toada active + Défi « A Voz na Roda » (< 140 lignes).
  */
 import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import { useLanguage } from '../../i18n/LanguageContext';

@@ -66,7 +66,7 @@ export const PatternCardItem: React.FC<PatternCardItemProps> = ({
             <input type="text" value={editName} autoFocus onChange={(e) => setEditName(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') handleSave(); if (e.key === 'Escape') setIsEditing(false); }} onBlur={handleSave} onClick={(e) => e.stopPropagation()} className="w-full min-w-0 bg-[var(--cordel-surface)] border border-theme-accent text-xs font-mono text-[var(--cordel-text)] px-1 py-0.2 focus:outline-none rounded" />
           ) : (
             <span onDoubleClick={(e) => { e.stopPropagation(); setIsEditing(true); setEditName(pat.name); }} title={t('doubleClickRename')} className={`text-xs font-bold font-mono truncate flex items-center gap-1 ${isActive ? '!text-white' : 'text-theme-ink hover:text-amber-600 dark:hover:text-amber-400'}`}>
-              {isActive && <span className="text-[#f4ecd8] font-black">▶</span>}
+              {isActive && <span className="text-[#f4ecd8] font-black">›</span>}
               <span className="truncate">{pat.name}</span>
             </span>
           )}

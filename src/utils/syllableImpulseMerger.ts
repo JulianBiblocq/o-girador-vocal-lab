@@ -1,7 +1,7 @@
 /**
  * syllableImpulseMerger.ts
  * Auto-regroupement des syllabes « mangées » par impulsion vocale dans chaque temps [1]..[4]
- * et opérations 1-clic Joindre (🔗) / Scinder (✂️) sans décalage inter-temps (< 120 lignes).
+ * et opérations 1-clic Joindre () / Scinder () sans décalage inter-temps (< 120 lignes).
  */
 import type { VocalStepData } from '../types/vocalPack.types';
 import { midiToNoteName } from './noteUtils';

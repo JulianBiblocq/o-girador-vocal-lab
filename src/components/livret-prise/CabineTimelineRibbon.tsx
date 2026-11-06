@@ -7,7 +7,7 @@ import type { MetronomeEngine } from '../../audio/MetronomeEngine';
 import type { ToadaProject, VocalPatternItem } from '../../types/toadaProject.types';
 import { buildCabineTimelineMeasures, drawCabineTimelineRibbon } from './cabineTimelineDrawer';
 import { useLanguage } from '../../i18n/LanguageContext';
-import { Headphones, Radio } from 'lucide-react';
+import { Headphones, Radio, Crosshair } from 'lucide-react';
 
 export interface CabineTimelineRibbonProps {
   engine: MetronomeEngine; isActive: boolean; takeMode: 'pattern' | 'puxador' | 'coro';
@@ -99,8 +99,9 @@ export const CabineTimelineRibbon: React.FC<CabineTimelineRibbonProps> = ({
               {isBr ? 'PRÉ-CONTAGEM / ESCUTA GUIA' : 'PRÉCOMPTE / ÉCOUTE TÉMOIN'}
             </span>
           ) : (
-            <span className="px-2 py-0.5 rounded text-[11px] font-mono font-bold bg-[var(--cordel-subcard-bg)] text-theme-ink border border-[var(--cordel-border-sub)]">
-              {isBr ? `FITA DE COMPASSOS (${beatsPerMeasure} TEMPOS / COMPASSO)` : `RUBAN DES MESURES (${beatsPerMeasure} TEMPS / MESURE)`}
+            <span className="px-2 py-0.5 rounded text-[11px] font-mono font-bold bg-[var(--cordel-subcard-bg)] text-theme-ink border border-[var(--cordel-border-sub)] inline-flex items-center gap-1.5">
+              <Crosshair className="w-3.5 h-3.5 text-theme-accent" />
+              <span>{isBr ? `FITA DE COMPASSOS (${beatsPerMeasure} TEMPOS / COMPASSO)` : `RUBAN DES MESURES (${beatsPerMeasure} TEMPS / MESURE)`}</span>
             </span>
           )}
         </div>

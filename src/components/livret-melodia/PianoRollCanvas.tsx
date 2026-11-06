@@ -1,7 +1,7 @@
 /**
  * PianoRollCanvas.tsx
  * Canvas interactif du Piano Roll avec poignées VariAudio par brique (0..100%),
- * déplacement MIDI, outil Colle 🔗, Crayon ✏️ et menu Clic Droit Cubase (< 135 lignes).
+ * déplacement MIDI, outil Colle , Crayon et menu Clic Droit Cubase (< 135 lignes).
  */
 import React, { useEffect, useRef, useCallback, useState } from 'react';
 import type { PitchCurvePoint, VocalStepData } from '../../types/vocalPack.types';

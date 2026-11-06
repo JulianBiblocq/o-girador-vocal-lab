@@ -1,6 +1,6 @@
 /**
  * TrainerConfigBar.tsx
- * Barre de configuration du Studio Élève 2.0 : Sélecteur de Motif (avec badges ⭐/👑), Parcours, Rôle, Guide Casque, Paliers Progressifs (75➔88➔100%) (< 130 lignes).
+ * Barre de configuration du Studio Élève 2.0 : Sélecteur de Motif (avec badges /), Parcours, Rôle, Guide Casque, Paliers Progressifs (75➔88➔100%) (< 130 lignes).
  */
 import React from 'react';
 import { Repeat, Trophy } from 'lucide-react';

@@ -14,7 +14,7 @@ import { PianoRollToolbar } from './PianoRollToolbar'; import { PianoRollKeyboar
 import { PianoRollCanvas } from './PianoRollCanvas'; import { PianoRollStickyHeader } from './PianoRollStickyHeader';
 import { FloatingSyllableInput } from './FloatingSyllableInput'; import { PianoRollSyllablesRow } from './PianoRollSyllablesRow';
 import { BeatRhythmPresetBar } from './BeatRhythmPresetBar'; import { PianoRollContextMenu } from './PianoRollContextMenu';
-import { CordelPiano } from '../common/CordelIcons';
+import { Piano } from 'lucide-react';
 import type { PianoRollTool } from './pianoRollInteractions';
 
 export interface PianoRollEditorProps {
@@ -37,7 +37,7 @@ export interface PianoRollEditorProps {
   pitchShiftSemitones?: number; allowedPitchClasses?: Set<number> | null; readOnly?: boolean; patternId?: string;
 }
 
-const ROW_HEIGHT = 20, NOTES_VIEWPORT_HEIGHT = 320;
+const ROW_HEIGHT = 22, NOTES_VIEWPORT_HEIGHT = 330;
 
 export const PianoRollEditor: React.FC<PianoRollEditorProps> = (p) => {
   const { t, language } = useLanguage();
@@ -101,7 +101,7 @@ export const PianoRollEditor: React.FC<PianoRollEditorProps> = (p) => {
       )}
       <div className="flex items-center justify-between text-[11px] font-mono px-1">
         <span className="font-bold text-theme-accent flex items-center gap-1.5">
-          <CordelPiano className="w-3.5 h-3.5" /><span>PIANO ROLL • {midiToNoteName(minMidi)} ➔ {midiToNoteName(maxMidi)} ({zoomLevel.toFixed(1)}x)</span>
+          <Piano className="w-3.5 h-3.5" /><span>PIANO ROLL • {midiToNoteName(minMidi)} ➔ {midiToNoteName(maxMidi)} ({zoomLevel.toFixed(1)}x)</span>
         </span>
         {p.readOnly ? (
           <div className="flex items-center gap-2">

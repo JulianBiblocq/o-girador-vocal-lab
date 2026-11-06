@@ -1,7 +1,7 @@
 /**
  * PatternLibraryBar.tsx
  * Bibliothèque de Patterns en 2 Blocs Verticaux (Puxador / Coro) scrollables (< 125 lignes).
- * Bouton d'inversion globale [⇄ Puxador ↔ Coro], sélection multiple et duplication [❐ (2)].
+ * Bouton d'inversion globale [⇄ Puxador ⇄ Coro], sélection multiple et duplication [❐ (2)].
  */
 import React from 'react';
 import { useToadaProject } from '../../context/ToadaProjectContext';

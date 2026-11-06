@@ -1,6 +1,6 @@
 /**
  * StudentDiagnosticCard.tsx
- * Carte de diagnostic pédagogique en 4 piliers (🎯 Justesse, 🥁 Attaque, 🌬️ Tenue, 🔔 Projection Roda) + Réécoute comparative (< 120 lignes).
+ * Carte de diagnostic pédagogique en 4 piliers (Justesse, Attaque, Tenue, Projection Roda) + Réécoute comparative (< 120 lignes).
  */
 import React from 'react';
 import type { StudentAnalysisResult } from '../../audio/studentPitchAnalyzer';

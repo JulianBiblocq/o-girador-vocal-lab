@@ -3,7 +3,7 @@
  * Édition directe ultra-rapide des briques à la souris au Livret 4 (< 125 lignes) :
  * - Détection de la poignée de redimensionnement droite (8 derniers pixels d'une brique)
  * - Étirement / raccourcissement de la tenue (isTie: true, '───')
- * - Soudure directe de deux briques voisines (Shift+Clic, Double-clic jonction ou bouton [ 🔗 Lier ])
+ * - Soudure directe de deux briques voisines (Shift+Clic, Double-clic jonction ou bouton [ Lier ])
  */
 import type { VocalStepData } from '../../types/vocalPack.types';
 import { findBrickRange } from './pianoRollInteractions';

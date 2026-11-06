@@ -82,7 +82,7 @@ export const MelodicControls: React.FC<MelodicControlsProps> = (props) => {
         </button>
       </div>
 
-      {/* 3. Droite : [ ▶ ÉCOUTER / OUVIR | ■ ARRÊTER LA LECTURE / PARAR A LEITURA ] */}
+      {/* 3. Droite : [ › ÉCOUTER / OUVIR | ■ ARRÊTER LA LECTURE / PARAR A LEITURA ] */}
       <div className="flex items-center gap-2">
         {onResetSeek && (
           <button type="button" onClick={onResetSeek} className="cordel-btn px-2.5 py-1.5 text-xs font-mono flex items-center gap-1 rounded cursor-pointer" title="0:00">

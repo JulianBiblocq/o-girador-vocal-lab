@@ -1,10 +1,10 @@
 /**
  * CabineMonitoringAndPunchBar.tsx
  * Barre studio du Livret 2 (Cabine) (< 125 lignes) :
- * - 🎧 Retour Casque Confort non-destructif (Off | Studio Doux | Roda Chaude + dosage)
- * - 🥁 Option Baque dans le casque pendant la prise
- * - 🎯 Sélecteur de reprise partielle Punch-in par mesure (Tout le bloc | Mesure 1..N)
- * - ⚠️ Témoin de saturation à mémoire de crête (-0.5 dBFS / Peak Hold).
+ * - Retour Casque Confort non-destructif (Off | Studio Doux | Roda Chaude + dosage)
+ * - Option Baque dans le casque pendant la prise
+ * - Sélecteur de reprise partielle Punch-in par mesure (Tout le bloc | Mesure 1..N)
+ * - Témoin de saturation à mémoire de crête (-0.5 dBFS / Peak Hold).
  */
 import React from 'react';
 import { Headphones, Target, AlertTriangle, Drum } from 'lucide-react';

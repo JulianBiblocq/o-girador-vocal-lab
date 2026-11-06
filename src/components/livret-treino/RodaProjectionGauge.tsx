@@ -1,6 +1,6 @@
 /**
  * RodaProjectionGauge.tsx
- * Jauge visuelle temps réel « 🔔 Projection Roda (Masque 3 kHz) » avec retour couleur (Sable ➔ Émeraude/Or) et conseil vocal (< 90 lignes).
+ * Jauge visuelle temps réel « Projection Roda (Masque 3 kHz) » avec retour couleur (Sable ➔ Émeraude/Or) et conseil vocal (< 90 lignes).
  */
 import React from 'react';
 import { useLanguage } from '../../i18n/LanguageContext';

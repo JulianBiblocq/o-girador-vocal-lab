@@ -1,6 +1,6 @@
 /**
  * pronunciationMirrorEngine.ts
- * Moteur de lecture découpée (100% / 🐢 75% WSOLA) et Miroir Audio (Enregistrement Élève ➔ Écoute Mestre puis Élève) (< 115 lignes).
+ * Moteur de lecture découpée (100% / 75% WSOLA) et Miroir Audio (Enregistrement Élève ➔ Écoute Mestre puis Élève) (< 115 lignes).
  */
 import type { VocalPatternItem } from '../types/toadaProject.types';
 import { getSharedAudioContext, registerAudioKillSwitch, stopAllActiveAudioEngines } from './sharedAudioContext';

@@ -1,7 +1,7 @@
 /**
  * studentPitchAnalyzer.ts
- * Analyse pédagogique 3 piliers (🎯 Justesse Cœur de Voyelle + Intervalles mod 12,
- * 🥁 Attaque compensée en latence \tau_lag, 🌬️ Stabilité) (< 120 lignes).
+ * Analyse pédagogique 3 piliers (Justesse Cœur de Voyelle + Intervalles mod 12,
+ * Attaque compensée en latence \tau_lag, Stabilité) (< 120 lignes).
  */
 import type { PitchCurvePoint, VocalStepData } from '../types/vocalPack.types';
 import { extractContinuousPitchCurve } from './pitchExtractor';

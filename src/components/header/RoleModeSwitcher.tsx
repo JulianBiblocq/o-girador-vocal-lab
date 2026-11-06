@@ -8,7 +8,7 @@ import React from 'react';
 import { useVocalTransportStore } from '../../stores/useVocalTransportStore';
 import { canAccessVocalStudio } from '../../utils/vocalPermissions';
 import { useLanguage } from '../../i18n/LanguageContext';
-import { Mic, Headphones } from 'lucide-react';
+import { Mic, GraduationCap } from 'lucide-react';
 
 export const RoleModeSwitcher: React.FC = () => {
   const viewRoleMode = useVocalTransportStore((s) => s.viewRoleMode);
@@ -42,7 +42,7 @@ export const RoleModeSwitcher: React.FC = () => {
         }`}
         title={t('roleEleve')}
       >
-        <Headphones className="w-3.5 h-3.5" />
+        <GraduationCap className="w-3.5 h-3.5" />
         <span className="hidden sm:inline">{t('roleEleve')}</span>
       </button>
     </div>

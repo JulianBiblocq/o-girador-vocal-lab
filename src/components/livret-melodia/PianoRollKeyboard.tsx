@@ -8,6 +8,10 @@ import { midiToNoteName } from '../../utils/noteUtils';
 
 export const KEYBOARD_WIDTH = 64;
 
+export function midiToRowY(midi: number, maxMidi: number, rowHeight: number): number {
+  return (maxMidi - midi) * rowHeight;
+}
+
 interface PianoRollKeyboardProps {
   minMidi: number;
   maxMidi: number;
@@ -32,7 +36,7 @@ export const PianoRollKeyboard: React.FC<PianoRollKeyboardProps> = ({
     const isBlack = BLACK_SEMITONES.has(semitone);
     const noteName = midiToNoteName(midi);
     const isC = semitone === 0;
-    const y = (maxMidi - midi) * rowHeight;
+    const y = midiToRowY(midi, maxMidi, rowHeight);
 
     if (isBlack) {
       rows.push(

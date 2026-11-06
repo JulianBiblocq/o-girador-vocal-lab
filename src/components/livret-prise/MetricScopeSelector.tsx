@@ -1,6 +1,6 @@
 /**
  * MetricScopeSelector.tsx
- * Commutateur de portée métrique [🌍 Tout le chant | 🎯 Ce bloc | ☑ Blocs cochés] (< 60 lignes).
+ * Commutateur de portée métrique [Tout le chant | Ce bloc | Blocs cochés] (< 60 lignes).
  */
 import React from 'react';
 import type { MetricApplyScope } from '../../utils/projectBatchOps';

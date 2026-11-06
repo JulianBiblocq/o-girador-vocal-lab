@@ -1,6 +1,6 @@
 /**
  * LivretReglages.tsx
- * Onglet ⚙️ Réglages : Configuration technique audio, micro/casque, calibration, latence et tessiture (< 125 lignes).
+ * Onglet Réglages : Configuration technique audio, micro/casque, calibration, latence et tessiture (< 125 lignes).
  */
 import React, { useState, useEffect } from 'react';
 import { Sliders, Headphones, Cpu, Activity, Sparkles } from 'lucide-react';
