@@ -1,6 +1,6 @@
 /**
  * LivretMelodiaWorkspace.tsx — Espace de travail Cubase VariAudio du Livret 4
- * (Gamme débrayable, Piano Roll VariAudio par brique, Letra & Contrôles épurés) (< 135 lignes).
+ * (Gamme unifiée Livrets 1-2-4 débrayable, Piano Roll VariAudio par brique, Letra & Contrôles épurés) (< 138 lignes).
  */
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import type { PitchCurvePoint, VocalPackExport, VocalStepData } from '../../types/vocalPack.types';
@@ -10,14 +10,12 @@ import { useMelodyneAudioProcessor } from '../../hooks/useMelodyneAudioProcessor
 import { useLivretMelodiaPlayback } from './useLivretMelodiaPlayback';
 import { recalibrateBricksToLocalPitchCurve } from '../../audio/pitchStepSegmentation';
 import { buildAllowedPitchClasses, detectBestScaleFromPitchCurve, type ScaleType } from '../../audio/scaleQuantizer';
+import { resolveProjectActiveScale, applyDetectedScaleToProject } from '../../audio/projectScaleAnalyzer';
 import { downloadToadaPackJson } from '../../utils/toadaPackExporter';
 import { useVocalTransportStore } from '../../stores/useVocalTransportStore';
-import { ScaleLockBar } from './ScaleLockBar';
-import { PianoRollEditor } from './PianoRollEditor';
-import { MelodicControls } from './MelodicControls';
-import { LetraEditorPanel } from './LetraEditorPanel';
-import { MelodiaNextStepFooter } from './MelodiaNextStepFooter';
-import { HarmonyProfileSelector } from '../common/HarmonyProfileSelector';
+import { ScaleLockBar } from './ScaleLockBar'; import { PianoRollEditor } from './PianoRollEditor';
+import { MelodicControls } from './MelodicControls'; import { LetraEditorPanel } from './LetraEditorPanel';
+import { MelodiaNextStepFooter } from './MelodiaNextStepFooter'; import { HarmonyProfileSelector } from '../common/HarmonyProfileSelector';
 import { DEFAULT_HARMONY_CONFIG } from '../../types/harmony.types';
 import { moveBrick, setAllBricksMelodynePullPct, type PianoRollTool } from './pianoRollInteractions';
 import { buildUpdatedVocalPackExport, upgradeStalePatternStepsIfNeeded, extractProjectRawLyricsSource } from '../../audio/livretResetHelper';
@@ -36,14 +34,17 @@ export const LivretMelodiaWorkspace: React.FC<LivretMelodiaWorkspaceProps> = ({
   initialPack, cleanPCM, sampleRate = 44100, totalDurationSec = 4, anacrusisDurationSec = 0, beatsPerMeasure = 4,
   measuresCount = 2, pitchCurve = [], initialSteps, outputDeviceId, pitchShiftSemitones = 0, onBackToPrise, onPackUpdated, onAnalyzeFullProjectScale,
 }) => {
-  const { t } = useLanguage(), { activePattern, updatePattern, project, updateHarmonyConfig } = useToadaProject();
+  const { t, language } = useLanguage(), { activePattern, updatePattern, project, loadProject, updateHarmonyConfig } = useToadaProject();
   const [activeTool, setActiveTool] = useState<PianoRollTool>('pointer'), [selectedStepIdx, setSelectedStepIdx] = useState<number | null>(null);
   const rawPitchCurve = useMemo(() => activePattern.rawPitchCurve ?? pitchCurve, [activePattern.rawPitchCurve, pitchCurve]);
+  const resolvedScale = useMemo(() => resolveProjectActiveScale(project, language), [project, language]);
   const initialScale = useMemo(() => detectBestScaleFromPitchCurve(rawPitchCurve, project.toadaMeta?.tonaliteDefaut || initialPack.metadata.referencePitch), [rawPitchCurve, project.toadaMeta?.tonaliteDefaut, initialPack.metadata.referencePitch]);
-  const [tonic, setTonic] = useState(() => initialScale.tonic);
-  const [scaleType, setScaleType] = useState<ScaleType>('chromatic');
-  const [customPitchClasses, setCustomPitchClasses] = useState<number[] | null>(null);
-  const [smoothingLevel, setSmoothingLevel] = useState(0);
+  const [tonic, setTonic] = useState(() => project.toadaMeta?.tonaliteDefaut ? resolvedScale.tonic : initialScale.tonic);
+  const [scaleType, setScaleType] = useState<ScaleType>(() => project.toadaMeta?.tonaliteDefaut ? resolvedScale.scaleType : 'chromatic');
+  const [customPitchClasses, setCustomPitchClasses] = useState<number[] | null>(null), [smoothingLevel, setSmoothingLevel] = useState(0);
+  useEffect(() => {
+    if (project.toadaMeta?.tonaliteDefaut) { setTonic(resolvedScale.tonic); setScaleType(resolvedScale.scaleType); }
+  }, [project.toadaMeta?.tonaliteDefaut, resolvedScale.tonic, resolvedScale.scaleType]);
   const allowedPitchClasses = useMemo(
     () => (scaleType !== 'chromatic' || (customPitchClasses && customPitchClasses.length < 12) ? buildAllowedPitchClasses(tonic, scaleType, customPitchClasses) : null),
     [tonic, scaleType, customPitchClasses]
@@ -102,8 +103,7 @@ export const LivretMelodiaWorkspace: React.FC<LivretMelodiaWorkspaceProps> = ({
 
   const globalVariAudioPct = useMemo(() => {
     const roots = allSteps.filter((s) => s.active && s.note !== '───');
-    if (roots.length === 0) return 0;
-    return Math.round(roots.reduce((acc, s) => acc + (s.melodynePullPct ?? 0), 0) / roots.length);
+    return roots.length === 0 ? 0 : Math.round(roots.reduce((acc, s) => acc + (s.melodynePullPct ?? 0), 0) / roots.length);
   }, [allSteps]);
 
   useEffect(() => useVocalTransportStore.getState().registerHandlers({
@@ -117,7 +117,7 @@ export const LivretMelodiaWorkspace: React.FC<LivretMelodiaWorkspaceProps> = ({
     <div className="flex flex-col gap-3 w-full">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex-1 min-w-[280px]">
-          <ScaleLockBar tonic={tonic} scaleType={scaleType} customPitchClasses={customPitchClasses} pitchCurve={rawPitchCurve} defaultKeyStr={project.toadaMeta?.tonaliteDefaut || initialPack.metadata.referencePitch} onUpdateScale={(ton, st, cust) => { setTonic(ton); setScaleType(st); setCustomPitchClasses(cust); handleSnapToGreenLine(ton, st, cust); }} onAnalyzeFullProjectScale={onAnalyzeFullProjectScale} />
+          <ScaleLockBar tonic={tonic} scaleType={scaleType} customPitchClasses={customPitchClasses} pitchCurve={rawPitchCurve} defaultKeyStr={project.toadaMeta?.tonaliteDefaut || initialPack.metadata.referencePitch} onUpdateScale={(ton, st, cust) => { setTonic(ton); setScaleType(st); setCustomPitchClasses(cust); loadProject(applyDetectedScaleToProject(project, ton, st, activePattern.referencePitch, language)); handleSnapToGreenLine(ton, st, cust); }} onAnalyzeFullProjectScale={onAnalyzeFullProjectScale} />
         </div>
         <HarmonyProfileSelector config={harmonyConfig} onChange={updateHarmonyConfig} />
       </div>

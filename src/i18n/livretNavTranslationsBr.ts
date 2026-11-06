@@ -1,6 +1,6 @@
 /**
  * livretNavTranslationsBr.ts
- * Traduções em português brasileiro para navegação de 5 livretos + Ajustes (< 60 lignes).
+ * Traduções em português brasileiro para navegação de 5 livretos + Ajustes (< 60 linhas).
  */
 import type { LivretNavTranslations } from './livretNavTranslations.types';
 
@@ -22,7 +22,7 @@ export const livretNavTranslationsBr: LivretNavTranslations = {
   goToCabineBtn: 'Ir para a Cabine (Livreto 2)',
   calageEmptyTitle: 'Nenhuma gravação vocal nesta frase',
   calageEmptyDesc: 'Grave sua voz na cabine (Livreto 2) ou importe diretamente um arquivo de áudio.',
-  calageDirectImportBtn: 'Importar Áudio (Pattern)',
+  calageDirectImportBtn: 'Importar Áudio (Padrão)',
   calageOpenSlicerBtn: 'Fatiar Toada Completa (Slicer)',
   melodiaEmptyTitle: 'Nenhuma melodia extraída para esta frase',
   melodiaEmptyDesc: 'Faça uma tomada no Livreto 2 ou confirme o ajuste no Livreto 3 para exibir o Piano Roll e a letra.',
@@ -39,8 +39,8 @@ export const livretNavTranslationsBr: LivretNavTranslations = {
   reglagesListeningSection: 'Modo de Escuta e Volume do Guia',
   reglagesCalibrationSection: 'Calibração e Latência',
   reglagesTessituraSection: 'Limites de Tessitura e Viterbi',
-  takeModePattern: 'Este pattern apenas',
-  takeModePatternTitle: 'Gravar apenas o pattern selecionado',
+  takeModePattern: 'Apenas este padrão',
+  takeModePatternTitle: 'Gravar apenas o padrão selecionado',
   takeModePuxador: 'Todo o Puxador de uma vez',
   takeModePuxadorTitle: 'Gravar todos os blocos Puxador da canção continuamente',
   takeModeCoro: 'Todo o Coro de uma vez',

@@ -1,8 +1,8 @@
 /**
  * PianoRollToolbar.tsx
- * Barre d'outils épurée façon Cubase VariAudio :
+ * Barre d'outils épurée bilingue (FR / PT-BR) façon Cubase VariAudio :
  * 5 outils (Sélection, Crayon, Ciseaux, Colle, Gomme), [ 🎯 Poser les notes sur la ligne verte ],
- * [ 🔄 Réinitialiser Rythme & Notes ] et Correction Voix Globale (0..100%) (< 120 lignes).
+ * [ 🔄 Réinitialiser Rythme & Notes ] et Correction Voix Globale (0..100%) (< 130 lignes).
  */
 import React from 'react';
 import type { PianoRollTool } from './pianoRollInteractions';
@@ -34,14 +34,15 @@ export const PianoRollToolbar: React.FC<PianoRollToolbarProps> = (props) => {
     onSnapToGreenLine, onReExtractNotes,
     globalVariAudioPct = 0, onChangeGlobalVariAudioPct, onPurgeVariAudio,
   } = props;
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  const isBr = language === 'br';
 
   const tools: { id: PianoRollTool; label: string; icon: React.FC<{ className?: string }> }[] = [
-    { id: 'pointer', label: 'Sélection', icon: MousePointer },
-    { id: 'draw_move', label: 'Crayon', icon: Pencil },
-    { id: 'cut', label: 'Ciseaux', icon: Scissors },
-    { id: 'glue', label: 'Colle (Souder)', icon: Link2 },
-    { id: 'erase', label: 'Gomme', icon: Eraser },
+    { id: 'pointer', label: isBr ? 'Seleção' : 'Sélection', icon: MousePointer },
+    { id: 'draw_move', label: isBr ? 'Lápis' : 'Crayon', icon: Pencil },
+    { id: 'cut', label: isBr ? 'Tesoura' : 'Ciseaux', icon: Scissors },
+    { id: 'glue', label: isBr ? 'Cola (Unir)' : 'Colle (Souder)', icon: Link2 },
+    { id: 'erase', label: isBr ? 'Borracha' : 'Gomme', icon: Eraser },
   ];
 
   return (
@@ -75,10 +76,10 @@ export const PianoRollToolbar: React.FC<PianoRollToolbarProps> = (props) => {
         {onSnapToGreenLine && (
           <button
             type="button" onClick={onSnapToGreenLine}
-            title="Garde le rythme et les syllabes intacts et pose chaque brique MIDI exactement sur la courbe verte de la voix"
+            title={isBr ? 'Mantém o ritmo e as sílabas intactos e alinha cada bloco MIDI exatamente na linha verde da voz' : 'Garde le rythme et les syllabes intacts et pose chaque brique MIDI exactement sur la courbe verte de la voix'}
             className="px-2.5 py-1 text-xs font-mono font-bold flex items-center gap-1.5 border border-emerald-500/60 bg-emerald-600/15 text-emerald-900 dark:text-emerald-300 hover:bg-emerald-600/25 rounded cursor-pointer"
           >
-            <Target className="w-3.5 h-3.5" /><span>Poser les notes sur la ligne verte</span>
+            <Target className="w-3.5 h-3.5" /><span>{isBr ? 'Alinhar notas na linha verde' : 'Poser les notes sur la ligne verte'}</span>
           </button>
         )}
 
@@ -89,10 +90,10 @@ export const PianoRollToolbar: React.FC<PianoRollToolbarProps> = (props) => {
               const ok = await confirmAsync({ title: t('reExtractNotes'), message: t('reExtractNotesConfirm'), confirmLabel: t('dialogConfirm'), cancelLabel: t('dialogCancel'), variant: 'warning' });
               if (ok) onReExtractNotes();
             }}
-            title="Recalcule le découpage rythmique Maracatu et les hauteurs depuis l'onde"
+            title={isBr ? 'Recalcula a divisão rítmica Maracatu e as alturas a partir da onda' : "Recalcule le découpage rythmique Maracatu et les hauteurs depuis l'onde"}
             className="px-2.5 py-1 text-xs font-mono font-bold flex items-center gap-1.5 border border-amber-500/50 bg-amber-500/15 text-amber-900 dark:text-amber-300 hover:bg-amber-500/25 rounded cursor-pointer"
           >
-            <RefreshCw className="w-3.5 h-3.5" /><span>Réinitialiser Rythme & Notes</span>
+            <RefreshCw className="w-3.5 h-3.5" /><span>{isBr ? 'Reiniciar Ritmo e Notas' : 'Réinitialiser Rythme & Notes'}</span>
           </button>
         )}
       </div>
@@ -100,18 +101,18 @@ export const PianoRollToolbar: React.FC<PianoRollToolbarProps> = (props) => {
       <div className="flex flex-wrap items-center gap-2 text-[11px] font-mono">
         {onChangeGlobalVariAudioPct && (
           <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-[var(--cordel-subcard-bg)] border border-[var(--cordel-border-sub)]">
-            <span className="font-bold text-theme-ink/85">Correction Voix Globale :</span>
+            <span className="font-bold text-theme-ink/85">{isBr ? 'Correção de Voz Global :' : 'Correction Voix Globale :'}</span>
             <input
               type="range" min={0} max={100} step={5} value={globalVariAudioPct}
               onChange={(e) => onChangeGlobalVariAudioPct(Number(e.target.value))}
               className="w-20 accent-[#9a3412] cursor-pointer"
             />
             <span className={`font-bold min-w-[78px] ${globalVariAudioPct > 0 ? 'text-[#9a3412] dark:text-amber-400' : 'text-emerald-700 dark:text-emerald-400'}`}>
-              {globalVariAudioPct === 0 ? '0 % (Voix brute)' : `${globalVariAudioPct} %`}
+              {globalVariAudioPct === 0 ? (isBr ? '0 % (Voz crua)' : '0 % (Voix brute)') : `${globalVariAudioPct} %`}
             </span>
             {onPurgeVariAudio && globalVariAudioPct > 0 && (
               <button type="button" onClick={onPurgeVariAudio} className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-600/20 text-red-400 border border-red-500/40 hover:bg-red-600/30 flex items-center gap-0.5 cursor-pointer">
-                <X className="w-3 h-3" /><span>Purger (0 %)</span>
+                <X className="w-3 h-3" /><span>{isBr ? 'Limpar (0 %)' : 'Purger (0 %)'}</span>
               </button>
             )}
           </div>

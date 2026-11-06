@@ -1,7 +1,7 @@
 /**
  * PianoRollKeyboard.tsx
- * Clavier vertical 64 px fixe à gauche (touches ivoire / ébène en relief).
- * Aligné directement avec la grille de notes (C2..C5).
+ * Clavier vertical 64 px fixe à gauche (touches crème/bois doux #d6c7b2 en Mode Nuit, ivoire en Mode Jour).
+ * Aligné directement avec la grille de notes (C2..C5) (< 75 lignes).
  */
 import React from 'react';
 import { midiToNoteName } from '../../utils/noteUtils';
@@ -36,9 +36,9 @@ export const PianoRollKeyboard: React.FC<PianoRollKeyboardProps> = ({ minMidi, m
           title={`Note ${noteName}`}
           className="relative w-full cursor-pointer select-none group"
         >
-          <div className="absolute inset-0 bg-[#e8e0d0] border-b border-black/15" />
+          <div className="absolute inset-0 bg-[#e8e0d0] dark:bg-[#c8b8a2] border-b border-black/20" />
           <div className="absolute left-0 top-0 bottom-0 w-[38px] bg-gradient-to-r from-[#1c1917] to-[#292524] border-t border-b border-r border-black shadow-md z-10 flex items-center px-1 group-hover:from-black group-hover:to-amber-950/80 transition-colors">
-            <span className="text-[7.5px] font-mono font-bold text-amber-200/70 tracking-tighter truncate">
+            <span className="text-[7.5px] font-mono font-bold text-amber-200/80 tracking-tighter truncate">
               {noteName}
             </span>
           </div>
@@ -52,10 +52,10 @@ export const PianoRollKeyboard: React.FC<PianoRollKeyboardProps> = ({ minMidi, m
           onClick={() => onPlayNote(midi)}
           title={`Note ${noteName}`}
           className={`relative w-full cursor-pointer select-none flex items-center justify-end pr-1.5 transition-colors group ${
-            isC ? 'bg-[#fffdf7]' : 'bg-[#f5f0e6]'
-          } ${isBorderBoundary ? 'border-b-2 border-[var(--cordel-border-panel)]' : 'border-b border-black/15'} hover:bg-[#fff9ea]`}
+            isC ? 'bg-[#f8f1e0] dark:bg-[#dfd2c0]' : 'bg-[#f2ead8] dark:bg-[#d6c7b2]'
+          } ${isBorderBoundary ? 'border-b-2 border-[var(--cordel-border-panel)]' : 'border-b border-black/20'} hover:bg-[#e8dcc4] dark:hover:bg-[#e5d8c8]`}
         >
-          <span className={`text-[8.5px] font-mono tracking-tight ${isC ? 'font-black text-amber-900' : 'font-semibold text-stone-700'} group-hover:text-amber-800`}>
+          <span className={`text-[8.5px] font-mono tracking-tight text-[#1a1a1a] ${isC ? 'font-black text-[#9a3412]' : 'font-bold'}`}>
             {noteName}
           </span>
         </div>

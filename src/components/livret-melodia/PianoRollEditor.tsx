@@ -1,7 +1,7 @@
 /**
  * PianoRollEditor.tsx
- * Éditeur Piano Roll Cubase VariAudio avec barre d'outils épurée, poignées par brique,
- * menu Clic Droit Maintenu et presets rythmiques Maracatu (1-2-4) sous chaque temps (< 135 lignes).
+ * Éditeur Piano Roll Cubase VariAudio avec Zone Supérieure auto-centrée sur les briques/courbe verte
+ * et Bandeau Inférieur Épinglé (Docked Footer : Syllabes + Figures Rythmiques 1-2-4) toujours visible (< 138 lignes).
  */
 import React, { useRef, useState, useEffect, useMemo, useCallback } from 'react';
 import type { PitchCurvePoint, VocalStepData, MelodyneRegion } from '../../types/vocalPack.types';
@@ -14,7 +14,7 @@ import { PianoRollToolbar } from './PianoRollToolbar'; import { PianoRollKeyboar
 import { PianoRollCanvas } from './PianoRollCanvas'; import { PianoRollStickyHeader } from './PianoRollStickyHeader';
 import { FloatingSyllableInput } from './FloatingSyllableInput'; import { PianoRollSyllablesRow } from './PianoRollSyllablesRow';
 import { BeatRhythmPresetBar } from './BeatRhythmPresetBar'; import { PianoRollContextMenu } from './PianoRollContextMenu';
-import { ChordGridBar } from '../common/ChordGridBar'; import { CordelPiano } from '../common/CordelIcons';
+import { CordelPiano } from '../common/CordelIcons';
 import type { PianoRollTool } from './pianoRollInteractions';
 
 export interface PianoRollEditorProps {
@@ -37,10 +37,11 @@ export interface PianoRollEditorProps {
   pitchShiftSemitones?: number; allowedPitchClasses?: Set<number> | null; readOnly?: boolean;
 }
 
-const ROW_HEIGHT = 20;
+const ROW_HEIGHT = 20, NOTES_VIEWPORT_HEIGHT = 320;
 
 export const PianoRollEditor: React.FC<PianoRollEditorProps> = (p) => {
-  const { t } = useLanguage(), scrollRef = useRef<HTMLDivElement>(null);
+  const { t, language } = useLanguage();
+  const horizScrollRef = useRef<HTMLDivElement>(null), notesScrollRef = useRef<HTMLDivElement>(null);
   const [baseWidth, setBaseWidth] = useState(640), [zoomLevel, setZoomLevel] = useState(1);
   const [internalTool, setInternalTool] = useState<PianoRollTool>('pointer');
   const activeTool = p.activeTool ?? internalTool, setActiveTool = p.onSelectTool ?? setInternalTool;
@@ -49,7 +50,7 @@ export const PianoRollEditor: React.FC<PianoRollEditorProps> = (p) => {
   const hasAutoCentered = useRef(false);
 
   useEffect(() => {
-    const el = scrollRef.current; if (!el) return;
+    const el = horizScrollRef.current; if (!el) return;
     const obs = new ResizeObserver(([e]) => { if (e) setBaseWidth(Math.max(320, Math.floor(e.contentRect.width) - 66)); });
     obs.observe(el);
     const onWheel = (e: WheelEvent) => { if (e.ctrlKey) { e.preventDefault(); setZoomLevel((z) => Math.max(1, Math.min(8, z * (e.deltaY < 0 ? 1.25 : 0.8)))); } };
@@ -63,10 +64,15 @@ export const PianoRollEditor: React.FC<PianoRollEditorProps> = (p) => {
   const t1OffsetSec = p.t1OffsetSec ?? getPatternT1OffsetSec(p.hasAnacrusis, p.beatsPerMeasure * (60 / (p.bpm || 88)));
 
   useEffect(() => {
-    const el = scrollRef.current; if (!el || hasAutoCentered.current) return;
-    const avgMidi = activeMidis.length > 0 ? activeMidis.reduce((a, b) => a + b, 0) / activeMidis.length : 54;
-    el.scrollTop = Math.max(0, (maxMidi - avgMidi) * ROW_HEIGHT - 140); hasAutoCentered.current = true;
-  }, [activeMidis, maxMidi]);
+    const el = notesScrollRef.current;
+    if (!el || hasAutoCentered.current) return;
+    const curveMidis = (p.rawPitchCurve?.length ? p.rawPitchCurve : p.pitchCurve).filter((pt) => pt.midiFloat >= 36 && pt.midiFloat <= 96).map((pt) => pt.midiFloat);
+    const pool = activeMidis.length > 0 ? activeMidis : curveMidis;
+    if (pool.length === 0) return;
+    const midMidi = (Math.min(...pool) + Math.max(...pool)) / 2;
+    el.scrollTop = Math.max(0, Math.round((maxMidi - midMidi) * ROW_HEIGHT + ROW_HEIGHT / 2 - NOTES_VIEWPORT_HEIGHT / 2));
+    hasAutoCentered.current = true;
+  }, [activeMidis, p.rawPitchCurve, p.pitchCurve, maxMidi]);
 
   const handleConfirmText = useCallback((text: string, jumpNext: boolean) => {
     if (!textInput) return;
@@ -95,8 +101,7 @@ export const PianoRollEditor: React.FC<PianoRollEditorProps> = (p) => {
       )}
       <div className="flex items-center justify-between text-[11px] font-mono px-1">
         <span className="font-bold text-theme-accent flex items-center gap-1.5">
-          <CordelPiano className="w-3.5 h-3.5" />
-          <span>PIANO ROLL • {midiToNoteName(minMidi)} ➔ {midiToNoteName(maxMidi)} ({zoomLevel.toFixed(1)}x)</span>
+          <CordelPiano className="w-3.5 h-3.5" /><span>PIANO ROLL • {midiToNoteName(minMidi)} ➔ {midiToNoteName(maxMidi)} ({zoomLevel.toFixed(1)}x)</span>
         </span>
         {p.readOnly ? (
           <div className="flex items-center gap-2">
@@ -109,22 +114,18 @@ export const PianoRollEditor: React.FC<PianoRollEditorProps> = (p) => {
           </div>
         ) : (
           <span className="text-[10px] text-theme-ink/70 hidden sm:inline">
-            ◆ Bord haut d'une brique = Correction Voix (0..100%) • Centre = Hauteur MIDI • Clic droit maintenu = Outils
+            {language === 'br'
+              ? '◆ Topo do bloco = Correção de Voz (0..100%) • Centro = Nota MIDI • Clique direito mantido = Ferramentas'
+              : "◆ Bord haut d'une brique = Correction Voix (0..100%) • Centre = Hauteur MIDI • Clic droit maintenu = Outils"}
           </span>
         )}
       </div>
-      <div ref={scrollRef} className="w-full cordel-card overflow-x-auto overflow-y-auto cordel-scrollbar max-h-[450px] rounded">
-        <div style={{ width: `${64 + gridWidth}px`, minHeight: `${42 + canvasHeight}px` }}>
-          {p.onUpdateHarmonyGrid && (
-            <ChordGridBar harmonyGrid={p.harmonyGrid} measuresCount={p.measuresCount ?? 2} beatsPerMeasure={p.beatsPerMeasure} hasAnacrusis={p.hasAnacrusis} onUpdateGrid={p.onUpdateHarmonyGrid} alignedGridWidth={gridWidth} keyboardOffsetPx={64} />
-          )}
-          <PianoRollStickyHeader
-            gridWidth={gridWidth} beatsPerMeasure={p.beatsPerMeasure} totalDurationSec={p.totalDurationSec} anacrusisDurationSec={p.anacrusisDurationSec}
-            seekStartSec={p.seekStartSec} isPlaying={p.isPlaying} hasAnacrusis={p.hasAnacrusis} bpm={p.bpm} t1OffsetSec={t1OffsetSec}
-            getPlayheadSec={p.getPlayheadSec} onSeek={p.onSeek}
-          />
-          <BeatRhythmPresetBar allSteps={p.allSteps} gridWidth={gridWidth} resPerBeat={p.beatResolutions?.[0] || 4} readOnly={p.readOnly} onUpdateSteps={p.onUpdateSteps} />
-          <div className="flex relative" style={{ width: `${64 + gridWidth}px`, height: `${canvasHeight}px` }}>
+
+      {/* Conteneur principal : scroll horizontal partagé, Zone Supérieure scrollable verticalement + Bandeau Inférieur Épinglé */}
+      <div ref={horizScrollRef} className="w-full cordel-card overflow-x-auto overflow-y-hidden cordel-scrollbar rounded">
+        <div style={{ width: `${64 + gridWidth}px` }} className="flex flex-col">
+          <PianoRollStickyHeader gridWidth={gridWidth} beatsPerMeasure={p.beatsPerMeasure} totalDurationSec={p.totalDurationSec} anacrusisDurationSec={p.anacrusisDurationSec} seekStartSec={p.seekStartSec} isPlaying={p.isPlaying} hasAnacrusis={p.hasAnacrusis} bpm={p.bpm} t1OffsetSec={t1OffsetSec} getPlayheadSec={p.getPlayheadSec} onSeek={p.onSeek} />
+          <div ref={notesScrollRef} className="flex relative overflow-y-auto overflow-x-hidden cordel-scrollbar" style={{ width: `${64 + gridWidth}px`, height: `${NOTES_VIEWPORT_HEIGHT}px` }}>
             <PianoRollKeyboard minMidi={minMidi} maxMidi={maxMidi} rowHeight={ROW_HEIGHT} onPlayNote={p.onPlayNotePreview} />
             <div className="relative" style={{ width: `${gridWidth}px`, height: `${canvasHeight}px` }}>
               <PianoRollCanvas {...p} t1OffsetSec={t1OffsetSec} readOnly={p.readOnly} width={gridWidth} height={canvasHeight} minMidi={minMidi} maxMidi={maxMidi} rowHeight={ROW_HEIGHT} activeTool={activeTool} onOpenContextMenu={(x, y) => setPalettePos({ x, y })} onOpenTextInput={(idx, rect) => setTextInput({ stepIndex: idx, rect })} />
@@ -132,6 +133,7 @@ export const PianoRollEditor: React.FC<PianoRollEditorProps> = (p) => {
             </div>
           </div>
           <PianoRollSyllablesRow allSteps={p.allSteps} gridWidth={gridWidth} readOnly={p.readOnly} onUpdateSteps={p.onUpdateSteps} />
+          <BeatRhythmPresetBar allSteps={p.allSteps} gridWidth={gridWidth} resPerBeat={p.beatResolutions?.[0] || 4} readOnly={p.readOnly} onUpdateSteps={p.onUpdateSteps} />
         </div>
       </div>
       {palettePos && <PianoRollContextMenu x={palettePos.x} y={palettePos.y} activeTool={activeTool} onSelectTool={setActiveTool} onClose={() => setPalettePos(null)} />}

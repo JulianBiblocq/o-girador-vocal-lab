@@ -1,6 +1,6 @@
 /**
  * MelodicControls.tsx
- * Barre de contrôle épurée du Livret 4 :
+ * Barre de contrôle épurée bilingue (FR / PT-BR) du Livret 4 :
  * [ ⬅ Retour à la Prise ], Sélecteur de Pattern, [ 🎹 Synthé | 🎙️ Voix seule | 🎙️🎹 Duo ] et [ ▶ ÉCOUTER / ■ ARRÊTER ] (< 105 lignes).
  */
 import React from 'react';
@@ -28,7 +28,7 @@ export const MelodicControls: React.FC<MelodicControlsProps> = (props) => {
     isPlaying, playMode, clickEnabled,
     onTogglePlay, onResetSeek, onSetPlayMode, onToggleClick, onBackToPrise,
   } = props;
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
 
   return (
     <div className="cordel-card p-2 w-full flex flex-wrap items-center justify-between gap-2 select-none rounded">
@@ -82,7 +82,7 @@ export const MelodicControls: React.FC<MelodicControlsProps> = (props) => {
         </button>
       </div>
 
-      {/* 3. Droite : [ ▶ ÉCOUTER / ■ ARRÊTER LA LECTURE ] */}
+      {/* 3. Droite : [ ▶ ÉCOUTER / OUVIR | ■ ARRÊTER LA LECTURE / PARAR A LEITURA ] */}
       <div className="flex items-center gap-2">
         {onResetSeek && (
           <button type="button" onClick={onResetSeek} className="cordel-btn px-2.5 py-1.5 text-xs font-mono flex items-center gap-1 rounded cursor-pointer" title="0:00">
@@ -96,7 +96,7 @@ export const MelodicControls: React.FC<MelodicControlsProps> = (props) => {
           }`}
         >
           {isPlaying ? <Square className="w-4 h-4 fill-current" /> : <Play className="w-4 h-4 fill-current text-[#f4ecd8]" />}
-          <span>{isPlaying ? t('stopPlayback') : 'ÉCOUTER'}</span>
+          <span>{isPlaying ? t('stopPlayback') : (language === 'br' ? 'OUVIR' : 'ÉCOUTER')}</span>
         </button>
       </div>
     </div>

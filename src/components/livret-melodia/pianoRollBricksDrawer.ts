@@ -1,7 +1,7 @@
 /**
  * pianoRollBricksDrawer.ts
  * Rendu Canvas des briques MIDI, poignées supérieures Cubase VariAudio (0..100%)
- * et courbes ambre/dorées de correction vocale par brique (< 125 lignes).
+ * et courbes ambre/dorées de correction vocale par brique (< 130 lignes).
  */
 import type { PitchCurvePoint, VocalStepData } from '../../types/vocalPack.types';
 
@@ -78,14 +78,16 @@ export function drawPianoRollBricks(params: DrawBricksParams): void {
     ctx.fillStyle = '#ffffff'; ctx.font = 'bold 9.5px sans-serif';
     ctx.fillText(step.syllable?.trim() ? `${step.note} • ${step.syllable.trim()}` : step.note, x + 4, y + h / 2 + 3.5);
 
-    // Poignée supérieure Cubase VariAudio (pastille ◆ sur le bord haut central)
+    // Poignée supérieure Cubase VariAudio (pastille ◆ sur le bord haut central avec contour doré #d4af37)
     const cx = x + w / 2, hy = y + 1;
     if (pullPct > 0 || isSel || isHov) {
       const badgeTxt = `◆ ${pullPct}%`;
       ctx.font = 'bold 11px monospace';
       const tw = ctx.measureText(badgeTxt).width + 8;
       ctx.fillStyle = pullPct > 0 ? '#9a3412' : '#1a1a1a';
-      ctx.beginPath(); ctx.roundRect(cx - tw / 2, hy - 8, tw, 14, 3); ctx.fill();
+      ctx.strokeStyle = '#d4af37';
+      ctx.lineWidth = 1.2;
+      ctx.beginPath(); ctx.roundRect(cx - tw / 2, hy - 8, tw, 14, 3); ctx.fill(); ctx.stroke();
       ctx.fillStyle = '#ffffff';
       ctx.fillText(badgeTxt, cx - tw / 2 + 4, hy + 2.5);
     } else if (w >= 14) {
@@ -124,4 +126,3 @@ export function drawVariAudioPulledCurveOverlay(
     i += ties;
   }
 }
-

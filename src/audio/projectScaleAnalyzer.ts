@@ -1,7 +1,7 @@
 /**
  * projectScaleAnalyzer.ts
  * Analyse globale de la gamme et de la tonique sur l'ensemble des phrases enregistrées d'une Toada,
- * avec pondération des notes de résolution de fin de phrase et requantification (< 130 lignes).
+ * avec pondération des notes de résolution de fin de phrase et requantification (< 120 lignes).
  */
 import type { ToadaProject, VocalPatternItem } from '../types/toadaProject.types';
 import type { PitchCurvePoint } from '../types/vocalPack.types';
@@ -12,8 +12,17 @@ import {
 } from './scaleQuantizer';
 import { recalibrateBricksToLocalPitchCurve } from './pitchStepSegmentation';
 import { NOTE_NAMES } from '../utils/noteUtils';
+import {
+  SOLFEGE_NOTE_NAMES, SOLFEGE_NOTE_NAMES_BR,
+  formatProjectScaleLabel, formatReferencePitchSolfege,
+  parseStoredScaleString, resolveProjectActiveScale,
+} from './projectScaleFormatter';
 
-export const SOLFEGE_NOTE_NAMES = ['Do', 'Do#', 'Ré', 'Ré#', 'Mi', 'Fa', 'Fa#', 'Sol', 'Sol#', 'La', 'Sib', 'Si'];
+export {
+  SOLFEGE_NOTE_NAMES, SOLFEGE_NOTE_NAMES_BR,
+  formatProjectScaleLabel, formatReferencePitchSolfege,
+  parseStoredScaleString, resolveProjectActiveScale,
+};
 
 export interface ProjectScaleAnalysisResult {
   tonic: string; rootPitchClass: number; scaleType: ScaleType;
@@ -22,25 +31,7 @@ export interface ProjectScaleAnalysisResult {
   analyzedPatternsCount: number; totalVoicedFrames: number; updatedPatterns: VocalPatternItem[];
 }
 
-export function formatProjectScaleLabel(tonic: string, scaleType: ScaleType): string {
-  if (scaleType === 'chromatic') return 'Mode libre (Chromatique)';
-  const pc = getTonicSemitone(tonic), rootFr = SOLFEGE_NOTE_NAMES[pc] || tonic;
-  const modeMap: Partial<Record<ScaleType, string>> = {
-    natural_minor: 'Mineur', minor: 'Mineur', major: 'Majeur',
-    mixolydian: 'Mixolydien', dorian: 'Dorien', harmonic_minor: 'Mineur Harm.',
-    pentatonic_minor: 'Pentatonique Min.', pentatonic_major: 'Pentatonique Maj.',
-  };
-  return `${rootFr} ${modeMap[scaleType] || 'Mineur'}`;
-}
-
-export function formatReferencePitchSolfege(referencePitch: string): string {
-  const m = (referencePitch || 'A3').match(/^([A-Ga-g][#b]?)(\d+)$/);
-  const note = m ? m[1].toUpperCase() : 'A', oct = m ? m[2] : '3';
-  const pc = getTonicSemitone(note);
-  return `${SOLFEGE_NOTE_NAMES[pc] || note}${oct}`;
-}
-
-export function analyzeFullProjectScale(patterns: VocalPatternItem[]): ProjectScaleAnalysisResult {
+export function analyzeFullProjectScale(patterns: VocalPatternItem[], lang: 'fr' | 'br' = 'fr'): ProjectScaleAnalysisResult {
   const allPoints: PitchCurvePoint[] = [], phraseCurves: PitchCurvePoint[][] = [];
   let analyzedPatternsCount = 0;
 
@@ -66,8 +57,7 @@ export function analyzeFullProjectScale(patterns: VocalPatternItem[]): ProjectSc
   const tuningOffset = estimateGlobalTuningOffset(allPoints);
   const plateauHist = new Float32Array(12), cadenceHist = new Float32Array(12);
   for (const curve of phraseCurves) {
-    const norm = 20 / Math.max(6, curve.length);
-    const tailStartIdx = Math.max(0, Math.floor(curve.length * 0.72));
+    const norm = 20 / Math.max(6, curve.length), tailStartIdx = Math.max(0, Math.floor(curve.length * 0.72));
     for (let i = 0; i < curve.length; i++) {
       const m = curve[i].midiFloat - tuningOffset, prevM = i > 0 ? curve[i - 1].midiFloat - tuningOffset : m;
       if (Math.abs(m - prevM) < 0.38) {
@@ -97,44 +87,29 @@ export function analyzeFullProjectScale(patterns: VocalPatternItem[]): ProjectSc
 
   const tonic = NOTE_NAMES[bestRoot];
   const tonicMidis = allPoints.map((p) => Math.round(p.midiFloat - tuningOffset)).filter((m) => ((m % 12) + 12) % 12 === bestRoot);
-  const pool = tonicMidis.length > 0 ? tonicMidis : allPoints.map((p) => Math.round(p.midiFloat - tuningOffset));
-  pool.sort((a, b) => a - b);
-  const medMidi = pool.length > 0 ? pool[Math.floor(pool.length / 2)] : 57;
-  const bestOctave = Math.max(2, Math.min(5, Math.floor(medMidi / 12) - 1));
-  const referencePitch = `${tonic}${bestOctave}`, label = formatProjectScaleLabel(tonic, bestMode);
-
+  const pool = (tonicMidis.length > 0 ? tonicMidis : allPoints.map((p) => Math.round(p.midiFloat - tuningOffset))).sort((a, b) => a - b);
+  const bestOctave = Math.max(2, Math.min(5, Math.floor((pool.length > 0 ? pool[Math.floor(pool.length / 2)] : 57) / 12) - 1));
+  const referencePitch = `${tonic}${bestOctave}`, label = formatProjectScaleLabel(tonic, bestMode, lang);
+  const solfegeArr = lang === 'br' ? SOLFEGE_NOTE_NAMES_BR : SOLFEGE_NOTE_NAMES;
   return {
-    tonic, rootPitchClass: bestRoot, scaleType: bestMode,
-    modeShortLabel: label.split(' ').slice(1).join(' '), label,
-    tonicSolfege: SOLFEGE_NOTE_NAMES[bestRoot], referencePitch,
-    referencePitchSolfege: `${SOLFEGE_NOTE_NAMES[bestRoot]}${bestOctave}`,
+    tonic, rootPitchClass: bestRoot, scaleType: bestMode, modeShortLabel: label.split(' ').slice(1).join(' '), label,
+    tonicSolfege: solfegeArr[bestRoot], referencePitch, referencePitchSolfege: `${solfegeArr[bestRoot]}${bestOctave}`,
     tuningOffset, analyzedPatternsCount, totalVoicedFrames: allPoints.length, updatedPatterns,
   };
 }
 
-export function applyDetectedScaleToProject(
-  project: ToadaProject, tonic: string, scaleType: ScaleType, referencePitch?: string
-): ToadaProject {
+export function applyDetectedScaleToProject(project: ToadaProject, tonic: string, scaleType: ScaleType, referencePitch?: string, lang: 'fr' | 'br' = 'fr'): ToadaProject {
   const pc = getTonicSemitone(tonic), cleanTonic = NOTE_NAMES[pc] || 'A';
-  const refPitch = referencePitch || `${cleanTonic}3`, keyLabel = formatProjectScaleLabel(cleanTonic, scaleType);
+  const refPitch = referencePitch || `${cleanTonic}3`, keyLabel = formatProjectScaleLabel(cleanTonic, scaleType, lang);
   const allowed = scaleType === 'chromatic' ? null : buildAllowedPitchClasses(cleanTonic, scaleType);
-
   const patterns = project.patterns.map((pat) => {
-    const hasAnac = pat.hasAnacrusis !== false;
-    const all = hasAnac ? [...(pat.anacrusisSteps || []), ...(pat.mainSteps || [])] : (pat.mainSteps || []);
+    const hasAnac = pat.hasAnacrusis !== false, all = hasAnac ? [...(pat.anacrusisSteps || []), ...(pat.mainSteps || [])] : (pat.mainSteps || []);
     if (all.length === 0) return { ...pat, referencePitch: refPitch };
     const bpm = pat.bpm ?? pat.baseBpm ?? project.bpm ?? 88, stepDur = (60 / bpm) / 4, t1Off = hasAnac ? 4 * (60 / bpm) : 0.15;
     const curve = pat.rawPitchCurve?.length ? pat.rawPitchCurve : (pat.pitchCurve || []);
-    const requantized = curve.length > 0
-      ? recalibrateBricksToLocalPitchCurve(all, curve, hasAnac ? 0 : t1Off, stepDur, cleanTonic, scaleType, 0, allowed)
-      : applyScaleToSteps(all, cleanTonic, scaleType);
+    const req = curve.length > 0 ? recalibrateBricksToLocalPitchCurve(all, curve, hasAnac ? 0 : t1Off, stepDur, cleanTonic, scaleType, 0, allowed) : applyScaleToSteps(all, cleanTonic, scaleType);
     const anacLen = hasAnac ? (pat.anacrusisSteps?.length ?? 0) : 0;
-    return {
-      ...pat, referencePitch: refPitch,
-      anacrusisSteps: hasAnac ? requantized.slice(0, anacLen) : [],
-      mainSteps: (hasAnac ? requantized.slice(anacLen) : requantized).map((s, idx) => ({ ...s, stepIndex: idx })),
-    };
+    return { ...pat, referencePitch: refPitch, anacrusisSteps: hasAnac ? req.slice(0, anacLen) : [], mainSteps: (hasAnac ? req.slice(anacLen) : req).map((s, idx) => ({ ...s, stepIndex: idx })) };
   });
-
   return { ...project, toadaMeta: { ...(project.toadaMeta || {}), tonaliteDefaut: keyLabel }, patterns };
 }

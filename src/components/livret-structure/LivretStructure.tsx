@@ -1,13 +1,14 @@
 /**
  * LivretStructure.tsx
  * Livret 1 : Structure & Chant épuré (Mode Organizador par défaut vs Mode Création / Édition Manuelle,
- * Bandeau Tempo/Batuque/Gamme, Bibliothèque avec badges [XM] [+Ana] [+1T], Conducteur et Paroles) (< 130 lignes).
+ * Bandeau Tempo/Batuque/Gamme unifiée FR/BR, Bibliothèque avec badges [XM] [+Ana] [+1T], Conducteur et Paroles) (< 130 lignes).
  */
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import type { ToadaProject } from '../../types/toadaProject.types';
 import { DEFAULT_TOADA_BPM } from '../../types/toadaProject.types';
 import { useToadaProject } from '../../context/ToadaProjectContext';
 import { useAudioHardware } from '../../context/AudioHardwareContext';
+import { useLanguage } from '../../i18n/LanguageContext';
 import { PatternLibraryBar } from '../conductor/PatternLibraryBar';
 import { ToadaConductorStrip } from '../conductor/ToadaConductorStrip';
 import { StructureTopControls } from './StructureTopControls';
@@ -16,6 +17,7 @@ import { ScaleProposalBanner } from '../common/ScaleProposalBanner';
 import {
   analyzeFullProjectScale,
   applyDetectedScaleToProject,
+  resolveProjectActiveScale,
   type ProjectScaleAnalysisResult,
 } from '../../audio/projectScaleAnalyzer';
 import type { ScaleType } from '../../audio/scaleQuantizer';
@@ -29,6 +31,7 @@ export function resolveDefaultManualStructureEdit(project: ToadaProject): boolea
 }
 
 export const LivretStructure: React.FC = () => {
+  const { language } = useLanguage();
   const {
     project, activePattern, loadProject, updatePattern,
     updateScopedBpm, updateScopedMeasuresCount, updateScopedHasAnacrusis, updateScopedTimeSignature,
@@ -48,39 +51,44 @@ export const LivretStructure: React.FC = () => {
     if (project.toadaMeta?.tonaliteDefaut || scaleProposal) return;
     const hasAnyAudio = project.patterns.some((p) => Boolean(p.rawPitchCurve?.length || p.pitchCurve?.length || p.rawAudioSamples?.length || p.recordingResult?.pcm?.length));
     if (!hasAnyAudio) return;
-    const res = analyzeFullProjectScale(project.patterns);
+    const res = analyzeFullProjectScale(project.patterns, language);
     if (res.analyzedPatternsCount > 0) setScaleProposal(res);
-  }, [project.patterns, project.toadaMeta?.tonaliteDefaut, scaleProposal]);
+  }, [project.patterns, project.toadaMeta?.tonaliteDefaut, scaleProposal, language]);
 
   const timeSignature = project.timeSignature || '4/4';
   const bpm = activePattern.bpm ?? activePattern.baseBpm ?? project.bpm ?? DEFAULT_TOADA_BPM;
-  const referencePitch =
-    scaleProposal?.referencePitch ??
-    (activePattern.referencePitch && activePattern.referencePitch !== 'C4' ? activePattern.referencePitch : (project.patterns.find((p) => p.referencePitch && p.referencePitch !== 'C4')?.referencePitch || activePattern.referencePitch || 'A3'));
-  const activeScaleLabel = project.toadaMeta?.tonaliteDefaut || scaleProposal?.label || 'Auto (Non verrouillée)';
+  const resolvedScale = useMemo(
+    () => resolveProjectActiveScale(project, language, scaleProposal || undefined),
+    [project, language, scaleProposal]
+  );
+  const referencePitch = resolvedScale.referencePitch;
+  const activeScaleLabel =
+    project.toadaMeta?.tonaliteDefaut || scaleProposal
+      ? resolvedScale.label
+      : (language === 'br' ? 'Auto (Não travada)' : 'Auto (Non verrouillée)');
 
   const handleAnalyzeProjectScale = useCallback(() => {
-    const res = analyzeFullProjectScale(project.patterns);
+    const res = analyzeFullProjectScale(project.patterns, language);
     setScaleProposal(res);
     loadProject({
       ...project,
       patterns: res.updatedPatterns.map((p) => ({ ...p, referencePitch: res.referencePitch })),
     });
-  }, [project, loadProject]);
+  }, [project, loadProject, language]);
 
   const handleApplyScale = useCallback((tonic: string, scaleType: ScaleType, refPitch?: string) => {
-    const updated = applyDetectedScaleToProject(project, tonic, scaleType, refPitch);
+    const updated = applyDetectedScaleToProject(project, tonic, scaleType, refPitch, language);
     loadProject(updated);
     setScaleProposal(null);
-  }, [project, loadProject]);
+  }, [project, loadProject, language]);
 
   const handleDisengageFreeMode = useCallback(() => {
-    const tonic = scaleProposal?.tonic || 'A';
+    const tonic = scaleProposal?.tonic || resolvedScale.tonic || 'A';
     const refPitch = scaleProposal?.referencePitch || referencePitch;
-    const updated = applyDetectedScaleToProject(project, tonic, 'chromatic', refPitch);
+    const updated = applyDetectedScaleToProject(project, tonic, 'chromatic', refPitch, language);
     loadProject(updated);
     setScaleProposal(null);
-  }, [project, loadProject, scaleProposal, referencePitch]);
+  }, [project, loadProject, scaleProposal, resolvedScale.tonic, referencePitch, language]);
 
   return (
     <div className="flex flex-col gap-3.5 w-full">

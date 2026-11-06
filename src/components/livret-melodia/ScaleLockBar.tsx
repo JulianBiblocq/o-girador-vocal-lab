@@ -1,23 +1,30 @@
 /**
  * ScaleLockBar.tsx
- * Bandeau de Gamme Maracatu Débrayable ([ 🔓 Gamme débrayée (Libre) ] ⟷ [ 🔒 Verrouiller sur la gamme ])
- * et détection automatique sur la voix (< 125 lignes).
+ * Bandeau de Gamme Maracatu Débrayable bilingue FR / PT-BR ([ 🔓 Gamme débrayée ] ⟷ [ 🔒 Gamme verrouillée ])
+ * et détection automatique sur la voix (< 135 lignes).
  */
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import type { PitchCurvePoint } from '../../types/vocalPack.types';
 import { type ScaleType, buildAllowedPitchClasses, detectBestScaleFromPitchCurve, getTonicSemitone } from '../../audio/scaleQuantizer';
+import { SOLFEGE_NOTE_NAMES, SOLFEGE_NOTE_NAMES_BR } from '../../audio/projectScaleAnalyzer';
 import { NOTE_NAMES } from '../../utils/noteUtils';
 import { detectRealtimePitch } from '../../audio/realtimePitchDetector';
 import { useWebMidiInput } from '../../hooks/useWebMidiInput';
+import { useLanguage } from '../../i18n/LanguageContext';
 import { Lock, Unlock, Target, Mic, Piano } from 'lucide-react';
 
-const SOLFEGE_LABELS = ['Do', 'Do#', 'Ré', 'Ré#', 'Mi', 'Fa', 'Fa#', 'Sol', 'Sol#', 'La', 'La#', 'Si'];
-
-const SCALE_MODES: Array<{ key: ScaleType; label: string }> = [
+const SCALE_MODES_FR: Array<{ key: ScaleType; label: string }> = [
   { key: 'chromatic', label: 'Libre / Chromatique' }, { key: 'major', label: 'Majeur' },
   { key: 'natural_minor', label: 'Mineur naturel' }, { key: 'mixolydian', label: 'Mixolydien (Nordeste)' },
   { key: 'dorian', label: 'Dorien' }, { key: 'harmonic_minor', label: 'Mineur harm.' },
   { key: 'pentatonic_minor', label: 'Pentatonique min.' }, { key: 'pentatonic_major', label: 'Pentatonique maj.' },
+];
+
+const SCALE_MODES_BR: Array<{ key: ScaleType; label: string }> = [
+  { key: 'chromatic', label: 'Livre / Cromática' }, { key: 'major', label: 'Maior' },
+  { key: 'natural_minor', label: 'Menor natural' }, { key: 'mixolydian', label: 'Mixolídio (Nordeste)' },
+  { key: 'dorian', label: 'Dórico' }, { key: 'harmonic_minor', label: 'Menor harm.' },
+  { key: 'pentatonic_minor', label: 'Pentatônica men.' }, { key: 'pentatonic_major', label: 'Pentatônica mai.' },
 ];
 
 export interface ScaleLockBarProps {
@@ -30,24 +37,21 @@ export interface ScaleLockBarProps {
 export const ScaleLockBar: React.FC<ScaleLockBarProps> = ({
   tonic, scaleType, customPitchClasses = null, pitchCurve, defaultKeyStr, onUpdateScale, onAnalyzeFullProjectScale,
 }) => {
+  const { language } = useLanguage(), isBr = language === 'br';
+  const solfegeLabels = isBr ? SOLFEGE_NOTE_NAMES_BR : SOLFEGE_NOTE_NAMES, scaleModes = isBr ? SCALE_MODES_BR : SCALE_MODES_FR;
   const [isLearning, setIsLearning] = useState(false), [countdown, setCountdown] = useState(5);
   const [lastActiveMode, setLastActiveMode] = useState<ScaleType>('natural_minor');
   const learnedSetRef = useRef<Set<number>>(new Set()), streamRef = useRef<MediaStream | null>(null);
   const timerRef = useRef<number | null>(null), rafRef = useRef<number | null>(null);
 
-  useEffect(() => {
-    if (scaleType !== 'chromatic') setLastActiveMode(scaleType);
-  }, [scaleType]);
+  useEffect(() => { if (scaleType !== 'chromatic') setLastActiveMode(scaleType); }, [scaleType]);
 
   const allowedSet = buildAllowedPitchClasses(tonic, scaleType, customPitchClasses);
   const isLocked = scaleType !== 'chromatic' || (customPitchClasses !== null && customPitchClasses.length < 12);
   const tonicIdx = getTonicSemitone(tonic);
-  const activeModeLabel = SCALE_MODES.find((m) => m.key === (isLocked ? scaleType : lastActiveMode))?.label || 'Mineur';
+  const activeModeLabel = scaleModes.find((m) => m.key === (isLocked ? scaleType : lastActiveMode))?.label || (isBr ? 'Menor' : 'Mineur');
 
-  useWebMidiInput({
-    isCapturing: isLearning,
-    onMidiNoteOn: (midiNote) => { if (isLearning) learnedSetRef.current.add(((midiNote % 12) + 12) % 12); },
-  });
+  useWebMidiInput({ isCapturing: isLearning, onMidiNoteOn: (midiNote) => { if (isLearning) learnedSetRef.current.add(((midiNote % 12) + 12) % 12); } });
 
   const stopLearning = useCallback((applyResult: boolean) => {
     if (timerRef.current) { window.clearInterval(timerRef.current); timerRef.current = null; }
@@ -95,42 +99,33 @@ export const ScaleLockBar: React.FC<ScaleLockBarProps> = ({
     <div className="cordel-card px-2.5 py-1.5 flex flex-wrap items-center justify-between gap-2 rounded text-[11px] font-mono">
       <div className="flex flex-wrap items-center gap-1.5">
         <button
-          type="button"
-          onClick={() => onUpdateScale(tonic, isLocked ? 'chromatic' : lastActiveMode, null)}
-          className={`px-2.5 py-1 rounded font-bold flex items-center gap-1.5 cursor-pointer border transition-colors ${
-            isLocked
-              ? 'bg-emerald-700 text-white border-emerald-500 shadow-2xs'
-              : 'bg-[#451a03] text-[#f4ecd8] border-[#9a3412] hover:opacity-90'
-          }`}
-          title="Débrayer ou verrouiller la gamme à tout moment en 1 clic"
+          type="button" onClick={() => onUpdateScale(tonic, isLocked ? 'chromatic' : lastActiveMode, null)}
+          className={`px-2.5 py-1 rounded font-bold flex items-center gap-1.5 cursor-pointer border transition-colors ${isLocked ? 'bg-emerald-700 text-white border-emerald-500 shadow-2xs' : 'bg-[#451a03] text-[#f4ecd8] border-[#9a3412] hover:opacity-90'}`}
+          title={isBr ? 'Desativar ou travar a escala a qualquer momento em 1 clique' : 'Débrayer ou verrouiller la gamme à tout moment en 1 clic'}
         >
           {isLocked ? <Lock className="w-3.5 h-3.5" /> : <Unlock className="w-3.5 h-3.5" />}
-          <span>{isLocked ? `Gamme verrouillée : ${SOLFEGE_LABELS[tonicIdx]} ${activeModeLabel}` : 'Gamme débrayée (Libre)'}</span>
+          <span>{isLocked ? `${isBr ? 'Escala travada' : 'Gamme verrouillée'} : ${solfegeLabels[tonicIdx]} ${activeModeLabel}` : (isBr ? 'Escala livre (Desativada)' : 'Gamme débrayée (Libre)')}</span>
         </button>
 
         <select value={tonic} onChange={(e) => onUpdateScale(e.target.value, isLocked ? scaleType : lastActiveMode, null)} className="cordel-card-sm px-1.5 py-1 font-bold text-theme-accent rounded cursor-pointer">
-          {NOTE_NAMES.map((n, i) => <option key={n} value={n}>{SOLFEGE_LABELS[i]} ({n})</option>)}
+          {NOTE_NAMES.map((n, i) => <option key={n} value={n}>{solfegeLabels[i]} ({n})</option>)}
         </select>
         <select value={scaleType} onChange={(e) => onUpdateScale(tonic, e.target.value as ScaleType, null)} className="cordel-card-sm px-1.5 py-1 font-bold text-theme-accent rounded cursor-pointer">
-          {SCALE_MODES.map((m) => <option key={m.key} value={m.key}>{m.label}</option>)}
+          {scaleModes.map((m) => <option key={m.key} value={m.key}>{m.label}</option>)}
         </select>
 
         <button
           type="button"
-          onClick={() => {
-            if (onAnalyzeFullProjectScale) onAnalyzeFullProjectScale();
-            const det = detectBestScaleFromPitchCurve(pitchCurve, defaultKeyStr);
-            onUpdateScale(det.tonic, det.scaleType, null);
-          }}
+          onClick={() => { if (onAnalyzeFullProjectScale) onAnalyzeFullProjectScale(); const det = detectBestScaleFromPitchCurve(pitchCurve, defaultKeyStr); onUpdateScale(det.tonic, det.scaleType, null); }}
           className="px-2.5 py-1 rounded cordel-card-sm hover:border-amber-500 font-bold flex items-center gap-1 cursor-pointer text-[#9a3412] dark:text-amber-300"
-          title="Analyser la gamme sur l'ensemble des phrases enregistrées du chant"
+          title={isBr ? 'Analisar a escala em todas as frases gravadas da toada' : "Analyser la gamme sur l'ensemble des phrases enregistrées du chant"}
         >
-          <Target className="w-3.5 h-3.5" /><span>Analyser la gamme du chant</span>
+          <Target className="w-3.5 h-3.5" /><span>{isBr ? 'Analisar escala na voz' : 'Analyser la gamme du chant'}</span>
         </button>
       </div>
 
       <div className="flex items-center gap-1 flex-wrap">
-        {isLocked && SOLFEGE_LABELS.map((lbl, pc) => (
+        {isLocked && solfegeLabels.map((lbl, pc) => (
           <button key={pc} type="button" onClick={() => { const next = new Set(allowedSet); if (next.has(pc) && next.size > 1) next.delete(pc); else next.add(pc); onUpdateScale(tonic, scaleType === 'chromatic' ? lastActiveMode : scaleType, Array.from(next).sort((a, b) => a - b)); }} className={`px-1.5 py-0.5 rounded text-[10px] font-bold cursor-pointer border ${allowedSet.has(pc) ? 'bg-emerald-600 text-white border-emerald-500' : 'bg-stone-500/10 text-theme-ink/40 border-transparent'}`}>{lbl}</button>
         ))}
         <button type="button" onClick={startLearning} className={`ml-1 px-2 py-0.5 rounded font-bold flex items-center gap-1 cursor-pointer border ${isLearning ? 'bg-red-600 text-white border-red-400 animate-pulse' : 'bg-amber-500/15 text-amber-800 dark:text-amber-300 border-amber-500/50'}`}>

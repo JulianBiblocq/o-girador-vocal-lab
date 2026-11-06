@@ -58,12 +58,12 @@ export function useAmbitusJourney(t: (k: any, p?: any) => string) {
     for (const c of [3, 2, 1]) {
       if (abortRef.current) return;
       setSweepCountdown(c);
-      engine.playReferenceNote(60, 0.12, 0.22).catch(() => {});
+      engine.playReferenceNote(60, 0.12, 0.22).catch(() => { });
       await new Promise((r) => { timerRef.current = window.setTimeout(r, 650); });
     }
     if (abortRef.current) return;
     setSweepCountdown(0);
-    engine.playReferenceNote(67, 0.14, 0.28).catch(() => {});
+    engine.playReferenceNote(67, 0.14, 0.28).catch(() => { });
     await new Promise((r) => { timerRef.current = window.setTimeout(r, 250); });
     if (abortRef.current) return;
 

@@ -12,6 +12,7 @@ export * from './i18n.types';
 
 interface LanguageContextValue {
   locale: Locale;
+  language: Locale;
   setLocale: (locale: Locale) => void;
   t: (key: TranslationKey, params?: TranslationParams) => string;
   dict: VocalLabTranslations;
@@ -57,7 +58,7 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     [dict]
   );
 
-  const value = useMemo(() => ({ locale, setLocale, t, dict }), [locale, setLocale, t, dict]);
+  const value = useMemo(() => ({ locale, language: locale, setLocale, t, dict }), [locale, setLocale, t, dict]);
 
   return <LanguageContext.Provider value={value}>{children}</LanguageContext.Provider>;
 };
@@ -67,6 +68,7 @@ export function useLanguage(): LanguageContextValue {
   if (!context) {
     return {
       locale: 'fr',
+      language: 'fr',
       setLocale: () => {},
       dict: translationsFr,
       t: (key: TranslationKey, params?: TranslationParams) => {

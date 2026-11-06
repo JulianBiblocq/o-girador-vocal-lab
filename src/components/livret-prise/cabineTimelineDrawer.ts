@@ -1,6 +1,6 @@
 /**
  * cabineTimelineDrawer.ts
- * Construction et rendu Canvas 60 FPS du Ruban des Mesures à Bille Rebondissante (< 135 lignes).
+ * Construction et rendu Canvas 60 FPS bilingue (FR / PT-BR) du Ruban des Mesures à Bille Rebondissante (< 135 lignes).
  */
 import type { ToadaProject, VocalPatternItem, VocalRole } from '../../types/toadaProject.types';
 import { getPatternT1OffsetSec, resolvePatternAnacrusisBeats } from '../../utils/anacrusisTimingHelper';
@@ -33,9 +33,10 @@ export function extractMeasureWaveform(pat: VocalPatternItem | null | undefined,
 
 export function buildCabineTimelineMeasures(params: {
   takeMode: 'pattern' | 'puxador' | 'coro'; project: ToadaProject; activePattern: VocalPatternItem;
-  cuePattern: VocalPatternItem | null; beatsPerMeasure: number; isPunchIn?: boolean; counterRoleCueEnabled?: boolean;
+  cuePattern: VocalPatternItem | null; beatsPerMeasure: number; isPunchIn?: boolean; counterRoleCueEnabled?: boolean; lang?: 'fr' | 'br';
 }) {
-  const { takeMode, project, activePattern, cuePattern, beatsPerMeasure: B, isPunchIn = false, counterRoleCueEnabled = true } = params;
+  const { takeMode, project, activePattern, cuePattern, beatsPerMeasure: B, isPunchIn = false, counterRoleCueEnabled = true, lang = 'fr' } = params;
+  const isBr = lang === 'br', mPfx = isBr ? 'C' : 'M', preLbl = isBr ? '⏳ PRÉ-CONTAGEM' : '⏳ PRÉCOMPTE', cueLbl = isBr ? '🎧 GUIA C' : '🎧 TÉMOIN M';
   const measures: TimelineMeasureBox[] = [], callSet = new Set<number>(), anaSet = new Set<number>(), recSet = new Set<number>(), beatRange = Array.from({ length: B }, (_, i) => i + 1);
   if (takeMode === 'pattern') {
     const hasCue = !isPunchIn && Boolean(cuePattern && (cuePattern.recordingResult?.pcm?.length || cuePattern.variants?.[cuePattern.activeVariantKey]?.recordingResult?.pcm?.length));
@@ -45,10 +46,10 @@ export function buildCabineTimelineMeasures(params: {
     for (let b = entryB; b < t1B; b++) anaSet.add(b); for (let b = entryB; b <= endB; b++) recSet.add(b);
     for (let m = 0; m < preRoll; m++) {
       const sb = m * B, isCueM = Boolean(hasCue && cuePattern && m >= 1 && m <= cuePattern.measuresCount);
-      measures.push({ measureIndex: m, label: isCueM ? `🎧 TÉMOIN M${m}` : '⏳ PRÉCOMPTE', subLabel: isCueM ? cuePattern?.name : undefined, kind: isCueM ? 'cue' : 'preroll', role: isCueM ? cuePattern?.role : undefined, beatsCount: B, startBeatGlobal: sb, anacrusisStartBeatInMeasure: (m === preRoll - 1 && anaB > 0) ? B - anaB + 1 : undefined, callInBeatsInMeasure: beatRange.filter((b) => callSet.has(sb + b - 1)), measureLyrics: isCueM ? (cuePattern?.assignedLyricsText || cuePattern?.rawLineCode || '').replace(/\[[^\]]+\]/g, '').trim() : undefined, waveformBins: isCueM ? extractMeasureWaveform(cuePattern, m, B) : undefined });
+      measures.push({ measureIndex: m, label: isCueM ? `${cueLbl}${m}` : preLbl, subLabel: isCueM ? cuePattern?.name : undefined, kind: isCueM ? 'cue' : 'preroll', role: isCueM ? cuePattern?.role : undefined, beatsCount: B, startBeatGlobal: sb, anacrusisStartBeatInMeasure: (m === preRoll - 1 && anaB > 0) ? B - anaB + 1 : undefined, callInBeatsInMeasure: beatRange.filter((b) => callSet.has(sb + b - 1)), measureLyrics: isCueM ? (cuePattern?.assignedLyricsText || cuePattern?.rawLineCode || '').replace(/\[[^\]]+\]/g, '').trim() : undefined, waveformBins: isCueM ? extractMeasureWaveform(cuePattern, m, B) : undefined });
     }
     const lyr = (activePattern.assignedLyricsText || activePattern.rawLineCode || '').replace(/\[[^\]]+\]/g, '').trim();
-    for (let m = 1; m <= activePattern.measuresCount; m++) measures.push({ measureIndex: preRoll + m - 1, label: `M${m}`, subLabel: activePattern.name, kind: 'sung', role: activePattern.role, beatsCount: B, startBeatGlobal: (preRoll + m - 1) * B, callInBeatsInMeasure: [], measureLyrics: m === 1 ? lyr : undefined, waveformBins: extractMeasureWaveform(activePattern, m, B) });
+    for (let m = 1; m <= activePattern.measuresCount; m++) measures.push({ measureIndex: preRoll + m - 1, label: `${mPfx}${m}`, subLabel: activePattern.name, kind: 'sung', role: activePattern.role, beatsCount: B, startBeatGlobal: (preRoll + m - 1) * B, callInBeatsInMeasure: [], measureLyrics: m === 1 ? lyr : undefined, waveformBins: extractMeasureWaveform(activePattern, m, B) });
     measures.push({ measureIndex: measures.length, label: '+T1', kind: 'tail', role: activePattern.role, beatsCount: 1, startBeatGlobal: endB, callInBeatsInMeasure: [] });
   } else {
     const timeline = buildConductorRoleTimeline(project, takeMode, 0, CONTINUOUS_LEAD_IN_MEASURES), counterRole: VocalRole = takeMode === 'puxador' ? 'coro' : 'puxador';
@@ -60,13 +61,13 @@ export function buildCabineTimelineMeasures(params: {
     });
     for (let m = 0; m < CONTINUOUS_LEAD_IN_MEASURES; m++) {
       const sb = m * B;
-      measures.push({ measureIndex: m, label: '⏳ PRÉCOMPTE', kind: 'preroll', beatsCount: B, startBeatGlobal: sb, anacrusisStartBeatInMeasure: beatRange.find((b) => anaSet.has(sb + b - 1)), callInBeatsInMeasure: beatRange.filter((b) => callSet.has(sb + b - 1)) });
+      measures.push({ measureIndex: m, label: preLbl, kind: 'preroll', beatsCount: B, startBeatGlobal: sb, anacrusisStartBeatInMeasure: beatRange.find((b) => anaSet.has(sb + b - 1)), callInBeatsInMeasure: beatRange.filter((b) => callSet.has(sb + b - 1)) });
     }
     timeline.forEach((it) => {
       const slot = project.slots[it.slotIndex], patId = it.isRoleGap ? (counterRole === 'puxador' ? slot?.puxadorPatternId : slot?.coroPatternId) : it.patternId, pat = project.patterns.find((p) => p.id === patId);
       for (let k = 0; k < it.measuresCount; k++) {
         const mIdx = (CONTINUOUS_LEAD_IN_MEASURES - 1) + it.startMeasure + k, sb = mIdx * B;
-        measures.push({ measureIndex: mIdx, label: it.isRoleGap ? `🎧 M${it.startMeasure + k}` : `M${it.startMeasure + k}`, subLabel: pat?.name || (it.isRoleGap ? counterRole.toUpperCase() : takeMode.toUpperCase()), kind: it.isRoleGap ? 'cue' : 'sung', role: it.isRoleGap ? counterRole : takeMode, beatsCount: B, startBeatGlobal: sb, anacrusisStartBeatInMeasure: beatRange.find((b) => anaSet.has(sb + b - 1)), callInBeatsInMeasure: beatRange.filter((b) => callSet.has(sb + b - 1)), measureLyrics: k === 0 ? (it.isRoleGap ? it.counterRoleLyrics : it.lyrics) : undefined, waveformBins: (!it.isRoleGap || counterRoleCueEnabled) ? extractMeasureWaveform(pat, k + 1, B) : undefined });
+        measures.push({ measureIndex: mIdx, label: it.isRoleGap ? `🎧 ${mPfx}${it.startMeasure + k}` : `${mPfx}${it.startMeasure + k}`, subLabel: pat?.name || (it.isRoleGap ? counterRole.toUpperCase() : takeMode.toUpperCase()), kind: it.isRoleGap ? 'cue' : 'sung', role: it.isRoleGap ? counterRole : takeMode, beatsCount: B, startBeatGlobal: sb, anacrusisStartBeatInMeasure: beatRange.find((b) => anaSet.has(sb + b - 1)), callInBeatsInMeasure: beatRange.filter((b) => callSet.has(sb + b - 1)), measureLyrics: k === 0 ? (it.isRoleGap ? it.counterRoleLyrics : it.lyrics) : undefined, waveformBins: (!it.isRoleGap || counterRoleCueEnabled) ? extractMeasureWaveform(pat, k + 1, B) : undefined });
       }
     });
     measures.push({ measureIndex: measures.length, label: '+T1', kind: 'tail', role: takeMode, beatsCount: 1, startBeatGlobal: measures.length * B, callInBeatsInMeasure: [] });
@@ -74,7 +75,7 @@ export function buildCabineTimelineMeasures(params: {
   return { measures, isRecordingBeat: (b: number) => recSet.has(b), isCallInBeat: (b: number) => callSet.has(b), isAnacrusisBeat: (b: number) => anaSet.has(b) };
 }
 
-export function drawCabineTimelineRibbon(ctx: CanvasRenderingContext2D, w: number, h: number, measures: TimelineMeasureBox[], curBeat: number, beatProg: number, isActive: boolean, isSliding4: boolean): void {
+export function drawCabineTimelineRibbon(ctx: CanvasRenderingContext2D, w: number, h: number, measures: TimelineMeasureBox[], curBeat: number, beatProg: number, isActive: boolean, isSliding4: boolean, lang: 'fr' | 'br' = 'fr'): void {
   ctx.clearRect(0, 0, w, h);
   const curMIdx = Math.max(0, measures.findIndex((m) => curBeat >= m.startBeatGlobal && curBeat < m.startBeatGlobal + m.beatsCount));
   const winStart = isSliding4 && measures.length > 4 ? Math.max(0, Math.min(measures.length - 4, curMIdx - 1)) : 0;
@@ -111,7 +112,7 @@ export function drawCabineTimelineRibbon(ctx: CanvasRenderingContext2D, w: numbe
     if (m.anacrusisStartBeatInMeasure) {
       const ax = xCursor + (m.anacrusisStartBeatInMeasure - 1) * cellW, aw = mw - (m.anacrusisStartBeatInMeasure - 1) * cellW;
       ctx.strokeStyle = '#facc15'; ctx.lineWidth = 2.2; ctx.strokeRect(ax + 1, topY + 1, aw - 2, boxH - 2);
-      ctx.fillStyle = '#facc15'; ctx.font = 'bold 9px monospace'; ctx.fillText('🎙️ ANACROUSE', ax + 3, topY - 4);
+      ctx.fillStyle = '#facc15'; ctx.font = 'bold 9px monospace'; ctx.fillText(lang === 'br' ? '🎙️ ANACRUSE' : '🎙️ ANACROUSE', ax + 3, topY - 4);
     }
     if (m.measureLyrics) { ctx.fillStyle = '#fde68a'; ctx.font = '10px sans-serif'; ctx.fillText(m.measureLyrics.slice(0, Math.max(8, Math.floor(mw / 6.5))), xCursor + 5, topY + boxH - 5); }
     xCursor += mw + gap;

@@ -1,10 +1,11 @@
 /**
  * PianoRollContextMenu.tsx
- * Menu d'outils au Clic Droit façon Cubase (Maintenir ➔ Glisser ➔ Relâcher ou Clic rapide) :
- * 🖱️ Sélection, ✏️ Crayon, ✂️ Ciseaux, 🔗 Colle, 🗑️ Gomme (< 90 lignes).
+ * Menu d'outils bilingue (FR / PT-BR) au Clic Droit façon Cubase (Maintenir ➔ Glisser ➔ Relâcher ou Clic rapide) :
+ * 🖱️ Sélection, ✏️ Crayon, ✂️ Ciseaux, 🔗 Colle, 🗑️ Gomme (< 98 lignes).
  */
 import React, { useEffect, useRef, useState } from 'react';
 import type { PianoRollTool } from './pianoRollInteractions';
+import { useLanguage } from '../../i18n/LanguageContext';
 import { MousePointer, Pencil, Scissors, Link2, Eraser } from 'lucide-react';
 
 export interface PianoRollContextMenuProps {
@@ -15,19 +16,21 @@ export interface PianoRollContextMenuProps {
   onClose: () => void;
 }
 
-const CUBASE_TOOLS: Array<{ id: PianoRollTool; label: string; icon: React.FC<{ className?: string }> }> = [
-  { id: 'pointer', label: 'Sélection', icon: MousePointer },
-  { id: 'draw_move', label: 'Crayon', icon: Pencil },
-  { id: 'cut', label: 'Ciseaux', icon: Scissors },
-  { id: 'glue', label: 'Colle', icon: Link2 },
-  { id: 'erase', label: 'Gomme', icon: Eraser },
-];
-
 export const PianoRollContextMenu: React.FC<PianoRollContextMenuProps> = ({
   x, y, activeTool, onSelectTool, onClose,
 }) => {
+  const { language } = useLanguage();
+  const isBr = language === 'br';
   const menuRef = useRef<HTMLDivElement>(null);
   const [hoveredTool, setHoveredTool] = useState<PianoRollTool | null>(null);
+
+  const cubaseTools: Array<{ id: PianoRollTool; label: string; icon: React.FC<{ className?: string }> }> = [
+    { id: 'pointer', label: isBr ? 'Seleção' : 'Sélection', icon: MousePointer },
+    { id: 'draw_move', label: isBr ? 'Lápis' : 'Crayon', icon: Pencil },
+    { id: 'cut', label: isBr ? 'Tesoura' : 'Ciseaux', icon: Scissors },
+    { id: 'glue', label: isBr ? 'Cola' : 'Colle', icon: Link2 },
+    { id: 'erase', label: isBr ? 'Borracha' : 'Gomme', icon: Eraser },
+  ];
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
@@ -71,7 +74,7 @@ export const PianoRollContextMenu: React.FC<PianoRollContextMenuProps> = ({
       style={{ left: `${clampedX}px`, top: `${clampedY}px` }}
       className="fixed z-50 p-1.5 cordel-card shadow-xl flex items-center gap-1 rounded border border-amber-500/60 select-none"
     >
-      {CUBASE_TOOLS.map((item) => {
+      {cubaseTools.map((item) => {
         const Icon = item.icon;
         const isCurrent = activeTool === item.id || hoveredTool === item.id;
         return (
@@ -95,4 +98,3 @@ export const PianoRollContextMenu: React.FC<PianoRollContextMenuProps> = ({
     </div>
   );
 };
-
