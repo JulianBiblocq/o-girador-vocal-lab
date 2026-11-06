@@ -16,9 +16,10 @@ import { Save, CloudUpload, FileText, Music, ChevronDown, Check, Loader2 } from 
 interface Props {
   project: ToadaProject;
   isUserLoggedIn: boolean;
+  onProjectUpdate?: (next: ToadaProject) => void;
 }
 
-export const SaveAndExportDropdown: React.FC<Props> = ({ project, isUserLoggedIn }) => {
+export const SaveAndExportDropdown: React.FC<Props> = ({ project, isUserLoggedIn, onProjectUpdate }) => {
   const { t } = useLanguage();
   const dropdownRef = useRef<HTMLDivElement>(null);
   const [isOpen, setIsOpen] = useState(false);
@@ -59,8 +60,17 @@ export const SaveAndExportDropdown: React.FC<Props> = ({ project, isUserLoggedIn
     setIsOpen(false);
     setIsPublishingOrganizador(true);
     try {
-      await publishToadaToOrganizador(project);
-      window.dispatchEvent(new CustomEvent('app-toast', { detail: { type: 'success', message: t('publishOrganizadorSuccessToast', { title: project.title }) } }));
+      const res = await publishToadaToOrganizador(project, project.toadaMeta?.groupId || 'samambaia');
+      onProjectUpdate?.({
+        ...project,
+        toadaMeta: { ...(project.toadaMeta || {}), id: res.documentId, bpmDefaut: res.bpm, tonaliteDefaut: res.scaleLabel },
+      });
+      window.dispatchEvent(new CustomEvent('app-toast', {
+        detail: {
+          type: 'success',
+          message: `✅ Fiche Organizador mise à jour (${res.bpm} BPM • Gamme : ${res.scaleLabel} • Temps & Syllabes synchronisés)`,
+        },
+      }));
     } catch (err: any) {
       window.dispatchEvent(new CustomEvent('app-toast', { detail: { type: 'error', message: t('publishOrganizadorErrorToast', { err: err?.message || 'err' }) } }));
     } finally {
@@ -99,25 +109,25 @@ export const SaveAndExportDropdown: React.FC<Props> = ({ project, isUserLoggedIn
       </button>
 
       {isOpen && (
-        <div className="absolute top-10 left-0 sm:left-auto sm:right-0 z-[100] w-64 cordel-card p-1.5 bg-[var(--cordel-surface)] text-[var(--cordel-text)] border border-[var(--cordel-border-panel)] shadow-lg flex flex-col gap-1 text-xs font-mono rounded">
+        <div className="absolute top-10 left-0 sm:left-auto sm:right-0 z-[100] w-80 cordel-card p-1.5 bg-[var(--cordel-surface)] text-[var(--cordel-text)] border border-[var(--cordel-border-panel)] shadow-lg flex flex-col gap-1 text-xs font-mono rounded">
           <button type="button" onClick={() => { setIsOpen(false); handleSave(); }}
             className="w-full p-2 text-left flex items-center gap-2 hover:bg-[var(--cordel-subcard-bg)] rounded transition-colors cursor-pointer border border-transparent hover:border-[var(--cordel-border-sub)]">
-            <Save className="w-3.5 h-3.5 text-amber-500" />
+            <Save className="w-3.5 h-3.5 text-amber-500 shrink-0" />
             <span className="font-bold">{t('btnSaveToada')} (Ctrl+S)</span>
           </button>
           <button type="button" onClick={handlePublishSequencer}
             className="w-full p-2 text-left flex items-center gap-2 hover:bg-[var(--cordel-subcard-bg)] rounded transition-colors cursor-pointer border border-transparent hover:border-[var(--cordel-border-sub)]">
-            <CloudUpload className="w-3.5 h-3.5 text-blue-400" />
+            <CloudUpload className="w-3.5 h-3.5 text-blue-400 shrink-0" />
             <span className="font-bold">{t('sendToSequencer')}</span>
           </button>
           <button type="button" onClick={handlePublishOrganizador}
             className="w-full p-2 text-left flex items-center gap-2 hover:bg-[var(--cordel-subcard-bg)] rounded transition-colors cursor-pointer border border-transparent hover:border-[var(--cordel-border-sub)]">
-            <FileText className="w-3.5 h-3.5 text-amber-600" />
-            <span className="font-bold">{t('publishOrganizadorBtn')}</span>
+            <FileText className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+            <span className="font-bold">🔄 Renvoyer vers Organizador (Rythme, Syllabes _, Tonalité & Tempo)</span>
           </button>
           <button type="button" onClick={handleWav}
             className="w-full p-2 text-left flex items-center gap-2 hover:bg-[var(--cordel-subcard-bg)] rounded transition-colors cursor-pointer border border-transparent hover:border-[var(--cordel-border-sub)]">
-            <Music className="w-3.5 h-3.5 text-emerald-500" />
+            <Music className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
             <span className="font-bold">{t('exportFullSongWav')}</span>
           </button>
         </div>

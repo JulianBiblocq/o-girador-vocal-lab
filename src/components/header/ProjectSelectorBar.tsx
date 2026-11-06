@@ -67,7 +67,7 @@ export const ProjectSelectorBar: React.FC = () => {
       )}
 
       <ToadaLibraryDropdown onOpenOrganizador={() => setIsOrganizadorOpen(true)} groupName={groupId || undefined} />
-      {viewRoleMode !== 'eleve' && <SaveAndExportDropdown project={project} isUserLoggedIn={Boolean(currentUser)} />}
+      {viewRoleMode !== 'eleve' && <SaveAndExportDropdown project={project} isUserLoggedIn={Boolean(currentUser)} onProjectUpdate={loadProject} />}
 
       {isOrganizadorOpen && (
         <OrganizadorToadaModal isOpen={isOrganizadorOpen} onClose={() => setIsOrganizadorOpen(false)} groupId={groupId} isUserLoggedIn={Boolean(currentUser)} onLogin={loginWithGoogle} />

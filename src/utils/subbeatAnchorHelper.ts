@@ -7,8 +7,8 @@ import type { TimeAnchor } from '../types/toadaDocument.types';
 import { splitTextIntoLetraSyllables } from './syllableSplitter';
 
 export function isIntraWordBadgeBoundary(rawText: string, badgeIndex: number, badgeFullLength: number): boolean {
-  const before = rawText.slice(0, badgeIndex).replace(/\*/g, '');
-  const after = rawText.slice(badgeIndex + badgeFullLength).replace(/\*/g, '');
+  const before = rawText.slice(0, badgeIndex).replace(/\*/g, '').replace(/<\/?u\b[^>]*>/gi, '');
+  const after = rawText.slice(badgeIndex + badgeFullLength).replace(/\*/g, '').replace(/<\/?u\b[^>]*>/gi, '');
   return /[\p{L}\p{M}]$/u.test(before) && /^[\p{L}\p{M}]/u.test(after);
 }
 

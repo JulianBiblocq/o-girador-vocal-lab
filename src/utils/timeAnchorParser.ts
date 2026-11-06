@@ -76,11 +76,12 @@ export function extractTimeAnchors(rawText: string, beatsPerMeasure = 4, forceTh
       } else if (k > 0 && (cur.beat === 1 || cur.beat <= matches[k - 1].beat)) measureOffset++;
     }
     const hasLeadingRest = (!isRestSymbol && /^[_𝄽]\s*/.test(trimmedChunk)) || Boolean(isSameBeatAfterRest);
-    const isGluedToSyl = /^[\p{L}\p{M}]/u.test(chunk.replace(/\*/g, ''));
+    const isGluedToSyl = /^[\p{L}\p{M}]/u.test(chunk.replace(/\*/g, '').replace(/<\/?u\b[^>]*>/gi, ''));
     const isDownbeatLocked = !hasLeadingRest && !isRestSymbol && (isIntraWordBadgeBoundary(rawText, cur.index, cur.fullLength) || Boolean(prevAnchor?.hasLeadingRest) || isGluedToSyl);
     const hasTrailingPickup = k + 1 < matches.length && isIntraWordBadgeBoundary(rawText, matches[k + 1].index, matches[k + 1].fullLength);
-    const textSlice = isRestSymbol ? '' : trimmedChunk.replace(/[_𝄽]/g, ' ').replace(/\s+/g, ' ').trim();
-    const syllables = textSlice ? splitTextIntoLetraSyllables(textSlice) : [];
+    const rawSlice = isRestSymbol ? '' : trimmedChunk.replace(/[_𝄽]/g, ' ').replace(/\s+/g, ' ').trim();
+    const syllables = rawSlice ? splitTextIntoLetraSyllables(rawSlice) : [];
+    const textSlice = rawSlice.replace(/<\/?u\b[^>]*>/gi, '');
     const syllableSubdivs = computeBeatSyllableSubdivs(trimmedChunk, syllables, hasLeadingRest, hasTrailingPickup);
     if (syllables.length > 0) hasEncounteredSyllables = true;
     const isInitialRest = isExplicitSilence || (isRestSymbol && !hasEncounteredSyllables), isSustainedHold = !isExplicitSilence && isRestSymbol && hasEncounteredSyllables;
@@ -95,7 +96,7 @@ export function extractTimeAnchors(rawText: string, beatsPerMeasure = 4, forceTh
       timeAnchors.sort((a, b) => (a.measureOffset - b.measureOffset) || (a.beat - b.beat));
     }
   }
-  const cleanText = rawText.replace(/\[(?:M\d+[•·\.:])?([1-9]|1[0-2])\]/gi, '').replace(/\[(?:silence|pause)\]|𝄽/gi, ' ').replace(/_/g, ' ').replace(/\s{2,}/g, ' ').trim();
+  const cleanText = rawText.replace(/\[(?:M\d+[•·\.:])?([1-9]|1[0-2])\]/gi, '').replace(/<\/?u\b[^>]*>/gi, '').replace(/\[(?:silence|pause)\]|𝄽/gi, ' ').replace(/_/g, ' ').replace(/\s{2,}/g, ' ').trim();
   const lastA = timeAnchors[timeAnchors.length - 1], prevA = timeAnchors[timeAnchors.length - 2], rawCount1 = timeAnchors.filter((x) => x.beat === 1 && (!hasAnacrusis || x.measureOffset > 0)).length;
   const lastChunk = rawText.slice(matches[matches.length - 1].index + matches[matches.length - 1].fullLength);
   const isTailExit1 = Boolean(rawCount1 >= 2 && lastA?.beat === 1 && prevA && prevA.beat > 1 && !lastA.isSustainedHold && !/_\s+_/.test(lastChunk));

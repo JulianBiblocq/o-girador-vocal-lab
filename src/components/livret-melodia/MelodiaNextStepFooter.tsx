@@ -1,18 +1,20 @@
 /**
  * MelodiaNextStepFooter.tsx
- * Pied de page de fin d'étape pour LivretMelodia (< 95 lignes).
- * Badge de validation bilingue, contraste Jour/Nuit et navigation vers Livret 1, 2 ou 5.
+ * Pied de page de fin d'étape pour LivretMelodia (< 120 lignes).
+ * Inclut le bouton direct [ 🔄 Renvoyer vers Organizador (Rythme, Syllabes _, Tonalité & Tempo) ].
  */
-import React from 'react';
+import React, { useState } from 'react';
 import { useToadaProject } from '../../context/ToadaProjectContext';
 import { useVocalTransportStore } from '../../stores/useVocalTransportStore';
 import { useLanguage } from '../../i18n/LanguageContext';
-import { CheckCircle2, Save, Mic, Music2, Headphones } from 'lucide-react';
+import { publishToadaToOrganizador } from '../../services/organizadorToadaPublisher';
+import { CheckCircle2, Save, Mic, Music2, Headphones, RefreshCw } from 'lucide-react';
 
 export const MelodiaNextStepFooter: React.FC = () => {
-  const { project, activePattern, setActivePatternId } = useToadaProject();
+  const { project, activePattern, setActivePatternId, loadProject } = useToadaProject();
   const setActiveLivret = useVocalTransportStore((s) => s.setActiveLivret);
   const { t } = useLanguage();
+  const [isPushingOrg, setIsPushingOrg] = useState(false);
 
   const activeNotesCount = [
     ...(activePattern.anacrusisSteps || []),
@@ -29,6 +31,39 @@ export const MelodiaNextStepFooter: React.FC = () => {
         detail: { message: t('melodiaSavedPatternToast', { name: activePattern.name }), type: 'success' },
       })
     );
+  };
+
+  const handlePushToOrganizador = async () => {
+    if (isPushingOrg) return;
+    setIsPushingOrg(true);
+    try {
+      const res = await publishToadaToOrganizador(project, project.toadaMeta?.groupId || 'samambaia');
+      loadProject({
+        ...project,
+        toadaMeta: {
+          ...(project.toadaMeta || {}),
+          id: res.documentId,
+          bpmDefaut: res.bpm,
+          tonaliteDefaut: res.scaleLabel,
+        },
+      });
+      window.dispatchEvent(
+        new CustomEvent('app-toast', {
+          detail: {
+            type: 'success',
+            message: `✅ Fiche Organizador mise à jour (${res.bpm} BPM • Gamme : ${res.scaleLabel} • Temps & Syllabes synchronisés)`,
+          },
+        })
+      );
+    } catch (err: any) {
+      window.dispatchEvent(
+        new CustomEvent('app-toast', {
+          detail: { type: 'error', message: t('publishOrganizadorErrorToast', { err: err?.message || 'err' }) },
+        })
+      );
+    } finally {
+      setIsPushingOrg(false);
+    }
   };
 
   const handleRecordNext = () => {
@@ -60,6 +95,15 @@ export const MelodiaNextStepFooter: React.FC = () => {
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
+        <button
+          type="button" onClick={handlePushToOrganizador} disabled={isPushingOrg}
+          title="Sauvegarder et renvoyer le rythme ([1]..[4] et _), les syllabes soulignées (<u>), la tonalité et le tempo vers la fiche Organizador"
+          className="px-3 py-1.5 rounded bg-emerald-700 hover:bg-emerald-600 text-white text-xs font-mono font-bold flex items-center gap-1.5 cursor-pointer shadow-xs transition-colors disabled:opacity-50"
+        >
+          <RefreshCw className={`w-3.5 h-3.5 ${isPushingOrg ? 'animate-spin' : ''}`} />
+          <span>🔄 Renvoyer vers Organizador (Rythme, Syllabes _, Tonalité & Tempo)</span>
+        </button>
+
         <button
           type="button" onClick={handleManualSave} title={t('melodiaSaveProgressTitle')}
           className="cordel-btn px-2.5 py-1.5 text-xs font-mono font-bold flex items-center gap-1.5 text-amber-900 dark:text-amber-300 cursor-pointer"
