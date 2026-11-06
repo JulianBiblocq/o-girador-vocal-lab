@@ -1,6 +1,7 @@
 /**
  * slicerAlignmentHelper.ts
- * Calquage des tranches sur les motifs Organizador, pauses Baque et auto-calage T1 par corrélation croisée (< 130 lignes).
+ * Calquage des tranches sur les motifs Organizador, gestion des trous Puxador/Coro (with_gaps vs chained)
+ * et auto-calage T1 par corrélation croisée (< 138 lignes).
  */
 import type { VocalPatternItem, VocalRole, ToadaArrangementSlot } from '../types/toadaProject.types';
 import type { TimeAnchor } from '../types/toadaDocument.types';
@@ -10,6 +11,7 @@ import { computePatternVocalOffsetsBeats } from './subbeatAnchorHelper';
 import { findOptimalAcousticCutSec, findOptimalMasterGridOffsetSec } from './slicerBoundaryOptimizer';
 
 export { findOptimalAcousticCutSec, findOptimalMasterGridOffsetSec };
+export type SlicerGapMode = 'with_gaps' | 'chained';
 
 function windowRms(pcm: Float32Array, sampleRate: number, t0: number, t1: number): number {
   const i0 = Math.max(0, Math.floor(t0 * sampleRate)), i1 = Math.min(pcm.length, Math.ceil(t1 * sampleRate));
@@ -78,41 +80,42 @@ export function mergeAdjacentSliceSegments(segA: SliceSegment, segB: SliceSegmen
   return { ...segA, startSec, endSec, metricT1Sec, measuresCount };
 }
 
-function computePauseMeasuresBetweenPatterns(slots: ToadaArrangementSlot[] | undefined, prevPatId: string, curPatId: string): number {
+function computeGapMeasuresInSlots(slots: ToadaArrangementSlot[] | undefined, allPatterns: VocalPatternItem[], prevPatId: string | null, curPatId: string): number {
   if (!slots || slots.length === 0) return 0;
-  const i1 = slots.findIndex((s) => s.puxadorPatternId === prevPatId || s.coroPatternId === prevPatId);
+  const i1 = prevPatId ? slots.findIndex((s) => s.puxadorPatternId === prevPatId || s.coroPatternId === prevPatId) : -1;
   const i2 = slots.findIndex((s, idx) => idx > i1 && (s.puxadorPatternId === curPatId || s.coroPatternId === curPatId));
-  if (i1 < 0 || i2 < 0) return 0;
-  let pauseMeasures = 0;
-  for (let k = i1 + 1; k < i2; k++) if (!slots[k].puxadorPatternId && !slots[k].coroPatternId) pauseMeasures += Math.max(1, Math.min(8, slots[k].advanceMeasures ?? 1));
-  return pauseMeasures;
+  if (i2 < 0) return 0;
+  let gapM = 0;
+  for (let k = i1 + 1; k < i2; k++) {
+    const pux = slots[k].puxadorPatternId ? allPatterns.find((p) => p.id === slots[k].puxadorPatternId) : undefined;
+    const cor = slots[k].coroPatternId ? allPatterns.find((p) => p.id === slots[k].coroPatternId) : undefined;
+    gapM += Math.max(pux?.measuresCount ?? 0, cor?.measuresCount ?? 0, Math.max(1, Math.min(8, slots[k].advanceMeasures ?? 1)));
+  }
+  return gapM;
 }
 
 export function buildOrganizadorSlices(
   patterns: VocalPatternItem[], defaultRole: VocalRole, bpm: number, detected: SliceSegment[],
-  gridOffsetSec = 0.8, slots?: ToadaArrangementSlot[], pcm?: Float32Array | null, sampleRate = 44100
+  gridOffsetSec = 0.8, slots?: ToadaArrangementSlot[], pcm?: Float32Array | null, sampleRate = 44100, gapMode: SlicerGapMode = 'with_gaps'
 ): SliceSegment[] {
   const beatDur = 60 / (bpm || 88), measureDur = beatDur * 4;
   const rolePats = patterns.filter((p) => p.role === (defaultRole === 'coro' ? 'coro' : 'puxador')), targetList = rolePats.length > 0 ? rolePats : patterns;
   if (targetList.length === 0) return [];
   const metaList: Array<{ pat: VocalPatternItem; t1: number; mCount: number; hasAna: boolean; anacDur: number; isIslandStart: boolean; pauseMeasures: number; pauseStartT1: number; firstVocalOffsetBeats: number; hasBoundaryExitAnchor: boolean }> = [];
-  let prevT1 = gridOffsetSec, prevMCount = targetList[0]?.measuresCount ?? 1;
+  let prevT1 = gridOffsetSec, prevMCount = 0;
 
   targetList.forEach((pat, idx) => {
     const hasAna = pat.hasAnacrusis !== false, anacDur = hasAna ? (pat.anacrusisBeats ?? 2) * beatDur : 0, mCount = pat.measuresCount ?? 1;
     const anchors = resolveFreshTimeAnchors(pat.rawLineCode, pat.timeAnchors, 4, !hasAna, pat.assignedLyricsText);
     const { firstVocalOffsetBeats, hasBoundaryExitAnchor } = computePatternVocalOffsetsBeats(anchors, hasAna, 4, mCount);
-    const pauseMeasures = idx > 0 ? computePauseMeasuresBetweenPatterns(slots, targetList[idx - 1].id, pat.id) : 0, pauseStartT1 = prevT1 + prevMCount * measureDur;
-    let t1 = prevT1 + (idx === 0 ? 0 : (prevMCount + pauseMeasures) * measureDur), isIslandStart = idx === 0 || pauseMeasures > 0;
-    if (idx === 0) {
-      const estT1 = detected[0] ? detected[0].startSec + anacDur * 0.5 : gridOffsetSec;
-      t1 = Math.max(anacDur, Math.round((estT1 - gridOffsetSec) / measureDur) * measureDur + gridOffsetSec);
-    } else if (pauseMeasures === 0) {
-      const prevBodyEnd = prevT1 + prevMCount * measureDur, nextDet = detected.find((d) => d.startSec > prevBodyEnd + 1.8);
-      if (nextDet) {
-        const snapM = Math.round((nextDet.startSec + anacDur * 0.5 - gridOffsetSec) / measureDur) * measureDur + gridOffsetSec;
-        if (snapM > prevBodyEnd + measureDur) { t1 = snapM; isIslandStart = true; }
-      }
+    const pauseMeasures = gapMode === 'with_gaps' ? computeGapMeasuresInSlots(slots, patterns, idx > 0 ? targetList[idx - 1].id : null, pat.id) : 0;
+    const pauseStartT1 = idx === 0 ? gridOffsetSec : prevT1 + prevMCount * measureDur;
+    let t1 = pauseStartT1 + pauseMeasures * measureDur, isIslandStart = idx === 0 || pauseMeasures > 0;
+    if (gapMode === 'chained' && detected[idx]) {
+      const snapM = Math.max(anacDur, Math.round((detected[idx].startSec + anacDur * 0.5 - gridOffsetSec) / measureDur) * measureDur + gridOffsetSec);
+      if (idx === 0 || snapM >= prevT1 + prevMCount * measureDur) { t1 = snapM; isIslandStart = idx === 0 || snapM > prevT1 + prevMCount * measureDur; }
+    } else if (idx === 0 && pauseMeasures === 0 && detected[0]) {
+      t1 = Math.max(anacDur, Math.round((detected[0].startSec + anacDur * 0.5 - gridOffsetSec) / measureDur) * measureDur + gridOffsetSec);
     }
     metaList.push({ pat, t1, mCount, hasAna, anacDur, isIslandStart, pauseMeasures, pauseStartT1, firstVocalOffsetBeats, hasBoundaryExitAnchor });
     prevT1 = t1; prevMCount = mCount;
@@ -123,7 +126,7 @@ export function buildOrganizadorSlices(
     const cur = metaList[i], next = metaList[i + 1];
     if (cur.pauseMeasures > 0) {
       const pM = Math.max(1, Math.min(4, cur.pauseMeasures)) as 1 | 2 | 3 | 4;
-      segments.push({ id: `seg-pause-org-${i}`, startSec: Math.round(cur.pauseStartT1 * 100) / 100, endSec: Math.round((cur.pauseStartT1 + cur.pauseMeasures * measureDur) * 100) / 100, metricT1Sec: Math.round(cur.pauseStartT1 * 100) / 100, targetPatternId: 'ignore', name: `[PAUSE ${pM}M]`, measuresCount: pM, hasAnacrusis: false, anacrusisBeats: 0, hasTailBeat: false, isPause: true });
+      segments.push({ id: `seg-pause-org-${i}`, startSec: Math.round(cur.pauseStartT1 * 100) / 100, endSec: Math.round((cur.pauseStartT1 + cur.pauseMeasures * measureDur) * 100) / 100, metricT1Sec: Math.round(cur.pauseStartT1 * 100) / 100, targetPatternId: 'ignore', name: `[PAUSE ${cur.pauseMeasures}M]`, measuresCount: pM, hasAnacrusis: false, anacrusisBeats: 0, hasTailBeat: false, isPause: true });
     }
     const prevVocalSeg = segments.length > 0 ? segments[segments.length - 1] : null;
     const isolatedStartSec = cur.hasAna ? Math.max(0, Math.round((cur.t1 + (cur.firstVocalOffsetBeats - 0.25) * beatDur) * 100) / 100) : Math.max(0, Math.round(cur.t1 * 100) / 100);

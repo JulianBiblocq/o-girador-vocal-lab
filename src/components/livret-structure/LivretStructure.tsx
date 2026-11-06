@@ -10,7 +10,7 @@ import { ToadaConductorStrip } from '../conductor/ToadaConductorStrip';
 import { ChordGridBar } from '../common/ChordGridBar';
 import { PatternLyricsBanner } from '../livret-prise/PatternLyricsBanner';
 import { StructureMusicConfigPanel } from './StructureMusicConfigPanel';
-import { LatencyReminderBanner } from '../common/LatencyReminderBanner';
+import { PreTakeSetupAssistantBar } from '../prise/PreTakeSetupAssistantBar';
 import { getDefaultBeatResolutions } from '../../utils/alignmentMath';
 import { getBeatsPerMeasure } from '../../utils/musicalMath';
 import { DEFAULT_TOADA_BPM } from '../../types/toadaProject.types';
@@ -34,7 +34,7 @@ export const LivretStructure: React.FC = () => {
 
   return (
     <div className="flex flex-col gap-4 w-full">
-      <LatencyReminderBanner />
+      <PreTakeSetupAssistantBar />
 
       {/* 1. Bibliothèque de Patterns et Conducteur 2 rails */}
       <div className="w-full grid grid-cols-1 xl:grid-cols-12 gap-4 items-stretch">

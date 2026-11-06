@@ -1,16 +1,16 @@
 /**
  * continuousTakeSlicer.ts
- * Découpage automatique d'une prise continue par pattern avec sélection RMS, auto-calage T1 et coupe acoustique optimale (< 135 lignes).
+ * Découpage automatique d'une prise continue par pattern via conductorRoleTimelineBuilder,
+ * en ignorant 100 % des trous de l'autre rôle (< 130 lignes).
  */
 import type { ToadaProject, VocalPatternItem, VocalRole } from '../types/toadaProject.types';
 import { getBeatsPerMeasure } from './musicalMath';
 import { NO_ANACRUSIS_PRE_MARGIN_SEC } from './anacrusisTimingHelper';
 import { extractPatternMelodicData } from '../audio/melodicExtractionHelper';
-import { computeSlotsMeasureLayout } from '../components/conductor/toadaTimingScheduler';
-import { CONTINUOUS_LEAD_IN_MEASURES } from '../audio/continuousCueHelper';
 import { resolveFreshTimeAnchors } from './timeAnchorParser';
 import { alignT1ByAnchorCrossCorrelation } from './slicerAlignmentHelper';
 import { findOptimalAcousticCutSec, snapToNearestZeroCrossing } from './slicerBoundaryOptimizer';
+import { buildConductorRoleTimeline, type RoleTimelineItem } from './conductorRoleTimelineBuilder';
 
 export interface SlicedTakeResult {
   updatedPatterns: VocalPatternItem[];
@@ -37,48 +37,43 @@ export function sliceContinuousTake(
   const beatsPerMeasure = getBeatsPerMeasure(project.timeSignature);
   const beatDuration = 60 / bpm;
   const measureDuration = beatsPerMeasure * beatDuration;
-  const layouts = computeSlotsMeasureLayout(project.slots, project.patterns);
 
-  const occurrencesByPatId = new Map<string, number[]>();
-  layouts.forEach((layout) => {
-    const slot = project.slots[layout.slotIndex];
-    const patId = targetRole === 'puxador' ? slot.puxadorPatternId : slot.coroPatternId;
-    if (!patId) return;
-    const slotMeasureFromM0 = (CONTINUOUS_LEAD_IN_MEASURES - 1) + layout.startMeasure;
-    const list = occurrencesByPatId.get(patId) || [];
-    list.push(slotMeasureFromM0);
-    occurrencesByPatId.set(patId, list);
-  });
+  const timeline = buildConductorRoleTimeline(project, targetRole, preM0MarginSec);
+  const occurrencesByPatId = new Map<string, RoleTimelineItem[]>();
+  for (const item of timeline) {
+    if (item.isRoleGap || !item.patternId) continue;
+    const list = occurrencesByPatId.get(item.patternId) || [];
+    list.push(item);
+    occurrencesByPatId.set(item.patternId, list);
+  }
 
   let processedCount = 0;
 
   const updatedPatterns = project.patterns.map((pat) => {
-    const measureList = occurrencesByPatId.get(pat.id);
-    if (!measureList || measureList.length === 0 || pat.role !== targetRole) return pat;
+    const occList = occurrencesByPatId.get(pat.id);
+    if (!occList || occList.length === 0 || pat.role !== targetRole) return pat;
 
     const hasAnac = pat.hasAnacrusis !== false;
     const anacSec = hasAnac ? measureDuration : NO_ANACRUSIS_PRE_MARGIN_SEC;
     const effectiveAnchors = resolveFreshTimeAnchors(pat.rawLineCode, pat.timeAnchors, beatsPerMeasure, !hasAnac, pat.assignedLyricsText);
 
-    let bestMeasureFromM0 = measureList[0];
-    if (measureList.length > 1) {
+    let bestOcc = occList[0];
+    if (occList.length > 1) {
       let bestRms = -1;
-      for (const mFromM0 of measureList) {
-        const t1Sec = preM0MarginSec + mFromM0 * measureDuration;
-        const rms = computeWindowRms(fullPCM, sampleRate, t1Sec - anacSec, t1Sec + pat.measuresCount * measureDuration);
-        if (rms > bestRms) { bestRms = rms; bestMeasureFromM0 = mFromM0; }
+      for (const occ of occList) {
+        const rms = computeWindowRms(fullPCM, sampleRate, occ.windowStartSec, occ.windowEndSec);
+        if (rms > bestRms) { bestRms = rms; bestOcc = occ; }
       }
     }
 
-    const nominalSlotT1 = preM0MarginSec + bestMeasureFromM0 * measureDuration;
+    const nominalSlotT1 = bestOcc.metricT1Sec;
     const slotT1InPCM = alignT1ByAnchorCrossCorrelation(
       fullPCM, sampleRate, nominalSlotT1, bpm, effectiveAnchors, hasAnac, beatsPerMeasure, 0.30
     );
     const patStartInPCM = snapToNearestZeroCrossing(fullPCM, sampleRate, slotT1InPCM - anacSec, 5);
     const bodyEndInPCM = slotT1InPCM + pat.measuresCount * measureDuration;
-    const nominalEndInPCM = bodyEndInPCM + beatDuration;
     const patEndInPCM = findOptimalAcousticCutSec(
-      fullPCM, sampleRate, nominalEndInPCM, bodyEndInPCM + 0.12 * beatDuration, bodyEndInPCM + 1.15 * beatDuration
+      fullPCM, sampleRate, bodyEndInPCM + beatDuration, bodyEndInPCM + 0.12 * beatDuration, bodyEndInPCM + 1.15 * beatDuration
     );
 
     const sliceStartSec = snapToNearestZeroCrossing(fullPCM, sampleRate, Math.max(0, patStartInPCM - 0.5), 5);

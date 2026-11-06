@@ -1,10 +1,11 @@
 /**
  * PianoRollSyllablesRow.tsx
- * Ligne d'édition directe des syllabes sous le Piano Roll (< 115 lignes).
+ * Ligne d'édition directe des syllabes sous le Piano Roll avec bouton [ 🔗 ] de fusion 1-clic (< 120 lignes).
  */
 import React, { useState, useRef, useMemo, useEffect } from 'react';
 import type { VocalStepData } from '../../types/vocalPack.types';
-import { Scissors, CornerDownLeft } from 'lucide-react';
+import { joinSyllableWithPrevious } from '../../utils/syllableImpulseMerger';
+import { Scissors, CornerDownLeft, Link2 } from 'lucide-react';
 import { useLanguage } from '../../i18n/LanguageContext';
 
 interface PianoRollSyllablesRowProps {
@@ -69,20 +70,33 @@ export const PianoRollSyllablesRow: React.FC<PianoRollSyllablesRowProps> = ({
     <div className="flex flex-col gap-1 border-t border-[var(--cordel-border-sub)] bg-[var(--cordel-subcard-bg)] pt-1">
       <div className="relative h-8" style={{ width: `${gridWidth}px`, marginLeft: '64px' }}>
         {activeNotes.map((n, idx) => (
-          <input
-            key={n.stepIndex}
-            ref={(el) => { inputRefs.current[idx] = el; }}
-            type="text"
-            disabled={readOnly}
-            value={n.syllable}
-            placeholder={n.note}
-            onChange={(e) => handleSyllableChange(n.stepIndex, e.target.value)}
-            onBlur={() => onUpdateSteps(allSteps, true)}
-            onKeyDown={(e) => handleKeyDown(e, idx)}
-            style={{ left: `${n.x}px`, width: `${n.width - 2}px` }}
-            className="letra-syllable-input absolute top-0 text-center text-[10px] font-mono font-bold px-0.5 py-0.5 focus:outline-none transition-colors rounded-none"
-            title={t('syllableInputTitle', { note: n.note })}
-          />
+          <React.Fragment key={n.stepIndex}>
+            <input
+              ref={(el) => { inputRefs.current[idx] = el; }}
+              type="text"
+              disabled={readOnly}
+              value={n.syllable}
+              placeholder={n.note}
+              onChange={(e) => handleSyllableChange(n.stepIndex, e.target.value)}
+              onBlur={() => onUpdateSteps(allSteps, true)}
+              onKeyDown={(e) => handleKeyDown(e, idx)}
+              style={{ left: `${n.x}px`, width: `${n.width - 2}px` }}
+              className="letra-syllable-input absolute top-0 text-center text-[10px] font-mono font-bold px-0.5 py-0.5 focus:outline-none transition-colors rounded-none"
+              title={t('syllableInputTitle', { note: n.note })}
+            />
+            {!readOnly && idx < activeNotes.length - 1 && (
+              <button
+                type="button"
+                tabIndex={-1}
+                onClick={() => onUpdateSteps(joinSyllableWithPrevious(allSteps, activeNotes[idx + 1].stepIndex), true)}
+                style={{ left: `${n.x + n.width - 8}px` }}
+                className="absolute -top-1 z-10 w-3.5 h-3.5 rounded-full bg-amber-600/90 hover:bg-amber-500 text-white flex items-center justify-center shadow-xs cursor-pointer opacity-75 hover:opacity-100"
+                title="🔗 Joindre cette syllabe à la suivante sur une seule brique"
+              >
+                <Link2 className="w-2.5 h-2.5" />
+              </button>
+            )}
+          </React.Fragment>
         ))}
       </div>
       {!readOnly && activeNotes.length > 0 && (

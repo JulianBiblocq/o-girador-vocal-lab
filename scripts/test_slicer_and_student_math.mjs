@@ -185,3 +185,4 @@ console.log('=== TEST 3 : CausalStudentPitchTracker (Gate Consonantique) & Ambit
 }
 
 console.log('✅ TOUS LES TESTS MATHÉMATIQUES SLICER (LIVRET 3) & STUDIO ÉLÈVE (LIVRET 5) SONT PASSÉS AVEC SUCCÈS !');
+

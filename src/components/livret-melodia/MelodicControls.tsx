@@ -1,13 +1,10 @@
 /**
  * MelodicControls.tsx
- * Barre de contrôle de transport et écoute unifiée sur 1 seule ligne Cordel (< 115 lignes) :
- * Gauche : [ ⬅ Retour à la Prise ] + Sélecteur rapide de Pattern [ ◀ ] [ Pattern actif ▾ ] [ ▶ ]
- * Centre : Groupe d'écoute [ Voix | Synthé | Duo ] + Clic
- * Droite : [ ⏮ 0:00 ] + [ ▶ Play ]
+ * Barre de contrôle de transport, écoute unifiée et commutateur [ 🥁 Rythme & Syllabes (Roda) | 🎹 Mélodie + Piano ] (< 125 lignes).
  */
 import React from 'react';
 import type { MelodicPlayMode } from '../../audio/MelodicPreviewPlayer';
-import { Play, Square, ArrowLeft, SkipBack } from 'lucide-react';
+import { Play, Square, ArrowLeft, SkipBack, Drum } from 'lucide-react';
 import { CordelMic, CordelPiano, CordelSpeaker } from '../common/CordelIcons';
 import { PatternCompassBar } from '../common/PatternCompassBar';
 import { useLanguage } from '../../i18n/LanguageContext';
@@ -16,6 +13,8 @@ interface MelodicControlsProps {
   isPlaying: boolean;
   playMode: MelodicPlayMode;
   clickEnabled: boolean;
+  ignoreMelodyPitch?: boolean;
+  onToggleIgnoreMelodyPitch?: (ignore: boolean) => void;
   onTogglePlay: () => void;
   onResetSeek?: () => void;
   onSetPlayMode: (mode: MelodicPlayMode) => void;
@@ -25,11 +24,14 @@ interface MelodicControlsProps {
 }
 
 export const MelodicControls: React.FC<MelodicControlsProps> = (props) => {
-  const { isPlaying, playMode, clickEnabled, onTogglePlay, onResetSeek, onSetPlayMode, onToggleClick, onBackToPrise } = props;
+  const {
+    isPlaying, playMode, clickEnabled, ignoreMelodyPitch = false, onToggleIgnoreMelodyPitch,
+    onTogglePlay, onResetSeek, onSetPlayMode, onToggleClick, onBackToPrise,
+  } = props;
   const { t } = useLanguage();
 
   return (
-    <div className="cordel-card p-2 w-full flex flex-wrap items-center justify-between gap-2.5 select-none rounded">
+    <div className="cordel-card p-2 w-full flex flex-wrap items-center justify-between gap-2 select-none rounded">
       {/* 1. Gauche : Retour à la Prise + Sélecteur direct de Pattern */}
       <div className="flex flex-wrap items-center gap-2">
         <button
@@ -42,8 +44,35 @@ export const MelodicControls: React.FC<MelodicControlsProps> = (props) => {
         <PatternCompassBar compact />
       </div>
 
-      {/* 2. Centre : Groupe d'Écoute (Voix / Synthé / Duo) + Clic */}
-      <div className="flex items-center gap-2">
+      {/* 2. Centre : Commutateur Rythme Seul Express + Groupe d'Écoute (Voix / Synthé / Duo) + Clic */}
+      <div className="flex flex-wrap items-center gap-2">
+        {onToggleIgnoreMelodyPitch && (
+          <div className="flex items-center border border-[var(--cordel-border-sub)] rounded overflow-hidden text-[11px] font-mono">
+            <button
+              type="button"
+              onClick={() => { onToggleIgnoreMelodyPitch(true); onSetPlayMode('voice'); }}
+              className={`px-2 py-1 flex items-center gap-1 cursor-pointer transition-colors ${
+                ignoreMelodyPitch ? 'bg-amber-600 text-white font-bold' : 'text-theme-ink/75 hover:bg-white/10'
+              }`}
+              title="Coupe le synthé piano et valide uniquement le rythme, les tenues et les syllabes pour la Roda Sequenciador"
+            >
+              <Drum className="w-3.5 h-3.5" />
+              <span>🥁 Rythme & Syllabes (Roda)</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => onToggleIgnoreMelodyPitch(false)}
+              className={`px-2 py-1 flex items-center gap-1 border-l border-[var(--cordel-border-sub)] cursor-pointer transition-colors ${
+                !ignoreMelodyPitch ? 'bg-theme-wood text-[#f4ecd8] font-bold' : 'text-theme-ink/75 hover:bg-white/10'
+              }`}
+              title="Mode complet avec édition des notes du Piano Roll"
+            >
+              <CordelPiano className="w-3.5 h-3.5" />
+              <span>🎹 Mélodie + Piano</span>
+            </button>
+          </div>
+        )}
+
         <div className="flex items-center border border-[var(--cordel-border-sub)] rounded overflow-hidden">
           <button
             type="button" onClick={() => onSetPlayMode('voice')}

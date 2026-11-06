@@ -14,6 +14,7 @@ import { PianoRollCanvas } from './PianoRollCanvas';
 import { PianoRollStickyHeader } from './PianoRollStickyHeader';
 import { FloatingSyllableInput } from './FloatingSyllableInput';
 import { PianoRollSyllablesRow } from './PianoRollSyllablesRow';
+import { BeatRhythmPresetBar } from './BeatRhythmPresetBar';
 import { PianoRollToolPopover } from './PianoRollToolPopover';
 import { ChordGridBar } from '../common/ChordGridBar';
 import { CordelPiano } from '../common/CordelIcons';
@@ -127,6 +128,7 @@ export const PianoRollEditor: React.FC<PianoRollEditorProps> = (p) => {
             </div>
           </div>
           <PianoRollSyllablesRow allSteps={p.allSteps} gridWidth={gridWidth} readOnly={p.readOnly} onUpdateSteps={p.onUpdateSteps} />
+          <BeatRhythmPresetBar allSteps={p.allSteps} gridWidth={gridWidth} resPerBeat={p.beatResolutions?.[0] || 4} readOnly={p.readOnly} onUpdateSteps={p.onUpdateSteps} />
         </div>
       </div>
       {palettePos && <PianoRollToolPopover x={palettePos.x} y={palettePos.y} activeTool={activeTool} onSelectTool={setActiveTool} onClose={() => setPalettePos(null)} />}

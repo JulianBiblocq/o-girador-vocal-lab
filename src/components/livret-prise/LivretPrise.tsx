@@ -9,7 +9,7 @@ import { useLanguage } from '../../i18n/LanguageContext';
 import { useVocalTransportStore } from '../../stores/useVocalTransportStore';
 import { confirmAsync } from '../../stores/useCordelDialogStore';
 import { PatternCompassBar } from '../common/PatternCompassBar';
-import { LatencyReminderBanner } from '../common/LatencyReminderBanner';
+import { PreTakeSetupAssistantBar } from '../prise/PreTakeSetupAssistantBar';
 import { StudioSettingsStatusBar } from './StudioSettingsStatusBar';
 import { CabineMonitoringAndPunchBar } from './CabineMonitoringAndPunchBar';
 import type { ComfortMonitoringPreset } from '../../audio/ComfortMonitoringNode';
@@ -93,7 +93,7 @@ export const LivretPrise: React.FC = () => {
 
   return (
     <div className="flex flex-col gap-3 w-full">
-      <LatencyReminderBanner />
+      <PreTakeSetupAssistantBar />
       <TakeModeSelector mode={takeMode} onChangeMode={setTakeMode} disabled={isRecordingAny} />
       {takeMode !== 'pattern' && <ContinuousPrompterBanner info={prompterInfo} isActive={isContinuousActive} />}
       <PatternCompassBar />
