@@ -1,6 +1,6 @@
 /**
  * ScaleLockBar.tsx
- * Bandeau de Gamme Maracatu Débrayable bilingue FR / PT-BR ([ 🔓 Gamme débrayée ] ⟷ [ 🔒 Gamme verrouillée ])
+ * Bandeau de Gamme Maracatu Débrayable bilingue FR / PT-BR ([ Gamme débrayée ] ⟷ [ Gamme verrouillée ])
  * et détection automatique sur la voix (< 135 lignes).
  */
 import React, { useState, useRef, useEffect, useCallback } from 'react';
@@ -11,7 +11,7 @@ import { NOTE_NAMES } from '../../utils/noteUtils';
 import { detectRealtimePitch } from '../../audio/realtimePitchDetector';
 import { useWebMidiInput } from '../../hooks/useWebMidiInput';
 import { useLanguage } from '../../i18n/LanguageContext';
-import { Lock, Unlock, Target, Mic, Piano } from 'lucide-react';
+import { Lock, Unlock, Target, Mic } from 'lucide-react';
 
 const SCALE_MODES_FR: Array<{ key: ScaleType; label: string }> = [
   { key: 'chromatic', label: 'Libre / Chromatique' }, { key: 'major', label: 'Majeur' },
@@ -129,7 +129,7 @@ export const ScaleLockBar: React.FC<ScaleLockBarProps> = ({
           <button key={pc} type="button" onClick={() => { const next = new Set(allowedSet); if (next.has(pc) && next.size > 1) next.delete(pc); else next.add(pc); onUpdateScale(tonic, scaleType === 'chromatic' ? lastActiveMode : scaleType, Array.from(next).sort((a, b) => a - b)); }} className={`px-1.5 py-0.5 rounded text-[10px] font-bold cursor-pointer border ${allowedSet.has(pc) ? 'bg-emerald-600 text-white border-emerald-500' : 'bg-stone-500/10 text-theme-ink/40 border-transparent'}`}>{lbl}</button>
         ))}
         <button type="button" onClick={startLearning} className={`ml-1 px-2 py-0.5 rounded font-bold flex items-center gap-1 cursor-pointer border ${isLearning ? 'bg-red-600 text-white border-red-400 animate-pulse' : 'bg-amber-500/15 text-amber-800 dark:text-amber-300 border-amber-500/50'}`}>
-          <Mic className="w-3 h-3" /><Piano className="w-3 h-3" /><span>{isLearning ? `${countdown}s...` : '5s'}</span>
+          <Mic className="w-3 h-3" /><span>{isLearning ? `${countdown}s...` : '5s'}</span>
         </button>
       </div>
     </div>

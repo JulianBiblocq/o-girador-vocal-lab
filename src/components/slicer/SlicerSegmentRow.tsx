@@ -5,7 +5,7 @@
 import React from 'react';
 import type { VocalPatternItem } from '../../types/toadaProject.types';
 import type { SliceSegment } from '../../types/slicerSegments.types';
-import { Play, Square, Scissors, Link2, Trash2, AlertTriangle } from 'lucide-react';
+import { Play, Square, Scissors, Link2, Trash2, AlertTriangle, VolumeX, Plus } from 'lucide-react';
 import { useLanguage } from '../../i18n/LanguageContext';
 
 interface SlicerSegmentRowProps {
@@ -122,10 +122,10 @@ export const SlicerSegmentRow: React.FC<SlicerSegmentRowProps> = ({
         )}
 
         {onInsertPauseBefore && (
-          <button type="button" onClick={onInsertPauseBefore} className="px-1 py-0.5 text-[9.5px] font-bold cordel-card-sm hover:text-amber-500 rounded cursor-pointer" title={t('slicerInsertPauseBeforeTitle')}>+🔇</button>
+          <button type="button" onClick={onInsertPauseBefore} className="p-1 cordel-card-sm text-[var(--cordel-secondary-text)] hover:text-amber-500 rounded cursor-pointer" title={t('slicerInsertPauseBeforeTitle')}><VolumeX className="w-3.5 h-3.5" /></button>
         )}
         {onInsertSliceAfter && (
-          <button type="button" onClick={onInsertSliceAfter} className="px-1 py-0.5 text-[9.5px] font-bold cordel-card-sm hover:text-emerald-500 rounded cursor-pointer" title={t('slicerInsertSliceAfterTitle')}>+➕</button>
+          <button type="button" onClick={onInsertSliceAfter} className="p-1 cordel-card-sm text-[var(--cordel-secondary-text)] hover:text-emerald-500 rounded cursor-pointer" title={t('slicerInsertSliceAfterTitle')}><Plus className="w-3.5 h-3.5" /></button>
         )}
         {!segment.isPause && (
           <button type="button" onClick={onSplit} className="p-1 cordel-card-sm text-[var(--cordel-secondary-text)] hover:text-amber-500 rounded cursor-pointer" title={t('slicerSplitSliceTitle')}><Scissors className="w-3.5 h-3.5" /></button>

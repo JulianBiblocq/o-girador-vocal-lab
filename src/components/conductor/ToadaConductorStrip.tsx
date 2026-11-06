@@ -101,7 +101,7 @@ export const ToadaConductorStrip: React.FC<{ outputDeviceId?: string; isManualSt
                   <span className="p-0.5 text-[var(--cordel-text)]/50 hover:text-theme-accent cursor-grab active:cursor-grabbing" title={t('conductorDragReorderTitle')}>
                     <GripVertical className="w-3 h-3" />
                   </span>
-                  <span className="truncate">{isSilenceSlot ? `🔇 ${t('conductorPauseShort')}` : t('blockLabel', { n: idx + 1 })}</span>
+                  <span className="truncate flex items-center gap-0.5">{isSilenceSlot ? <><VolumeX className="w-3 h-3 shrink-0" /><span>{t('conductorPauseShort')}</span></> : t('blockLabel', { n: idx + 1 })}</span>
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
                   {isSilenceSlot && (
@@ -118,14 +118,14 @@ export const ToadaConductorStrip: React.FC<{ outputDeviceId?: string; isManualSt
                 value={slot.puxadorPatternId ?? ''} onChange={(e) => updateSlot(slot.slotId, e.target.value || null, slot.coroPatternId, e.target.value ? undefined : pauseMeasures)}
                 className={`h-6 text-[10px] font-mono font-bold px-1 outline-none border cursor-pointer rounded ${slot.puxadorPatternId ? 'bg-role-puxador !text-white font-bold border-role-puxador' : 'bg-[var(--cordel-surface)] text-[var(--cordel-text)] border border-[var(--cordel-border-sub)] font-semibold'}`}
               >
-                <option value="" className="bg-[var(--cordel-surface)] text-[var(--cordel-text)]">{isSilenceSlot ? `🔇 (${pauseMeasures}M)` : t('emptySlot')}</option>
+                <option value="" className="bg-[var(--cordel-surface)] text-[var(--cordel-text)]">{isSilenceSlot ? `[Pause ${pauseMeasures}M]` : t('emptySlot')}</option>
                 {puxPatterns.map((p) => <option key={p.id} value={p.id} className="bg-[var(--cordel-surface)] text-[var(--cordel-text)]">{p.name}</option>)}
               </select>
               <select
                 value={slot.coroPatternId ?? ''} onChange={(e) => updateSlot(slot.slotId, slot.puxadorPatternId, e.target.value || null, e.target.value ? undefined : pauseMeasures)}
                 className={`h-6 text-[10px] font-mono font-bold px-1 outline-none border cursor-pointer rounded ${slot.coroPatternId ? 'bg-role-coro !text-white font-bold border-role-coro' : 'bg-[var(--cordel-surface)] text-[var(--cordel-text)] border border-[var(--cordel-border-sub)] font-semibold'}`}
               >
-                <option value="" className="bg-[var(--cordel-surface)] text-[var(--cordel-text)]">{isSilenceSlot ? `🔇 (${pauseMeasures}M)` : t('emptySlot')}</option>
+                <option value="" className="bg-[var(--cordel-surface)] text-[var(--cordel-text)]">{isSilenceSlot ? `[Pause ${pauseMeasures}M]` : t('emptySlot')}</option>
                 {coroPatterns.map((p) => <option key={p.id} value={p.id} className="bg-[var(--cordel-surface)] text-[var(--cordel-text)]">{p.name}</option>)}
               </select>
             </div>

@@ -1,7 +1,7 @@
 /**
  * LetraEditorPanel.tsx
- * Barre compacte « Letra da Toada » (saisie rapide de la phrase complète + bouton [+ Aligner] + aperçu des mots) (< 85 lignes).
- * Les syllabes individuelles et liaisons [ 🔗 ] sont éditées directement dans le bandeau épinglé sous le Piano Roll.
+ * Barre compacte « Letra da Toada » (saisie rapide de la phrase complète + bouton [Aligner] + aperçu des mots) (< 85 lignes).
+ * Les syllabes individuelles et liaisons sont éditées directement dans le bandeau épinglé sous le Piano Roll.
  */
 import React, { useState, useEffect, useMemo } from 'react';
 import type { VocalStepData } from '../../types/vocalPack.types';
@@ -87,7 +87,7 @@ export const LetraEditorPanel: React.FC<LetraEditorPanelProps> = ({ allSteps, on
         />
         <button type="button" onClick={handleAlign} className="cordel-btn-primary px-3.5 py-1.5 text-xs font-mono flex items-center gap-1.5 font-bold rounded cursor-pointer">
           <CordelSpark className="w-3.5 h-3.5" />
-          <span>+ {t('alignBtn')}</span>
+          <span>{t('alignBtn')}</span>
         </button>
       </div>
     </div>

@@ -81,7 +81,7 @@ export const RhythmTapBar: React.FC<RhythmTapBarProps> = ({
       <div className="flex flex-wrap items-center gap-2">
         <button type="button" onClick={handleToggleCapture} className={`px-2.5 py-1 rounded font-bold flex items-center gap-1.5 cursor-pointer border transition-colors ${phase !== 'idle' ? 'bg-red-600 text-white border-red-400 animate-pulse' : 'bg-theme-wood text-[#f4ecd8] border-amber-600/50 hover:opacity-95'}`}>
           {phase !== 'idle' ? <Square className="w-3.5 h-3.5 fill-current" /> : <Circle className="w-3.5 h-3.5 fill-red-400 text-red-400" />}
-          <span>{phase === 'countin' ? `Décompte : ${countInBeat}...` : phase === 'recording' ? `⏹ Valider (${taps.length} frappes)` : 'Taper le Rythme (Espace / Clavier MIDI)'}</span>
+          <span>{phase === 'countin' ? `Décompte : ${countInBeat}...` : phase === 'recording' ? `Valider (${taps.length} frappes)` : 'Taper le Rythme (Espace / Clavier MIDI)'}</span>
         </button>
         {phase === 'recording' && (
           <button type="button" onPointerDown={() => triggerManualTapDown()} onPointerUp={() => triggerManualTapUp()} className="px-3 py-1 rounded bg-amber-500 text-stone-950 font-black flex items-center gap-1 cursor-pointer active:scale-95">

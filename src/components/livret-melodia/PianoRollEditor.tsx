@@ -125,9 +125,9 @@ export const PianoRollEditor: React.FC<PianoRollEditorProps> = (p) => {
       <div ref={horizScrollRef} className="w-full cordel-card overflow-x-auto overflow-y-hidden cordel-scrollbar rounded">
         <div style={{ width: `${64 + gridWidth}px` }} className="flex flex-col">
           <PianoRollStickyHeader gridWidth={gridWidth} beatsPerMeasure={p.beatsPerMeasure} totalDurationSec={p.totalDurationSec} anacrusisDurationSec={p.anacrusisDurationSec} seekStartSec={p.seekStartSec} isPlaying={p.isPlaying} hasAnacrusis={p.hasAnacrusis} bpm={p.bpm} t1OffsetSec={t1OffsetSec} getPlayheadSec={p.getPlayheadSec} onSeek={p.onSeek} />
-          <div ref={notesScrollRef} className="flex relative overflow-y-auto overflow-x-hidden cordel-scrollbar" style={{ width: `${64 + gridWidth}px`, height: `${NOTES_VIEWPORT_HEIGHT}px` }}>
+          <div ref={notesScrollRef} className="flex items-start relative overflow-y-auto overflow-x-hidden cordel-scrollbar" style={{ width: `${64 + gridWidth}px`, height: `${NOTES_VIEWPORT_HEIGHT}px` }}>
             <PianoRollKeyboard minMidi={minMidi} maxMidi={maxMidi} rowHeight={ROW_HEIGHT} onPlayNote={p.onPlayNotePreview} />
-            <div className="relative" style={{ width: `${gridWidth}px`, height: `${canvasHeight}px` }}>
+            <div className="relative shrink-0" style={{ width: `${gridWidth}px`, height: `${canvasHeight}px` }}>
               <PianoRollCanvas {...p} t1OffsetSec={t1OffsetSec} readOnly={p.readOnly} width={gridWidth} height={canvasHeight} minMidi={minMidi} maxMidi={maxMidi} rowHeight={ROW_HEIGHT} activeTool={activeTool} onOpenContextMenu={(x, y) => setPalettePos({ x, y })} onOpenTextInput={(idx, rect) => setTextInput({ stepIndex: idx, rect })} />
               {textInput && (<FloatingSyllableInput initialText={p.allSteps[textInput.stepIndex]?.syllable ?? ''} x={textInput.rect.x} y={textInput.rect.y} width={textInput.rect.w} height={textInput.rect.h} onConfirm={handleConfirmText} onCancel={() => setTextInput(null)} />)}
             </div>

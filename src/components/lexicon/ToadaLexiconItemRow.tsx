@@ -58,7 +58,7 @@ export const ToadaLexiconItemRow: React.FC<Props> = ({ entry, onDelete, isReadOn
 
         {entry.conseilDiction && (
           <p className="text-[10px] text-[var(--cordel-secondary-text)] pt-0.5">
-            💡 {entry.conseilDiction}
+            {entry.conseilDiction}
           </p>
         )}
       </div>

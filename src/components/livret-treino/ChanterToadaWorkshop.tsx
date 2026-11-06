@@ -52,7 +52,7 @@ export const ChanterToadaWorkshop: React.FC = () => {
   const toadaMasteryCounts = useMemo(() => countMasteredPatternsInToada(project.id, project.patterns.map((p) => p.id)), [project.id, project.patterns, patternMastery]);
   const patternOptions: TrainerPatternOption[] = useMemo(() => project.patterns.map((p) => {
     const m = loadPatternSpeedMastery(project.id, p.id);
-    return { id: p.id, name: p.name, role: p.role, badge: m.tier100 ? '👑' : m.tier88 ? '⭐⭐' : m.tier75 ? '⭐' : '' };
+    return { id: p.id, name: p.name, role: p.role, badge: m.tier100 ? '[100%]' : m.tier88 ? '[88%]' : m.tier75 ? '[75%]' : '' };
   }), [project.id, project.patterns, patternMastery]);
 
   const baseBpm = activePattern.bpm ?? activePattern.baseBpm ?? project.bpm ?? 88, bpm = Math.max(30, Math.round(baseBpm * speedRatio));

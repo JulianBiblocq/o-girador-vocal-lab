@@ -10,10 +10,10 @@ export interface SlicerHitResult {
 }
 
 export function formatPegLabel(index: number, beatsPerMeasure = 4): string {
-  if (index === 0) return '📍 M1•T1';
+  if (index === 0) return '◆ M1•T1';
   const m = Math.floor(index / beatsPerMeasure) + 1;
   const t = (index % beatsPerMeasure) + 1;
-  return `🚩 M${m}•T${t}`;
+  return `▸ M${m}•T${t}`;
 }
 
 export function hitTestSlicer(

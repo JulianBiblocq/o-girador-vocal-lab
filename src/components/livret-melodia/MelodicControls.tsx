@@ -1,11 +1,11 @@
 /**
  * MelodicControls.tsx
  * Barre de contrôle épurée bilingue (FR / PT-BR) du Livret 4 :
- * [ ⬅ Retour à la Prise ], Sélecteur de Pattern, [ 🎹 Synthé | 🎙️ Voix seule | 🎙️🎹 Duo ] et [ ▶ ÉCOUTER / ■ ARRÊTER ] (< 105 lignes).
+ * [ Retour à la Prise ], Sélecteur de Pattern, [ Synthé | Voix seule | Duo ] et [ ÉCOUTER / ARRÊTER ] (< 105 lignes).
  */
 import React from 'react';
 import type { MelodicPlayMode } from '../../audio/MelodicPreviewPlayer';
-import { Play, Square, ArrowLeft, SkipBack } from 'lucide-react';
+import { Play, Square, ArrowLeft, SkipBack, Music } from 'lucide-react';
 import { CordelMic, CordelPiano, CordelSpeaker } from '../common/CordelIcons';
 import { useLanguage } from '../../i18n/LanguageContext';
 
@@ -42,7 +42,7 @@ export const MelodicControls: React.FC<MelodicControlsProps> = (props) => {
         </button>
       </div>
 
-      {/* 2. Centre : Sélecteur d'écoute [ 🎹 Synthé | 🎙️ Voix seule | 🎙️🎹 Duo ] + Clic */}
+      {/* 2. Centre : Sélecteur d'écoute [ Synthé | Voix seule | Duo ] + Clic */}
       <div className="flex flex-wrap items-center gap-2">
         <div className="flex items-center border border-[var(--cordel-border-sub)] rounded overflow-hidden">
           <button
@@ -67,7 +67,7 @@ export const MelodicControls: React.FC<MelodicControlsProps> = (props) => {
               playMode === 'duo' ? 'bg-theme-wood text-[#f4ecd8] font-bold shadow-sm' : 'text-theme-ink/75 hover:bg-white/10'
             }`}
           >
-            <div className="flex items-center gap-0.5"><CordelMic className="w-3 h-3" /><CordelPiano className="w-3 h-3" /></div>
+            <Music className="w-3.5 h-3.5" />
             <span>{t('modeDuo')}</span>
           </button>
         </div>

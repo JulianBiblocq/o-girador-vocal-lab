@@ -124,7 +124,7 @@ export const SlicerSegmentWaveform: React.FC<SlicerSegmentWaveformProps> = ({
     <div className="flex flex-col gap-1 select-none">
       <div className="flex flex-wrap items-center justify-between gap-2 px-2 py-1 bg-[var(--cordel-panel)] border border-[var(--cordel-border-panel)] rounded text-[10px] font-mono">
         <div className="flex items-center gap-1">
-          <span className="font-bold text-amber-500 mr-1">🔍 Zoom :</span>
+          <span className="font-bold text-amber-500 mr-1">Zoom :</span>
           <button type="button" onClick={() => setZoomWithAnchor(zoomLevel / 1.5)} className="px-1.5 py-0.5 rounded bg-[var(--cordel-surface)] border border-[var(--cordel-border-panel)] hover:border-amber-500 cursor-pointer font-bold">-</button>
           {SLICER_ZOOM_PRESETS.map((z) => <button key={z} type="button" onClick={() => setZoomWithAnchor(z)} className={`px-1.5 py-0.5 rounded border cursor-pointer font-bold ${Math.round(zoomLevel) === z ? 'bg-amber-600 text-white border-amber-500' : 'bg-[var(--cordel-surface)] border-[var(--cordel-border-panel)] hover:border-amber-500'}`}>{z}x</button>)}
           <button type="button" onClick={() => setZoomWithAnchor(zoomLevel * 1.5)} className="px-1.5 py-0.5 rounded bg-[var(--cordel-surface)] border border-[var(--cordel-border-panel)] hover:border-amber-500 cursor-pointer font-bold">+</button>

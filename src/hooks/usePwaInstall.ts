@@ -65,8 +65,8 @@ export function usePwaInstall(locale: 'fr' | 'br' = 'fr') {
     await alertAsync({
       title: isBr ? 'Instalar o Cantador' : 'Installer Cantador',
       message: isBr
-        ? '📲 Para instalar o Cantador no seu dispositivo :\n\n• Chrome / Edge : clique no menu ⋮ (ou no ícone na barra de endereço) ➔ "Instalar a página como aplicativo".\n\n• Safari iOS : toque no botão Compartilhar ➔ "Adicionar à Tela de Início".'
-        : '📲 Pour installer Cantador sur votre appareil :\n\n• Chrome / Edge : cliquez sur le menu ⋮ (ou l\'icône dans la barre d\'adresse) ➔ "Installer la page en tant qu\'application".\n\n• Safari iOS : appuyez sur le bouton Partager ➔ "Sur l\'écran d\'accueil".',
+        ? 'Para instalar o Cantador no seu dispositivo :\n\n• Chrome / Edge : clique no menu ⋮ (ou no ícone na barra de endereço) ➔ "Instalar a página como aplicativo".\n\n• Safari iOS : toque no botão Compartilhar ➔ "Adicionar à Tela de Início".'
+        : 'Pour installer Cantador sur votre appareil :\n\n• Chrome / Edge : cliquez sur le menu ⋮ (ou l\'icône dans la barre d\'adresse) ➔ "Installer la page en tant qu\'application".\n\n• Safari iOS : appuyez sur le bouton Partager ➔ "Sur l\'écran d\'accueil".',
       confirmLabel: isBr ? 'Entendido' : 'Compris',
       variant: 'info',
     });

@@ -17,7 +17,7 @@ export function isVaralCommissionOrNonSong(data: any): boolean {
   const nonSongCats = ['ComptesRendus', 'TutosFabrication', 'PhotosPrestations', 'fabrication', 'tuto_fabrication'];
   if (nonSongCats.includes(data.categoryId) || nonSongCats.includes(data.categorie)) return true;
   if (data.type === 'culture_fiche' || data.type === 'fiche_pedagogique' || data.type === 'fabrication') return true;
-  if (typeof data.titre === 'string' && (data.titre.includes('Commission :') || data.titre.startsWith('📋') || data.titre.startsWith('📌'))) return true;
+  if (typeof data.titre === 'string' && (data.titre.includes('Commission :') || data.titre.startsWith('\u{1F4CB}') || data.titre.startsWith('\u{1F4CC}'))) return true;
   return false;
 }
 

@@ -68,7 +68,7 @@ export const SaveAndExportDropdown: React.FC<Props> = ({ project, isUserLoggedIn
       window.dispatchEvent(new CustomEvent('app-toast', {
         detail: {
           type: 'success',
-          message: `✅ Fiche Organizador mise à jour (${res.bpm} BPM • Gamme : ${res.scaleLabel} • Temps & Syllabes synchronisés)`,
+          message: `Fiche Organizador mise à jour (${res.bpm} BPM • Gamme : ${res.scaleLabel} • Temps & Syllabes synchronisés)`,
         },
       }));
     } catch (err: any) {
@@ -112,22 +112,22 @@ export const SaveAndExportDropdown: React.FC<Props> = ({ project, isUserLoggedIn
         <div className="absolute top-10 left-0 sm:left-auto sm:right-0 z-[100] w-80 cordel-card p-1.5 bg-[var(--cordel-surface)] text-[var(--cordel-text)] border border-[var(--cordel-border-panel)] shadow-lg flex flex-col gap-1 text-xs font-mono rounded">
           <button type="button" onClick={() => { setIsOpen(false); handleSave(); }}
             className="w-full p-2 text-left flex items-center gap-2 hover:bg-[var(--cordel-subcard-bg)] rounded transition-colors cursor-pointer border border-transparent hover:border-[var(--cordel-border-sub)]">
-            <Save className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+            <Save className="w-3.5 h-3.5 text-theme-accent shrink-0" />
             <span className="font-bold">{t('btnSaveToada')} (Ctrl+S)</span>
           </button>
           <button type="button" onClick={handlePublishSequencer}
             className="w-full p-2 text-left flex items-center gap-2 hover:bg-[var(--cordel-subcard-bg)] rounded transition-colors cursor-pointer border border-transparent hover:border-[var(--cordel-border-sub)]">
-            <CloudUpload className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+            <CloudUpload className="w-3.5 h-3.5 text-theme-accent shrink-0" />
             <span className="font-bold">{t('sendToSequencer')}</span>
           </button>
           <button type="button" onClick={handlePublishOrganizador}
             className="w-full p-2 text-left flex items-center gap-2 hover:bg-[var(--cordel-subcard-bg)] rounded transition-colors cursor-pointer border border-transparent hover:border-[var(--cordel-border-sub)]">
-            <FileText className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-            <span className="font-bold">🔄 Renvoyer vers Organizador (Rythme, Syllabes _, Tonalité & Tempo)</span>
+            <FileText className="w-3.5 h-3.5 text-theme-accent shrink-0" />
+            <span className="font-bold">Renvoyer vers Organizador (Rythme, Syllabes _, Tonalité & Tempo)</span>
           </button>
           <button type="button" onClick={handleWav}
             className="w-full p-2 text-left flex items-center gap-2 hover:bg-[var(--cordel-subcard-bg)] rounded transition-colors cursor-pointer border border-transparent hover:border-[var(--cordel-border-sub)]">
-            <Music className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+            <Music className="w-3.5 h-3.5 text-theme-accent shrink-0" />
             <span className="font-bold">{t('exportFullSongWav')}</span>
           </button>
         </div>

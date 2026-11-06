@@ -22,7 +22,7 @@ export const LongAudioSlicerBanner: React.FC<LongAudioSlicerBannerProps> = ({ du
         </div>
         <div className="flex flex-col">
           <span className="text-xs font-bold font-mono text-theme-ink flex items-center gap-1.5">
-            <span>✂️</span>
+            <Scissors className="w-3.5 h-3.5 text-theme-accent" />
             <span>{t('slicerLongAudioDetectedTitle', { sec: durationSec.toFixed(1) })}</span>
           </span>
           <span className="text-[11px] text-[var(--cordel-secondary-text)]">

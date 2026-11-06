@@ -79,14 +79,15 @@ export const PreTakeSetupAssistantBar: React.FC = () => {
       <div className="flex items-center gap-1.5 flex-wrap">
         {!isDeviceCalibrated ? (
           <div className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-[#9a3412]/15 border border-[#9a3412] text-[#9a3412] dark:text-amber-200 font-bold">
-            <span>⚠️ 1. {isBr ? 'Latência não calibrada' : 'Latence non calée'}</span>
+            <span>1. {isBr ? 'Latência não calibrada' : 'Latence non calée'}</span>
             <button type="button" onClick={() => setActiveLivret('reglages')} className="px-2 py-0.5 bg-[#9a3412] hover:opacity-90 text-white font-bold rounded flex items-center gap-1 cursor-pointer">
               <Zap className="w-3 h-3" /><span>{isBr ? 'Calibrar' : 'Calibrer'}</span>
             </button>
           </div>
         ) : (
           <button type="button" onClick={() => setActiveLivret('reglages')} className="px-2.5 py-1 rounded bg-emerald-700/15 border border-emerald-600/40 text-emerald-800 dark:text-emerald-300 font-bold flex items-center gap-1.5 cursor-pointer">
-            <span>✅ 1. {isBr ? `Latência calibrada (${calibratedMs} ms)` : `Latence calée (${calibratedMs} ms)`}</span>
+            <Check className="w-3.5 h-3.5" />
+            <span>1. {isBr ? `Latência calibrada (${calibratedMs} ms)` : `Latence calée (${calibratedMs} ms)`}</span>
             <Settings className="w-3 h-3 opacity-70" />
           </button>
         )}
@@ -94,7 +95,7 @@ export const PreTakeSetupAssistantBar: React.FC = () => {
 
       <div className="flex items-center gap-1.5 flex-wrap">
         <span className="px-2 py-1 cordel-card-sm rounded font-bold">
-          🥁 2. {isBr ? 'Andamento :' : 'Tempo :'} <strong className="text-[#9a3412] dark:text-amber-300">{bpm} BPM</strong> ({project.timeSignature || '4/4'})
+          2. {isBr ? 'Andamento :' : 'Tempo :'} <strong className="text-[#9a3412] dark:text-amber-300">{bpm} BPM</strong> ({project.timeSignature || '4/4'})
         </span>
         <button type="button" onClick={handleTapTempo} className="px-2.5 py-1 cordel-btn font-bold flex items-center gap-1 rounded cursor-pointer">
           <Drum className="w-3.5 h-3.5 text-[#9a3412] dark:text-amber-300" /><span>Tap Tempo {tapCount >= 2 ? `(${tapCount})` : ''}</span>
@@ -103,7 +104,7 @@ export const PreTakeSetupAssistantBar: React.FC = () => {
 
       <div className="flex items-center gap-1.5 flex-wrap">
         <span className="px-2 py-1 cordel-card-sm rounded font-bold">
-          🎼 3. {isBr ? 'Escala detectada :' : 'Gamme détectée :'} <strong className="text-[#9a3412] dark:text-amber-300">{activeScaleText}</strong>
+          3. {isBr ? 'Escala detectada :' : 'Gamme détectée :'} <strong className="text-[#9a3412] dark:text-amber-300">{activeScaleText}</strong>
         </span>
         <button type="button" onClick={() => applyScale(activeTonic, activeScaleType)} className="px-2 py-1 rounded bg-emerald-700 hover:bg-emerald-600 text-white font-bold flex items-center gap-1 cursor-pointer">
           <Check className="w-3 h-3" /><span>{isBr ? 'Validar' : 'Valider'}</span>

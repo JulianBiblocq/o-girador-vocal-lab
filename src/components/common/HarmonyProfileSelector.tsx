@@ -1,6 +1,6 @@
 /**
  * HarmonyProfileSelector.tsx
- * Sélecteur UI compact [ 🎸 Accords MIDI ▾ ] avec toggle, profils et volume (< 125 lignes).
+ * Sélecteur UI compact [ Accords MIDI ▾ ] avec toggle, profils et volume (< 125 lignes).
  */
 import React, { useState, useRef, useEffect } from 'react';
 import type { HarmonyConfig, HarmonyProfileId } from '../../types/harmony.types';
@@ -65,8 +65,8 @@ export const HarmonyProfileSelector: React.FC<HarmonyProfileSelectorProps> = ({ 
         } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
         title={`${t('harmonyToggleHelp')} — ${currentLabel}`}
       >
-        <Music className={`w-3.5 h-3.5 ${config.enabled ? 'text-amber-600 dark:text-amber-400' : 'text-stone-500'}`} />
-        <span>🎸 {t('harmonyBtnLabel')}</span>
+        <Music className="w-3.5 h-3.5 shrink-0" />
+        <span>{t('harmonyBtnLabel')}</span>
         <span className={`w-2 h-2 rounded-full ${config.enabled ? 'bg-emerald-500 animate-pulse' : 'bg-stone-500'}`} />
         <span className="text-[10px] opacity-75">▾</span>
       </button>

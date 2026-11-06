@@ -6,7 +6,7 @@ import type { LexiconTranslations } from './lexiconTranslations.types';
 
 export const lexiconTranslationsFr: LexiconTranslations = {
   lexiconModalTitle: 'DICTIONNAIRE DE LA TOADA (PORTUGAIS ⇄ FRANÇAIS)',
-  lexiconDetectBtn: '🔍 Détecter les mots du chant',
+  lexiconDetectBtn: 'Détecter les mots du chant',
   lexiconDetectTooltip: 'Analyser les paroles et repérer les termes Nordeste, Yoruba et Portugais chanté',
   lexiconAddTermBtn: '+ Ajouter un terme',
   lexiconEmptyNotice: 'Aucun mot répertorié. Cliquez sur « Détecter » pour scanner les paroles ou ajoutez-en manuellement.',
@@ -17,8 +17,8 @@ export const lexiconTranslationsFr: LexiconTranslations = {
   lexiconCategoryCol: 'Catégorie',
   lexiconQuizBadge: 'Quiz Organizador',
   lexiconActiveInToada: 'Dans cette Toada',
-  lexiconAllTermsTab: '📚 Catalogue général',
-  lexiconToadaTermsTab: '⭐ Vocabulaire du chant',
+  lexiconAllTermsTab: 'Catalogue général',
+  lexiconToadaTermsTab: 'Vocabulaire du chant',
   lexiconDetectedCountToast: '{count} mots détectés et synchronisés !',
   lexiconListenTermBtn: 'Écouter la prononciation',
   lexiconQuizGeneratedToast: '{count} questions de quiz bilingue prêtes pour Organizador !',

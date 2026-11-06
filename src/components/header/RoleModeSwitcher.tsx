@@ -1,6 +1,6 @@
 /**
  * RoleModeSwitcher.tsx
- * Commutateur Cordel de prévisualisation [ 🎙️ Studio | 🎓 Élève ] pour les utilisateurs autorisés.
+ * Commutateur Cordel de prévisualisation [ Studio | Élève ] pour les utilisateurs autorisés.
  * Strictement < 150 lignes.
  */
 
@@ -8,6 +8,7 @@ import React from 'react';
 import { useVocalTransportStore } from '../../stores/useVocalTransportStore';
 import { canAccessVocalStudio } from '../../utils/vocalPermissions';
 import { useLanguage } from '../../i18n/LanguageContext';
+import { Mic, Headphones } from 'lucide-react';
 
 export const RoleModeSwitcher: React.FC = () => {
   const viewRoleMode = useVocalTransportStore((s) => s.viewRoleMode);
@@ -28,7 +29,7 @@ export const RoleModeSwitcher: React.FC = () => {
         }`}
         title={t('roleStudio')}
       >
-        <span>🎙️</span>
+        <Mic className="w-3.5 h-3.5" />
         <span className="hidden sm:inline">{t('roleStudio')}</span>
       </button>
       <button
@@ -41,7 +42,7 @@ export const RoleModeSwitcher: React.FC = () => {
         }`}
         title={t('roleEleve')}
       >
-        <span>🎓</span>
+        <Headphones className="w-3.5 h-3.5" />
         <span className="hidden sm:inline">{t('roleEleve')}</span>
       </button>
     </div>

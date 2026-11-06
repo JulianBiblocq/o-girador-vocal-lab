@@ -59,17 +59,17 @@ export const AmbitusFinderPanel: React.FC = () => {
             {j.isTesting && j.sweepCountdown === 0 && (
               <div className="p-3 rounded border border-[#0f766e]/40 bg-[#0f766e]/10 space-y-2">
                 <div className="flex flex-wrap items-center justify-between gap-2 text-xs font-mono font-bold">
-                  <span className="text-[#0f766e] dark:text-[#2dd4bf]">🎙️ CHANTEZ ! Sirène Grave ➔ Aigu</span>
+                  <span className="text-[#0f766e] dark:text-[#2dd4bf]">CHANTEZ ! Sirène Grave ➔ Aigu</span>
                   <span className="px-2 py-0.5 rounded bg-[var(--cordel-surface)] border border-[var(--cordel-border-sub)]">Note : {liveNoteStr}</span>
-                  <span>⏱️ {j.sweepRemainingSec.toFixed(1)}s ({j.sweepProgress}%)</span>
+                  <span>{j.sweepRemainingSec.toFixed(1)}s ({j.sweepProgress}%)</span>
                 </div>
                 <div className="w-full h-3 bg-[var(--cordel-surface)] rounded-full overflow-hidden border border-[var(--cordel-border-panel)]">
                   <div className="h-full bg-gradient-to-r from-amber-600 via-teal-600 to-emerald-500 transition-all duration-100" style={{ width: `${j.sweepProgress}%` }} />
                 </div>
                 <div className="grid grid-cols-3 gap-1 text-[10px] font-mono text-center">
-                  <span className={`py-0.5 rounded border ${j.sweepProgress < 30 ? 'bg-amber-600 text-white border-amber-500 font-bold' : 'opacity-55 border-transparent'}`}>0–30% : 🔉 Grave</span>
-                  <span className={`py-0.5 rounded border ${j.sweepProgress >= 30 && j.sweepProgress < 70 ? 'bg-teal-700 text-white border-teal-500 font-bold' : 'opacity-55 border-transparent'}`}>30–70% : 🗣️ Médium</span>
-                  <span className={`py-0.5 rounded border ${j.sweepProgress >= 70 ? 'bg-emerald-600 text-white border-emerald-400 font-bold' : 'opacity-55 border-transparent'}`}>70–100% : 🚀 Aigu</span>
+                  <span className={`py-0.5 rounded border ${j.sweepProgress < 30 ? 'bg-amber-600 text-white border-amber-500 font-bold' : 'opacity-55 border-transparent'}`}>0–30% : Grave</span>
+                  <span className={`py-0.5 rounded border ${j.sweepProgress >= 30 && j.sweepProgress < 70 ? 'bg-teal-700 text-white border-teal-500 font-bold' : 'opacity-55 border-transparent'}`}>30–70% : Médium</span>
+                  <span className={`py-0.5 rounded border ${j.sweepProgress >= 70 ? 'bg-emerald-600 text-white border-emerald-400 font-bold' : 'opacity-55 border-transparent'}`}>70–100% : Aigu</span>
                 </div>
               </div>
             )}

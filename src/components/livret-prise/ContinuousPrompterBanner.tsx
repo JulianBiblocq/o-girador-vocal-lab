@@ -1,6 +1,6 @@
 /**
  * ContinuousPrompterBanner.tsx
- * Prompteur dynamique pendant la prise continue : indicateur 🎙️ CHANTEZ vs 🔇 TROU DU CHŒUR / PUXADOR (< 95 lignes).
+ * Prompteur dynamique pendant la prise continue : indicateur CHANTEZ vs TROU DU CHŒUR / PUXADOR (< 95 lignes).
  */
 import React from 'react';
 import type { ContinuousPrompterSlotInfo } from '../../audio/continuousTakeRecorder';
@@ -30,14 +30,14 @@ export const ContinuousPrompterBanner: React.FC<ContinuousPrompterBannerProps> =
           {isGap ? (
             <span className="px-2.5 py-0.5 rounded text-xs font-black uppercase tracking-wider bg-stone-700 text-amber-200 flex items-center gap-1.5">
               <VolumeX className="w-3.5 h-3.5 text-amber-400" />
-              <span>🔇 TROU DU {gapRoleName} ({info.gapMeasures ?? 1} M) — Écoutez / Respirez</span>
+              <span>TROU DU {gapRoleName} ({info.gapMeasures ?? 1} M) — Écoutez / Respirez</span>
             </span>
           ) : (
             <span className={`px-2.5 py-0.5 rounded text-xs font-black uppercase tracking-wider flex items-center gap-1.5 ${
               isPuxador ? 'bg-amber-500 text-stone-950' : 'bg-emerald-500 text-stone-950'
             }`}>
               <Mic className="w-3.5 h-3.5" />
-              <span>🎙️ CHANTEZ ({activeRoleName})</span>
+              <span>CHANTEZ ({activeRoleName})</span>
             </span>
           )}
           <span className="text-xs font-mono font-bold text-amber-200">
@@ -55,7 +55,7 @@ export const ContinuousPrompterBanner: React.FC<ContinuousPrompterBannerProps> =
         <div className="flex items-center gap-2">
           {isGap && typeof info.remainingBeatsToNextEntry === 'number' && (
             <span className="px-2 py-0.5 rounded bg-amber-500/25 border border-amber-400/60 text-amber-300 text-xs font-mono font-black">
-              ⏳ Entrée dans {info.remainingBeatsToNextEntry} temps
+              Entrée dans {info.remainingBeatsToNextEntry} temps
             </span>
           )}
           <span className="text-[10px] font-mono text-red-400 font-bold flex items-center gap-1 animate-pulse">
@@ -68,8 +68,8 @@ export const ContinuousPrompterBanner: React.FC<ContinuousPrompterBannerProps> =
         {isGap ? (
           <span className="text-stone-400 italic text-sm font-mono">
             {info.counterRoleLyrics
-              ? `🔊 (${gapRoleName} chante : « ${info.counterRoleLyrics} » — Ne chantez pas, préparez votre prochaine entrée)`
-              : `🔇 Pause Batuque (${info.gapMeasures ?? 1} M)`}
+              ? `(${gapRoleName} chante : « ${info.counterRoleLyrics} » — Ne chantez pas, préparez votre prochaine entrée)`
+              : `Pause Batuque (${info.gapMeasures ?? 1} M)`}
           </span>
         ) : (
           info.lyrics ? `« ${info.lyrics} »` : <em>({t('continuousPrompterRest')})</em>

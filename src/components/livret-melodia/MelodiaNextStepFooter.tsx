@@ -1,7 +1,7 @@
 /**
  * MelodiaNextStepFooter.tsx
  * Pied de page de fin d'étape pour LivretMelodia (< 120 lignes).
- * Inclut le bouton direct [ 🔄 Renvoyer vers Organizador (Rythme, Syllabes _, Tonalité & Tempo) ].
+ * Inclut le bouton direct [ Renvoyer vers Organizador (Rythme, Syllabes _, Tonalité & Tempo) ].
  */
 import React, { useState } from 'react';
 import { useToadaProject } from '../../context/ToadaProjectContext';
@@ -51,7 +51,7 @@ export const MelodiaNextStepFooter: React.FC = () => {
         new CustomEvent('app-toast', {
           detail: {
             type: 'success',
-            message: `✅ Fiche Organizador mise à jour (${res.bpm} BPM • Gamme : ${res.scaleLabel} • Temps & Syllabes synchronisés)`,
+            message: `Fiche Organizador mise à jour (${res.bpm} BPM • Gamme : ${res.scaleLabel} • Temps & Syllabes synchronisés)`,
           },
         })
       );
@@ -101,7 +101,7 @@ export const MelodiaNextStepFooter: React.FC = () => {
           className="px-3 py-1.5 rounded bg-emerald-700 hover:bg-emerald-600 text-white text-xs font-mono font-bold flex items-center gap-1.5 cursor-pointer shadow-xs transition-colors disabled:opacity-50"
         >
           <RefreshCw className={`w-3.5 h-3.5 ${isPushingOrg ? 'animate-spin' : ''}`} />
-          <span>🔄 Renvoyer vers Organizador (Rythme, Syllabes _, Tonalité & Tempo)</span>
+          <span>Renvoyer vers Organizador (Rythme, Syllabes _, Tonalité & Tempo)</span>
         </button>
 
         <button

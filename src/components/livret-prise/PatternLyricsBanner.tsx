@@ -103,7 +103,7 @@ export const PatternLyricsBanner: React.FC = () => {
 
       {activePattern.assignedPhoneticText && (
         <div className="text-[10px] font-mono text-[var(--cordel-secondary-text)] italic px-1 flex items-center gap-1">
-          <span className="opacity-60">🔤</span>
+          <span className="opacity-60 font-bold">[Phon.]</span>
           <span>{activePattern.assignedPhoneticText}</span>
         </div>
       )}

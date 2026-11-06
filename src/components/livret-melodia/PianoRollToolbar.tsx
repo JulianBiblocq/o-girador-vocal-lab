@@ -1,8 +1,8 @@
 /**
  * PianoRollToolbar.tsx
  * Barre d'outils épurée bilingue (FR / PT-BR) façon Cubase VariAudio :
- * 5 outils (Sélection, Crayon, Ciseaux, Colle, Gomme), [ 🎯 Poser les notes sur la ligne verte ],
- * [ 🔄 Réinitialiser Rythme & Notes ] et Correction Voix Globale (0..100%) (< 130 lignes).
+ * 5 outils (Sélection, Crayon, Ciseaux, Colle, Gomme), [ Poser les notes sur la ligne verte ],
+ * [ Réinitialiser Rythme & Notes ] et Correction Voix Globale (0..100%) (< 130 lignes).
  */
 import React from 'react';
 import type { PianoRollTool } from './pianoRollInteractions';

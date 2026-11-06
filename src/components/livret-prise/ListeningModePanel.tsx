@@ -38,10 +38,10 @@ export const ListeningModePanel: React.FC<ListeningModePanelProps> = ({
   const currentOctave = match ? match[2] : '4';
 
   const scopeLabel = applyScope === 'all'
-    ? `🌍 ${t('scopeAll')}`
+    ? t('scopeAll')
     : applyScope === 'selected'
     ? t('scopeSelected', { n: selectedPatternIds.length })
-    : `🎯 ${t('scopeActive')}`;
+    : t('scopeActive');
 
   return (
     <div className="cordel-card p-3 h-full flex flex-col justify-between gap-2.5">

@@ -1,7 +1,7 @@
 /**
  * PianoRollKeyboard.tsx
- * Clavier vertical 64 px fixe à gauche (touches crème/bois doux #d6c7b2 en Mode Nuit, ivoire en Mode Jour).
- * Aligné directement avec la grille de notes (C2..C5) (< 75 lignes).
+ * Clavier matriciel 64 px à gauche du Piano Roll : alignement 1:1 absolu (y = (maxMidi - midi) * rowHeight)
+ * avec chaque rangée de brique MIDI et la courbe verte (< 80 lignes).
  */
 import React from 'react';
 import { midiToNoteName } from '../../utils/noteUtils';
@@ -17,7 +17,14 @@ interface PianoRollKeyboardProps {
 
 const BLACK_SEMITONES = new Set([1, 3, 6, 8, 10]);
 
-export const PianoRollKeyboard: React.FC<PianoRollKeyboardProps> = ({ minMidi, maxMidi, rowHeight, onPlayNote }) => {
+export const PianoRollKeyboard: React.FC<PianoRollKeyboardProps> = ({
+  minMidi,
+  maxMidi,
+  rowHeight,
+  onPlayNote,
+}) => {
+  const totalRows = Math.max(1, maxMidi - minMidi + 1);
+  const totalHeight = totalRows * rowHeight;
   const rows: React.ReactNode[] = [];
 
   for (let midi = maxMidi; midi >= minMidi; midi--) {
@@ -25,37 +32,40 @@ export const PianoRollKeyboard: React.FC<PianoRollKeyboardProps> = ({ minMidi, m
     const isBlack = BLACK_SEMITONES.has(semitone);
     const noteName = midiToNoteName(midi);
     const isC = semitone === 0;
-    const isBorderBoundary = semitone === 4 || semitone === 11;
+    const y = (maxMidi - midi) * rowHeight;
 
     if (isBlack) {
       rows.push(
         <div
           key={midi}
-          style={{ height: `${rowHeight}px` }}
+          style={{ top: `${y}px`, height: `${rowHeight}px` }}
           onClick={() => onPlayNote(midi)}
           title={`Note ${noteName}`}
-          className="relative w-full cursor-pointer select-none group"
+          className="absolute left-0 right-0 box-border cursor-pointer select-none flex items-center justify-end pr-1.5 bg-[#1c1613] hover:bg-[#2b211c] border-b border-[#3e2723] border-l-4 border-l-[#b45309] transition-colors"
         >
-          <div className="absolute inset-0 bg-[#e8e0d0] dark:bg-[#c8b8a2] border-b border-black/20" />
-          <div className="absolute left-0 top-0 bottom-0 w-[38px] bg-gradient-to-r from-[#1c1917] to-[#292524] border-t border-b border-r border-black shadow-md z-10 flex items-center px-1 group-hover:from-black group-hover:to-amber-950/80 transition-colors">
-            <span className="text-[7.5px] font-mono font-bold text-amber-200/80 tracking-tighter truncate">
-              {noteName}
-            </span>
-          </div>
+          <span className="text-[10px] leading-none font-mono font-semibold text-[#f4ecd8] tracking-tight">
+            {noteName}
+          </span>
         </div>
       );
     } else {
       rows.push(
         <div
           key={midi}
-          style={{ height: `${rowHeight}px` }}
+          style={{ top: `${y}px`, height: `${rowHeight}px` }}
           onClick={() => onPlayNote(midi)}
           title={`Note ${noteName}`}
-          className={`relative w-full cursor-pointer select-none flex items-center justify-end pr-1.5 transition-colors group ${
-            isC ? 'bg-[#f8f1e0] dark:bg-[#dfd2c0]' : 'bg-[#f2ead8] dark:bg-[#d6c7b2]'
-          } ${isBorderBoundary ? 'border-b-2 border-[var(--cordel-border-panel)]' : 'border-b border-black/20'} hover:bg-[#e8dcc4] dark:hover:bg-[#e5d8c8]`}
+          className={`absolute left-0 right-0 box-border cursor-pointer select-none flex items-center justify-end pr-1.5 border-b border-[#3e2723] transition-colors ${
+            isC
+              ? 'bg-[#efe4cc] dark:bg-[#dfd2c0] border-l-4 border-l-[#9a3412]'
+              : 'bg-[#f4ecd8] dark:bg-[#d6c7b2]'
+          } hover:brightness-95`}
         >
-          <span className={`text-[8.5px] font-mono tracking-tight text-[#1a1a1a] ${isC ? 'font-black text-[#9a3412]' : 'font-bold'}`}>
+          <span
+            className={`text-[11px] leading-none font-mono font-bold tracking-tight ${
+              isC ? 'text-[#9a3412] font-black' : 'text-[#1a1a1a]'
+            }`}
+          >
             {noteName}
           </span>
         </div>
@@ -65,8 +75,8 @@ export const PianoRollKeyboard: React.FC<PianoRollKeyboardProps> = ({ minMidi, m
 
   return (
     <div
-      style={{ width: `${KEYBOARD_WIDTH}px` }}
-      className="sticky left-0 z-10 shrink-0 bg-[var(--cordel-surface)] border-r-2 border-[var(--cordel-border-panel)] flex flex-col shadow-lg"
+      style={{ width: `${KEYBOARD_WIDTH}px`, height: `${totalHeight}px`, minHeight: `${totalHeight}px` }}
+      className="sticky left-0 z-10 shrink-0 self-start relative bg-[#1c1613] border-r-2 border-[#3e2723] shadow-md box-border"
     >
       {rows}
     </div>

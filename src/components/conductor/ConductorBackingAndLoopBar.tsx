@@ -87,9 +87,9 @@ export const ConductorBackingAndLoopBar: React.FC<ConductorBackingAndLoopBarProp
             <button type="button" onClick={() => updateActiveBackingTrack(projectId, { firstDownbeatOffsetSec: Math.round((track.firstDownbeatOffsetSec + 0.01) * 1000) / 1000 })} className="px-1 cordel-card-sm rounded cursor-pointer">+10ms</button>
             <button
               type="button" onClick={() => updateActiveBackingTrack(projectId, { loopTrack: !track.loopTrack })}
-              className={`px-1.5 py-0.5 rounded cursor-pointer border ${track.loopTrack ? 'bg-theme-wood text-[#f4ecd8] font-bold' : 'cordel-card-sm opacity-70'}`}
+              className={`px-1.5 py-0.5 rounded cursor-pointer border flex items-center ${track.loopTrack ? 'bg-theme-wood text-[#f4ecd8] font-bold' : 'cordel-card-sm opacity-70'}`}
             >
-              🔁
+              <Repeat className="w-3 h-3" />
             </button>
             <input
               type="range" min={0} max={1} step={0.05} value={track.volume}

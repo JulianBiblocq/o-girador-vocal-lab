@@ -91,7 +91,7 @@ export const AmbitusWizardStepToneCheck: React.FC<AmbitusWizardStepToneCheckProp
           <button type="button" disabled={isTesting} onClick={() => onSetCurrentMidi((m) => Math.min(84, m + 12))} className="cordel-btn px-2 py-1 font-mono font-bold cursor-pointer rounded text-[11px]" title="+1 Octave">+1 Oct ▶</button>
           {typeof medianMidi === 'number' && medianMidi !== currentMidi && (
             <button type="button" disabled={isTesting} onClick={() => onSetCurrentMidi(() => medianMidi)} className="px-2 py-1 rounded bg-amber-500/15 text-amber-600 dark:text-amber-300 border border-amber-500/40 font-mono font-bold text-[10px] cursor-pointer">
-              🎯 Médiane ({midiToNoteName(medianMidi)})
+              Médiane ({midiToNoteName(medianMidi)})
             </button>
           )}
         </div>
@@ -110,7 +110,7 @@ export const AmbitusWizardStepToneCheck: React.FC<AmbitusWizardStepToneCheckProp
             <div className="flex items-center justify-center gap-2 animate-pulse"><Volume2 className="w-4 h-4" /><span>{t('ambitusListenPhasePrompt', { note: noteName })}</span></div>
           ) : (
             <div className="flex items-center justify-between px-2">
-              <span>🎙️ {t('ambitusSingPhasePrompt', { note: noteName })}</span>
+              <span>{t('ambitusSingPhasePrompt', { note: noteName })}</span>
               <span className="font-mono text-[11px]">{progress}%</span>
             </div>
           )}

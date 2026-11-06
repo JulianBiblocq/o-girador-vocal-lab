@@ -61,7 +61,7 @@ export function drawSegmentWaveform(ctx: CanvasRenderingContext2D, opts: DrawSeg
       ctx.strokeStyle = isSelected ? '#94a3b8' : '#78716c'; ctx.lineWidth = isSelected ? 2 : 1.5; ctx.setLineDash([4, 3]);
       ctx.beginPath(); ctx.moveTo(xStart, 0); ctx.lineTo(xStart, height); ctx.moveTo(xEnd, 0); ctx.lineTo(xEnd, height); ctx.stroke();
       ctx.setLineDash([]);
-      const pLabel = `🔇 Pause #${idx + 1} (${mCount}M)`;
+      const pLabel = `Pause #${idx + 1} (${mCount}M)`;
       ctx.font = 'bold 9px monospace';
       ctx.fillStyle = '#57534e'; ctx.fillRect(xStart + 2, 2, ctx.measureText(pLabel).width + 8, 14);
       ctx.fillStyle = '#ffffff'; ctx.fillText(pLabel, xStart + 6, 12);
@@ -97,7 +97,7 @@ export function drawSegmentWaveform(ctx: CanvasRenderingContext2D, opts: DrawSeg
       ctx.fillStyle = isLight ? 'rgba(120, 113, 108, 0.22)' : 'rgba(168, 162, 158, 0.16)';
       ctx.fillRect(xGapStart, 0, gapW, height);
       ctx.font = 'bold 8px monospace'; ctx.fillStyle = isLight ? '#57534e' : '#d6d3d1';
-      ctx.fillText(`🔇 Pause (${pauseM}M)`, xGapStart + 4, midY + 3);
+      ctx.fillText(`Pause (${pauseM}M)`, xGapStart + 4, midY + 3);
     }
 
     if (xT1 >= 0 && xT1 <= width && xT1 <= xEnd) {

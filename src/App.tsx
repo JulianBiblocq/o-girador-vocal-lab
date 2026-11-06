@@ -1,6 +1,6 @@
 /**
  * App.tsx
- * Point d'entrée de O Girador — Cantador avec navigation 5 livrets + ⚙️ Réglages (< 135 lignes).
+ * Point d'entrée de O Girador — Cantador avec navigation 5 livrets + Réglages (< 135 lignes).
  */
 import React, { useState, useEffect } from 'react';
 import { LanguageProvider, useLanguage } from './i18n/LanguageContext';
@@ -18,7 +18,7 @@ import { LivretContentRenderer } from './components/navigation/LivretContentRend
 import { useGlobalTransportShortcuts } from './hooks/useGlobalTransportShortcuts';
 import { useVocalLabMidi } from './hooks/useVocalLabMidi';
 import { usePwaInstall } from './hooks/usePwaInstall';
-import { Sun, Moon } from 'lucide-react';
+import { Sun, Moon, Download } from 'lucide-react';
 
 const AppContent: React.FC = () => {
   useGlobalTransportShortcuts();
@@ -77,7 +77,7 @@ const AppContent: React.FC = () => {
               title={locale === 'br' ? 'Instalar aplicativo' : "Installer l'application"}
               className="h-9 px-2.5 cordel-btn font-mono text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer rounded transition-transform active:scale-95"
             >
-              <span>📲</span>
+              <Download className="w-3.5 h-3.5 text-theme-accent" />
               <span>{t('pwaInstallBtn') || (locale === 'br' ? 'Instalar' : 'Installer')}</span>
             </button>
           )}

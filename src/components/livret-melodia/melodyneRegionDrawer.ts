@@ -79,7 +79,7 @@ export function drawMelodyneRegions(
 
     // 4. Badge récapitulatif si zone sélectionnée
     if (isSelected && w > 105) {
-      const badgeText = `🎯${r.pitchCenterPct}% ⚓${r.driftCorrectionPct ?? 80}% 📏${r.flattenPct}%`;
+      const badgeText = `C:${r.pitchCenterPct}% D:${r.driftCorrectionPct ?? 80}% F:${r.flattenPct}%`;
       const badgeW = 122, badgeX = xIn + (w - badgeW) / 2;
       ctx.fillStyle = 'rgba(0, 0, 0, 0.80)';
       ctx.fillRect(badgeX, 2, badgeW, 14);

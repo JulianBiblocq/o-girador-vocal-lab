@@ -5,7 +5,7 @@
  * et bouton interrupteur [ 🔒 Structure Organizador ] ⟷ [ ✏️ Modifier la structure ] (< 130 lignes).
  */
 import React, { useRef, useState, useCallback, useEffect } from 'react';
-import { Drum, Volume2, Search, Lock, Edit3, Minus, Plus } from 'lucide-react';
+import { Drum, Volume2, Search, Lock, Edit3, Minus, Plus, Hand, Music } from 'lucide-react';
 import { NumericDraftInput } from '../ui/NumericDraftInput';
 import { decodeAudioFile } from '../../utils/directAudioImporter';
 import {
@@ -84,7 +84,8 @@ export const StructureTopControls: React.FC<StructureTopControlsProps> = ({
         </div>
 
         <button type="button" onClick={handleTapTempo} className="px-2.5 py-1 cordel-btn font-bold flex items-center gap-1 rounded cursor-pointer hover:bg-amber-500/20" title={isBr ? 'Clique 3 a 4 vezes no ritmo para definir o andamento' : 'Cliquez 3 à 4 fois en rythme pour fixer le tempo'}>
-          <span>👆 Tap Tempo {tapCount >= 2 ? `(${tapCount})` : ''}</span>
+          <Hand className="w-3.5 h-3.5 text-theme-accent" />
+          <span>Tap Tempo {tapCount >= 2 ? `(${tapCount})` : ''}</span>
         </button>
 
         <button type="button" onClick={() => fileRef.current?.click()} className="px-2.5 py-1 cordel-card-sm hover:border-amber-500 font-bold flex items-center gap-1 rounded cursor-pointer text-theme-accent" title={isBr ? 'Importar um arquivo de áudio de acompanhamento do Batuque (.wav)' : "Importer un fichier audio d'accompagnement Batuque (.wav)"}>
@@ -96,8 +97,9 @@ export const StructureTopControls: React.FC<StructureTopControlsProps> = ({
 
       {/* 2. Gamme & Tonique du Chant (Auto-détectée) */}
       <div className="flex flex-wrap items-center gap-1.5">
-        <span className="px-2 py-1 cordel-card-sm rounded font-bold">
-          🎼 {isBr ? 'Escala :' : 'Gamme :'} <strong className="text-theme-accent">{activeScaleLabel}</strong>
+        <span className="px-2 py-1 cordel-card-sm rounded font-bold inline-flex items-center gap-1">
+          <Music className="w-3.5 h-3.5 text-theme-accent" />
+          <span>{isBr ? 'Escala :' : 'Gamme :'} <strong className="text-theme-accent">{activeScaleLabel}</strong></span>
         </span>
         <button type="button" onClick={onPlayTonicPreview} className="px-2.5 py-1 cordel-btn font-bold flex items-center gap-1 rounded cursor-pointer" title={isBr ? `Ouvir a tônica da toada (${tonicSolfege} / ${referencePitch})` : `Écouter la tonique du chant (${tonicSolfege} / ${referencePitch})`}>
           <Volume2 className="w-3.5 h-3.5 text-theme-accent" />

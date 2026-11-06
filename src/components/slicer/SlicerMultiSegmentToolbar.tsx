@@ -1,10 +1,10 @@
 /**
  * SlicerMultiSegmentToolbar.tsx
  * Barre d'outils Slicer : Sélection par rôle (Puxador / Coro), Métronome ON/OFF, Décalage T1 Maître,
- * Commutateur [ 🕳️ Avec les trous | 🔗 Phrases à la suite ], Calquage Organizador (< 142 lignes).
+ * Commutateur [ Avec les trous | Phrases à la suite ], Calquage Organizador (< 142 lignes).
  */
 import React from 'react';
-import { Volume2, VolumeX, Sparkles, Plus, Trash2, RefreshCw, Magnet, LayoutGrid } from 'lucide-react';
+import { Volume2, VolumeX, Sparkles, Plus, Trash2, RefreshCw, Magnet, LayoutGrid, Link2 } from 'lucide-react';
 import { useLanguage } from '../../i18n/LanguageContext';
 import type { SlicerGapMode } from '../../utils/slicerAlignmentHelper';
 import type { VocalRole } from '../../types/toadaProject.types';
@@ -89,16 +89,16 @@ export const SlicerMultiSegmentToolbar: React.FC<SlicerMultiSegmentToolbarProps>
                 }`}
                 title="Garde les trous exacts de l'autre rôle (Chœur / Puxador) selon le Conducteur"
               >
-                🕳️ Avec les trous
+                Avec les trous
               </button>
               <button
                 type="button" onClick={() => onGapModeChange('chained')}
-                className={`h-7 px-2 font-bold cursor-pointer transition-colors border-l border-[var(--cordel-border-sub)] ${
+                className={`h-7 px-2 font-bold cursor-pointer transition-colors border-l border-[var(--cordel-border-sub)] flex items-center gap-1 ${
                   gapMode === 'chained' ? 'bg-emerald-700 text-white' : 'bg-[var(--cordel-subcard-bg)] text-theme-ink/75 hover:opacity-100'
                 }`}
                 title="Phrases chantées à la suite sans attendre le Chœur / Puxador"
               >
-                🔗 Phrases à la suite
+                <Link2 className="w-3 h-3" /><span>Phrases à la suite</span>
               </button>
             </div>
           )}

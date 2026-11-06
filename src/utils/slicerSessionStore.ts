@@ -75,3 +75,4 @@ export function computeRoleReadinessCounts(patterns: VocalPatternItem[]): RoleRe
     coroRecordedCount: coroPatterns.filter(hasPatternRecordedAudio).length,
   };
 }
+

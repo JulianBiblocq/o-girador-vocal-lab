@@ -111,3 +111,4 @@ export function formatWordsWithUnderlinedSyllables(
   if (isTutti) return `<em><strong>${out}</strong></em>`;
   return isPuxador ? `<strong>${out}</strong>` : out;
 }
+

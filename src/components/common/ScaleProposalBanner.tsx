@@ -69,7 +69,7 @@ export const ScaleProposalBanner: React.FC<ScaleProposalBannerProps> = ({
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2 flex-wrap">
           <span className="font-bold text-amber-900 dark:text-amber-200">
-            🎼 {isBr ? 'Escala detectada na sua voz :' : 'Gamme détectée sur vos voix :'}{' '}
+            {isBr ? 'Escala detectada na sua voz :' : 'Gamme détectée sur vos voix :'}{' '}
             <strong className="text-theme-accent underline">{activeLabel}</strong> ({isBr ? 'Tônica :' : 'Tonique :'} <strong>{tonicSolfege}</strong> • {isBr ? 'Referência :' : 'Repère :'} <strong>{tonicSolfege}{oct}</strong>)
           </span>
           {count > 0 && (

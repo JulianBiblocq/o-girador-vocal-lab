@@ -41,26 +41,26 @@ export const AmbitusNeedleGauge: React.FC<AmbitusNeedleGaugeProps> = ({
   const targetName = midiToNoteName(targetMidi);
   const sungName = hasVoice ? midiToNoteName(Math.round(activeMidi)) : '—';
 
-  let directionText = "🎙️ Chantez pour voir l'aiguille bouger en direct";
+  let directionText = "Chantez pour voir l'aiguille bouger en direct";
   if (hasVoice) {
-    if (isCentered) directionText = `🎯 Pile sur la cible ! (${diffSt >= 0 ? '+' : ''}${Math.round(diffSt * 100)} cts)`;
-    else if (diffSt <= -9) directionText = `⬆️ Monte d'une octave (+${Math.abs(Math.round(diffSt))} demi-tons)`;
-    else if (diffSt >= 9) directionText = `⬇️ Descends d'une octave (-${Math.round(diffSt)} demi-tons)`;
-    else if (diffSt < 0) directionText = `⬆️ Monte un peu (+${Math.abs(diffSt).toFixed(1)} demi-ton${Math.abs(diffSt) >= 1.5 ? 's' : ''})`;
-    else directionText = `⬇️ Descends un peu (-${diffSt.toFixed(1)} demi-ton${diffSt >= 1.5 ? 's' : ''})`;
+    if (isCentered) directionText = `Pile sur la cible ! (${diffSt >= 0 ? '+' : ''}${Math.round(diffSt * 100)} cts)`;
+    else if (diffSt <= -9) directionText = `↑ Monte d'une octave (+${Math.abs(Math.round(diffSt))} demi-tons)`;
+    else if (diffSt >= 9) directionText = `↓ Descends d'une octave (-${Math.round(diffSt)} demi-tons)`;
+    else if (diffSt < 0) directionText = `↑ Monte un peu (+${Math.abs(diffSt).toFixed(1)} demi-ton${Math.abs(diffSt) >= 1.5 ? 's' : ''})`;
+    else directionText = `↓ Descends un peu (-${diffSt.toFixed(1)} demi-ton${diffSt >= 1.5 ? 's' : ''})`;
   }
 
   return (
     <div className="p-2.5 bg-[var(--cordel-subcard-bg)] border border-[var(--cordel-border-sub)] rounded space-y-2">
       <div className="flex flex-wrap items-center justify-between gap-2 text-xs font-mono">
         <div className="flex items-center gap-1.5">
-          <span className="opacity-75">🎯 Cible :</span>
+          <span className="opacity-75">Cible :</span>
           <span className="font-bold text-sm px-2 py-0.5 rounded bg-[#0f766e]/15 text-[#0f766e] dark:text-[#2dd4bf] border border-[#0f766e]/30">
             {targetName} ({midiToHz(targetMidi)} Hz)
           </span>
         </div>
         <div className="flex items-center gap-1.5">
-          <span className="opacity-75">🎙️ Vous chantez :</span>
+          <span className="opacity-75">Vous chantez :</span>
           <span className={`font-bold text-sm px-2 py-0.5 rounded border ${!hasVoice ? 'bg-[var(--cordel-surface)] opacity-60 border-[var(--cordel-border-sub)]' : isCentered ? 'bg-[#0f766e] text-white border-[#0f766e]' : 'bg-amber-600/20 text-amber-600 dark:text-amber-300 border-amber-500/40'}`}>
             {hasVoice ? `${sungName} (${midiToHz(activeMidi)} Hz)` : 'En attente...'}
           </span>

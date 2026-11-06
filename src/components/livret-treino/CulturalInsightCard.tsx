@@ -33,7 +33,7 @@ export const CulturalInsightCard: React.FC<Props> = ({ onOpenLexicon }) => {
   return (
     <div className="cordel-card p-4 space-y-3">
       <div className="font-bold uppercase tracking-wider text-xs border-b border-[var(--cordel-border-sub)] pb-1.5 flex items-center justify-between text-[var(--cordel-text)]">
-        <span>📜 {meta.titre || project.title || 'Toada'}</span>
+        <span className="flex items-center gap-1.5"><BookOpen className="w-3.5 h-3.5 text-theme-accent" /><span>{meta.titre || project.title || 'Toada'}</span></span>
         {meta.nacao && <span className="text-[10px] text-[var(--cordel-secondary-text)] font-normal">Nação : {meta.nacao}</span>}
       </div>
 

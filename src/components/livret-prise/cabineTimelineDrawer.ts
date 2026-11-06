@@ -36,7 +36,7 @@ export function buildCabineTimelineMeasures(params: {
   cuePattern: VocalPatternItem | null; beatsPerMeasure: number; isPunchIn?: boolean; counterRoleCueEnabled?: boolean; lang?: 'fr' | 'br';
 }) {
   const { takeMode, project, activePattern, cuePattern, beatsPerMeasure: B, isPunchIn = false, counterRoleCueEnabled = true, lang = 'fr' } = params;
-  const isBr = lang === 'br', mPfx = isBr ? 'C' : 'M', preLbl = isBr ? '⏳ PRÉ-CONTAGEM' : '⏳ PRÉCOMPTE', cueLbl = isBr ? '🎧 GUIA C' : '🎧 TÉMOIN M';
+  const isBr = lang === 'br', mPfx = isBr ? 'C' : 'M', preLbl = isBr ? 'PRÉ-CONTAGEM' : 'PRÉCOMPTE', cueLbl = isBr ? 'GUIA C' : 'TÉMOIN M';
   const measures: TimelineMeasureBox[] = [], callSet = new Set<number>(), anaSet = new Set<number>(), recSet = new Set<number>(), beatRange = Array.from({ length: B }, (_, i) => i + 1);
   if (takeMode === 'pattern') {
     const hasCue = !isPunchIn && Boolean(cuePattern && (cuePattern.recordingResult?.pcm?.length || cuePattern.variants?.[cuePattern.activeVariantKey]?.recordingResult?.pcm?.length));
@@ -67,7 +67,7 @@ export function buildCabineTimelineMeasures(params: {
       const slot = project.slots[it.slotIndex], patId = it.isRoleGap ? (counterRole === 'puxador' ? slot?.puxadorPatternId : slot?.coroPatternId) : it.patternId, pat = project.patterns.find((p) => p.id === patId);
       for (let k = 0; k < it.measuresCount; k++) {
         const mIdx = (CONTINUOUS_LEAD_IN_MEASURES - 1) + it.startMeasure + k, sb = mIdx * B;
-        measures.push({ measureIndex: mIdx, label: it.isRoleGap ? `🎧 ${mPfx}${it.startMeasure + k}` : `${mPfx}${it.startMeasure + k}`, subLabel: pat?.name || (it.isRoleGap ? counterRole.toUpperCase() : takeMode.toUpperCase()), kind: it.isRoleGap ? 'cue' : 'sung', role: it.isRoleGap ? counterRole : takeMode, beatsCount: B, startBeatGlobal: sb, anacrusisStartBeatInMeasure: beatRange.find((b) => anaSet.has(sb + b - 1)), callInBeatsInMeasure: beatRange.filter((b) => callSet.has(sb + b - 1)), measureLyrics: k === 0 ? (it.isRoleGap ? it.counterRoleLyrics : it.lyrics) : undefined, waveformBins: (!it.isRoleGap || counterRoleCueEnabled) ? extractMeasureWaveform(pat, k + 1, B) : undefined });
+        measures.push({ measureIndex: mIdx, label: it.isRoleGap ? `[${mPfx}${it.startMeasure + k}]` : `${mPfx}${it.startMeasure + k}`, subLabel: pat?.name || (it.isRoleGap ? counterRole.toUpperCase() : takeMode.toUpperCase()), kind: it.isRoleGap ? 'cue' : 'sung', role: it.isRoleGap ? counterRole : takeMode, beatsCount: B, startBeatGlobal: sb, anacrusisStartBeatInMeasure: beatRange.find((b) => anaSet.has(sb + b - 1)), callInBeatsInMeasure: beatRange.filter((b) => callSet.has(sb + b - 1)), measureLyrics: k === 0 ? (it.isRoleGap ? it.counterRoleLyrics : it.lyrics) : undefined, waveformBins: (!it.isRoleGap || counterRoleCueEnabled) ? extractMeasureWaveform(pat, k + 1, B) : undefined });
       }
     });
     measures.push({ measureIndex: measures.length, label: '+T1', kind: 'tail', role: takeMode, beatsCount: 1, startBeatGlobal: measures.length * B, callInBeatsInMeasure: [] });
@@ -106,13 +106,13 @@ export function drawCabineTimelineRibbon(ctx: CanvasRenderingContext2D, w: numbe
       if (b > 1) { ctx.strokeStyle = 'rgba(255,255,255,0.14)'; ctx.beginPath(); ctx.moveTo(xCursor + (b - 1) * cellW, topY + 16); ctx.lineTo(xCursor + (b - 1) * cellW, topY + boxH - 16); ctx.stroke(); }
       if (isHit || isCall) { ctx.fillStyle = isCall ? (isHit ? 'rgba(250,204,21,0.55)' : 'rgba(250,204,21,0.22)') : 'rgba(251,146,60,0.42)'; ctx.fillRect(xCursor + (b - 1) * cellW + 2, topY + 17, cellW - 4, boxH - 34); }
       ctx.fillStyle = isCall ? '#fde047' : isHit ? '#ffffff' : 'rgba(248,250,252,0.75)'; ctx.font = isHit || isCall ? 'bold 12px monospace' : '11px monospace';
-      const lbl = m.kind === 'tail' ? '+1' : `${isCall ? '⚡' : ''}${b}`;
+      const lbl = m.kind === 'tail' ? '+1' : `${isCall ? '•' : ''}${b}`;
       ctx.fillText(lbl, cx - ctx.measureText(lbl).width / 2, floorY + 4);
     }
     if (m.anacrusisStartBeatInMeasure) {
       const ax = xCursor + (m.anacrusisStartBeatInMeasure - 1) * cellW, aw = mw - (m.anacrusisStartBeatInMeasure - 1) * cellW;
       ctx.strokeStyle = '#facc15'; ctx.lineWidth = 2.2; ctx.strokeRect(ax + 1, topY + 1, aw - 2, boxH - 2);
-      ctx.fillStyle = '#facc15'; ctx.font = 'bold 9px monospace'; ctx.fillText(lang === 'br' ? '🎙️ ANACRUSE' : '🎙️ ANACROUSE', ax + 3, topY - 4);
+      ctx.fillStyle = '#facc15'; ctx.font = 'bold 9px monospace'; ctx.fillText(lang === 'br' ? 'ANACRUSE' : 'ANACROUSE', ax + 3, topY - 4);
     }
     if (m.measureLyrics) { ctx.fillStyle = '#fde68a'; ctx.font = '10px sans-serif'; ctx.fillText(m.measureLyrics.slice(0, Math.max(8, Math.floor(mw / 6.5))), xCursor + 5, topY + boxH - 5); }
     xCursor += mw + gap;

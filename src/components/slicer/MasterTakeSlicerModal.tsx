@@ -129,7 +129,7 @@ export const MasterTakeSlicerModal: React.FC<SlicerModalProps> = ({ isOpen, onCl
           <div className="flex flex-col gap-3">
             <SlicerRoleSessionBar activeRole={activeRole} counts={roleCounts} hasPuxadorMaster={hasPuxadorMaster} hasCoroMaster={hasCoroMaster} postAssignBanner={postAssignBanner} onSelectRoleSession={handleSelectRoleSession} onLoadRoleFile={handleLoadRoleFile} onCloseModal={onClose} />
             <div onClick={() => handleLoadRoleFile(activeRole)} className="border-2 border-dashed border-[var(--cordel-border-panel)] rounded p-8 flex flex-col items-center justify-center gap-2 cursor-pointer hover:bg-[var(--cordel-subcard-bg)]">
-              <Upload className="w-8 h-8 text-theme-accent animate-bounce" /><span className="font-bold text-sm text-center">{activeRole === 'puxador' ? '🔴 Importer le fichier maître du Puxador' : '🟢 Importer le fichier maître du Chœur (Coro)'}</span><span className="text-xs text-theme-ink/60 text-center">{t('slicerDropzoneSub')}</span>
+              <Upload className="w-8 h-8 text-theme-accent animate-bounce" /><span className="font-bold text-sm text-center">{activeRole === 'puxador' ? 'Importer le fichier maître du Puxador' : 'Importer le fichier maître du Chœur (Coro)'}</span><span className="text-xs text-theme-ink/60 text-center">{t('slicerDropzoneSub')}</span>
             </div>
           </div>
         ) : (

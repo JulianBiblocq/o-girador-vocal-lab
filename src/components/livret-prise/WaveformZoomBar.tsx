@@ -31,7 +31,7 @@ export const WaveformZoomBar: React.FC<WaveformZoomBarProps> = ({
           title={t('zoomOutTitle')}
           className="cordel-btn px-2 py-0.5 rounded active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed font-mono text-[11px]"
         >
-          🔍-
+          -
         </button>
         {presets.map((preset) => {
           const isActive = Math.abs(zoomLevel - preset) < 0.1;
@@ -57,7 +57,7 @@ export const WaveformZoomBar: React.FC<WaveformZoomBarProps> = ({
           title={t('zoomInTitle')}
           className="cordel-btn px-2 py-0.5 rounded active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed font-mono text-[11px]"
         >
-          🔍+
+          +
         </button>
       </div>
 

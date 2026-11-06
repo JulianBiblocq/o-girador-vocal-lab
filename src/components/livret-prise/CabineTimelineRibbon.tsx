@@ -88,19 +88,19 @@ export const CabineTimelineRibbon: React.FC<CabineTimelineRibbonProps> = ({
           {livePhase === 'recording' || livePhase === 'anacrusis' ? (
             <span className="px-2.5 py-0.5 rounded text-xs font-mono font-bold bg-red-600 text-white flex items-center gap-1.5 animate-pulse">
               <Radio className="w-3.5 h-3.5" />
-              <span>{livePhase === 'anacrusis' ? (isBr ? '🔴 GRAVAÇÃO • 🎙️ ANACRUSE' : '🔴 ENREGISTREMENT • 🎙️ ANACROUSE') : (isBr ? '🔴 GRAVAÇÃO' : '🔴 ENREGISTREMENT')}</span>
+              <span>{livePhase === 'anacrusis' ? (isBr ? 'GRAVAÇÃO • ANACRUSE' : 'ENREGISTREMENT • ANACROUSE') : (isBr ? 'GRAVAÇÃO' : 'ENREGISTREMENT')}</span>
             </span>
           ) : livePhase === 'call' ? (
             <span className="px-2.5 py-0.5 rounded text-xs font-mono font-bold bg-amber-400 text-stone-950 flex items-center gap-1.5">
-              <span>{isBr ? '⚡ CHAMADA CLAVE (2 TEMPOS ANTES DA ENTRADA)' : '⚡ APPEL CLAVE (2 TEMPS AVANT ENTRÉE)'}</span>
+              <span>{isBr ? 'CHAMADA CLAVE (2 TEMPOS ANTES DA ENTRADA)' : 'APPEL CLAVE (2 TEMPS AVANT ENTRÉE)'}</span>
             </span>
           ) : livePhase === 'preroll' ? (
             <span className="px-2.5 py-0.5 rounded text-xs font-mono font-bold bg-slate-700 text-slate-100">
-              {isBr ? '⏳ PRÉ-CONTAGEM / ESCUTA GUIA' : '⏳ PRÉCOMPTE / ÉCOUTE TÉMOIN'}
+              {isBr ? 'PRÉ-CONTAGEM / ESCUTA GUIA' : 'PRÉCOMPTE / ÉCOUTE TÉMOIN'}
             </span>
           ) : (
             <span className="px-2 py-0.5 rounded text-[11px] font-mono font-bold bg-[var(--cordel-subcard-bg)] text-theme-ink border border-[var(--cordel-border-sub)]">
-              {isBr ? `🎯 FITA DE COMPASSOS (${beatsPerMeasure} TEMPOS / COMPASSO)` : `🎯 RUBAN DES MESURES (${beatsPerMeasure} TEMPS / MESURE)`}
+              {isBr ? `FITA DE COMPASSOS (${beatsPerMeasure} TEMPOS / COMPASSO)` : `RUBAN DES MESURES (${beatsPerMeasure} TEMPS / MESURE)`}
             </span>
           )}
         </div>

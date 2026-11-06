@@ -92,10 +92,10 @@ export const translationsFr: VocalLabTranslations = {
   melodynePresetRaw: '0 % Brute', melodynePresetNatural: '50 % Naturel', melodynePresetLocked: '100 % Calé', melodyneLinkedHint: 'Liaison active : déplacer une brique ajuste la voix', melodyneProcessing: 'Recalcul audio en cours...',
 
   mirrorToCoro: '⇄ Coro', mirrorToPuxador: '⇄ Puxador', mirrorToCoroTooltip: 'Copier et synchroniser ce pattern vers le Coro', mirrorToPuxadorTooltip: 'Copier et synchroniser ce pattern vers le Puxador',
-  syncBadge: '🔗 Sync : {source}', unlinkTooltip: 'Dissocier pour éditer séparément',
+  syncBadge: 'Sync : {source}', unlinkTooltip: 'Dissocier pour éditer séparément',
 
   toolMelodyneCut: 'Découpe Melodyne', toolMelodyneCutTooltip: "Découper l'attaque (voix naturelle) sans scinder la note MIDI",
-  melodyneAttackSlider: "Préserver l'attaque : {percent} %", reExtractNotes: "🥁 Recalquer Rythme & Tenues sur l'Onde",
+  melodyneAttackSlider: "Préserver l'attaque : {percent} %", reExtractNotes: "Recalquer Rythme & Tenues sur l'Onde",
   reExtractNotesTooltip: "Recalcule fidèlement les briques MIDI et les tenues de notes (isTie) calées sur la courbe verte pour Sequenciador",
   reExtractNotesConfirm: "Recalquer les briques MIDI et les tenues de notes fidèlement sur la courbe verte de l'onde ?",
   reExtractSuccessToast: "Son et notes réinitialisés d'après le Livret 1",
@@ -107,13 +107,13 @@ export const translationsFr: VocalLabTranslations = {
   deletePatternConfirm: 'Voulez-vous vraiment supprimer le pattern', deletePatternTitle: 'Supprimer le pattern',
   resetRecordingConfirm: 'Voulez-vous ré-enregistrer cette prise ? L\'enregistrement actuel sera perdu.', resetRecordingTitle: 'Ré-enregistrer la prise',
 
-  melodynePitchCenter: '🎯 Justesse (Centrer) : {percent} %', melodyneFlatten: '📏 Stabilité (Aplatir) : {percent} %',
+  melodynePitchCenter: 'Justesse (Centrer) : {percent} %', melodyneFlatten: 'Stabilité (Aplatir) : {percent} %',
   melodyneCreateZoneBtn: 'Créer Zone In/Out', melodyneWholePhraseBtn: '+ Zone sur toute la phrase',
   melodyneDeleteZoneBtn: '✕ Supprimer Zone', melodyneResetZoneBtn: '↺ Réinitialiser (0 %)',
   melodyneNoZoneSelected: 'Sélectionnez ou créez une zone [ In ── Out ] sur le Piano Roll',
   melodyneZoneActiveBadge: 'Zone [ IN: {start}s ── OUT: {end}s ]',
   melodyneZoneHelpHint: 'Glissez les poignées [IN] et [OUT] sous la ligne des Temps pour ajuster la zone', melodyneRailLabel: 'ZONE',
-  melodyneShiftDownOct: '🔽 -1 Oct', melodyneShiftUpOct: '🔼 +1 Oct', melodyneAlignToBricks: '🧲 Octave ➔ Briques',
+  melodyneShiftDownOct: '-1 Oct', melodyneShiftUpOct: '+1 Oct', melodyneAlignToBricks: 'Octave ➔ Briques',
   melodynePurgeBtn: '✕ Purger Melodyne (Son brut)',
   melodynePurgeTooltip: 'Supprime toutes les zones Melodyne pour écouter le son 100% brut du Livret 1 tout en conservant les notes MIDI',
   melodynePurgeToast: 'Son brut du Livret 1 rétabli (zones Melodyne purgées)',

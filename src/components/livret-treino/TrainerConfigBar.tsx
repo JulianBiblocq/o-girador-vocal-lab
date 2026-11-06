@@ -39,9 +39,9 @@ export const TrainerConfigBar: React.FC<TrainerConfigBarProps> = ({
 }) => {
   const { t } = useLanguage();
   const speedTiers = [
-    { ratio: 0.75, label: t('speedTier75Label'), badge: patternMastery?.tier75 ? '⭐' : '' },
-    { ratio: 0.88, label: t('speedTier88Label'), badge: patternMastery?.tier88 ? '⭐' : '' },
-    { ratio: 1.0, label: t('speedTier100Label'), badge: patternMastery?.tier100 ? '👑' : '' },
+    { ratio: 0.75, label: t('speedTier75Label'), badge: patternMastery?.tier75 ? '✓' : '' },
+    { ratio: 0.88, label: t('speedTier88Label'), badge: patternMastery?.tier88 ? '✓' : '' },
+    { ratio: 1.0, label: t('speedTier100Label'), badge: patternMastery?.tier100 ? '★' : '' },
   ];
 
   return (
