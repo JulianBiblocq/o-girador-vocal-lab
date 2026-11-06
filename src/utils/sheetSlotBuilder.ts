@@ -121,8 +121,8 @@ export function buildPatternsAndSlotsFromSegments(
     i = lookAhead;
   }
   const patMap = new Map(newPatterns.map((p) => [p.id, p]));
-  for (let s = 0; s < newSlots.length - 1; s++) {
-    const curPat = patMap.get(newSlots[s].puxadorPatternId || newSlots[s].coroPatternId || ''), nextPat = patMap.get(newSlots[s + 1].puxadorPatternId || newSlots[s + 1].coroPatternId || '');
+  for (let s = 0; s < newSlots.length; s++) {
+    const curPat = patMap.get(newSlots[s].puxadorPatternId || newSlots[s].coroPatternId || ''), nextPat = s < newSlots.length - 1 ? patMap.get(newSlots[s + 1].puxadorPatternId || newSlots[s + 1].coroPatternId || '') : undefined;
     const nextAttackBeat = nextPat?.timeAnchors?.find((a) => !a.isRest)?.beat;
     if (curPat?.exitBeat === 1 && curPat?.measuresCount === 2 && nextAttackBeat !== undefined && nextAttackBeat > 1) newSlots[s].advanceMeasures = 1;
     else if (curPat?.measuresCount === 1) newSlots[s].advanceMeasures = 1;

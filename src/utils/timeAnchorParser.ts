@@ -1,5 +1,5 @@
 /**
- * timeAnchorParser.ts — Parsing des ancres de temps ([1]..[12], [M•1]), silences initiaux (𝄽) et tenues de note (< 145 lignes).
+ * timeAnchorParser.ts — Parsing des ancres de temps ([1]..[12], [M•1]), silences initiaux (𝄽) et tenues de note (< 148 lignes).
  */
 import type { TimeAnchor } from '../types/toadaDocument.types';
 import { splitTextIntoLetraSyllables } from './syllableSplitter';
@@ -9,7 +9,6 @@ export const TIME_ANCHOR_REGEX = /\[(?:M(\d+)[•·\.:])?([1-9]|1[0-2])\]/gi;
 export function isAnchorOnlyLine(line: string): boolean {
   return Boolean(line.trim() && /^[\d\s_M•·\.:\[\]]+$/.test(line) && /\b([1-9]|1[0-2])\b/.test(line));
 }
-
 export function convertTwoLineNotationToBrackets(anchorLine: string, lyricsLine: string): string {
   const regex = /\b([1-9]|1[0-2])\b/g, matches: Array<{ beat: number; col: number }> = [];
   let m: RegExpExecArray | null;
@@ -23,18 +22,25 @@ export function convertTwoLineNotationToBrackets(anchorLine: string, lyricsLine:
   }
   return result.trim().replace(/\s{2,}/g, ' ');
 }
-
 export function preprocessTwoLineLyrics(text: string): string {
   if (!text) return '';
   const lines = text.split(/\r?\n/), resultLines: string[] = [];
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i], next = lines[i + 1];
-    if (isAnchorOnlyLine(line) && next !== undefined && !isAnchorOnlyLine(next) && next.trim().length > 0) {
-      resultLines.push(convertTwoLineNotationToBrackets(line, next)); i++;
-    } else resultLines.push(line);
+    if (isAnchorOnlyLine(line) && next !== undefined && !isAnchorOnlyLine(next) && next.trim().length > 0) { resultLines.push(convertTwoLineNotationToBrackets(line, next)); i++; }
+    else resultLines.push(line);
   }
   return resultLines.join('\n');
 }
+export function computeMeasuresCountFromAnchors(timeAnchors: TimeAnchor[] | undefined, hasAnacrusis = false, fallbackMeasures: 1 | 2 | 3 | 4 = 1): 1 | 2 | 3 | 4 {
+  if (!timeAnchors || timeAnchors.length === 0) return fallbackMeasures;
+  const lastA = timeAnchors[timeAnchors.length - 1], prevA = timeAnchors[timeAnchors.length - 2];
+  const rawCount1 = timeAnchors.filter((x) => x.beat === 1 && (!hasAnacrusis || x.measureOffset > 0)).length;
+  if (rawCount1 === 0) return fallbackMeasures;
+  const isTailExitBeat1 = Boolean(rawCount1 >= 2 && lastA?.beat === 1 && prevA && prevA.beat > 1 && !lastA.isSustainedHold);
+  return Math.min(4, Math.max(1, isTailExitBeat1 ? rawCount1 - 1 : rawCount1)) as 1 | 2 | 3 | 4;
+}
+
 export interface ExtractedAnchorsResult {
   cleanText: string; timeAnchors: TimeAnchor[]; measuresCount?: 1 | 2 | 3 | 4;
   hasAnacrusis?: boolean; anacrusisBeats?: number; anacrusisStartBeat?: number; exitBeat?: number;
@@ -50,9 +56,7 @@ export function extractTimeAnchors(rawText: string, beatsPerMeasure = 4, forceTh
   if (!isExplicitM1) {
     if (firstOneIdx > 0 || (firstOneIdx === -1 && matches[0].beat > 1)) {
       const sBeat = matches[0].beat; hasAnacrusis = true; anacrusisStartBeat = sBeat; anacrusisBeats = Math.max(1, beatsPerMeasure + 1 - sBeat);
-    } else if (firstOneIdx === 0 && textBeforeFirst.length > 0) {
-      hasAnacrusis = true; anacrusisStartBeat = beatsPerMeasure; anacrusisBeats = 1;
-    }
+    } else if (firstOneIdx === 0 && textBeforeFirst.length > 0) { hasAnacrusis = true; anacrusisStartBeat = beatsPerMeasure; anacrusisBeats = 1; }
   }
   const timeAnchors: TimeAnchor[] = [];
   let measureOffset = 0, hasEncounteredSyllables = false;
@@ -60,7 +64,6 @@ export function extractTimeAnchors(rawText: string, beatsPerMeasure = 4, forceTh
     const preSyls = splitTextIntoLetraSyllables(textBeforeFirst); hasEncounteredSyllables = preSyls.length > 0;
     timeAnchors.push({ beat: beatsPerMeasure, measureOffset: 0, isRest: false, isInitialRest: false, isSustainedHold: false, hasLeadingRest: false, charOffset: 0, textSlice: textBeforeFirst, syllables: preSyls });
   }
-
   for (let k = 0; k < matches.length; k++) {
     const cur = matches[k], nextIndex = matches[k + 1] ? matches[k + 1].index : rawText.length, chunk = rawText.slice(cur.index + cur.fullLength, nextIndex);
     const isExplicitSilence = /\[(?:silence|pause)\]|𝄽/i.test(chunk), trimmedChunk = chunk.replace(/\[[^\]]+\]/g, '').replace(/\*/g, '').trim();
@@ -94,9 +97,11 @@ export function extractTimeAnchors(rawText: string, beatsPerMeasure = 4, forceTh
   }
   const cleanText = rawText.replace(/\[(?:M\d+[•·\.:])?([1-9]|1[0-2])\]/gi, '').replace(/\[(?:silence|pause)\]|𝄽/gi, ' ').replace(/_/g, ' ').replace(/\s{2,}/g, ' ').trim();
   const lastA = timeAnchors[timeAnchors.length - 1], prevA = timeAnchors[timeAnchors.length - 2], rawCount1 = timeAnchors.filter((x) => x.beat === 1 && (!hasAnacrusis || x.measureOffset > 0)).length;
-  const count1 = (rawCount1 >= 2 && lastA?.beat === 1 && prevA && prevA.beat > 1 && (lastA.syllables?.length ?? 0) <= 1) ? rawCount1 - 1 : rawCount1;
+  const lastChunk = rawText.slice(matches[matches.length - 1].index + matches[matches.length - 1].fullLength);
+  const isTailExit1 = Boolean(rawCount1 >= 2 && lastA?.beat === 1 && prevA && prevA.beat > 1 && !lastA.isSustainedHold && !/_\s+_/.test(lastChunk));
+  const count1 = isTailExit1 ? rawCount1 - 1 : rawCount1;
   const rawMeasuresCount = Math.min(4, Math.max(1, count1 > 0 ? count1 : (hasAnacrusis ? (measureOffset || 1) : measureOffset + 1))) as 1 | 2 | 3 | 4;
-  return { cleanText, timeAnchors, measuresCount: rawMeasuresCount, hasAnacrusis, anacrusisBeats, anacrusisStartBeat, exitBeat: timeAnchors[timeAnchors.length - 1]?.beat };
+  return { cleanText, timeAnchors, measuresCount: rawMeasuresCount, hasAnacrusis, anacrusisBeats, anacrusisStartBeat, exitBeat: isTailExit1 ? 1 : timeAnchors[timeAnchors.length - 1]?.beat };
 }
 
 export function buildBeatLyricsMap(timeAnchors: TimeAnchor[], _hasAnacrusis = false): Record<string, TimeAnchor> {

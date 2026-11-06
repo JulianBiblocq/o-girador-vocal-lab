@@ -26,6 +26,7 @@ export function extractInlineLineDirectives(rawSegmentText: string, beatsPerMeas
 
   const sigMatch = text.match(/^\[sig:(2\/4|3\/4|4\/4|6\/8|12\/8)\]\s*/i);
   if (sigMatch) { lineSignature = sigMatch[1]; text = text.slice(sigMatch[0].length).trim(); }
+  text = text.replace(/^\[(sim|nosim)\]\s*/i, '');
 
   const secMatch = text.match(/^\[\s*(?:Section\s+)?([^\]\-]+?)(?:\s*-\s*(\d+)\s*BPM)?\s*\]\s*/i);
   if (secMatch && !/^(?:M\d+[•\.:])?([1-9]|1[0-2])$/i.test(secMatch[1].trim()) && extractChordsFromTextLine(secMatch[0]).length === 0) {

@@ -7,7 +7,7 @@ import { useEffect, useRef } from 'react';
 import type { ToadaProject } from '../types/toadaProject.types';
 import { saveProjectToIndexedDB, loadProjectFromIndexedDB } from '../utils/projectAutoSave';
 import { saveToadaToLibrary } from '../utils/toadaLibraryStorage';
-import { resolveFreshTimeAnchors } from '../utils/timeAnchorParser';
+import { resolveFreshTimeAnchors, computeMeasuresCountFromAnchors } from '../utils/timeAnchorParser';
 import { extractProjectRawLyricsSource } from '../audio/livretResetHelper';
 import { getBeatsPerMeasure } from '../utils/musicalMath';
 
@@ -42,10 +42,12 @@ export function useProjectAutoSave(
     loadProjectFromIndexedDB().then((saved) => {
       if (isMounted && saved && saved.patterns && saved.patterns.length > 0) {
         const bpmCount = getBeatsPerMeasure(saved.timeSignature);
-        const hydratedPatterns = saved.patterns.map((pat) => ({
-          ...pat,
-          timeAnchors: resolveFreshTimeAnchors(pat.rawLineCode, pat.timeAnchors, bpmCount, pat.hasAnacrusis === false, pat.assignedLyricsText, extractProjectRawLyricsSource(saved, pat)),
-        }));
+        const hydratedPatterns = saved.patterns.map((pat) => {
+          const timeAnchors = resolveFreshTimeAnchors(pat.rawLineCode, pat.timeAnchors, bpmCount, pat.hasAnacrusis === false, pat.assignedLyricsText, extractProjectRawLyricsSource(saved, pat));
+          const isThetic = Boolean(timeAnchors?.length && timeAnchors[0].beat === 1 && timeAnchors[0].measureOffset === 0);
+          const measuresCount = computeMeasuresCountFromAnchors(timeAnchors, isThetic ? false : pat.hasAnacrusis !== false, pat.measuresCount ?? 1);
+          return { ...pat, timeAnchors, measuresCount };
+        });
         const hydrated = { ...saved, patterns: hydratedPatterns };
         lastSummarySigRef.current = getSummarySignature(hydrated);
         setProject(hydrated);

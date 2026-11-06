@@ -109,13 +109,14 @@ export function detectVocalPhrases(
     const rawEnd = Math.min(durationSec, r.endSec + marginSec);
     const start = snapToNearestZeroCrossing(pcm, sampleRate, rawStart, 5);
     const end = snapToNearestZeroCrossing(pcm, sampleRate, rawEnd, 5);
+    const onset = snapToNearestZeroCrossing(pcm, sampleRate, r.startSec, 5);
 
     if (segments.length > 0 && start <= segments[segments.length - 1].endSec + 0.1) {
       segments[segments.length - 1].endSec = Math.max(segments[segments.length - 1].endSec, end);
     } else {
       const met = estimateSegmentMetrics(end - start);
       segments.push({
-        id: `seg-${Date.now()}-${idx}`, startSec: start, endSec: end, targetPatternId: 'ignore',
+        id: `seg-${Date.now()}-${idx}`, startSec: start, endSec: end, onsetSec: onset, targetPatternId: 'ignore',
         measuresCount: met.measuresCount, hasAnacrusis: met.hasAnacrusis, hasTailBeat: met.hasTailBeat,
       });
     }

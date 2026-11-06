@@ -12,7 +12,7 @@ import { analyzeBeatPegs, piecewiseTimeWarp } from '../../audio/piecewiseTimeWar
 import { extractPatternFromMaster } from '../../utils/masterTakeExtractor';
 import { executeBatchAssign } from '../../utils/slicerBatchAssigner';
 import { detectVocalPhrases } from '../../audio/silenceDetector';
-import { buildOrganizadorSlices } from '../../utils/slicerAlignmentHelper';
+import { buildOrganizadorSlices, calculateInitialMasterGridOffsetSec } from '../../utils/slicerAlignmentHelper';
 import type { SliceSegment } from '../../types/slicerSegments.types';
 import type { VocalRole } from '../../types/toadaProject.types';
 import { SlicerModeTabs, type SlicerWorkMode } from './SlicerModeTabs';
@@ -31,7 +31,7 @@ export const MasterTakeSlicerModal: React.FC<SlicerModalProps> = ({
   const { project, addPattern, updatePattern, loadProject } = useToadaProject();
   const { t } = useLanguage();
   const [mode, setMode] = useState<SlicerWorkMode>('multi'), [audio, setAudio] = useState<DecodedAudioResult | null>(null);
-  const [segments, setSegments] = useState<SliceSegment[]>([]), [isAssigning, setIsAssigning] = useState(false);
+  const [segments, setSegments] = useState<SliceSegment[]>([]), [isAssigning, setIsAssigning] = useState(false), [gridOffsetSec, setGridOffsetSec] = useState(0.1);
 
   const [trimIn, setTrimIn] = useState(0), [trimOut, setTrimOut] = useState(8);
   const [beatPegs, setBeatPegs] = useState<number[]>([]), [warpPct, setWarpPct] = useState(0);
@@ -48,8 +48,9 @@ export const MasterTakeSlicerModal: React.FC<SlicerModalProps> = ({
 
   const loadAudioWithAutoSlices = useCallback((aud: DecodedAudioResult) => {
     setAudio(aud); setTrimIn(0); setTrimOut(Math.min(aud.durationSec, 8)); setBeatPegs([]);
-    const detected = detectVocalPhrases(aud.pcm, aud.sampleRate);
-    setSegments(buildOrganizadorSlices(project.patterns, defaultRole, project.bpm || 88, detected, 0.8, project.slots, aud.pcm, aud.sampleRate));
+    const detected = detectVocalPhrases(aud.pcm, aud.sampleRate), autoOff = calculateInitialMasterGridOffsetSec(project.patterns, defaultRole, project.bpm || 88, detected, project.slots);
+    setGridOffsetSec(autoOff);
+    setSegments(buildOrganizadorSlices(project.patterns, defaultRole, project.bpm || 88, detected, autoOff, project.slots, aud.pcm, aud.sampleRate));
   }, [defaultRole, project.patterns, project.bpm, project.slots]);
 
   useEffect(() => {
@@ -127,7 +128,7 @@ export const MasterTakeSlicerModal: React.FC<SlicerModalProps> = ({
           <div className="flex flex-col gap-2.5">
             <SlicerModeTabs mode={mode} onModeChange={setMode} />
             {mode === 'multi' ? (
-              <SlicerMultiSection project={project} audio={audio} segments={segments} onSegmentsChange={setSegments} patterns={project.patterns} defaultRole={defaultRole} isAssigning={isAssigning} onExecuteBatchAssign={handleBatchAssign} onChangeFile={() => fileInputRef.current?.click()} engine={engine} onProjectUpdate={loadProject} />
+              <SlicerMultiSection project={project} audio={audio} segments={segments} onSegmentsChange={setSegments} patterns={project.patterns} defaultRole={defaultRole} isAssigning={isAssigning} onExecuteBatchAssign={handleBatchAssign} onChangeFile={() => fileInputRef.current?.click()} engine={engine} onProjectUpdate={loadProject} initialGridOffsetSec={gridOffsetSec} />
             ) : (
               <SlicerSingleSection
                 audio={audio} patterns={project.patterns} trimIn={trimIn} trimOut={trimOut} beatPegs={beatPegs} targetPegs={targetPegs} playheadSec={playheadSec} isPlaying={isPlaying} loop={loop} witnessClick={witnessClick} phraseBpm={phraseBpm} warpPct={warpPct} measures={measures} hasAnacrusis={hasAnacrusis} role={role} patternName={patternName} targetPatternId={targetPatternId} isExtracting={isExtracting} lastExtracted={lastExtracted}
