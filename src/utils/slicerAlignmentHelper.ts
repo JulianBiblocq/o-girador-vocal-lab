@@ -8,9 +8,9 @@ import type { TimeAnchor } from '../types/toadaDocument.types';
 import type { SliceSegment } from '../types/slicerSegments.types';
 import { resolveFreshTimeAnchors, computeMeasuresCountFromAnchors } from './timeAnchorParser';
 import { computePatternVocalOffsetsBeats } from './subbeatAnchorHelper';
-import { findOptimalAcousticCutSec, findOptimalMasterGridOffsetSec } from './slicerBoundaryOptimizer';
+import { findOptimalAcousticCutSec, findOptimalMasterGridOffsetSec, findVocalTailExtinctionSec } from './slicerBoundaryOptimizer';
 
-export { findOptimalAcousticCutSec, findOptimalMasterGridOffsetSec };
+export { findOptimalAcousticCutSec, findOptimalMasterGridOffsetSec, findVocalTailExtinctionSec };
 export type SlicerGapMode = 'with_gaps' | 'chained';
 
 function windowRms(pcm: Float32Array, sampleRate: number, t0: number, t1: number): number {
@@ -131,15 +131,15 @@ export function buildOrganizadorSlices(
 
   const segments: SliceSegment[] = [];
   for (let i = 0; i < metaList.length; i++) {
-    const cur = metaList[i], next = metaList[i + 1];
+    const cur = metaList[i], next = metaList[i + 1], prevBeforePause = segments.length > 0 ? segments[segments.length - 1] : null;
     if (cur.pauseMeasures > 0) {
-      const pM = Math.max(1, Math.min(4, cur.pauseMeasures)) as 1 | 2 | 3 | 4;
-      segments.push({ id: `seg-pause-org-${i}`, startSec: Math.round(cur.pauseStartT1 * 100) / 100, endSec: Math.round((cur.pauseStartT1 + cur.pauseMeasures * measureDur) * 100) / 100, metricT1Sec: Math.round(cur.pauseStartT1 * 100) / 100, targetPatternId: 'ignore', name: `[PAUSE ${cur.pauseMeasures}M]`, measuresCount: pM, hasAnacrusis: false, anacrusisBeats: 0, hasTailBeat: false, isPause: true });
+      const pM = Math.max(1, Math.min(4, cur.pauseMeasures)) as 1 | 2 | 3 | 4, pStart = Math.max(Math.round(cur.pauseStartT1 * 100) / 100, prevBeforePause && !prevBeforePause.isPause ? prevBeforePause.endSec : 0);
+      segments.push({ id: `seg-pause-org-${i}`, startSec: pStart, endSec: Math.round((cur.pauseStartT1 + cur.pauseMeasures * measureDur) * 100) / 100, metricT1Sec: Math.round(cur.pauseStartT1 * 100) / 100, targetPatternId: 'ignore', name: `[PAUSE ${cur.pauseMeasures}M]`, measuresCount: pM, hasAnacrusis: false, anacrusisBeats: 0, hasTailBeat: false, isPause: true });
     }
     const prevVocalSeg = segments.length > 0 ? segments[segments.length - 1] : null;
     const isolatedStartSec = cur.hasAna ? Math.max(0, Math.round((cur.t1 + (cur.firstVocalOffsetBeats - 0.25) * beatDur) * 100) / 100) : Math.max(0, Math.round(cur.t1 * 100) / 100);
     const startSec = (i === 0 || cur.isIslandStart || !prevVocalSeg || prevVocalSeg.isPause) ? isolatedStartSec : prevVocalSeg.endSec;
-    const rawEnd = Boolean(next && !next.isIslandStart) && next ? findOptimalAcousticCutSec({ boundaryT1Sec: next.t1, beatDur, nextFirstVocalOffsetBeats: next.firstVocalOffsetBeats, curHasBoundaryExit: cur.hasBoundaryExitAnchor, pcm, sampleRate }) : Math.round((cur.t1 + cur.mCount * measureDur + beatDur * 0.75) * 100) / 100;
+    const rawEnd = Boolean(next && !next.isIslandStart) && next ? findOptimalAcousticCutSec({ boundaryT1Sec: next.t1, beatDur, nextFirstVocalOffsetBeats: next.firstVocalOffsetBeats, curHasBoundaryExit: cur.hasBoundaryExitAnchor, pcm, sampleRate }) : findVocalTailExtinctionSec(cur.t1 + cur.mCount * measureDur, beatDur, pcm, sampleRate, 2.5);
     segments.push({ id: `seg-org-${cur.pat.id}-${i}`, startSec, endSec: !next ? Math.min(maxDurSec, rawEnd) : rawEnd, metricT1Sec: cur.t1, targetPatternId: cur.pat.id, role: cur.pat.role, name: cur.pat.name, measuresCount: cur.mCount as 1 | 2 | 3 | 4, hasAnacrusis: cur.hasAna, anacrusisBeats: cur.pat.anacrusisBeats ?? (cur.hasAna ? 2 : 0), hasTailBeat: true });
   }
   return segments;

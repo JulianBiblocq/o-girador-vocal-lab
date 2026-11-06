@@ -77,7 +77,7 @@ export function computePatternVocalOffsetsBeats(
   }
   const anchorsHaveAnac = Boolean(hasAnacrusis && timeAnchors.some((a) => a.measureOffset === 0 && a.beat > 1) && timeAnchors.some((a) => a.measureOffset >= 1));
   const first = sungAnchors[0];
-  const s0 = first.syllableSubdivs?.[0] ?? (first.hasLeadingRest ? 1 : 0);
+  const s0 = first.hasLeadingRest ? Math.max(2, first.syllableSubdivs?.[0] ?? 2) : (first.syllableSubdivs?.[0] ?? 0);
   const firstRelMeasure = anchorsHaveAnac ? first.measureOffset - 1 : first.measureOffset;
   const firstVocalOffsetBeats = firstRelMeasure * beatsPerMeasure + (first.beat - 1) + s0 / 4;
 
