@@ -53,7 +53,7 @@ export const CuePatternSelector: React.FC<{ disabled?: boolean }> = ({ disabled 
           </option>
           {otherRecordedPatterns.map((p) => (
             <option key={p.id} value={p.id} className="bg-[var(--cordel-surface)] text-[var(--cordel-text)]">
-              {t('cueCustomPrefix')} {p.name} ({p.role.toUpperCase()} • {p.measuresCount} M)
+              {t('cueCustomPrefix')} {p.name} ({p.role.toUpperCase()} • {p.measuresCount} {t('measureAbbr')})
             </option>
           ))}
         </select>

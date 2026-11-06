@@ -77,3 +77,4 @@ export function resolveProjectActiveScale(
     referencePitch: hasAnalysis ? fallbackAnalysis!.referencePitch : patRef,
   };
 }
+

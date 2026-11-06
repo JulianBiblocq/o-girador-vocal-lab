@@ -132,7 +132,7 @@ export const LivretMelodiaWorkspace: React.FC<LivretMelodiaWorkspaceProps> = ({
         onSnapToGreenLine={() => handleSnapToGreenLine(tonic, scaleType, customPitchClasses)} onReExtractNotes={handleReset}
         globalVariAudioPct={globalVariAudioPct} onChangeGlobalVariAudioPct={(pct) => { const next = setAllBricksMelodynePullPct(allSteps, pct); commitCurrentSnapshot({ steps: next }); handleUpdateSteps(next, true); }}
         onPurgeVariAudio={() => { const next = setAllBricksMelodynePullPct(allSteps, 0); commitCurrentSnapshot({ steps: next, melodyneRegions: [] }); clearAllRegions(); handleUpdateSteps(next, true); }}
-        harmonyGrid={activePattern.harmonyGrid} onUpdateHarmonyGrid={(g) => updatePattern(activePattern.id, { harmonyGrid: g })} pitchShiftSemitones={pitchShiftSemitones}
+        harmonyGrid={activePattern.harmonyGrid} onUpdateHarmonyGrid={(g) => updatePattern(activePattern.id, { harmonyGrid: g })} pitchShiftSemitones={pitchShiftSemitones} patternId={activePattern.id}
       />
       <MelodicControls isPlaying={isPlaying} playMode={playMode} clickEnabled={clickEnabled} onTogglePlay={handleTogglePlay} onResetSeek={() => handleSeek(0)} onSetPlayMode={(m) => { setPlayMode(m); player.setPlayMode(m, clickEnabled); }} onToggleClick={() => setClickEnabled((p) => { const n = !p; player.setPlayMode(playMode, n); return n; })} onBackToPrise={onBackToPrise ?? (() => useVocalTransportStore.getState().setActiveLivret('prise'))} onDownloadPack={() => { const u = buildUpdatedVocalPackExport(initialPack, allSteps, hasAnac, beatsPerMeasure, displayedCurve); onPackUpdated?.(u); downloadToadaPackJson(project, u); }} />
       <LetraEditorPanel allSteps={allSteps} onUpdateSteps={handleUpdateSteps} onCommitHistory={() => commitCurrentSnapshot()} />

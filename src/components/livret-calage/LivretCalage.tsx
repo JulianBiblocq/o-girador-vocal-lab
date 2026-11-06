@@ -86,7 +86,7 @@ export const LivretCalage: React.FC = () => {
       <PatternCompassBar />
       {isLongAudio && <LongAudioSlicerBanner durationSec={audioDurationSec} onOpenSlicer={() => setIsSlicerOpen(true)} />}
       <div className="flex flex-wrap items-center justify-between gap-2.5">
-        <span className="text-xs font-mono font-bold text-[var(--cordel-secondary-text)] uppercase tracking-wider">{activePattern.name} ({activePattern.measuresCount}M)</span>
+        <span className="text-xs font-mono font-bold text-[var(--cordel-secondary-text)] uppercase tracking-wider">{activePattern.name} ({activePattern.measuresCount}{t('measureAbbr')})</span>
         <div className="flex items-center gap-2">
           <button type="button" onClick={() => fileInputRef.current?.click()} className="cordel-btn px-2.5 py-1 text-xs font-mono font-bold flex items-center gap-1.5 cursor-pointer">
             <Upload className="w-3.5 h-3.5 text-theme-accent" /><span>{t('calageDirectImportBtn')}</span>

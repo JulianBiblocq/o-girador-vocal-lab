@@ -34,7 +34,7 @@ export interface PianoRollEditorProps {
   selectedStepIdx?: number | null; onSelectStep?: (idx: number | null) => void;
   onBrickMoved?: (rootIdx: number, newSteps: VocalStepData[]) => void;
   harmonyGrid?: PatternHarmonyGrid; onUpdateHarmonyGrid?: (grid: PatternHarmonyGrid) => void;
-  pitchShiftSemitones?: number; allowedPitchClasses?: Set<number> | null; readOnly?: boolean;
+  pitchShiftSemitones?: number; allowedPitchClasses?: Set<number> | null; readOnly?: boolean; patternId?: string;
 }
 
 const ROW_HEIGHT = 20, NOTES_VIEWPORT_HEIGHT = 320;
@@ -47,7 +47,7 @@ export const PianoRollEditor: React.FC<PianoRollEditorProps> = (p) => {
   const activeTool = p.activeTool ?? internalTool, setActiveTool = p.onSelectTool ?? setInternalTool;
   const [palettePos, setPalettePos] = useState<{ x: number; y: number } | null>(null);
   const [textInput, setTextInput] = useState<{ stepIndex: number; rect: { x: number; y: number; w: number; h: number } } | null>(null);
-  const hasAutoCentered = useRef(false);
+  const lastCenteredKeyRef = useRef<string>('');
 
   useEffect(() => {
     const el = horizScrollRef.current; if (!el) return;
@@ -64,15 +64,15 @@ export const PianoRollEditor: React.FC<PianoRollEditorProps> = (p) => {
   const t1OffsetSec = p.t1OffsetSec ?? getPatternT1OffsetSec(p.hasAnacrusis, p.beatsPerMeasure * (60 / (p.bpm || 88)));
 
   useEffect(() => {
-    const el = notesScrollRef.current;
-    if (!el || hasAutoCentered.current) return;
+    const el = notesScrollRef.current, key = `${p.patternId || ''}_${minMidi}_${maxMidi}`;
+    if (!el || lastCenteredKeyRef.current === key) return;
     const curveMidis = (p.rawPitchCurve?.length ? p.rawPitchCurve : p.pitchCurve).filter((pt) => pt.midiFloat >= 36 && pt.midiFloat <= 96).map((pt) => pt.midiFloat);
     const pool = activeMidis.length > 0 ? activeMidis : curveMidis;
     if (pool.length === 0) return;
     const midMidi = (Math.min(...pool) + Math.max(...pool)) / 2;
     el.scrollTop = Math.max(0, Math.round((maxMidi - midMidi) * ROW_HEIGHT + ROW_HEIGHT / 2 - NOTES_VIEWPORT_HEIGHT / 2));
-    hasAutoCentered.current = true;
-  }, [activeMidis, p.rawPitchCurve, p.pitchCurve, maxMidi]);
+    lastCenteredKeyRef.current = key;
+  }, [p.patternId, activeMidis, p.rawPitchCurve, p.pitchCurve, minMidi, maxMidi]);
 
   const handleConfirmText = useCallback((text: string, jumpNext: boolean) => {
     if (!textInput) return;

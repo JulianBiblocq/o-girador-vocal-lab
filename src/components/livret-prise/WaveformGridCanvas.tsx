@@ -112,7 +112,7 @@ export const WaveformGridCanvas: React.FC<WaveformGridCanvasProps> = ({
       const mStartSec = t1Offset + m * measureDurationSec;
       const mX = (mStartSec / totalDurationSec) * width;
       ctx.fillStyle = isLight ? '#1a1a1a' : 'rgba(244, 236, 216, 0.85)';
-      ctx.fillText(`M${m + 1}`, mX + 4, 13);
+      ctx.fillText(`${t('measureAbbr')}${m + 1}`, mX + 4, 13);
     }
 
     if (tNextT1 < totalDurationSec) {
