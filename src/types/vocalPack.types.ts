@@ -39,6 +39,8 @@ export interface VocalAnacrusisData {
 export interface PitchCurvePoint {
   timeSec: number;
   midiFloat: number; // Numéro MIDI fractionnaire continu
+  confidence?: number;
+  rms?: number;
 }
 
 /** Payload audio consolidé et métadonnées d'alignement */

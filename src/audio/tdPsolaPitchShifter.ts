@@ -1,7 +1,8 @@
 /**
  * tdPsolaPitchShifter.ts
- * Moteur continu Phase-Locked PSOLA avec Normalisation Exacte (acc[n] / weight[n]),
- * Interpolation Cubique Hermite 4-points et préservation des formants (< 135 lignes).
+ * Moteur Vocal Melodyne TD-PSOLA 3.0 à Phase Glottique Pure :
+ * Interpolation linéaire temporelle de grains glottiques 1:1 (formants intacts),
+ * fenêtre de Hann asymétrique et normalisation douce pour r > 1.15 (< 130 lignes).
  */
 import type { TdPsolaAnalysis } from './tdPsolaEpochDetector';
 
@@ -13,8 +14,7 @@ export function sampleHermite4(buf: Float32Array, pos: number): number {
   const n = buf.length;
   if (pos <= 1) return buf[Math.max(0, Math.floor(pos))] || 0;
   if (pos >= n - 2) return buf[n - 1] || 0;
-  const i = Math.floor(pos), t = pos - i;
-  const y0 = buf[i - 1], y1 = buf[i], y2 = buf[i + 1], y3 = buf[i + 2];
+  const i = Math.floor(pos), t = pos - i, y0 = buf[i - 1], y1 = buf[i], y2 = buf[i + 1], y3 = buf[i + 2];
   const c1 = 0.5 * (y2 - y0), c2 = y0 - 2.5 * y1 + 2 * y2 - 0.5 * y3, c3 = 0.5 * (y3 - y0) + 1.5 * (y1 - y2);
   return ((c3 * t + c2) * t + c1) * t + y1;
 }
@@ -34,61 +34,44 @@ export function smoothShiftFramesZeroPhase(shifts: Float32Array, halfWinFrames: 
   return runPass(runPass(shifts));
 }
 
-function findPhaseLockOffset(
-  rawAudio: Float32Array, acc: Float32Array, weight: Float32Array,
-  outStart: number, globalCenter: number, halfWin: number, hopSize: number,
-  r: number, maxLock: number, expectedOffset: number, hasPrevVoiced: boolean
-): number {
-  const n = rawAudio.length, segLen = acc.length;
-  const corrStart = Math.max(0, hopSize >> 2), corrEnd = Math.min(halfWin, segLen - outStart);
-  if (corrEnd - corrStart < 16) return expectedOffset;
-  let refEnergy = 0;
-  for (let k = corrStart; k < corrEnd; k += 2) {
-    const w = weight[outStart + k];
-    if (w > 1e-3) { const v = acc[outStart + k] / w; refEnergy += v * v; }
-  }
-  if (refEnergy <= 1e-8) return 0;
+function buildContinuousEpochGrid(analysis: TdPsolaAnalysis, startIdx: number, endIdx: number, sampleRate: number): Int32Array {
+  const defaultT0 = Math.max(24, Math.round(sampleRate / 200)), rawEpochs = analysis.epochs || new Int32Array(0);
+  const hop = Math.max(1, analysis.hopSamples || Math.round(sampleRate * 0.005)), periods = analysis.framePeriods;
+  const getT0 = (pos: number) => (periods && periods.length > 0 ? Math.max(16, Math.round(periods[Math.min(periods.length - 1, Math.max(0, Math.floor(pos / hop)))] || defaultT0)) : defaultT0);
+  const list: number[] = [];
+  let cur = Math.max(0, startIdx - defaultT0 * 2), eIdx = 0;
+  while (eIdx < rawEpochs.length && rawEpochs[eIdx] < cur) eIdx++;
 
-  let bestOff = Math.round(Math.max(-maxLock, Math.min(maxLock, expectedOffset))), bestScore = -Infinity;
-  const step = maxLock > 160 ? 2 : 1;
-  for (let off = -maxLock; off <= maxLock; off += step) {
-    let dot = 0, candEnergy = 0;
-    const baseCenter = globalCenter + off;
-    if (baseCenter - halfWin * r < 2 || baseCenter + halfWin * r >= n - 2) continue;
-    for (let k = corrStart; k < corrEnd; k += 2) {
-      const w = weight[outStart + k];
-      if (w <= 1e-3) continue;
-      const refVal = acc[outStart + k] / w, candVal = rawAudio[Math.round(baseCenter + (k - halfWin) * r)];
-      dot += refVal * candVal; candEnergy += candVal * candVal;
+  while (cur <= endIdx + defaultT0 * 2) {
+    const t0 = getT0(cur);
+    if (eIdx < rawEpochs.length && rawEpochs[eIdx] <= cur + t0 * 1.65) {
+      const ep = rawEpochs[eIdx++];
+      if (list.length === 0 || ep - list[list.length - 1] >= Math.max(12, t0 * 0.45)) list.push(ep);
+      cur = ep;
+      while (eIdx < rawEpochs.length && rawEpochs[eIdx] <= cur) eIdx++;
+      if (eIdx < rawEpochs.length && rawEpochs[eIdx] - cur <= getT0(cur) * 1.75) { cur = rawEpochs[eIdx++]; list.push(cur); continue; }
     }
-    const corr = candEnergy > 1e-8 ? dot / Math.sqrt(refEnergy * candEnergy) : 0;
-    const centerPen = 0.15 * (Math.abs(off) / maxLock);
-    const trackPen = hasPrevVoiced && Math.abs(expectedOffset) <= maxLock * 0.7 ? 0.12 * (Math.abs(off - expectedOffset) / maxLock) : 0;
-    const score = corr - centerPen - trackPen;
-    if (score > bestScore) { bestScore = score; bestOff = off; }
+    cur += getT0(cur); list.push(cur);
   }
-  return hasPrevVoiced && Math.abs(bestOff - expectedOffset) <= step * 2 ? expectedOffset : bestOff;
+  return Int32Array.from(list);
 }
 
 export function applyTdPsolaPitchCorrection(
   rawAudio: Float32Array, sampleRate: number, analysis: TdPsolaAnalysis, targets: TdPsolaRegionTarget[]
 ): Float32Array {
   if (!rawAudio || rawAudio.length === 0 || !targets || targets.length === 0) return new Float32Array(rawAudio);
-  const n = rawAudio.length, out = new Float32Array(rawAudio), fadeSec = 0.025;
-  const winSize = Math.max(64, (Math.round(0.024 * sampleRate) >> 2) << 2), hopSize = winSize >> 2, halfWin = winSize >> 1;
+  const n = rawAudio.length, out = new Float32Array(rawAudio), fadeSec = 0.025, hopSize = Math.max(32, Math.round(0.005 * sampleRate));
 
   let minStartSec = Infinity, maxEndSec = -Infinity;
   for (const t of targets) { if (t.startSec < minStartSec) minStartSec = t.startSec; if (t.endSec > maxEndSec) maxEndSec = t.endSec; }
-  const startIdx = Math.max(0, Math.floor(minStartSec * sampleRate) - winSize), endIdx = Math.min(n, Math.ceil(maxEndSec * sampleRate) + winSize);
+  const margin = Math.max(128, Math.round(0.03 * sampleRate));
+  const startIdx = Math.max(0, Math.floor(minStartSec * sampleRate) - margin), endIdx = Math.min(n, Math.ceil(maxEndSec * sampleRate) + margin);
   const segLen = endIdx - startIdx;
-  if (segLen <= winSize) return out;
+  if (segLen <= 64) return out;
 
-  const hann = new Float32Array(winSize);
-  for (let k = 0; k < winSize; k++) hann[k] = 0.5 * (1 - Math.cos((2 * Math.PI * k) / winSize));
-
-  const numFrames = Math.floor((segLen - winSize) / hopSize) + 1, rawShifts = new Float32Array(numFrames);
+  const numFrames = Math.ceil(segLen / hopSize) + 1, rawShifts = new Float32Array(numFrames);
   for (let m = 0; m < numFrames; m++) {
-    const gCenter = Math.min(n - 1, startIdx + m * hopSize + halfWin), tSec = gCenter / sampleRate;
+    const gCenter = Math.min(n - 1, startIdx + m * hopSize), tSec = gCenter / sampleRate;
     let activeTarget: TdPsolaRegionTarget | null = null, env = 0;
     for (let k = targets.length - 1; k >= 0; k--) {
       const tg = targets[k];
@@ -99,42 +82,40 @@ export function applyTdPsolaPitchCorrection(
       activeTarget = tg; env = e; break;
     }
     const vWeight = analysis.voicedWeight ? analysis.voicedWeight[gCenter] : 1;
-    const s = activeTarget && vWeight > 0 ? activeTarget.shiftSemitonesAt(tSec) * env * vWeight : 0;
+    const s = activeTarget && vWeight > 0 ? activeTarget.shiftSemitonesAt(tSec) * env : 0;
     rawShifts[m] = Number.isFinite(s) ? Math.max(-12, Math.min(12, s)) : 0;
   }
-  const shifts = smoothShiftFramesZeroPhase(rawShifts, Math.max(1, Math.round(0.0225 / (hopSize / sampleRate))));
-  const acc = new Float32Array(segLen), weight = new Float32Array(segLen), maxLock = Math.round(sampleRate / 110);
-  let prevOffset = 0, prevR = 1.0, hasPrevVoiced = false;
+  const shifts = smoothShiftFramesZeroPhase(rawShifts, Math.max(1, Math.round(0.018 / (hopSize / sampleRate))));
+  const epochs = buildContinuousEpochGrid(analysis, startIdx, endIdx, sampleRate);
+  if (epochs.length < 2) return out;
+  const synthAcc = new Float32Array(segLen), winDensity = new Float32Array(segLen);
+  let tauS = epochs[0], k = 0;
 
-  for (let m = 0; m < numFrames; m++) {
-    const outStart = m * hopSize, gCenter = startIdx + outStart + halfWin, shiftSt = shifts[m];
-    const isVoiced = (analysis.voicedWeight ? analysis.voicedWeight[Math.min(n - 1, gCenter)] : 1) > 0.01;
-    const r = isVoiced && Math.abs(shiftSt) >= 0.015 ? Math.pow(2, shiftSt / 12) : 1.0;
-    if (Math.abs(r - 1.0) < 0.001) {
-      prevOffset = 0; prevR = 1.0; hasPrevVoiced = false;
-      for (let k = 0; k < winSize; k++) {
-        const localOut = outStart + k, gIn = startIdx + localOut;
-        if (localOut < segLen && gIn < n) { const w = hann[k]; acc[localOut] += rawAudio[gIn] * w; weight[localOut] += w; }
-      }
-      continue;
+  while (tauS < epochs[epochs.length - 1]) {
+    while (k + 1 < epochs.length - 1 && epochs[k + 1] <= tauS) k++;
+    const m0 = epochs[k], m1 = epochs[k + 1], T0 = Math.max(16, m1 - m0), alpha = Math.max(0, Math.min(1, (tauS - m0) / T0));
+    const cS = Math.round(tauS), fIdx = Math.max(0, Math.min(numFrames - 1, Math.round((cS - startIdx) / hopSize))), shiftSt = shifts[fIdx];
+    const vw = analysis.voicedWeight ? analysis.voicedWeight[Math.max(0, Math.min(n - 1, cS))] : 1;
+    const r = vw > 0 && Math.abs(shiftSt) >= 0.008 ? Math.pow(2, shiftSt / 12) : 1.0, synthStep = T0 / r;
+    const L = Math.max(16, Math.round(r < 1 ? synthStep : (k > 0 ? (1 - alpha) * (m0 - epochs[k - 1]) + alpha * T0 : T0)));
+    const R = Math.max(16, Math.round(r < 1 ? synthStep : T0));
+
+    for (let d = -L; d <= R; d++) {
+      const localOut = cS + d - startIdx, p0 = m0 + d, p1 = m1 + d;
+      if (localOut < 0 || localOut >= segLen || p0 < 0 || p1 >= n) continue;
+      const w = d < 0 ? 0.5 * (1 + Math.cos((Math.PI * d) / L)) : 0.5 * (1 + Math.cos((Math.PI * d) / R));
+      synthAcc[localOut] += ((1 - alpha) * rawAudio[p0] + alpha * rawAudio[p1]) * w;
+      winDensity[localOut] += w;
     }
-    const expectedOffset = hasPrevVoiced ? prevOffset + (0.5 * (prevR + r) - 1) * hopSize : 0;
-    const phaseLockOffset = findPhaseLockOffset(rawAudio, acc, weight, outStart, gCenter, halfWin, hopSize, r, maxLock, expectedOffset, hasPrevVoiced);
-    prevOffset = phaseLockOffset; prevR = r; hasPrevVoiced = true;
-    const emphAlpha = Math.abs(shiftSt) > 1.5 ? Math.min(0.42, (Math.abs(shiftSt) - 1.5) * 0.08) : 0;
-    let deEmphState = 0;
-    const inCenter = gCenter + phaseLockOffset;
-    for (let k = 0; k < winSize; k++) {
-      const localOut = outStart + k; if (localOut >= segLen) break;
-      const pos = inCenter + (k - halfWin) * r;
-      let val = sampleHermite4(rawAudio, pos);
-      if (emphAlpha > 0) { deEmphState = (val - emphAlpha * sampleHermite4(rawAudio, pos - 1)) + emphAlpha * deEmphState; val = deEmphState; }
-      const w = hann[k]; acc[localOut] += val * w; weight[localOut] += w;
-    }
+    tauS += Math.max(8, synthStep);
   }
+
   for (let i = 0; i < segLen; i++) {
-    const globalIdx = startIdx + i, v = weight[i] > 1e-4 ? acc[i] / weight[i] : rawAudio[globalIdx];
-    out[globalIdx] = Number.isFinite(v) ? Math.max(-1, Math.min(1, v)) : rawAudio[globalIdx];
+    const globalIdx = startIdx + i, vw = analysis.voicedWeight ? analysis.voicedWeight[globalIdx] : 1;
+    if (vw <= 0 || winDensity[i] <= 1e-4) { out[globalIdx] = rawAudio[globalIdx]; continue; }
+    const norm = winDensity[i] > 1.15 ? 1 + 0.85 * (winDensity[i] - 1.15) : Math.max(0.85, winDensity[i]);
+    const mixed = (1 - vw) * rawAudio[globalIdx] + vw * (synthAcc[i] / norm);
+    out[globalIdx] = Number.isFinite(mixed) ? Math.max(-1, Math.min(1, mixed)) : rawAudio[globalIdx];
   }
   return out;
 }

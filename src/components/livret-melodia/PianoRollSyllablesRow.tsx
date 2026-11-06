@@ -1,11 +1,10 @@
 /**
  * PianoRollSyllablesRow.tsx
- * Ligne d'édition directe des syllabes sous le Piano Roll avec Fusion (🔗) et Scission (✂️) en 1 clic (< 125 lignes).
+ * Ligne d'édition directe des syllabes sous le Piano Roll (< 115 lignes).
  */
 import React, { useState, useRef, useMemo, useEffect } from 'react';
 import type { VocalStepData } from '../../types/vocalPack.types';
-import { joinSyllableWithPrevious, splitBrickAndSyllableAt } from '../../utils/syllableImpulseMerger';
-import { Scissors, CornerDownLeft, Link2 } from 'lucide-react';
+import { Scissors, CornerDownLeft } from 'lucide-react';
 import { useLanguage } from '../../i18n/LanguageContext';
 
 interface PianoRollSyllablesRowProps {
@@ -25,7 +24,7 @@ export const PianoRollSyllablesRow: React.FC<PianoRollSyllablesRowProps> = ({
       if (s.active && s.note !== '───') {
         let ties = 0;
         while (i + 1 + ties < allSteps.length && allSteps[i + 1 + ties].note === '───') ties++;
-        const spanSteps = 1 + ties, x = i * stepW, w = Math.max(stepW * spanSteps, 36);
+        const spanSteps = 1 + ties, x = i * stepW, w = Math.max(stepW * spanSteps, 28);
         list.push({ stepIndex: i, note: s.note, syllable: s.syllable || '', spanSteps, width: w, x });
         i += ties;
       }
@@ -43,25 +42,13 @@ export const PianoRollSyllablesRow: React.FC<PianoRollSyllablesRowProps> = ({
   const handleSyllableChange = (stepIdx: number, val: string) =>
     onUpdateSteps(allSteps.map((st, i) => (i === stepIdx ? { ...st, syllable: val } : st)), false);
 
-  const handleJoinPrev = (stepIdx: number, focusPrevIdx?: number) => {
-    onUpdateSteps(joinSyllableWithPrevious(allSteps, stepIdx, 4), true);
-    if (focusPrevIdx !== undefined && focusPrevIdx >= 0) setTimeout(() => inputRefs.current[focusPrevIdx]?.focus(), 10);
-  };
-
-  const handleSplitBrick = (stepIdx: number, customVal?: string) =>
-    onUpdateSteps(splitBrickAndSyllableAt(allSteps, stepIdx, customVal), true);
-
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>, idx: number, n: { stepIndex: number; spanSteps: number }) => {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>, idx: number) => {
     if (e.key === 'Tab') {
       e.preventDefault();
       const nextIdx = e.shiftKey ? idx - 1 : idx + 1;
       if (nextIdx >= 0 && nextIdx < activeNotes.length) { inputRefs.current[nextIdx]?.focus(); inputRefs.current[nextIdx]?.select(); }
-    } else if (e.key === 'Backspace' && idx > 0 && e.currentTarget.selectionStart === 0 && e.currentTarget.selectionEnd === 0) {
-      e.preventDefault(); handleJoinPrev(n.stepIndex, idx - 1);
     } else if (e.key === 'Enter') {
-      const val = e.currentTarget.value;
-      if (n.spanSteps >= 2 && /\S+\s+\S+/.test(val)) { e.preventDefault(); handleSplitBrick(n.stepIndex, val); }
-      else e.currentTarget.blur();
+      e.currentTarget.blur();
     }
   };
 
@@ -82,19 +69,20 @@ export const PianoRollSyllablesRow: React.FC<PianoRollSyllablesRowProps> = ({
     <div className="flex flex-col gap-1 border-t border-[var(--cordel-border-sub)] bg-[var(--cordel-subcard-bg)] pt-1">
       <div className="relative h-8" style={{ width: `${gridWidth}px`, marginLeft: '64px' }}>
         {activeNotes.map((n, idx) => (
-          <div key={n.stepIndex} className="absolute top-0 flex items-center" style={{ left: `${n.x}px`, width: `${n.width - 2}px` }}>
-            {!readOnly && idx > 0 && (
-              <button type="button" tabIndex={-1} onClick={() => handleJoinPrev(n.stepIndex, idx - 1)} title="🔗 Joindre cette syllabe à la précédente (ou Backspace en début de case)" className="px-0.5 py-0.5 bg-amber-600/20 hover:bg-amber-600 text-amber-700 dark:text-amber-300 hover:text-white text-[9px] font-bold cursor-pointer shrink-0 border-y border-l border-amber-500/40">
-                <Link2 className="w-2.5 h-2.5" />
-              </button>
-            )}
-            <input ref={(el) => { inputRefs.current[idx] = el; }} type="text" disabled={readOnly} value={n.syllable} placeholder={n.note} onChange={(e) => handleSyllableChange(n.stepIndex, e.target.value)} onBlur={() => onUpdateSteps(allSteps, true)} onKeyDown={(e) => handleKeyDown(e, idx, n)} className="letra-syllable-input w-full text-center text-[10px] font-mono font-bold px-0.5 py-0.5 focus:outline-none transition-colors rounded-none" title={t('syllableInputTitle', { note: n.note })} />
-            {!readOnly && n.spanSteps >= 2 && (
-              <button type="button" tabIndex={-1} onClick={() => handleSplitBrick(n.stepIndex)} title="✂️ Scinder cette brique tenue en 2 impulsions/syllabes" className="px-0.5 py-0.5 bg-emerald-600/20 hover:bg-emerald-600 text-emerald-700 dark:text-emerald-300 hover:text-white text-[9px] font-bold cursor-pointer shrink-0 border-y border-r border-emerald-500/40">
-                <Scissors className="w-2.5 h-2.5" />
-              </button>
-            )}
-          </div>
+          <input
+            key={n.stepIndex}
+            ref={(el) => { inputRefs.current[idx] = el; }}
+            type="text"
+            disabled={readOnly}
+            value={n.syllable}
+            placeholder={n.note}
+            onChange={(e) => handleSyllableChange(n.stepIndex, e.target.value)}
+            onBlur={() => onUpdateSteps(allSteps, true)}
+            onKeyDown={(e) => handleKeyDown(e, idx)}
+            style={{ left: `${n.x}px`, width: `${n.width - 2}px` }}
+            className="letra-syllable-input absolute top-0 text-center text-[10px] font-mono font-bold px-0.5 py-0.5 focus:outline-none transition-colors rounded-none"
+            title={t('syllableInputTitle', { note: n.note })}
+          />
         ))}
       </div>
       {!readOnly && activeNotes.length > 0 && (

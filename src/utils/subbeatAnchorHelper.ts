@@ -45,7 +45,7 @@ export function computeBeatSyllableSubdivs(
     }
     if (k === 3) {
       if (hasRestBetween(0, 1)) return [0, 2, 3];
-      if (hasRestBetween(1, 2) || hasTrailingPickup) return [0, 1, 3];
+      if (hasRestBetween(1, 2) || hasTrailingPickup || !hasTrailingRest) return [0, 1, 3];
       return [0, 1, 2];
     }
     return syllables.map((_, idx) => Math.min(3, idx));

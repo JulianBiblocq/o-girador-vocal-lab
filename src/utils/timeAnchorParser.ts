@@ -98,12 +98,12 @@ export function extractTimeAnchors(rawText: string, beatsPerMeasure = 4, forceTh
   return { cleanText, timeAnchors, measuresCount: rawMeasuresCount, hasAnacrusis, anacrusisBeats, anacrusisStartBeat, exitBeat: timeAnchors[timeAnchors.length - 1]?.beat };
 }
 
-export function buildBeatLyricsMap(timeAnchors: TimeAnchor[], _hasAnacrusis = false): Record<string, { isInitialRest: boolean; isSustainedHold: boolean; hasLeadingRest: boolean; syllables: string[] }> {
-  const map: Record<string, { isInitialRest: boolean; isSustainedHold: boolean; hasLeadingRest: boolean; syllables: string[] }> = {};
-  for (const a of timeAnchors) map[`${a.measureOffset}_${a.beat}`] = { isInitialRest: !!a.isInitialRest, isSustainedHold: !!a.isSustainedHold, hasLeadingRest: !!a.hasLeadingRest, syllables: a.syllables || [] };
+export function buildBeatLyricsMap(timeAnchors: TimeAnchor[], _hasAnacrusis = false): Record<string, TimeAnchor> {
+  const map: Record<string, TimeAnchor> = {};
+  for (const a of timeAnchors) map[`${a.measureOffset}_${a.beat}`] = { ...a, syllables: a.syllables || [] };
   const firstSung = timeAnchors.find((a) => !a.isInitialRest && !a.isRest && (a.syllables?.length || a.textSlice));
   if (firstSung && firstSung.measureOffset === 0 && firstSung.beat > 1) {
-    for (let b = 1; b < firstSung.beat; b++) if (!map[`0_${b}`]) map[`0_${b}`] = { isInitialRest: true, isSustainedHold: false, hasLeadingRest: false, syllables: [] };
+    for (let b = 1; b < firstSung.beat; b++) if (!map[`0_${b}`]) map[`0_${b}`] = { beat: b, measureOffset: 0, isRest: true, isInitialRest: true, isSustainedHold: false, hasLeadingRest: false, syllables: [] };
   }
   return map;
 }

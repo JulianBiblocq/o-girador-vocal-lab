@@ -113,3 +113,4 @@ assert.equal(shiftedLeft[3].midiNumber, 64, 'Shifted -1 double moves Tap 1 from 
 assert.equal(shiftedLeft[7].midiNumber, 67, 'Shifted -1 double moves Tap 2 from step 8 to step 7');
 
 console.log('✅ Tous les tests des Volets 1, 2 et 3 sont validés avec succès !');
+

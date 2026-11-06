@@ -79,7 +79,12 @@ function decodeVoicedBlock(block: CandidateFrame[], tessitura?: TessituraRange, 
   for (let t = 0; t < T; t++) {
     const cand = block[t].candidates[optimal[t]];
     if (cand && cand.confidence >= 0.12 && Number.isFinite(cand.midiFloat) && Number.isFinite(block[t].timeSec)) {
-      pts.push({ timeSec: Math.round(block[t].timeSec * 1000) / 1000, midiFloat: Math.round(cand.midiFloat * 100) / 100 });
+      pts.push({
+        timeSec: Math.round(block[t].timeSec * 1000) / 1000,
+        midiFloat: Math.round(cand.midiFloat * 100) / 100,
+        confidence: Math.round(cand.confidence * 1000) / 1000,
+        rms: Math.round(block[t].rms * 10000) / 10000,
+      });
     }
   }
   return pts;

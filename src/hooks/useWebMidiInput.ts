@@ -116,3 +116,4 @@ export function useWebMidiInput(options: UseWebMidiInputOptions = {}) {
 
   return { midiConnected, midiDeviceName, lastMidiNote, taps, getTapsSnapshot: () => tapsListRef.current, clearTaps, triggerManualTapDown, triggerManualTapUp };
 }
+

@@ -1,6 +1,6 @@
 /**
  * syllableAligner.ts
- * Alignement des syllabes et briques MIDI guidé par la micro-grille sub-temps (syllableSubdivs) d'Organizador (< 142 lignes).
+ * Alignement des syllabes et briques MIDI guidé par la micro-grille sub-temps et impulsions réelles (< 142 lignes).
  */
 import type { VocalStepData } from '../types/vocalPack.types';
 import type { TimeAnchor } from '../types/toadaDocument.types';
@@ -18,9 +18,7 @@ export function assignSyllablesStrictlyToExistingBricks(steps: VocalStepData[], 
   const rawSyllables = splitTextIntoLetraSyllables(lyricsText || '');
   const attackIndices = steps.map((st, idx) => (st.active && st.note !== '───' && !st.isTie ? idx : -1)).filter((idx) => idx !== -1);
   if (attackIndices.length === 0) return steps;
-  const syllables = rawSyllables.length > attackIndices.length
-    ? mergeSyllablesToImpulseCount(rawSyllables, attackIndices.length)
-    : rawSyllables;
+  const syllables = rawSyllables.length > attackIndices.length ? mergeSyllablesToImpulseCount(rawSyllables, attackIndices.length) : rawSyllables;
   const result = steps.map((st) => ({ ...st, syllable: '' }));
   for (let k = 0; k < attackIndices.length; k++) result[attackIndices[k]].syllable = syllables[k] ?? '';
   return result;
@@ -66,6 +64,7 @@ export function alignAudioStepsWithTimeAnchors(
   steps: VocalStepData[], timeAnchors: TimeAnchor[], beatsPerMeasure = 4, stepsPerBeat = 4
 ): VocalStepData[] {
   const origActive = steps.map((s) => Boolean(s.active && s.midiNumber > 0));
+  const origAttacks = steps.map((s) => Boolean(s.active && s.syllableAttack === true && !s.isTie && s.note !== '───'));
   const result = steps.map((s) => ({ ...s, syllable: '', note: s.active ? '───' : '', isTie: s.active, syllableAttack: false }));
   let seenSung = false, lastSungBeatEnd = 0;
 
@@ -82,7 +81,11 @@ export function alignAudioStepsWithTimeAnchors(
     const syls = anchor.syllables?.length ? anchor.syllables : (anchor.textSlice ? splitTextIntoLetraSyllables(anchor.textSlice) : []);
     if (syls.length === 0) continue;
 
-    const subdivs = anchor.syllableSubdivs?.length === syls.length ? anchor.syllableSubdivs : computeBeatSyllableSubdivs(anchor.textSlice || '', syls, Boolean(anchor.hasLeadingRest), Boolean(anchor.hasTrailingPickup));
+    const detectedHeads: number[] = [];
+    for (let i = beatStart; i < beatEnd; i++) if (origAttacks[i]) detectedHeads.push(i);
+    const useDetected = detectedHeads.length >= 1 && detectedHeads.length <= syls.length;
+
+    const subdivs = useDetected ? detectedHeads.map((h) => h - beatStart) : (anchor.syllableSubdivs?.length === syls.length ? anchor.syllableSubdivs : computeBeatSyllableSubdivs(anchor.textSlice || '', syls, Boolean(anchor.hasLeadingRest), Boolean(anchor.hasTrailingPickup)));
     const firstSub = Math.max(0, Math.min(stepsPerBeat - 1, subdivs[0] ?? (anchor.hasLeadingRest ? 1 : 0)));
     const nextAct = result.find((s, idx) => idx >= beatStart && s.active && s.midiNumber > 0);
     const prevAct = result.slice(0, beatStart).reverse().find((s) => s.active && s.midiNumber > 0);
@@ -95,11 +98,14 @@ export function alignAudioStepsWithTimeAnchors(
     for (let i = beatStart + firstSub; i < beatEnd; i++) {
       if (!result[i].active || result[i].midiNumber <= 0) result[i] = { ...result[i], active: true, midiNumber: fbMidi, note: '───', isTie: true };
     }
-    const maxHeads = Math.min(syls.length, stepsPerBeat - firstSub), heads: number[] = [];
-    for (let k = 0; k < maxHeads; k++) {
-      const prevHead = heads.length > 0 ? heads[heads.length - 1] - beatStart : firstSub - 1;
-      heads.push(Math.min(beatEnd - 1, beatStart + Math.max(prevHead + 1, Math.min(stepsPerBeat - (maxHeads - k), subdivs[k] ?? (firstSub + k)))));
-    }
+    const heads = useDetected ? detectedHeads : (() => {
+      const maxH = Math.min(syls.length, stepsPerBeat - firstSub), h: number[] = [];
+      for (let k = 0; k < maxH; k++) {
+        const pH = h.length > 0 ? h[h.length - 1] - beatStart : firstSub - 1;
+        h.push(Math.min(beatEnd - 1, beatStart + Math.max(pH + 1, Math.min(stepsPerBeat - (maxH - k), subdivs[k] ?? (firstSub + k)))));
+      }
+      return h;
+    })();
     if (heads.length > 0) {
       const mergedSyls = syls.length > heads.length ? mergeSyllablesToImpulseCount(syls, heads.length) : syls;
       for (let k = 0; k < heads.length; k++) result[heads[k]].syllable = mergedSyls[k] ?? '';

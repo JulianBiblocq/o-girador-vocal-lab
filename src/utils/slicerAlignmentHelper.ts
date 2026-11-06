@@ -1,62 +1,87 @@
 /**
  * slicerAlignmentHelper.ts
- * Helper pur de génération et calquage des tranches sur les motifs Organizador et pauses Baque (< 142 lignes).
+ * Calquage des tranches sur les motifs Organizador, pauses Baque et auto-calage T1 par corrélation croisée (< 130 lignes).
  */
 import type { VocalPatternItem, VocalRole, ToadaArrangementSlot } from '../types/toadaProject.types';
+import type { TimeAnchor } from '../types/toadaDocument.types';
 import type { SliceSegment } from '../types/slicerSegments.types';
 import { resolveFreshTimeAnchors } from './timeAnchorParser';
 import { computePatternVocalOffsetsBeats, findTransitionRmsDipSec } from './subbeatAnchorHelper';
 
+function windowRms(pcm: Float32Array, sampleRate: number, t0: number, t1: number): number {
+  const i0 = Math.max(0, Math.floor(t0 * sampleRate)), i1 = Math.min(pcm.length, Math.ceil(t1 * sampleRate));
+  if (i1 <= i0) return 0;
+  let sumSq = 0;
+  for (let i = i0; i < i1; i++) sumSq += pcm[i] * pcm[i];
+  return Math.sqrt(sumSq / (i1 - i0));
+}
+
+export function alignT1ByAnchorCrossCorrelation(
+  pcm: Float32Array | null | undefined, sampleRate: number, nominalT1Sec: number, bpm: number,
+  timeAnchors: TimeAnchor[] | undefined, hasAnacrusis: boolean, beatsPerMeasure = 4, maxShiftSec = 0.35
+): number {
+  if (!pcm || pcm.length === 0 || sampleRate <= 0 || !timeAnchors || timeAnchors.length === 0) return nominalT1Sec;
+  const sung = timeAnchors.filter((a) => !a.isRest && !a.isInitialRest && !a.isSustainedHold && (a.syllables?.length ?? 0) > 0);
+  if (sung.length === 0) return nominalT1Sec;
+  const beatDur = 60 / (bpm || 88), pulses: Array<{ relSec: number; weight: number; durSec: number }> = [];
+  for (const a of sung) {
+    const relBeat = (hasAnacrusis ? a.measureOffset - 1 : a.measureOffset) * beatsPerMeasure + (a.beat - 1);
+    const subdivs = a.syllableSubdivs?.length ? a.syllableSubdivs : [a.hasLeadingRest ? 1 : 0];
+    for (const s of subdivs) pulses.push({ relSec: (relBeat + s / 4) * beatDur, weight: relBeat === 0 && s === 0 ? 1.8 : (s === 0 ? 1.25 : 0.9), durSec: Math.max(0.06, beatDur * 0.22) });
+  }
+  if (pulses.length === 0) return nominalT1Sec;
+  let bestDelta = 0, bestScore = -Infinity;
+  for (let dt = -maxShiftSec; dt <= maxShiftSec + 1e-6; dt += 0.01) {
+    const candT1 = nominalT1Sec + dt;
+    if (candT1 < 0) continue;
+    let corr = 0;
+    for (const p of pulses) {
+      const t = candT1 + p.relSec, eCur = windowRms(pcm, sampleRate, t, t + p.durSec), ePre = windowRms(pcm, sampleRate, Math.max(0, t - 0.07), t);
+      corr += p.weight * (Math.max(0, eCur - 0.55 * ePre) + 0.45 * eCur);
+    }
+    const score = corr * (1 - 0.08 * ((dt / Math.max(0.01, maxShiftSec)) ** 2));
+    if (score > bestScore) { bestScore = score; bestDelta = dt; }
+  }
+  return Math.max(0, Math.round((nominalT1Sec + bestDelta) * 1000) / 1000);
+}
+
 export function calculateSliceMetricT1Sec(
   startSec: number, bpm: number, gridOffsetSec = 0.8, hasAnacrusis = false, anacrusisBeats = 2, existingMetricT1Sec?: number
 ): number {
-  const beatDur = 60 / (bpm || 88), measureDur = beatDur * 4;
-  const anacDur = hasAnacrusis && anacrusisBeats > 0 ? anacrusisBeats * beatDur : 0;
+  const beatDur = 60 / (bpm || 88), measureDur = beatDur * 4, anacDur = hasAnacrusis && anacrusisBeats > 0 ? anacrusisBeats * beatDur : 0;
   if (typeof existingMetricT1Sec === 'number' && existingMetricT1Sec >= 0) {
     if (startSec >= existingMetricT1Sec - anacDur - 0.45 * measureDur && startSec <= existingMetricT1Sec + 0.65 * measureDur) return existingMetricT1Sec;
   }
-  const estT1 = startSec + anacDur;
-  return Math.max(0, Math.round((estT1 - gridOffsetSec) / measureDur) * measureDur + gridOffsetSec);
+  return Math.max(0, Math.round((startSec + anacDur - gridOffsetSec) / measureDur) * measureDur + gridOffsetSec);
 }
 
-export function splitSliceSegment(
-  seg: SliceSegment, cutSec: number, bpm: number, gridOffsetSec = 0.8
-): [SliceSegment, SliceSegment] {
-  const beatDur = 60 / (bpm || 88), measureDur = beatDur * 4;
-  const cut = Math.round(Math.max(seg.startSec + 0.2, Math.min(seg.endSec - 0.2, cutSec)) * 100) / 100;
+export function splitSliceSegment(seg: SliceSegment, cutSec: number, bpm: number, gridOffsetSec = 0.8): [SliceSegment, SliceSegment] {
+  const beatDur = 60 / (bpm || 88), measureDur = beatDur * 4, cut = Math.round(Math.max(seg.startSec + 0.2, Math.min(seg.endSec - 0.2, cutSec)) * 100) / 100;
   const s1T1 = seg.metricT1Sec ?? calculateSliceMetricT1Sec(seg.startSec, bpm, gridOffsetSec, seg.hasAnacrusis, seg.anacrusisBeats);
   const s1M = Math.min(4, Math.max(1, Math.round((cut - s1T1) / measureDur) || 1)) as 1 | 2 | 3 | 4;
   const s2T1 = calculateSliceMetricT1Sec(cut, bpm, gridOffsetSec, false, 0);
   const s2M = Math.min(4, Math.max(1, Math.round((seg.endSec - s2T1 - 0.1) / measureDur) || 1)) as 1 | 2 | 3 | 4;
-  const s2HasAna = cut < s2T1 - 0.15;
-  const s2AnaBeats = s2HasAna ? Math.min(4, Math.max(1, Math.round((s2T1 - cut) / beatDur))) : 0;
+  const s2HasAna = cut < s2T1 - 0.15, s2AnaBeats = s2HasAna ? Math.min(4, Math.max(1, Math.round((s2T1 - cut) / beatDur))) : 0;
   return [
     { ...seg, id: `${seg.id}-a`, endSec: cut, metricT1Sec: s1T1, measuresCount: s1M },
     { ...seg, id: `seg-${Date.now()}-b`, startSec: cut, metricT1Sec: s2T1, measuresCount: s2M, hasAnacrusis: s2HasAna, anacrusisBeats: s2AnaBeats, targetPatternId: 'new' },
   ];
 }
 
-export function mergeAdjacentSliceSegments(
-  segA: SliceSegment, segB: SliceSegment, bpm: number, gridOffsetSec = 0.8
-): SliceSegment {
-  const beatDur = 60 / (bpm || 88), measureDur = beatDur * 4;
-  const startSec = Math.min(segA.startSec, segB.startSec), endSec = Math.max(segA.endSec, segB.endSec);
+export function mergeAdjacentSliceSegments(segA: SliceSegment, segB: SliceSegment, bpm: number, gridOffsetSec = 0.8): SliceSegment {
+  const beatDur = 60 / (bpm || 88), measureDur = beatDur * 4, startSec = Math.min(segA.startSec, segB.startSec), endSec = Math.max(segA.endSec, segB.endSec);
   const metricT1Sec = segA.metricT1Sec ?? calculateSliceMetricT1Sec(startSec, bpm, gridOffsetSec, segA.hasAnacrusis, segA.anacrusisBeats);
   const measuresCount = Math.min(4, Math.max(1, Math.round((endSec - metricT1Sec - 0.15) / measureDur) || 1)) as 1 | 2 | 3 | 4;
   return { ...segA, startSec, endSec, metricT1Sec, measuresCount };
 }
 
-function computePauseMeasuresBetweenPatterns(
-  slots: ToadaArrangementSlot[] | undefined, prevPatId: string, curPatId: string
-): number {
+function computePauseMeasuresBetweenPatterns(slots: ToadaArrangementSlot[] | undefined, prevPatId: string, curPatId: string): number {
   if (!slots || slots.length === 0) return 0;
   const i1 = slots.findIndex((s) => s.puxadorPatternId === prevPatId || s.coroPatternId === prevPatId);
   const i2 = slots.findIndex((s, idx) => idx > i1 && (s.puxadorPatternId === curPatId || s.coroPatternId === curPatId));
   if (i1 < 0 || i2 < 0) return 0;
   let pauseMeasures = 0;
-  for (let k = i1 + 1; k < i2; k++) {
-    if (!slots[k].puxadorPatternId && !slots[k].coroPatternId) pauseMeasures += Math.max(1, Math.min(8, slots[k].advanceMeasures ?? 1));
-  }
+  for (let k = i1 + 1; k < i2; k++) if (!slots[k].puxadorPatternId && !slots[k].coroPatternId) pauseMeasures += Math.max(1, Math.min(8, slots[k].advanceMeasures ?? 1));
   return pauseMeasures;
 }
 
@@ -65,35 +90,22 @@ export function buildOrganizadorSlices(
   gridOffsetSec = 0.8, slots?: ToadaArrangementSlot[], pcm?: Float32Array | null, sampleRate = 44100
 ): SliceSegment[] {
   const beatDur = 60 / (bpm || 88), measureDur = beatDur * 4;
-  const targetRole = defaultRole === 'coro' ? 'coro' : 'puxador';
-  const rolePats = patterns.filter((p) => p.role === targetRole);
-  const targetList = rolePats.length > 0 ? rolePats : patterns;
+  const rolePats = patterns.filter((p) => p.role === (defaultRole === 'coro' ? 'coro' : 'puxador')), targetList = rolePats.length > 0 ? rolePats : patterns;
   if (targetList.length === 0) return [];
-
-  const metaList: Array<{
-    pat: VocalPatternItem; t1: number; mCount: number; hasAna: boolean; anacDur: number;
-    isIslandStart: boolean; pauseMeasures: number; pauseStartT1: number;
-    firstVocalOffsetBeats: number; hasBoundaryExitAnchor: boolean;
-  }> = [];
+  const metaList: Array<{ pat: VocalPatternItem; t1: number; mCount: number; hasAna: boolean; anacDur: number; isIslandStart: boolean; pauseMeasures: number; pauseStartT1: number; firstVocalOffsetBeats: number; hasBoundaryExitAnchor: boolean }> = [];
   let prevT1 = gridOffsetSec, prevMCount = targetList[0]?.measuresCount ?? 1;
 
   targetList.forEach((pat, idx) => {
-    const hasAna = pat.hasAnacrusis !== false;
-    const anacDur = hasAna ? (pat.anacrusisBeats ?? 2) * beatDur : 0;
-    const mCount = pat.measuresCount ?? 1;
+    const hasAna = pat.hasAnacrusis !== false, anacDur = hasAna ? (pat.anacrusisBeats ?? 2) * beatDur : 0, mCount = pat.measuresCount ?? 1;
     const anchors = resolveFreshTimeAnchors(pat.rawLineCode, pat.timeAnchors, 4, !hasAna, pat.assignedLyricsText);
     const { firstVocalOffsetBeats, hasBoundaryExitAnchor } = computePatternVocalOffsetsBeats(anchors, hasAna, 4, mCount);
-    const pauseMeasures = idx > 0 ? computePauseMeasuresBetweenPatterns(slots, targetList[idx - 1].id, pat.id) : 0;
-    const pauseStartT1 = prevT1 + prevMCount * measureDur;
-    let t1 = prevT1 + (idx === 0 ? 0 : (prevMCount + pauseMeasures) * measureDur);
-    let isIslandStart = idx === 0 || pauseMeasures > 0;
-
+    const pauseMeasures = idx > 0 ? computePauseMeasuresBetweenPatterns(slots, targetList[idx - 1].id, pat.id) : 0, pauseStartT1 = prevT1 + prevMCount * measureDur;
+    let t1 = prevT1 + (idx === 0 ? 0 : (prevMCount + pauseMeasures) * measureDur), isIslandStart = idx === 0 || pauseMeasures > 0;
     if (idx === 0) {
       const estT1 = detected[0] ? detected[0].startSec + anacDur * 0.5 : gridOffsetSec;
       t1 = Math.max(anacDur, Math.round((estT1 - gridOffsetSec) / measureDur) * measureDur + gridOffsetSec);
     } else if (pauseMeasures === 0) {
-      const prevBodyEnd = prevT1 + prevMCount * measureDur;
-      const nextDet = detected.find((d) => d.startSec > prevBodyEnd + 1.8);
+      const prevBodyEnd = prevT1 + prevMCount * measureDur, nextDet = detected.find((d) => d.startSec > prevBodyEnd + 1.8);
       if (nextDet) {
         const snapM = Math.round((nextDet.startSec + anacDur * 0.5 - gridOffsetSec) / measureDur) * measureDur + gridOffsetSec;
         if (snapM > prevBodyEnd + measureDur) { t1 = snapM; isIslandStart = true; }
@@ -107,10 +119,8 @@ export function buildOrganizadorSlices(
   for (let i = 0; i < metaList.length; i++) {
     const cur = metaList[i], next = metaList[i + 1];
     if (cur.pauseMeasures > 0) {
-      const pMeasures = Math.max(1, Math.min(4, cur.pauseMeasures)) as 1 | 2 | 3 | 4;
-      const pStart = Math.round(cur.pauseStartT1 * 100) / 100;
-      const pEnd = Math.round((cur.pauseStartT1 + cur.pauseMeasures * measureDur) * 100) / 100;
-      segments.push({ id: `seg-pause-org-${i}`, startSec: pStart, endSec: pEnd, metricT1Sec: pStart, targetPatternId: 'ignore', name: `[PAUSE ${pMeasures}M]`, measuresCount: pMeasures, hasAnacrusis: false, anacrusisBeats: 0, hasTailBeat: false, isPause: true });
+      const pM = Math.max(1, Math.min(4, cur.pauseMeasures)) as 1 | 2 | 3 | 4;
+      segments.push({ id: `seg-pause-org-${i}`, startSec: Math.round(cur.pauseStartT1 * 100) / 100, endSec: Math.round((cur.pauseStartT1 + cur.pauseMeasures * measureDur) * 100) / 100, metricT1Sec: Math.round(cur.pauseStartT1 * 100) / 100, targetPatternId: 'ignore', name: `[PAUSE ${pM}M]`, measuresCount: pM, hasAnacrusis: false, anacrusisBeats: 0, hasTailBeat: false, isPause: true });
     }
     const prevVocalSeg = segments.length > 0 ? segments[segments.length - 1] : null;
     const isolatedStartSec = cur.hasAna ? Math.max(0, Math.round((cur.t1 + (cur.firstVocalOffsetBeats - 0.25) * beatDur) * 100) / 100) : Math.max(0, Math.round(cur.t1 * 100) / 100);

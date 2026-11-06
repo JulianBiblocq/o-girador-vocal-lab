@@ -1,13 +1,14 @@
 /**
- * pitchToStepsQuantizer.ts — Quantification MIDI sur la grille des temps et gestion des silences (< 144 lignes).
+ * pitchToStepsQuantizer.ts — Quantification MIDI sub-temps Maracatu, noyau vocalique et gestion des silences (< 130 lignes).
  */
 import type { PitchCurvePoint, VocalStepData } from '../types/vocalPack.types';
 import type { TimeAnchor } from '../types/toadaDocument.types';
 import { midiToNoteName } from '../utils/noteUtils';
-import { snapMidiToScale, type ScaleType } from './scaleQuantizer';
+import { snapMidiToScale, snapMidiWithBayesianScalePrior, type ScaleType } from './scaleQuantizer';
 import { hasSyllableAttack } from './onsetDetector';
 import { getPatternT1OffsetSec } from '../utils/anacrusisTimingHelper';
-import { filterConsonantPitchDips, segmentPitchCurve, computeTrimmedMedianMidi, recalibrateBricksToLocalPitchCurve, type PitchSegment } from './pitchStepSegmentation';
+import { filterConsonantPitchDips, segmentPitchCurve, computeVowelCoreMidi, recalibrateBricksToLocalPitchCurve, inferBestDiatonicScale, type PitchSegment } from './pitchStepSegmentation';
+import { computeVowelOnsetStrength, scoreMaracatuSubBeatPattern } from './maracatuSubBeatAligner';
 import { buildBeatLyricsMap } from '../utils/timeAnchorParser';
 
 export interface QuantizerParams {
@@ -33,43 +34,43 @@ function findSegmentForStep(segments: PitchSegment[], sStart: number, sEnd: numb
 
 export function quantizePitchToSteps(params: QuantizerParams): QuantizedGridResult {
   const { bpm, beatsPerMeasure, measuresCount, beatResolutions, trimStartSec, trimEndSec, hasAnacrusis = true, tonic = 'C', scaleType = 'chromatic', allowedPitchClasses, pcm, sampleRate, timeAnchors = [] } = params;
-  const pitchCurve = filterConsonantPitchDips(params.pitchCurve);
-  const beatDuration = 60 / bpm, measureDuration = beatsPerMeasure * beatDuration;
-  const t1 = params.t1OffsetSec ?? getPatternT1OffsetSec(hasAnacrusis, measureDuration);
+  const pitchCurve = filterConsonantPitchDips(params.pitchCurve), inferred = inferBestDiatonicScale(pitchCurve, tonic), tuningOffset = inferred.tuningOffset;
+  const beatDuration = 60 / bpm, measureDuration = beatsPerMeasure * beatDuration, t1 = params.t1OffsetSec ?? getPatternT1OffsetSec(hasAnacrusis, measureDuration);
   const hasAnac = hasAnacrusis !== false, startM = hasAnac ? -1 : 0, gridStartSec = hasAnac ? (t1 - measureDuration) : t1;
   const pitchDiffLimit = Math.max(0.55, 0.55 + (params.smoothingLevel ?? 0.15) * 0.5);
-  const allSteps: VocalStepData[] = [];
-  const beatMap = buildBeatLyricsMap(timeAnchors, hasAnac);
+  const allSteps: VocalStepData[] = [], beatMap = buildBeatLyricsMap(timeAnchors, hasAnac);
   let globalStepIndex = 0, prevMidiFloat = 0;
   const segments = segmentPitchCurve(pitchCurve, { minDurationSec: 0.04, pitchJumpThreshold: pitchDiffLimit });
 
   for (let m = startM; m <= measuresCount; m++) {
     const mBaseSec = m === -1 ? (t1 - measureDuration) : (t1 + m * measureDuration);
-    const beatsInThisM = (m === measuresCount) ? 1 : beatsPerMeasure;
-    const mOffset = hasAnac ? (m === -1 ? 0 : m + 1) : m;
+    const beatsInThisM = (m === measuresCount) ? 1 : beatsPerMeasure, mOffset = hasAnac ? (m === -1 ? 0 : m + 1) : m;
 
     for (let b = 0; b < beatsInThisM; b++) {
-      const beatStartTime = mBaseSec + b * beatDuration;
-      const resolution = beatResolutions[b] || 4, stepDuration = beatDuration / resolution;
+      const beatStartTime = mBaseSec + b * beatDuration, resolution = beatResolutions[b] || 4, stepDuration = beatDuration / resolution;
       const anchor = beatMap[`${mOffset}_${b + 1}`];
       const isInitialRest = anchor?.isInitialRest === true, isSustainedHold = anchor?.isSustainedHold === true, hasLeadingRest = anchor?.hasLeadingRest === true;
-      const sylCount = anchor?.syllables?.length || 0, startSub = hasLeadingRest ? 1 : 0, availRes = hasLeadingRest ? Math.max(1, resolution - 1) : resolution;
-      const subdivTargets = new Set<number>();
-      for (let k = 0; k < sylCount; k++) subdivTargets.add(Math.min(resolution - 1, startSub + Math.floor((k * availRes) / sylCount)));
-      const beatPitch = computeTrimmedMedianMidi(pitchCurve, beatStartTime, beatStartTime + beatDuration, 0.15)
-        ?? (sylCount > 0 && !isInitialRest ? computeTrimmedMedianMidi(pitchCurve, beatStartTime, beatStartTime + beatDuration * 1.6, 0.15) : null);
+      const sylCount = anchor?.syllables?.length || 0;
+      const onsetProfile = computeVowelOnsetStrength(pcm, sampleRate, pitchCurve, beatStartTime, beatDuration, resolution);
+      const hasExplicitUnderscore = Boolean(anchor?.textSlice && /[_𝄽]/.test(anchor.textSlice)) || Boolean(anchor?.isDownbeatLocked) || Boolean(anchor?.hasTrailingPickup);
+      const maracatuFit = scoreMaracatuSubBeatPattern({
+        syllableCount: sylCount, profile: onsetProfile, hasLeadingRest, hasTrailingPickup: anchor?.hasTrailingPickup,
+        isDownbeatLocked: anchor?.isDownbeatLocked, explicitSubdivs: anchor?.syllableSubdivs, hasExplicitUnderscore,
+      });
+      const subdivTargets = new Set<number>(maracatuFit.subdivs), startSub = maracatuFit.subdivs.length > 0 ? maracatuFit.subdivs[0] : (hasLeadingRest ? 1 : 0);
+      const beatPitch = computeVowelCoreMidi(pitchCurve, beatStartTime, beatStartTime + beatDuration, tuningOffset, inferred.allowedPitchClasses)
+        ?? (sylCount > 0 && !isInitialRest ? computeVowelCoreMidi(pitchCurve, beatStartTime, beatStartTime + beatDuration * 1.6, tuningOffset, inferred.allowedPitchClasses) : null);
       let hasVoicedInBeat = false;
 
       for (let s = 0; s < resolution; s++) {
-        const stepStart = beatStartTime + s * stepDuration, stepEnd = stepStart + stepDuration;
-        const prevStep = allSteps[allSteps.length - 1];
+        const stepStart = beatStartTime + s * stepDuration, stepEnd = stepStart + stepDuration, prevStep = allSteps[allSteps.length - 1];
         if (isInitialRest || stepStart >= trimEndSec) {
           allSteps.push({ stepIndex: globalStepIndex++, active: false, note: '', midiNumber: 0, velocity: 0, decay: stepDuration });
           prevMidiFloat = 0; continue;
         }
-        if (hasLeadingRest && s === 0) {
-          const s0Voiced = computeTrimmedMedianMidi(pitchCurve, stepStart, stepEnd, 0.15) !== null;
-          if (prevStep?.active && prevStep.midiNumber > 0 && s0Voiced) {
+        if ((hasLeadingRest && s === 0) || (sylCount > 0 && s < startSub)) {
+          const sVoiced = computeVowelCoreMidi(pitchCurve, stepStart, stepEnd, tuningOffset) !== null;
+          if (prevStep?.active && prevStep.midiNumber > 0 && sVoiced) {
             allSteps.push({ stepIndex: globalStepIndex++, active: true, note: '───', midiNumber: prevStep.midiNumber, syllable: '', syllableAttack: false, isTie: true, velocity: 90, decay: stepDuration });
           } else {
             allSteps.push({ stepIndex: globalStepIndex++, active: false, note: '', midiNumber: 0, velocity: 0, decay: stepDuration });
@@ -78,9 +79,9 @@ export function quantizePitchToSteps(params: QuantizerParams): QuantizedGridResu
           continue;
         }
 
-        let localPitch = computeTrimmedMedianMidi(pitchCurve, stepStart, stepEnd, 0.15);
+        let localPitch = computeVowelCoreMidi(pitchCurve, stepStart, stepEnd, tuningOffset, inferred.allowedPitchClasses);
         if (!localPitch && sylCount > 0 && s >= startSub && beatPitch && (subdivTargets.has(s) || hasVoicedInBeat)) {
-          localPitch = computeTrimmedMedianMidi(pitchCurve, stepStart, beatStartTime + beatDuration, 0.15) ?? beatPitch;
+          localPitch = computeVowelCoreMidi(pitchCurve, stepStart, beatStartTime + beatDuration, tuningOffset, inferred.allowedPitchClasses) ?? beatPitch;
         }
         const bestSegment = findSegmentForStep(segments, stepStart, stepEnd, stepDuration);
         if (!localPitch && (!bestSegment || stepEnd <= trimStartSec)) {
@@ -89,25 +90,20 @@ export function quantizePitchToSteps(params: QuantizerParams): QuantizedGridResu
         }
 
         const curFloat = localPitch ? localPitch.midiFloat : bestSegment!.medianMidiFloat;
-        const targetMidi = (scaleType !== 'chromatic' || allowedPitchClasses)
-          ? snapMidiToScale(curFloat, tonic, scaleType, allowedPitchClasses)
-          : (localPitch ? localPitch.midi : bestSegment!.medianMidi);
-
+        const targetMidi = (scaleType !== 'chromatic' || allowedPitchClasses) ? snapMidiToScale(curFloat, tonic, scaleType, allowedPitchClasses) : snapMidiWithBayesianScalePrior(curFloat, inferred.allowedPitchClasses, 0, 0.32);
         const isFirstVoicedWithSyl = !hasVoicedInBeat && sylCount > 0;
         hasVoicedInBeat = true;
         const isSubdivAttack = sylCount > 0 && subdivTargets.has(s);
-        const acousticAttack = pcm && sampleRate ? hasSyllableAttack(pcm, sampleRate, stepStart, stepEnd) : false;
+        const acousticAttack = (pcm && sampleRate ? hasSyllableAttack(pcm, sampleRate, stepStart, stepEnd) : false) || onsetProfile.hasImpulse[s];
         const allowAcousticSplit = timeAnchors.length === 0 || (sylCount === 0 && !isSustainedHold);
         const hasAttack = !isSustainedHold && (isFirstVoicedWithSyl || isSubdivAttack || (allowAcousticSplit && acousticAttack));
-
-        const samePitch = Boolean(prevStep && prevStep.active && prevStep.midiNumber === targetMidi && (prevMidiFloat <= 0 || Math.abs(curFloat - prevMidiFloat) < pitchDiffLimit));
+        const samePitch = Boolean(prevStep && prevStep.active && (sylCount > 0 || (prevStep.midiNumber === targetMidi && (prevMidiFloat <= 0 || Math.abs(curFloat - prevMidiFloat) < pitchDiffLimit))));
         const canTie = Boolean(prevStep && prevStep.active && (isSustainedHold || (!hasAttack && samePitch)));
         if (!canTie) prevMidiFloat = curFloat;
-        const effectiveMidi = (canTie && isSustainedHold) ? prevStep.midiNumber : targetMidi;
-
+        const effectiveMidi = (canTie && (isSustainedHold || sylCount > 0)) ? prevStep.midiNumber : targetMidi;
         allSteps.push({
           stepIndex: globalStepIndex++, active: true, note: canTie ? '───' : midiToNoteName(effectiveMidi),
-          midiNumber: effectiveMidi, syllable: '', syllableAttack: hasAttack || acousticAttack, isTie: canTie, velocity: canTie ? 90 : 100, decay: stepDuration,
+          midiNumber: effectiveMidi, syllable: '', syllableAttack: hasAttack, isTie: canTie, velocity: canTie ? 90 : 100, decay: stepDuration,
         });
       }
     }
@@ -127,13 +123,12 @@ export function requantizeStepsInTimeRange(
   curve: PitchCurvePoint[], existingSteps: VocalStepData[], startSec: number, endSec: number, stepDurationSec: number, _anacCount = 0, tGridStart = 0
 ): VocalStepData[] {
   if (!existingSteps || existingSteps.length === 0 || stepDurationSec <= 0) return existingSteps;
-  const segments = segmentPitchCurve(curve, { minDurationSec: 0.04, pitchJumpThreshold: 0.65 });
+  const segments = segmentPitchCurve(curve, { minDurationSec: 0.04, pitchJumpThreshold: 0.65 }), tuningOffset = inferBestDiatonicScale(curve).tuningOffset;
   const result = existingSteps.map((s) => ({ ...s }));
   for (let i = 0; i < result.length; i++) {
     const sStart = tGridStart + i * stepDurationSec, sEnd = sStart + stepDurationSec;
     if (sEnd <= startSec - 0.005 || sStart >= endSec + 0.005) continue;
-    const local = computeTrimmedMedianMidi(curve, sStart, sEnd, 0.2);
-    const bestSegment = findSegmentForStep(segments, sStart, sEnd, stepDurationSec);
+    const local = computeVowelCoreMidi(curve, sStart, sEnd, tuningOffset), bestSegment = findSegmentForStep(segments, sStart, sEnd, stepDurationSec);
     if (!local && !bestSegment) { result[i] = { ...result[i], active: false, note: '', midiNumber: 0 }; continue; }
     const targetMidi = local ? local.midi : bestSegment!.medianMidi, prev = i > 0 ? result[i - 1] : null;
     const isTie = Boolean(prev && prev.active && prev.midiNumber === targetMidi && !result[i].syllableAttack);

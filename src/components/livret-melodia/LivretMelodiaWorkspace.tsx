@@ -1,5 +1,5 @@
 /**
- * LivretMelodiaWorkspace.tsx — Espace de travail du Livret 4 (Gamme Maracatu, Tap Rythmique, Piano Roll, Melodyne & Syllabes) (< 140 lignes).
+ * LivretMelodiaWorkspace.tsx — Espace de travail du Livret 4 (Piano Roll, Melodyne & Syllabes) (< 130 lignes).
  */
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import type { PitchCurvePoint, VocalPackExport, VocalStepData } from '../../types/vocalPack.types';
@@ -15,7 +15,6 @@ import { resolveFreshTimeAnchors } from '../../utils/timeAnchorParser';
 import { downloadToadaPackJson } from '../../utils/toadaPackExporter';
 import { useVocalTransportStore } from '../../stores/useVocalTransportStore';
 import { PianoRollEditor } from './PianoRollEditor'; import { MelodyneControlsBar } from './MelodyneControlsBar';
-import { ScaleLockBar } from './ScaleLockBar'; import { RhythmTapBar } from './RhythmTapBar';
 import { MelodicControls } from './MelodicControls'; import { LetraEditorPanel } from './LetraEditorPanel';
 import { MelodiaNextStepFooter } from './MelodiaNextStepFooter'; import { HarmonyProfileSelector } from '../common/HarmonyProfileSelector';
 import { DEFAULT_HARMONY_CONFIG } from '../../types/harmony.types'; import { moveBrick, type PianoRollTool } from './pianoRollInteractions';
@@ -37,9 +36,9 @@ export const LivretMelodiaWorkspace: React.FC<LivretMelodiaWorkspaceProps> = ({
   const [activeTool, setActiveTool] = useState<PianoRollTool>('pointer'), [selectedStepIdx, setSelectedStepIdx] = useState<number | null>(null);
   const rawPitchCurve = useMemo(() => activePattern.rawPitchCurve ?? pitchCurve, [activePattern.rawPitchCurve, pitchCurve]);
   const initialScale = useMemo(() => detectBestScaleFromPitchCurve(rawPitchCurve, project.toadaMeta?.tonaliteDefaut || initialPack.metadata.referencePitch), [rawPitchCurve, project.toadaMeta?.tonaliteDefaut, initialPack.metadata.referencePitch]);
-  const [tonic, setTonic] = useState(() => initialScale.tonic), [scaleType, setScaleType] = useState<ScaleType>(() => initialScale.scaleType);
-  const [customPitchClasses, setCustomPitchClasses] = useState<number[] | null>(null), [smoothingLevel, setSmoothingLevel] = useState(0.15);
-  const allowedPitchClasses = useMemo(() => buildAllowedPitchClasses(tonic, scaleType, customPitchClasses), [tonic, scaleType, customPitchClasses]);
+  const [tonic, setTonic] = useState(() => initialScale.tonic), [scaleType, setScaleType] = useState<ScaleType>('chromatic');
+  const [smoothingLevel, setSmoothingLevel] = useState(0.15);
+  const allowedPitchClasses = useMemo(() => (scaleType !== 'chromatic' ? buildAllowedPitchClasses(tonic, scaleType) : null), [tonic, scaleType]);
 
   const rawPCM = useMemo(() => activePattern.rawAudioSamples ?? cleanPCM ?? new Float32Array(0), [activePattern.rawAudioSamples, cleanPCM]);
   const hasAnac = activePattern.hasAnacrusis !== false, resPerBeat = initialPack.metadata.beatResolutions?.[0] || 4;
@@ -80,8 +79,8 @@ export const LivretMelodiaWorkspace: React.FC<LivretMelodiaWorkspaceProps> = ({
     updatePattern(activePattern.id, { pack: updatedPack, anacrusisSteps: hasAnac ? norm.slice(0, anacLen) : [], mainSteps: (hasAnac ? norm.slice(anacLen) : norm).map((s, idx) => ({ ...s, stepIndex: idx })), isMidiInitialized: true, ...(commit ? { midiLocked: true } : {}) });
   }, [setAllSteps, initialPack, hasAnac, beatsPerMeasure, displayedCurve, anacLen, activePattern.id, updatePattern]);
 
-  const recompute = useCallback((smooth: number, ton: string, sc: ScaleType, customPcs: number[] | null = customPitchClasses) => {
-    const stepDur = (60 / (initialPack.metadata.bpm || 88)) / resPerBeat, allowed = buildAllowedPitchClasses(ton, sc, customPcs);
+  const recompute = useCallback((smooth: number, ton: string, sc: ScaleType) => {
+    const stepDur = (60 / (initialPack.metadata.bpm || 88)) / resPerBeat, allowed = sc !== 'chromatic' ? buildAllowedPitchClasses(ton, sc) : null;
     if (activePattern.midiLocked && allSteps.length > 0) {
       const steps = recalibrateBricksToLocalPitchCurve(allSteps, rawPitchCurve, hasAnac ? 0 : t1OffsetSec, stepDur, ton, sc, smooth, allowed);
       commitCurrentSnapshot({ steps }); handleUpdateSteps(steps, false); return;
@@ -93,7 +92,7 @@ export const LivretMelodiaWorkspace: React.FC<LivretMelodiaWorkspaceProps> = ({
     const steps = recalibrateBricksToLocalPitchCurve(aligned, rawPitchCurve, hasAnac ? 0 : t1OffsetSec, stepDur, ton, sc, smooth, allowed);
     if (anchors && anchors !== activePattern.timeAnchors) updatePattern(activePattern.id, { timeAnchors: anchors });
     commitCurrentSnapshot({ steps }); handleUpdateSteps(steps, false);
-  }, [activePattern.midiLocked, allSteps, rawPitchCurve, initialPack, beatsPerMeasure, measuresCount, totalDurationSec, hasAnac, t1OffsetSec, rawPCM, sampleRate, activePattern.id, activePattern.rawLineCode, activePattern.assignedLyricsText, activePattern.timeAnchors, rawTxtCode, resPerBeat, customPitchClasses, updatePattern, commitCurrentSnapshot, handleUpdateSteps]);
+  }, [activePattern.midiLocked, allSteps, rawPitchCurve, initialPack, beatsPerMeasure, measuresCount, totalDurationSec, hasAnac, t1OffsetSec, rawPCM, sampleRate, activePattern.id, activePattern.rawLineCode, activePattern.assignedLyricsText, activePattern.timeAnchors, rawTxtCode, resPerBeat, updatePattern, commitCurrentSnapshot, handleUpdateSteps]);
 
   const { handleReset, handleShiftOctave, handleAlignOctaveToBricks, handleDeleteSelected, handleSimplifyMelody, handleWeldSelected } = useMelodiaActions({
     rawPCM, sampleRate, totalDurationSec, activePattern, initialPack, beatsPerMeasure, measuresCount, hasAnac, t1OffsetSec, smoothingLevel, tonic, scaleType, rawPitchCurve, allSteps, selectedRegion, selectedRegionId, selectedStepIdx, regions, clearAllRegions, deleteSelected, commitCurrentSnapshot, setAllSteps, updatePattern, handleUpdateSteps, t, rawTxtCode,
@@ -106,19 +105,15 @@ export const LivretMelodiaWorkspace: React.FC<LivretMelodiaWorkspaceProps> = ({
   useEffect(() => { useVocalTransportStore.getState().setIsPlaying(isPlaying); }, [isPlaying]);
 
   return (
-    <div className="flex flex-col gap-2.5 w-full">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <ScaleLockBar tonic={tonic} scaleType={scaleType} customPitchClasses={customPitchClasses} pitchCurve={rawPitchCurve} defaultKeyStr={project.toadaMeta?.tonaliteDefaut} onUpdateScale={(ton, sc, cp) => { setTonic(ton); setScaleType(sc); setCustomPitchClasses(cp); recompute(smoothingLevel, ton, sc, cp); }} />
-        <HarmonyProfileSelector config={harmonyConfig} onChange={updateHarmonyConfig} />
-      </div>
-      <RhythmTapBar allSteps={allSteps} pitchCurve={rawPitchCurve} pcm={rawPCM} sampleRate={sampleRate} bpm={initialPack.metadata.bpm || 88} beatsPerMeasure={beatsPerMeasure} stepsPerBeat={resPerBeat} gridStartSec={hasAnac ? 0 : t1OffsetSec} totalDurationSec={totalDurationSec} allowedPitchClasses={allowedPitchClasses} lyricsText={activePattern.assignedLyricsText} isPlaying={isPlaying} getPlayheadSec={() => player.getCurrentPlayheadSec()} onStartVoicePlayback={() => { handleSeek(0); if (!isPlaying) handleTogglePlay(); }} onStopVoicePlayback={() => { player.stop(); setIsPlaying(false); }} onUpdateSteps={handleUpdateSteps} onCommitHistory={() => commitCurrentSnapshot()} />
+    <div className="flex flex-col gap-3 w-full">
+      <div className="flex justify-end"><HarmonyProfileSelector config={harmonyConfig} onChange={updateHarmonyConfig} /></div>
       <PianoRollEditor
         allSteps={allSteps} pitchCurve={displayedCurve} rawPitchCurve={rawPitchCurve} totalDurationSec={totalDurationSec} anacrusisDurationSec={anacrusisDurationSec}
         beatsPerMeasure={beatsPerMeasure} measuresCount={measuresCount} beatResolutions={initialPack.metadata.beatResolutions} seekStartSec={seekStartSec} isPlaying={isPlaying}
         tonic={tonic} scaleType={scaleType} smoothingLevel={smoothingLevel} canUndo={canUndo} canRedo={canRedo} historyCount={historyCount} allowedPitchClasses={allowedPitchClasses}
         hasAnacrusis={hasAnac} bpm={initialPack.metadata.bpm} regions={regions} selectedRegionId={selectedRegionId} activeTool={activeTool} onSelectTool={setActiveTool}
         selectedStepIdx={selectedStepIdx} onSelectStep={setSelectedStepIdx} getPlayheadSec={() => player.getCurrentPlayheadSec()} onSeek={handleSeek} onUndo={undo} onRedo={redo}
-        onSetTonic={(ton) => { setTonic(ton); setCustomPitchClasses(null); recompute(smoothingLevel, ton, scaleType, null); }} onSetScaleType={(st) => { setScaleType(st); setCustomPitchClasses(null); recompute(smoothingLevel, tonic, st, null); }}
+        onSetTonic={(ton) => { setTonic(ton); recompute(smoothingLevel, ton, scaleType); }} onSetScaleType={(st) => { setScaleType(st); recompute(smoothingLevel, tonic, st); }}
         onSetSmoothingLevel={(lvl) => { setSmoothingLevel(lvl); recompute(lvl, tonic, scaleType); }} onUpdateSteps={handleUpdateSteps} onBrickMoved={syncMovedBrickRegion} onPlayNotePreview={(m) => player.playNotePreview(m)} onReExtractNotes={handleReset} onSimplifyMelody={handleSimplifyMelody} onWeldSelected={handleWeldSelected}
         onSelectRegion={setSelectedRegionId} onAddRegion={(s0, s1) => { commitCurrentSnapshot(); addRegion(s0, s1); }} onUpdateRegionBounds={updateBounds} onDeleteSelectedRegion={() => { commitCurrentSnapshot(); deleteSelected(); }}
         harmonyGrid={activePattern.harmonyGrid} onUpdateHarmonyGrid={(g) => updatePattern(activePattern.id, { harmonyGrid: g })} pitchShiftSemitones={pitchShiftSemitones}

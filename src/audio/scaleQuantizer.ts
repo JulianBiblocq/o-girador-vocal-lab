@@ -1,6 +1,6 @@
 /**
  * scaleQuantizer.ts
- * Détection automatique et verrouillage de gamme Maracatu (Majeur, Mineur, Mixolydien, Dorien, Pentatonique) (< 125 lignes).
+ * Inférence automatique de gamme Maracatu, auto-diapason et attraction bayésienne (+0.32 st) (< 135 lignes).
  */
 import type { PitchCurvePoint, VocalStepData } from '../types/vocalPack.types';
 import { midiToNoteName, NOTE_NAMES } from '../utils/noteUtils';
@@ -40,11 +40,9 @@ export function getTonicSemitone(tonic: string): number {
 
 export function parseDefaultKeyString(keyStr?: string): { tonicSemitone: number; isMinor: boolean } | null {
   if (!keyStr || !keyStr.trim()) return null;
-  const raw = keyStr.trim();
-  const isMinor = /(?:m|min|mineur|menor)$/i.test(raw) && !/maj|majeur|maior/i.test(raw);
-  const rootToken = raw.replace(/(?:m|min|mineur|menor|maj|majeur|maior|\s)+$/gi, '').toUpperCase();
-  const semi = SOLFEGE_TO_SEMITONE[rootToken];
-  return semi !== undefined ? { tonicSemitone: semi, isMinor } : null;
+  const raw = keyStr.trim(), isMinor = /(?:m|min|mineur|menor)$/i.test(raw) && !/maj|majeur|maior/i.test(raw);
+  const rootToken = raw.replace(/(?:m|min|mineur|menor|maj|majeur|maior|\d|\s)+$/gi, '').toUpperCase();
+  return SOLFEGE_TO_SEMITONE[rootToken] !== undefined ? { tonicSemitone: SOLFEGE_TO_SEMITONE[rootToken], isMinor } : null;
 }
 
 export function buildAllowedPitchClasses(tonic: string, scaleType: ScaleType, customPitchClasses?: number[] | Set<number> | null): Set<number> {
@@ -52,9 +50,39 @@ export function buildAllowedPitchClasses(tonic: string, scaleType: ScaleType, cu
     const arr = Array.from(customPitchClasses).map((n) => ((n % 12) + 12) % 12);
     if (arr.length > 0) return new Set(arr);
   }
-  const def = SCALE_DEFINITIONS[scaleType] || SCALE_DEFINITIONS.chromatic;
-  const root = getTonicSemitone(tonic);
+  const def = SCALE_DEFINITIONS[scaleType] || SCALE_DEFINITIONS.chromatic, root = getTonicSemitone(tonic);
   return new Set(def.intervals.map((iv) => (root + iv) % 12));
+}
+
+export function estimateGlobalTuningOffset(pitchCurve: PitchCurvePoint[]): number {
+  const valid = (pitchCurve || []).filter((p) => p.midiFloat >= 36 && p.midiFloat <= 96);
+  if (valid.length < 3) return 0;
+  const devs: number[] = [];
+  for (let i = 0; i < valid.length; i++) {
+    const p = valid[i];
+    if ((p.confidence ?? 0.9) <= 0.80) continue;
+    const prev = valid[Math.max(0, i - 1)], next = valid[Math.min(valid.length - 1, i + 1)];
+    const slope = i > 0 || i + 1 < valid.length ? Math.abs(next.midiFloat - prev.midiFloat) / Math.max(0.005, next.timeSec - prev.timeSec) : 0;
+    if (slope < 3.0) devs.push(p.midiFloat - Math.round(p.midiFloat));
+  }
+  if (devs.length === 0) return 0;
+  devs.sort((a, b) => a - b);
+  return Math.max(-0.42, Math.min(0.42, Math.round(devs[Math.floor(devs.length / 2)] * 1000) / 1000));
+}
+
+export function snapMidiWithBayesianScalePrior(
+  midiFloat: number, allowedPitchClasses?: Set<number> | number[] | null, tuningOffset = 0, bayesianBonus = 0.32
+): number {
+  const calibrated = midiFloat - tuningOffset;
+  const allowed = allowedPitchClasses instanceof Set ? allowedPitchClasses : (allowedPitchClasses ? new Set(allowedPitchClasses) : null);
+  if (!allowed || allowed.size === 0 || allowed.size >= 12) return Math.round(calibrated);
+  const center = Math.round(calibrated);
+  let bestMidi = center, bestScore = -Infinity;
+  for (let m = center - 2; m <= center + 2; m++) {
+    const score = -Math.abs(calibrated - m) + (allowed.has(((m % 12) + 12) % 12) ? bayesianBonus : 0);
+    if (score > bestScore) { bestScore = score; bestMidi = m; }
+  }
+  return bestMidi;
 }
 
 export function snapMidiToScale(
@@ -64,16 +92,12 @@ export function snapMidiToScale(
     tonicOrSet instanceof Set ? tonicOrSet
     : customPitchClasses ? buildAllowedPitchClasses(typeof tonicOrSet === 'string' ? tonicOrSet : 'C', scaleType, customPitchClasses)
     : scaleType !== 'chromatic' ? buildAllowedPitchClasses(typeof tonicOrSet === 'string' ? tonicOrSet : 'C', scaleType) : null;
-
   if (!allowed || allowed.size === 0 || allowed.size >= 12) return Math.round(midiFloat);
   const center = Math.round(midiFloat);
   let bestMidi = center, bestDist = Infinity;
   for (let delta = -6; delta <= 6; delta++) {
     const candidate = center + delta, pc = ((candidate % 12) + 12) % 12;
-    if (allowed.has(pc)) {
-      const dist = Math.abs(candidate - midiFloat);
-      if (dist < bestDist) { bestDist = dist; bestMidi = candidate; }
-    }
+    if (allowed.has(pc) && Math.abs(candidate - midiFloat) < bestDist) { bestDist = Math.abs(candidate - midiFloat); bestMidi = candidate; }
   }
   return bestMidi;
 }
@@ -82,18 +106,15 @@ export function detectBestScaleFromPitchCurve(
   pitchCurve: PitchCurvePoint[], defaultKeyStr?: string
 ): { tonic: string; scaleType: ScaleType; allowedPitchClasses: Set<number>; tuningOffset: number } {
   const valid = (pitchCurve || []).filter((p) => p.midiFloat >= 36 && p.midiFloat <= 96);
-  const prior = parseDefaultKeyString(defaultKeyStr);
+  const prior = parseDefaultKeyString(defaultKeyStr), tuningOffset = estimateGlobalTuningOffset(valid);
   if (valid.length < 4) {
     const t = prior ? NOTE_NAMES[prior.tonicSemitone] : 'C', sc: ScaleType = prior?.isMinor ? 'natural_minor' : 'major';
-    return { tonic: t, scaleType: sc, allowedPitchClasses: buildAllowedPitchClasses(t, sc), tuningOffset: 0 };
+    return { tonic: t, scaleType: sc, allowedPitchClasses: buildAllowedPitchClasses(t, sc), tuningOffset };
   }
-  const devs = valid.map((p) => p.midiFloat - Math.round(p.midiFloat)).sort((a, b) => a - b);
-  const tuningOffset = devs[Math.floor(devs.length / 2)] || 0;
   const hist = new Float32Array(12);
   for (let i = 0; i < valid.length; i++) {
     const m = valid[i].midiFloat - tuningOffset, prevM = i > 0 ? valid[i - 1].midiFloat - tuningOffset : m;
-    const stability = Math.abs(m - prevM) < 0.35 ? 1.5 : 0.7;
-    hist[((Math.round(m) % 12) + 12) % 12] += stability;
+    if (Math.abs(m - prevM) < 0.35) hist[((Math.round(m) % 12) + 12) % 12] += (valid[i].confidence ?? 0.9) * 1.5;
   }
   const candidateModes: ScaleType[] = ['major', 'natural_minor', 'mixolydian', 'dorian'];
   let bestRoot = prior ? prior.tonicSemitone : 0, bestMode: ScaleType = prior?.isMinor ? 'natural_minor' : 'major', bestScore = -1;
@@ -108,6 +129,7 @@ export function detectBestScaleFromPitchCurve(
   const tonic = NOTE_NAMES[bestRoot];
   return { tonic, scaleType: bestMode, allowedPitchClasses: buildAllowedPitchClasses(tonic, bestMode), tuningOffset };
 }
+export const inferBestDiatonicScale = detectBestScaleFromPitchCurve;
 
 export function applyScaleToSteps(steps: VocalStepData[], tonic: string, scaleType: ScaleType, customPitchClasses?: number[] | Set<number> | null): VocalStepData[] {
   const allowed = buildAllowedPitchClasses(tonic, scaleType, customPitchClasses);

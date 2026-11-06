@@ -1,6 +1,6 @@
 /**
  * continuousTakeSlicer.ts
- * Découpage automatique d'une prise continue par pattern avec sélection RMS et ancrage T1 (< 135 lignes).
+ * Découpage automatique d'une prise continue par pattern avec sélection RMS et auto-calage T1 par corrélation croisée (< 140 lignes).
  */
 import type { ToadaProject, VocalPatternItem, VocalRole } from '../types/toadaProject.types';
 import { getBeatsPerMeasure } from './musicalMath';
@@ -8,6 +8,8 @@ import { NO_ANACRUSIS_PRE_MARGIN_SEC } from './anacrusisTimingHelper';
 import { extractPatternMelodicData } from '../audio/melodicExtractionHelper';
 import { computeSlotsMeasureLayout } from '../components/conductor/toadaTimingScheduler';
 import { CONTINUOUS_LEAD_IN_MEASURES } from '../audio/continuousCueHelper';
+import { resolveFreshTimeAnchors } from './timeAnchorParser';
+import { alignT1ByAnchorCrossCorrelation } from './slicerAlignmentHelper';
 
 export interface SlicedTakeResult {
   updatedPatterns: VocalPatternItem[];
@@ -55,6 +57,7 @@ export function sliceContinuousTake(
 
     const hasAnac = pat.hasAnacrusis !== false;
     const anacSec = hasAnac ? measureDuration : NO_ANACRUSIS_PRE_MARGIN_SEC;
+    const effectiveAnchors = resolveFreshTimeAnchors(pat.rawLineCode, pat.timeAnchors, beatsPerMeasure, !hasAnac, pat.assignedLyricsText);
 
     let bestMeasureFromM0 = measureList[0];
     if (measureList.length > 1) {
@@ -66,7 +69,10 @@ export function sliceContinuousTake(
       }
     }
 
-    const slotT1InPCM = preM0MarginSec + bestMeasureFromM0 * measureDuration;
+    const nominalSlotT1 = preM0MarginSec + bestMeasureFromM0 * measureDuration;
+    const slotT1InPCM = alignT1ByAnchorCrossCorrelation(
+      fullPCM, sampleRate, nominalSlotT1, bpm, effectiveAnchors, hasAnac, beatsPerMeasure, 0.30
+    );
     const patStartInPCM = slotT1InPCM - anacSec;
     const patEndInPCM = slotT1InPCM + pat.measuresCount * measureDuration + beatDuration;
 
@@ -83,56 +89,30 @@ export function sliceContinuousTake(
     const t1OffsetSec = slotT1InPCM - sliceStartSec;
 
     const melodic = extractPatternMelodicData({
-      rawPCM: slicedPCM,
-      sampleRate,
-      bpm,
-      timeSignature: project.timeSignature,
-      measuresCount: pat.measuresCount,
-      beatsPerMeasure,
+      rawPCM: slicedPCM, sampleRate, bpm, timeSignature: project.timeSignature,
+      measuresCount: pat.measuresCount, beatsPerMeasure,
       beatResolutions: pat.pack?.metadata.beatResolutions || [4, 4, 4, 4],
-      hasAnacrusis: hasAnac,
-      trimStartSec,
-      trimEndSec,
-      t1OffsetSec,
-      referencePitch: pat.referencePitch || 'C4',
-      assignedLyricsText: pat.assignedLyricsText,
-      timeAnchors: pat.timeAnchors,
+      hasAnacrusis: hasAnac, trimStartSec, trimEndSec, t1OffsetSec,
+      referencePitch: pat.referencePitch || 'C4', assignedLyricsText: pat.assignedLyricsText, timeAnchors: effectiveAnchors,
     });
 
     const recResult = { pcm: slicedPCM, sampleRate, recordedBpm: bpm, t1OffsetSec };
     const activeVarKey = pat.activeVariantKey || 'spd100_pit0';
     const existingVar = pat.variants?.[activeVarKey];
     const updatedVariant = {
-      ...(existingVar || {}),
-      recordingResult: recResult,
-      t1OffsetSec,
-      trimStartSec,
-      trimEndSec,
-      anacrusisSteps: melodic.anacrusisSteps,
-      mainSteps: melodic.mainSteps,
-      pitchCurve: melodic.pitchCurve,
+      ...(existingVar || {}), recordingResult: recResult, t1OffsetSec, trimStartSec, trimEndSec,
+      anacrusisSteps: melodic.anacrusisSteps, mainSteps: melodic.mainSteps, pitchCurve: melodic.pitchCurve,
     };
 
     processedCount++;
     return {
-      ...pat,
-      bpm,
-      baseBpm: pat.baseBpm ?? bpm,
-      recordingResult: recResult,
-      rawAudioSamples: melodic.cleanPCM,
-      rawPitchCurve: melodic.pitchCurve,
-      t1OffsetSec,
-      trimStartSec,
-      trimEndSec,
-      anacrusisSteps: melodic.anacrusisSteps,
-      mainSteps: melodic.mainSteps,
-      pitchCurve: melodic.pitchCurve,
-      pack: melodic.pack,
-      midiLocked: true,
-      isMidiInitialized: true,
-      hasCanonicalAlignment: true as any,
-      correctedAudioSamples: null,
-      melodyneRegions: [],
+      ...pat, bpm, baseBpm: pat.baseBpm ?? bpm, recordingResult: recResult,
+      rawAudioSamples: melodic.cleanPCM, rawPitchCurve: melodic.pitchCurve,
+      t1OffsetSec, trimStartSec, trimEndSec,
+      anacrusisSteps: melodic.anacrusisSteps, mainSteps: melodic.mainSteps, pitchCurve: melodic.pitchCurve,
+      pack: melodic.pack, timeAnchors: effectiveAnchors ?? pat.timeAnchors,
+      midiLocked: true, isMidiInitialized: true, hasCanonicalAlignment: true as any,
+      correctedAudioSamples: null, melodyneRegions: [],
       variants: { ...(pat.variants || {}), [activeVarKey]: updatedVariant as any },
     };
   });

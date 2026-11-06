@@ -21,7 +21,7 @@ export function sanitizePitchCurve(raw: RawPitchPoint[]): PitchCurvePoint[] {
     if (p.zcr !== undefined && p.zcr > 0.35) return false;
     return p.midiFloat >= 36 && p.midiFloat <= 88;
   });
-  if (gated.length < 5) return gated.map(({ timeSec, midiFloat }) => ({ timeSec, midiFloat }));
+  if (gated.length < 5) return gated.map(({ timeSec, midiFloat, confidence, rms }) => ({ timeSec, midiFloat, confidence, rms }));
 
   // 2. Centre vocal global robuste (Percentile 70)
   const sortedMidis = [...gated.map((p) => p.midiFloat)].sort((a, b) => a - b);
@@ -92,10 +92,10 @@ export function sanitizePitchCurve(raw: RawPitchPoint[]): PitchCurvePoint[] {
   const weights = [0.06, 0.24, 0.40, 0.24, 0.06];
   return med.map((pt, i, arr) => {
     if (i < 2 || i >= arr.length - 2 || Math.abs(arr[i + 2].timeSec - arr[i - 2].timeSec) > 0.08) {
-      return { timeSec: pt.timeSec, midiFloat: Math.round(pt.midiFloat * 100) / 100 };
+      return { timeSec: pt.timeSec, midiFloat: Math.round(pt.midiFloat * 100) / 100, confidence: pt.confidence, rms: pt.rms };
     }
     let sum = 0;
     for (let k = -2; k <= 2; k++) sum += arr[i + k].midiFloat * weights[k + 2];
-    return { timeSec: pt.timeSec, midiFloat: Math.round(sum * 100) / 100 };
+    return { timeSec: pt.timeSec, midiFloat: Math.round(sum * 100) / 100, confidence: pt.confidence, rms: pt.rms };
   });
 }
