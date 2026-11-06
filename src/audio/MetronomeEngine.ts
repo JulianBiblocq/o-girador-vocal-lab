@@ -1,13 +1,13 @@
 /**
  * MetronomeEngine.ts
- * Moteur d horloge Web Audio temps reel haute precision (60 FPS sync).
- * Cycle a 3 etages : Decompte (M-2) -> Anacrouse (M-1) -> Chant (M1..MN).
+ * Moteur d'horloge Web Audio temps réel haute précision (60 FPS sync) :
+ * Clic doux d'attente, double clic clave d'appel à 1400 Hz sur les 2 temps avant l'entrée, et clic chant (< 138 lignes).
  */
 import type { TimeSignatureString } from '../types/vocalPack.types';
 import type { PatternHarmonyGrid, HarmonyConfig } from '../types/harmony.types';
 import { getSharedAudioContext, setSharedSinkId } from './sharedAudioContext';
 import { getBeatsPerMeasure } from '../utils/musicalMath';
-import { scheduleWoodClick, scheduleReferencePitch } from './metronomeAudioNodes';
+import { scheduleWoodClick, scheduleCallDoubleClick, scheduleReferencePitch } from './metronomeAudioNodes';
 import { computeCycleStatus, type CycleStatus } from './cycleStatusHelper';
 import { HarmonyPlayerEngine } from './harmony/HarmonyPlayerEngine';
 
@@ -16,17 +16,10 @@ export type { CycleStatus };
 export type ListeningMode = 'headphones' | 'speakers';
 
 export interface MetronomeConfig {
-  bpm: number;
-  timeSignature: TimeSignatureString;
-  measuresCount: number;
-  referencePitch: string;
-  listeningMode: ListeningMode;
-  outputDeviceId?: string;
-  preRollMeasures?: number;
-  harmonyGrid?: PatternHarmonyGrid;
-  harmonyConfig?: HarmonyConfig;
-  hasAnacrusis?: boolean;
-  pitchShiftSemitones?: number;
+  bpm: number; timeSignature: TimeSignatureString; measuresCount: number; referencePitch: string;
+  listeningMode: ListeningMode; outputDeviceId?: string; preRollMeasures?: number;
+  harmonyGrid?: PatternHarmonyGrid; harmonyConfig?: HarmonyConfig;
+  hasAnacrusis?: boolean; anacrusisBeats?: number; pitchShiftSemitones?: number;
 }
 
 export class MetronomeEngine {
@@ -47,9 +40,7 @@ export class MetronomeEngine {
   public getContext(): AudioContext | null { return this.ctx; }
 
   public async startCycle(
-    config: MetronomeConfig,
-    onComplete?: () => void,
-    externalStartTime?: number
+    config: MetronomeConfig, onComplete?: () => void, externalStartTime?: number
   ): Promise<number> {
     this.stop();
     const ctx = await this.initContext(config.outputDeviceId);
@@ -61,7 +52,6 @@ export class MetronomeEngine {
     this.preRollMeasures = config.preRollMeasures ?? 2;
     this.hasAnacrusis = config.hasAnacrusis !== false;
 
-    // Décompte/écoute (preRollMeasures) + N mesures de chant + 1 temps (Temps 1 mesure suivante)
     this.totalBeats = (this.preRollMeasures + this.measuresCount) * this.beatsPerMeasure + 1;
     this.totalDurationSec = this.totalBeats * this.beatDurationSec;
     this.startTime = externalStartTime ?? (ctx.currentTime + 0.08);
@@ -76,15 +66,9 @@ export class MetronomeEngine {
   }
 
   public stop(): void {
-    if (this.completionTimerId !== null) {
-      window.clearTimeout(this.completionTimerId);
-      this.completionTimerId = null;
-    }
+    if (this.completionTimerId !== null) { window.clearTimeout(this.completionTimerId); this.completionTimerId = null; }
     for (const node of this.activeNodes) {
-      try {
-        if ('stop' in node && typeof (node as AudioScheduledSourceNode).stop === 'function') (node as AudioScheduledSourceNode).stop();
-        node.disconnect();
-      } catch {}
+      try { if ('stop' in node && typeof (node as AudioScheduledSourceNode).stop === 'function') (node as AudioScheduledSourceNode).stop(); node.disconnect(); } catch {}
     }
     this.activeNodes = [];
     this.harmonyEngine.stop();
@@ -110,23 +94,29 @@ export class MetronomeEngine {
   public getBeatDurationSec(): number { return this.beatDurationSec; }
 
   private scheduleHeadphoneAudio(ctx: AudioContext, start: number, config: MetronomeConfig): void {
+    const t1BeatIdx = this.preRollMeasures * this.beatsPerMeasure;
+    const anacBeats = this.hasAnacrusis ? Math.max(1, Math.min(this.beatsPerMeasure, config.anacrusisBeats ?? 2)) : 0;
+    const entryBeatIdx = Math.max(2, t1BeatIdx - anacBeats);
+
     for (let b = 0; b < this.totalBeats; b++) {
       const beatTime = start + b * this.beatDurationSec;
       const isMajorBeat = b % this.beatsPerMeasure === 0;
-      scheduleWoodClick(ctx, beatTime, isMajorBeat, this.activeNodes);
+      if (b === entryBeatIdx - 2 || b === entryBeatIdx - 1) {
+        scheduleCallDoubleClick(ctx, beatTime, this.beatDurationSec, this.activeNodes);
+      } else {
+        scheduleWoodClick(ctx, beatTime, isMajorBeat, this.activeNodes, undefined, b < entryBeatIdx - 2);
+      }
     }
-    // La note repère ne joue STRICTEMENT que pendant le décompte M-2
-    const pitchDurationSec = this.beatsPerMeasure * this.beatDurationSec;
-    scheduleReferencePitch(ctx, start, config.referencePitch, pitchDurationSec, this.activeNodes);
+
+    scheduleReferencePitch(ctx, start, config.referencePitch, this.beatsPerMeasure * this.beatDurationSec, this.activeNodes);
 
     if (config.harmonyConfig?.enabled && config.harmonyGrid) {
       this.harmonyEngine.schedule(ctx, ctx.destination, {
         grid: config.harmonyGrid, bpm: config.bpm, beatsPerMeasure: this.beatsPerMeasure,
-        measuresCount: this.measuresCount, startTime: start + this.preRollMeasures * this.beatsPerMeasure * this.beatDurationSec,
+        measuresCount: this.measuresCount, startTime: start + t1BeatIdx * this.beatDurationSec,
         totalDurationSec: this.measuresCount * this.beatsPerMeasure * this.beatDurationSec,
         hasAnacrusis: config.hasAnacrusis, pitchShiftSemitones: config.pitchShiftSemitones,
-        profile: config.harmonyConfig.profile, volume: config.harmonyConfig.volume,
-        muteBass: config.harmonyConfig.muteBass,
+        profile: config.harmonyConfig.profile, volume: config.harmonyConfig.volume, muteBass: config.harmonyConfig.muteBass,
       });
     }
   }

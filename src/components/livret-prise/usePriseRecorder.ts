@@ -11,7 +11,7 @@ import { scheduleSecondaryTakeGuide, type TakeGuideHandle } from '../../audio/ta
 import { buildDeviceSignature } from '../../utils/deviceSignature';
 import { getSavedLatencyOffsetMs } from '../../utils/latencyStorage';
 import { useVocalTransportStore } from '../../stores/useVocalTransportStore';
-import { NO_ANACRUSIS_PRE_MARGIN_SEC, getPatternTotalDurationSec } from '../../utils/anacrusisTimingHelper';
+import { NO_ANACRUSIS_PRE_MARGIN_SEC, getPatternTotalDurationSec, resolvePatternAnacrusisBeats } from '../../utils/anacrusisTimingHelper';
 import { registerAudioKillSwitch, stopAllActiveAudioEngines } from '../../audio/sharedAudioContext';
 import { autoSnapT1ToVocalOnset } from '../../audio/vocalOnsetDetector';
 import { rebuildCanonicalCleanAudio } from '../../audio/melodicExtractionHelper';
@@ -113,17 +113,18 @@ export function usePriseRecorder(params: UsePriseRecorderParams) {
     if (isPunchIn && listeningMode === 'headphones' && activeVariant.recordingResult && punchMeasureIndex) {
       punchLeadRef.current = schedulePunchInLeadInAudio(ctx, activeVariant.recordingResult.pcm, sampleRate, punchMeasureIndex, measureDuration, activeVariant.recordingResult.t1OffsetSec ?? t1OffsetSec, cycleStart);
     }
-    if (hasCue && cue && listeningMode === 'headphones') cueHandleRef.current = scheduleCuePatternAudio(ctx, cue, cycleStart, beatsPerMeasure, beatDuration, effectiveBpm);
+    if (hasCue && cue) cueHandleRef.current = scheduleCuePatternAudio(ctx, cue, cycleStart, beatsPerMeasure, beatDuration, effectiveBpm);
     const isMainTake = activeVariant.speedRatio === 1.0 && activeVariant.pitchShiftSemitones === 0;
     if (!isMainTake && activePattern.midiLocked && activePattern.mainSteps?.length > 0 && listeningMode === 'headphones') {
       const guideAna = hasAnacrusis ? measureDuration : 0;
       takeGuideRef.current = scheduleSecondaryTakeGuide(ctx, ctx.destination, activePattern.anacrusisSteps || [], activePattern.mainSteps || [], targetT1Time - guideAna, guideAna, effectiveBpm, activeVariant.pitchShiftSemitones);
     }
     recorder.start(captureStart, effectiveRecSec); setIsCycleActive(true);
+    const anacrusisBeats = resolvePatternAnacrusisBeats(activePattern, beatsPerMeasure);
     await engine.startCycle({
       bpm: effectiveBpm, timeSignature, measuresCount: (isPunchIn ? 1 : measuresCount) as 1 | 2 | 3 | 4, referencePitch: effectivePitch,
       listeningMode, outputDeviceId: selectedOutputDeviceId, preRollMeasures,
-      harmonyGrid: activePattern.harmonyGrid, harmonyConfig, hasAnacrusis: isPunchIn ? false : hasAnacrusis, pitchShiftSemitones: activeVariant.pitchShiftSemitones,
+      harmonyGrid: activePattern.harmonyGrid, harmonyConfig, hasAnacrusis: isPunchIn ? false : hasAnacrusis, anacrusisBeats, pitchShiftSemitones: activeVariant.pitchShiftSemitones,
     }, () => {
       if (sessionTokenRef.current !== token) return;
       stopAuxHandles(); commitRecordedTake(recorder.stop(), sampleRate, t1OffsetSec, totalRecordedSec); setIsCycleActive(false);

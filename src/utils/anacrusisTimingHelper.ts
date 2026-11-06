@@ -40,3 +40,28 @@ export function getPatternTotalDurationSec(
   const t1Offset = getPatternT1OffsetSec(hasAnacrusis, measureDurationSec, explicitT1OffsetSec);
   return t1Offset + measuresCount * measureDurationSec + extraEndBeatsSec + postRollSec;
 }
+
+/**
+ * Calcule le nombre exact de temps d'anacrouse (levée avant M1•T1) d'un pattern.
+ */
+export function resolvePatternAnacrusisBeats(
+  pattern: {
+    hasAnacrusis?: boolean;
+    anacrusisBeats?: number;
+    timeAnchors?: Array<{ measureOffset: number; beat: number; isRest?: boolean; isInitialRest?: boolean }>;
+  } | null | undefined,
+  beatsPerMeasure = 4
+): number {
+  if (!pattern || pattern.hasAnacrusis === false) return 0;
+  if (typeof pattern.anacrusisBeats === 'number' && pattern.anacrusisBeats > 0) {
+    return Math.min(beatsPerMeasure, pattern.anacrusisBeats);
+  }
+  const anaAnchors = (pattern.timeAnchors || []).filter(
+    (a) => a.measureOffset === 0 && !a.isRest && !a.isInitialRest && a.beat >= 1 && a.beat <= beatsPerMeasure
+  );
+  if (anaAnchors.length > 0) {
+    const minBeat = Math.min(...anaAnchors.map((a) => a.beat));
+    return Math.max(1, beatsPerMeasure + 1 - minBeat);
+  }
+  return Math.min(2, beatsPerMeasure);
+}

@@ -154,3 +154,4 @@ console.log('=== TEST 3 : Livret 4 Sub-Temps Maracatu (1-2-4) & BeatRhythmPreset
 }
 
 console.log('🎉 TOUS LES TESTS DU PARCOURS MESTRE GUIDÉ SONT VALIDÉS AVEC SUCCÈS !');
+

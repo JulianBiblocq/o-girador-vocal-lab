@@ -16,7 +16,7 @@ import type { ComfortMonitoringPreset } from '../../audio/ComfortMonitoringNode'
 import { getActiveBackingTrack, subscribeBackingTrack } from '../../utils/backingTrackStorage';
 import { PatternLyricsBanner } from './PatternLyricsBanner';
 import { ChordGridBar } from '../common/ChordGridBar';
-import { PendulumVisualizer } from '../PendulumVisualizer';
+import { CabineTimelineRibbon } from './CabineTimelineRibbon';
 import { RecordActionButton } from './RecordActionButton';
 import { CuePatternSelector } from './CuePatternSelector';
 import { HarmonyProfileSelector } from '../common/HarmonyProfileSelector';
@@ -30,17 +30,10 @@ import { getBeatsPerMeasure, transposePitchNote } from '../../utils/musicalMath'
 import { RotateCcw, Scissors, Music } from 'lucide-react';
 
 export const LivretPrise: React.FC = () => {
-  const {
-    project, activePattern, activeVariant, updatePattern, updateVariant, updatePatternAndVariant,
-    cueMode, getPreviousConductorPattern, updateHarmonyConfig, loadProject,
-  } = useToadaProject();
-  const {
-    engine, recorder, selectedDeviceId, selectedOutputDeviceId,
-    listeningMode, recordedSampleRate, setRecordedSampleRate,
-  } = useAudioHardware();
+  const { project, activePattern, activeVariant, updatePattern, updateVariant, updatePatternAndVariant, cueMode, getPreviousConductorPattern, updateHarmonyConfig, loadProject } = useToadaProject();
+  const { engine, recorder, selectedDeviceId, selectedOutputDeviceId, listeningMode, recordedSampleRate, setRecordedSampleRate } = useAudioHardware();
   const { t } = useLanguage();
-  const activeLivret = useVocalTransportStore((s) => s.activeLivret);
-  const setActiveLivret = useVocalTransportStore((s) => s.setActiveLivret);
+  const activeLivret = useVocalTransportStore((s) => s.activeLivret), setActiveLivret = useVocalTransportStore((s) => s.setActiveLivret);
 
   const [comfortPreset, setComfortPreset] = useState<ComfortMonitoringPreset>('off');
   const [comfortMix, setComfortMix] = useState<number>(0.35);
@@ -52,16 +45,11 @@ export const LivretPrise: React.FC = () => {
     setHasBackingTrack(Boolean(getActiveBackingTrack(project.id)?.enabled));
     return subscribeBackingTrack(() => setHasBackingTrack(Boolean(getActiveBackingTrack(project.id)?.enabled)));
   }, [project.id]);
-
   useEffect(() => { setPunchMeasureIndex(null); }, [activePattern.id]);
 
-  const bpm = activePattern.bpm ?? activePattern.baseBpm ?? project.bpm ?? 88;
-  const referencePitch = activePattern.referencePitch ?? 'C4';
-  const timeSignature = project.timeSignature;
-  const measuresCount = activePattern.measuresCount;
-  const hasAnacrusis = activePattern.hasAnacrusis !== false;
-  const beatsPerMeasure = getBeatsPerMeasure(timeSignature);
-  const effectiveBpm = Math.max(30, Math.round(bpm * activeVariant.speedRatio));
+  const bpm = activePattern.bpm ?? activePattern.baseBpm ?? project.bpm ?? 88, referencePitch = activePattern.referencePitch ?? 'C4';
+  const timeSignature = project.timeSignature, measuresCount = activePattern.measuresCount, hasAnacrusis = activePattern.hasAnacrusis !== false;
+  const beatsPerMeasure = getBeatsPerMeasure(timeSignature), effectiveBpm = Math.max(30, Math.round(bpm * activeVariant.speedRatio));
   const effectivePitch = useMemo(() => transposePitchNote(referencePitch, activeVariant.pitchShiftSemitones), [referencePitch, activeVariant.pitchShiftSemitones]);
   const beatDuration = 60 / effectiveBpm;
 
@@ -74,9 +62,14 @@ export const LivretPrise: React.FC = () => {
     comfortPreset, comfortMix, backingInHeadphones, punchMeasureIndex,
   });
 
-  const { takeMode, setTakeMode, isContinuousActive, prompterInfo, handleToggleContinuous } = useContinuousTakeController({
+  const { takeMode, setTakeMode, isContinuousActive, prompterInfo, counterRoleCueEnabled, setCounterRoleCueEnabled, getContinuousLiveStatus, handleToggleContinuous } = useContinuousTakeController({
     project, loadProject, engine, recorder, listeningMode, selectedDeviceId, selectedOutputDeviceId, activeLivret,
   });
+
+  const effectiveCuePattern = useMemo(
+    () => (cueMode === 'none' ? null : cueMode === 'auto_previous' ? getPreviousConductorPattern() : project.patterns.find((p) => p.id === cueMode) ?? null),
+    [cueMode, getPreviousConductorPattern, project.patterns]
+  );
 
   const isRecordingAny = isCycleActive || isContinuousActive;
   const hasRecording = activeVariant.recordingResult !== null && activeVariant.recordingResult.pcm.length > 0;
@@ -84,10 +77,7 @@ export const LivretPrise: React.FC = () => {
   const isMainVariant = activeVariant.speedRatio === 1.0 && activeVariant.pitchShiftSemitones === 0;
 
   const handleReset = useCallback(async () => {
-    const ok = await confirmAsync({
-      title: t('resetRecordingTitle'), message: t('resetRecordingConfirm'),
-      confirmLabel: t('dialogConfirm'), cancelLabel: t('dialogCancel'), variant: 'warning',
-    });
+    const ok = await confirmAsync({ title: t('resetRecordingTitle'), message: t('resetRecordingConfirm'), confirmLabel: t('dialogConfirm'), cancelLabel: t('dialogCancel'), variant: 'warning' });
     if (ok) updateVariant(activePattern.id, activeVariant.variantKey, { recordingResult: null });
   }, [t, updateVariant, activePattern.id, activeVariant.variantKey]);
 
@@ -113,7 +103,11 @@ export const LivretPrise: React.FC = () => {
         </div>
       </div>
 
-      <PendulumVisualizer engine={engine} isActive={isRecordingAny} measuresCount={measuresCount} beatsPerMeasure={beatsPerMeasure}>
+      <CabineTimelineRibbon
+        engine={engine} isActive={isRecordingAny} takeMode={takeMode} project={project} activePattern={activePattern}
+        cuePattern={effectiveCuePattern} beatsPerMeasure={beatsPerMeasure} isPunchIn={Boolean(punchMeasureIndex && punchMeasureIndex >= 1 && hasRecording)}
+        counterRoleCueEnabled={counterRoleCueEnabled} onToggleCounterRoleCue={() => setCounterRoleCueEnabled((v) => !v)} getContinuousLiveStatus={getContinuousLiveStatus}
+      >
         <RecordActionButton isCycleActive={takeMode === 'pattern' ? isCycleActive : isContinuousActive} measuresCount={measuresCount} onToggleRecord={takeMode === 'pattern' ? handleToggleRecord : handleToggleContinuous} />
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 pt-1 border-t border-[var(--cordel-border-sub)]">
           <div className="flex-1 min-w-[200px]"><CuePatternSelector disabled={isRecordingAny} /></div>
@@ -126,7 +120,7 @@ export const LivretPrise: React.FC = () => {
             <button type="button" onClick={handleReset} className="cordel-card-sm px-2.5 py-1.5 text-[11px] font-mono text-red-500 hover:text-red-400 flex items-center gap-1 cursor-pointer"><RotateCcw className="w-3 h-3" /><span>{t('resetRecordingTitle')}</span></button>
           </div>
         )}
-      </PendulumVisualizer>
+      </CabineTimelineRibbon>
 
       <CordelAccordion title={t('grainPlayerAccordionTitle')} summaryBadge={t('grainPlayerAccordionSummary', { recorded: recordedCount, active: isMainVariant ? t('variantMainLabel') : `${Math.round(activeVariant.speedRatio * 100)}% / ${activeVariant.pitchShiftSemitones}st` })} storageKey={`variants_${activePattern.id}`} defaultOpen={false}>
         <PatternVariantSelector baseBpm={bpm} referencePitch={referencePitch} disabled={isRecordingAny} onPlayPitchPreview={(p) => engine.playReferencePitchPreview(p, 1.5, selectedOutputDeviceId)} />

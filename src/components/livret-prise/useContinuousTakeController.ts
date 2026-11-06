@@ -28,6 +28,7 @@ export function useContinuousTakeController(params: UseContinuousTakeControllerP
   const [takeMode, setTakeMode] = useState<TakeRecordingMode>('pattern');
   const [isContinuousActive, setIsContinuousActive] = useState(false);
   const [prompterInfo, setPrompterInfo] = useState<ContinuousPrompterSlotInfo | null>(null);
+  const [counterRoleCueEnabled, setCounterRoleCueEnabled] = useState<boolean>(true);
 
   const sessionRef = useRef<ContinuousTakeSession>(new ContinuousTakeSession());
   const setIsRecording = useVocalTransportStore((s) => s.setIsRecording);
@@ -79,10 +80,13 @@ export function useContinuousTakeController(params: UseContinuousTakeControllerP
       listeningMode,
       selectedDeviceId,
       selectedOutputDeviceId,
+      counterRoleCueEnabled,
       onPrompterUpdate: (info) => setPrompterInfo(info),
       onComplete: (pcm, sr, margin) => handleFinishContinuous(pcm, sr, margin),
     });
-  }, [takeMode, isContinuousActive, abortContinuous, project, engine, recorder, listeningMode, selectedDeviceId, selectedOutputDeviceId, handleFinishContinuous]);
+  }, [takeMode, isContinuousActive, abortContinuous, project, engine, recorder, listeningMode, selectedDeviceId, selectedOutputDeviceId, counterRoleCueEnabled, handleFinishContinuous]);
+
+  const getContinuousLiveStatus = useCallback(() => sessionRef.current.getLiveStatus(), []);
 
   useEffect(() => {
     if (isContinuousActive) setIsRecording(true);
@@ -98,6 +102,9 @@ export function useContinuousTakeController(params: UseContinuousTakeControllerP
     setTakeMode,
     isContinuousActive,
     prompterInfo,
+    counterRoleCueEnabled,
+    setCounterRoleCueEnabled,
+    getContinuousLiveStatus,
     handleToggleContinuous,
   };
 }

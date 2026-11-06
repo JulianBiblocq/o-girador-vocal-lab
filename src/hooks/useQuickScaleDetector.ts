@@ -124,3 +124,4 @@ export function useQuickScaleDetector(
 
   return { isListeningScale, suggestion, startQuickScaleListen, applyScaleToProject, clearSuggestion: () => setSuggestion(null) };
 }
+

@@ -1,7 +1,9 @@
-﻿/**
+/**
  * metronomeAudioNodes.ts
- * Nœuds audio Web Audio pour le métronome et la note repère.
- * Attaque percussive boostée (1600 Hz / 1000 Hz) et contrôle de volume matériel.
+ * Nœuds audio Web Audio pour le métronome :
+ * - Clic boisé doux pendant l'écoute témoin / attente
+ * - Double clic clave d'appel à 1400 Hz sur les 2 derniers temps avant l'entrée
+ * - Clic normal (Temps 1 à 1000 Hz, Temps 2-3-4 à 700 Hz, et +T1) (< 115 lignes).
  */
 import { noteToFrequency } from '../utils/musicalMath';
 import { getSavedClickVolume } from '../utils/clickVolumeStorage';
@@ -11,19 +13,23 @@ export function scheduleWoodClick(
   time: number,
   isMajor: boolean,
   activeNodes: (AudioNode | AudioScheduledSourceNode)[],
-  volumeMultiplier?: number
+  volumeMultiplier?: number,
+  isSoftBackground = false
 ): void {
-  const vol = volumeMultiplier ?? getSavedClickVolume();
+  const baseVol = volumeMultiplier ?? getSavedClickVolume();
+  const vol = isSoftBackground ? baseVol * 0.55 : baseVol;
   if (vol <= 0.01) return;
 
   const osc = ctx.createOscillator();
   const gain = ctx.createGain();
   const duration = 0.025;
   osc.type = 'triangle';
-  osc.frequency.setValueAtTime(isMajor ? 1600 : 1000, time);
-  osc.frequency.exponentialRampToValueAtTime(isMajor ? 280 : 190, time + duration);
+  const startFreq = isMajor ? 1000 : 700;
+  const endFreq = isMajor ? 240 : 170;
+  osc.frequency.setValueAtTime(startFreq, time);
+  osc.frequency.exponentialRampToValueAtTime(endFreq, time + duration);
 
-  const baseGain = isMajor ? 0.75 : 0.45;
+  const baseGain = isMajor ? 0.78 : 0.46;
   const targetGain = Math.min(1.5, baseGain * vol);
 
   gain.gain.setValueAtTime(0.0001, time);
@@ -43,6 +49,47 @@ export function scheduleWoodClick(
     const i2 = activeNodes.indexOf(gain);
     if (i2 !== -1) activeNodes.splice(i2, 1);
   };
+}
+
+export function scheduleCallDoubleClick(
+  ctx: AudioContext,
+  time: number,
+  beatDurationSec: number,
+  activeNodes: (AudioNode | AudioScheduledSourceNode)[],
+  volumeMultiplier?: number
+): void {
+  const vol = volumeMultiplier ?? getSavedClickVolume();
+  if (vol <= 0.01) return;
+  const secondOffset = Math.min(0.11, Math.max(0.06, beatDurationSec * 0.22));
+  const offsets = [0, secondOffset];
+
+  for (const off of offsets) {
+    const t = time + off;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    const dur = 0.022;
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(1400, t);
+    osc.frequency.exponentialRampToValueAtTime(420, t + dur);
+
+    const targetGain = Math.min(1.5, 0.82 * vol);
+    gain.gain.setValueAtTime(0.0001, t);
+    gain.gain.linearRampToValueAtTime(targetGain, t + 0.0018);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    activeNodes.push(osc, gain);
+    osc.start(t);
+    osc.stop(t + dur);
+    osc.onended = () => {
+      osc.disconnect(); gain.disconnect();
+      const i1 = activeNodes.indexOf(osc);
+      if (i1 !== -1) activeNodes.splice(i1, 1);
+      const i2 = activeNodes.indexOf(gain);
+      if (i2 !== -1) activeNodes.splice(i2, 1);
+    };
+  }
 }
 
 export function scheduleReferencePitch(
