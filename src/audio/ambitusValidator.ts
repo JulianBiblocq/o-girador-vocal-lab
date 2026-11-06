@@ -1,15 +1,13 @@
 /**
  * ambitusValidator.ts
- * Validation acoustique Haute Précision de l'ambitus : octave stricte (sans mod 12),
- * tenue continue >= 1.2s, jitter phonatoire < 35 cents et anti-affaissement (< 125 lignes).
+ * Validation acoustique Haute Précision de l'ambitus : filtre médian glissant 120 ms pondéré
+ * anti-saut d'octave (H1/H2), tenue continue >= 1.2s, jitter < 35 cents (< 138 lignes).
  */
 import type { AmbitusStepResult, AmbitusValidationStatus } from '../types/vocalProfile.types';
 import { midiToNoteName } from '../utils/noteUtils';
 
 export interface ValidationSample {
-  timeSec: number;
-  pitchMidi: number;
-  rms: number;
+  timeSec: number; pitchMidi: number; rms: number; clarity?: number;
 }
 
 export const AMBITUS_HOLD_SEC = 1.6;
@@ -22,40 +20,65 @@ export const PITCH_TOLERANCE_SEMITONES = 0.85;
 export const MAX_CONTINUITY_GAP_SEC = 0.35;
 
 export interface AmbitusDetailedFeedback {
-  isSolid: boolean;
-  status: AmbitusValidationStatus;
-  messageKey: string;
-  avgDiffCents: number;
-  durationSec: number;
-  avgRms: number;
+  isSolid: boolean; status: AmbitusValidationStatus; messageKey: string;
+  avgDiffCents: number; durationSec: number; avgRms: number;
+}
+
+export function smoothAmbitusSamples(
+  samples: ValidationSample[], targetMidi?: number, windowSec = 0.12
+): ValidationSample[] {
+  if (samples.length <= 2) return samples;
+  const voicedPitches = samples.filter((s) => s.pitchMidi > 0).map((s) => s.pitchMidi).sort((a, b) => a - b);
+  const globalMed = voicedPitches.length > 0 ? voicedPitches[Math.floor(voicedPitches.length / 2)] : (targetMidi ?? 60);
+  const ref = targetMidi && Math.abs(globalMed - targetMidi) <= 2.5 ? targetMidi : globalMed;
+
+  const despiked = samples.map((s) => {
+    if (s.pitchMidi <= 0) return s;
+    let p = s.pitchMidi;
+    if (Math.abs(p - 12 - ref) <= 0.9 && Math.abs(p - ref) >= 10.5) p -= 12;
+    else if (Math.abs(p + 12 - ref) <= 0.9 && Math.abs(p - ref) >= 10.5) p += 12;
+    return { ...s, pitchMidi: p };
+  });
+
+  const halfWin = windowSec * 0.5;
+  return despiked.map((s, idx) => {
+    if (s.pitchMidi <= 0) return s;
+    const neighbors: Array<{ pitch: number; w: number }> = [];
+    for (let j = Math.max(0, idx - 8); j <= Math.min(despiked.length - 1, idx + 8); j++) {
+      const n = despiked[j];
+      if (n.pitchMidi > 0 && Math.abs(n.timeSec - s.timeSec) <= halfWin) {
+        neighbors.push({ pitch: n.pitchMidi, w: Math.max(0.01, (n.clarity ?? 0.85) * n.rms) });
+      }
+    }
+    if (neighbors.length <= 1) return s;
+    neighbors.sort((a, b) => a.pitch - b.pitch);
+    const totalW = neighbors.reduce((a, b) => a + b.w, 0);
+    let accW = 0, medPitch = s.pitchMidi;
+    for (const item of neighbors) {
+      accW += item.w;
+      if (accW >= totalW * 0.5) { medPitch = item.pitch; break; }
+    }
+    return { ...s, pitchMidi: medPitch };
+  });
 }
 
 export function validateAmbitusNote(
-  targetMidi: number,
-  samples: ValidationSample[],
-  targetHoldSec = AMBITUS_HOLD_SEC,
-  minProjectionRms = MIN_PROJECTION_RMS
+  targetMidi: number, samples: ValidationSample[], targetHoldSec = AMBITUS_HOLD_SEC, minProjectionRms = MIN_PROJECTION_RMS
 ): AmbitusStepResult {
   const noteName = midiToNoteName(targetMidi);
-  const voiced = samples.filter((s) => s.pitchMidi > 0 && s.rms >= minProjectionRms * 0.35);
+  const smoothed = smoothAmbitusSamples(samples, targetMidi, 0.12);
+  const voiced = smoothed.filter((s) => s.pitchMidi > 0 && s.rms >= minProjectionRms * 0.35);
 
   if (voiced.length < 4) {
-    return {
-      note: noteName, midi: targetMidi, heldDurationSec: 0, avgRms: 0,
-      isSolid: false, status: 'failed_low_power', messageKey: 'ambitusCoachingNeedPower',
-    };
+    return { note: noteName, midi: targetMidi, heldDurationSec: 0, avgRms: 0, isSolid: false, status: 'failed_low_power', messageKey: 'ambitusCoachingNeedPower' };
   }
 
-  const firstTime = voiced[0].timeSec;
-  const lastTime = voiced[voiced.length - 1].timeSec;
+  const firstTime = voiced[0].timeSec, lastTime = voiced[voiced.length - 1].timeSec;
   const durationSec = lastTime - firstTime;
   const avgRms = voiced.reduce((acc, s) => acc + s.rms, 0) / voiced.length;
 
   if (avgRms < minProjectionRms) {
-    return {
-      note: noteName, midi: targetMidi, heldDurationSec: durationSec, avgRms,
-      isSolid: false, status: 'failed_low_power', messageKey: 'ambitusCoachingNeedPower',
-    };
+    return { note: noteName, midi: targetMidi, heldDurationSec: durationSec, avgRms, isSolid: false, status: 'failed_low_power', messageKey: 'ambitusCoachingNeedPower' };
   }
 
   let maxGapSec = 0;
@@ -66,58 +89,33 @@ export function validateAmbitusNote(
 
   const requiredHoldSec = Math.min(MIN_STABLE_HOLD_SEC, targetHoldSec * 0.75);
   if (durationSec < requiredHoldSec || maxGapSec > MAX_CONTINUITY_GAP_SEC) {
-    return {
-      note: noteName, midi: targetMidi, heldDurationSec: durationSec, avgRms,
-      isSolid: false, status: 'failed_pitch', messageKey: 'ambitusCoachingTooShort',
-    };
+    return { note: noteName, midi: targetMidi, heldDurationSec: durationSec, avgRms, isSolid: false, status: 'failed_pitch', messageKey: 'ambitusCoachingTooShort' };
   }
 
-  // 1. Justesse stricte dans l'octave cible (SANS repliement mod 12 !)
   const avgDiff = voiced.reduce((acc, s) => acc + (s.pitchMidi - targetMidi), 0) / voiced.length;
   if (avgDiff < -PITCH_TOLERANCE_SEMITONES) {
-    return {
-      note: noteName, midi: targetMidi, heldDurationSec: durationSec, avgRms,
-      isSolid: false, status: 'failed_pitch', messageKey: 'ambitusCoachingTooLow',
-    };
+    return { note: noteName, midi: targetMidi, heldDurationSec: durationSec, avgRms, isSolid: false, status: 'failed_pitch', messageKey: 'ambitusCoachingTooLow' };
   }
   if (avgDiff > PITCH_TOLERANCE_SEMITONES) {
-    return {
-      note: noteName, midi: targetMidi, heldDurationSec: durationSec, avgRms,
-      isSolid: false, status: 'failed_pitch', messageKey: 'ambitusCoachingTooHigh',
-    };
+    return { note: noteName, midi: targetMidi, heldDurationSec: durationSec, avgRms, isSolid: false, status: 'failed_pitch', messageKey: 'ambitusCoachingTooHigh' };
   }
 
-  // 2. Stabilité phonatoire : jitter (écart-type de la hauteur) < 35 cents
   const meanPitch = voiced.reduce((acc, s) => acc + s.pitchMidi, 0) / voiced.length;
   const varianceCents = voiced.reduce((acc, s) => acc + Math.pow((s.pitchMidi - meanPitch) * 100, 2), 0) / voiced.length;
-  const jitterCents = Math.sqrt(varianceCents);
-  if (jitterCents > MAX_JITTER_CENTS) {
-    return {
-      note: noteName, midi: targetMidi, heldDurationSec: durationSec, avgRms,
-      isSolid: false, status: 'failed_sagging', messageKey: 'ambitusCoachingSagging',
-    };
+  if (Math.sqrt(varianceCents) > MAX_JITTER_CENTS) {
+    return { note: noteName, midi: targetMidi, heldDurationSec: durationSec, avgRms, isSolid: false, status: 'failed_sagging', messageKey: 'ambitusCoachingSagging' };
   }
 
-  // 3. Stabilité jusqu'à la fin du souffle : pas d'affaissement > 50 cents sur les 500 dernières ms
   const tailBoundary = lastTime - 0.5;
   const coreWindow = voiced.filter((s) => s.timeSec <= tailBoundary);
   const finalWindow = voiced.filter((s) => s.timeSec > tailBoundary);
-
   if (coreWindow.length > 0 && finalWindow.length > 0) {
-    const avgCorePitch = coreWindow.reduce((a, s) => a + s.pitchMidi, 0) / coreWindow.length;
-    const avgFinalPitch = finalWindow.reduce((a, s) => a + s.pitchMidi, 0) / finalWindow.length;
-    const dropCents = (avgCorePitch - avgFinalPitch) * 100;
-
-    if (dropCents > MAX_SAGGING_CENTS) {
-      return {
-        note: noteName, midi: targetMidi, heldDurationSec: durationSec, avgRms,
-        isSolid: false, status: 'failed_sagging', messageKey: 'ambitusCoachingSagging',
-      };
+    const avgCore = coreWindow.reduce((a, s) => a + s.pitchMidi, 0) / coreWindow.length;
+    const avgFinal = finalWindow.reduce((a, s) => a + s.pitchMidi, 0) / finalWindow.length;
+    if ((avgCore - avgFinal) * 100 > MAX_SAGGING_CENTS) {
+      return { note: noteName, midi: targetMidi, heldDurationSec: durationSec, avgRms, isSolid: false, status: 'failed_sagging', messageKey: 'ambitusCoachingSagging' };
     }
   }
 
-  return {
-    note: noteName, midi: targetMidi, heldDurationSec: durationSec, avgRms,
-    isSolid: true, status: 'solid', messageKey: 'ambitusNoteSolidSuccess',
-  };
+  return { note: noteName, midi: targetMidi, heldDurationSec: durationSec, avgRms, isSolid: true, status: 'solid', messageKey: 'ambitusNoteSolidSuccess' };
 }

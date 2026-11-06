@@ -1,10 +1,10 @@
 /**
  * AmbitusPitchGraph.tsx
- * Canvas Cordel réactif (240px) avec Auto-Scale vertical dynamique (minPlotMidi/maxPlotMidi, plage min 18 demi-tons),
- * repères de notes latéraux (Sol2, Do3, Sol3, Do4...) et mode Escalier (< 135 lignes).
+ * Canvas Cordel réactif (240px) avec Auto-Scale vertical dynamique, lissage médian 120 ms
+ * anti-saut d'octave (H1/H2), repères latéraux et mode Escalier (< 138 lignes).
  */
 import React, { useEffect, useRef } from 'react';
-import type { ValidationSample } from '../../audio/ambitusValidator';
+import { smoothAmbitusSamples, type ValidationSample } from '../../audio/ambitusValidator';
 import type { StaircaseStep } from '../../audio/ambitusSweepAndStairs';
 import { midiToNoteName } from '../../utils/noteUtils';
 
@@ -36,9 +36,10 @@ export const AmbitusPitchGraph: React.FC<Props> = ({
     const borderStroke = isLight ? 'rgba(26, 26, 26, 0.22)' : 'rgba(239, 230, 210, 0.16)';
 
     ctx.fillStyle = bgFill; ctx.fillRect(0, 0, w, h);
+    const cleanSamples = smoothAmbitusSamples(samples, mode === 'single' ? targetMidi : undefined, 0.12);
 
     if (mode === 'single' || mode === 'sweep') {
-      const voicedMidiPoints = samples.filter((s) => s.pitchMidi >= 30 && s.pitchMidi <= 96).map((s) => s.pitchMidi);
+      const voicedMidiPoints = cleanSamples.filter((s) => s.pitchMidi >= 30 && s.pitchMidi <= 96).map((s) => s.pitchMidi);
       const sorted = [...voicedMidiPoints].sort((a, b) => a - b);
       const medianMidi = sorted.length > 0 ? sorted[Math.floor(sorted.length / 2)] : targetMidi;
       const refPoints = voicedMidiPoints.length > 0 ? (mode === 'single' ? [...voicedMidiPoints, targetMidi] : voicedMidiPoints) : [targetMidi];
@@ -54,7 +55,6 @@ export const AmbitusPitchGraph: React.FC<Props> = ({
       const spanMidi = Math.max(1, maxPlotMidi - minPlotMidi);
       const midiToY = (m: number) => Math.max(padY - 4, Math.min(h - padY + 4, padY + ((maxPlotMidi - m) / spanMidi) * plotH));
 
-      // Repères horizontaux (Do, Mi, Sol, La) sur le bord gauche
       for (let m = minPlotMidi; m <= maxPlotMidi; m++) {
         const pc = ((m % 12) + 12) % 12;
         if (pc === 0 || pc === 4 || pc === 7 || pc === 9) {
@@ -68,7 +68,6 @@ export const AmbitusPitchGraph: React.FC<Props> = ({
         }
       }
 
-      // Couloir de la note cible ou médiane détectée
       const focusMidi = mode === 'sweep' ? Math.round(medianMidi) : targetMidi;
       const targetY = midiToY(focusMidi);
       const tolPx = Math.max(6, (0.45 / spanMidi) * plotH);
@@ -85,13 +84,12 @@ export const AmbitusPitchGraph: React.FC<Props> = ({
         : `${midiToNoteName(targetMidi)} (Cible ±45 cents)`;
       ctx.fillText(headerLabel, leftPad + 4, 15);
 
-      // Tracé intégral de la courbe vocale (100 % contenue dans le cadre)
-      const maxSampleSec = samples.length > 0 ? Math.max(...samples.map((s) => s.timeSec)) : 0;
+      const maxSampleSec = cleanSamples.length > 0 ? Math.max(...cleanSamples.map((s) => s.timeSec)) : 0;
       const totalSec = Math.max(targetHoldSec, maxSampleSec, 0.5);
-      if (samples.length > 1) {
+      if (cleanSamples.length > 1) {
         ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-        for (let i = 1; i < samples.length; i++) {
-          const s1 = samples[i - 1], s2 = samples[i];
+        for (let i = 1; i < cleanSamples.length; i++) {
+          const s1 = cleanSamples[i - 1], s2 = cleanSamples[i];
           if (s1.pitchMidi < 30 || s2.pitchMidi < 30) continue;
           const x1 = leftPad + Math.min(1, s1.timeSec / totalSec) * plotW;
           const x2 = leftPad + Math.min(1, s2.timeSec / totalSec) * plotW;
@@ -113,7 +111,7 @@ export const AmbitusPitchGraph: React.FC<Props> = ({
           ctx.strokeStyle = '#0f766e'; ctx.lineWidth = 1.5;
           ctx.fillRect(x + 4, y - 9, stepW - 8, 18); ctx.strokeRect(x + 4, y - 9, stepW - 8, 18);
           ctx.fillStyle = textFill; ctx.font = 'bold 10px monospace'; ctx.fillText(st.noteName, x + 8, y + 4);
-          const stepSamples = samples.filter((s) => s.timeSec >= idx * 1.8 && s.timeSec < (idx + 1) * 1.8);
+          const stepSamples = cleanSamples.filter((s) => s.timeSec >= idx * 1.8 && s.timeSec < (idx + 1) * 1.8);
           if (stepSamples.length > 2) {
             const avgP = stepSamples.reduce((a, s) => a + s.pitchMidi, 0) / stepSamples.length;
             const diff = avgP - st.midi, ok = Math.abs(diff) <= 0.55;

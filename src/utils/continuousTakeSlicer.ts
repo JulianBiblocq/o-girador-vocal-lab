@@ -1,6 +1,6 @@
 /**
  * continuousTakeSlicer.ts
- * Découpage automatique d'une prise continue par pattern avec sélection RMS et auto-calage T1 par corrélation croisée (< 140 lignes).
+ * Découpage automatique d'une prise continue par pattern avec sélection RMS, auto-calage T1 et coupe acoustique optimale (< 135 lignes).
  */
 import type { ToadaProject, VocalPatternItem, VocalRole } from '../types/toadaProject.types';
 import { getBeatsPerMeasure } from './musicalMath';
@@ -10,6 +10,7 @@ import { computeSlotsMeasureLayout } from '../components/conductor/toadaTimingSc
 import { CONTINUOUS_LEAD_IN_MEASURES } from '../audio/continuousCueHelper';
 import { resolveFreshTimeAnchors } from './timeAnchorParser';
 import { alignT1ByAnchorCrossCorrelation } from './slicerAlignmentHelper';
+import { findOptimalAcousticCutSec, snapToNearestZeroCrossing } from './slicerBoundaryOptimizer';
 
 export interface SlicedTakeResult {
   updatedPatterns: VocalPatternItem[];
@@ -73,11 +74,15 @@ export function sliceContinuousTake(
     const slotT1InPCM = alignT1ByAnchorCrossCorrelation(
       fullPCM, sampleRate, nominalSlotT1, bpm, effectiveAnchors, hasAnac, beatsPerMeasure, 0.30
     );
-    const patStartInPCM = slotT1InPCM - anacSec;
-    const patEndInPCM = slotT1InPCM + pat.measuresCount * measureDuration + beatDuration;
+    const patStartInPCM = snapToNearestZeroCrossing(fullPCM, sampleRate, slotT1InPCM - anacSec, 5);
+    const bodyEndInPCM = slotT1InPCM + pat.measuresCount * measureDuration;
+    const nominalEndInPCM = bodyEndInPCM + beatDuration;
+    const patEndInPCM = findOptimalAcousticCutSec(
+      fullPCM, sampleRate, nominalEndInPCM, bodyEndInPCM + 0.12 * beatDuration, bodyEndInPCM + 1.15 * beatDuration
+    );
 
-    const sliceStartSec = Math.max(0, patStartInPCM - 0.5);
-    const sliceEndSec = Math.min(fullPCM.length / sampleRate, patEndInPCM + 0.5);
+    const sliceStartSec = snapToNearestZeroCrossing(fullPCM, sampleRate, Math.max(0, patStartInPCM - 0.5), 5);
+    const sliceEndSec = snapToNearestZeroCrossing(fullPCM, sampleRate, Math.min(fullPCM.length / sampleRate, patEndInPCM + 0.5), 5);
 
     const sStart = Math.floor(sliceStartSec * sampleRate);
     const sEnd = Math.floor(sliceEndSec * sampleRate);

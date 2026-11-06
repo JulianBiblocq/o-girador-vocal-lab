@@ -6,7 +6,10 @@ import type { VocalPatternItem, VocalRole, ToadaArrangementSlot } from '../types
 import type { TimeAnchor } from '../types/toadaDocument.types';
 import type { SliceSegment } from '../types/slicerSegments.types';
 import { resolveFreshTimeAnchors } from './timeAnchorParser';
-import { computePatternVocalOffsetsBeats, findTransitionRmsDipSec } from './subbeatAnchorHelper';
+import { computePatternVocalOffsetsBeats } from './subbeatAnchorHelper';
+import { findOptimalAcousticCutSec, findOptimalMasterGridOffsetSec } from './slicerBoundaryOptimizer';
+
+export { findOptimalAcousticCutSec, findOptimalMasterGridOffsetSec };
 
 function windowRms(pcm: Float32Array, sampleRate: number, t0: number, t1: number): number {
   const i0 = Math.max(0, Math.floor(t0 * sampleRate)), i1 = Math.min(pcm.length, Math.ceil(t1 * sampleRate));
@@ -126,7 +129,7 @@ export function buildOrganizadorSlices(
     const isolatedStartSec = cur.hasAna ? Math.max(0, Math.round((cur.t1 + (cur.firstVocalOffsetBeats - 0.25) * beatDur) * 100) / 100) : Math.max(0, Math.round(cur.t1 * 100) / 100);
     const startSec = (i === 0 || cur.isIslandStart || !prevVocalSeg || prevVocalSeg.isPause) ? isolatedStartSec : prevVocalSeg.endSec;
     const endSec = Boolean(next && !next.isIslandStart) && next
-      ? findTransitionRmsDipSec(next.t1, beatDur, next.firstVocalOffsetBeats, cur.hasBoundaryExitAnchor, pcm, sampleRate)
+      ? findOptimalAcousticCutSec({ boundaryT1Sec: next.t1, beatDur, nextFirstVocalOffsetBeats: next.firstVocalOffsetBeats, curHasBoundaryExit: cur.hasBoundaryExitAnchor, pcm, sampleRate })
       : Math.round((cur.t1 + cur.mCount * measureDur + beatDur * 0.75) * 100) / 100;
     segments.push({ id: `seg-org-${cur.pat.id}-${i}`, startSec, endSec, metricT1Sec: cur.t1, targetPatternId: cur.pat.id, role: cur.pat.role, name: cur.pat.name, measuresCount: cur.mCount as 1 | 2 | 3 | 4, hasAnacrusis: cur.hasAna, anacrusisBeats: cur.pat.anacrusisBeats ?? (cur.hasAna ? 2 : 0), hasTailBeat: true });
   }

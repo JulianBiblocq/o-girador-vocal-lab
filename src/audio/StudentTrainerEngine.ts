@@ -1,5 +1,5 @@
 /**
- * StudentTrainerEngine.ts — Moteur d'entraînement vocal Web Audio Studio Élève 2.0 (Trace pitch 60 FPS, Projection Roda, WSOLA) (< 138 lignes).
+ * StudentTrainerEngine.ts — Moteur d'entraînement vocal Web Audio Studio Élève 2.0 (Trace pitch 60 FPS Bayésienne, Projection Roda, WSOLA) (< 138 lignes).
  */
 import { getSharedAudioContext, registerAudioKillSwitch, stopAllActiveAudioEngines } from './sharedAudioContext';
 import { VocalRecorderEngine } from './VocalRecorderEngine';
@@ -7,6 +7,7 @@ import { scheduleWoodClick, scheduleReferencePitch } from './metronomeAudioNodes
 import { scheduleSecondaryTakeGuide, type TakeGuideHandle } from './takeGuideHelper';
 import { scheduleCuePatternAudio, type CuePlaybackHandle } from './cueAudioHelper';
 import { detectRealtimePitch } from './realtimePitchDetector';
+import { CausalStudentPitchTracker } from './studentPerformanceMatcher';
 import { extractCanonicalMestreBuffer, timeStretchConstantPitch } from './wsolaTimeStretcher';
 import { analyzeVocalProjectionFrame, computeSessionProjectionSummary, type RodaProjectionFrameResult, type SessionProjectionSummary } from './rodaResonanceAnalyzer';
 import type { VocalPatternItem } from '../types/toadaProject.types';
@@ -43,9 +44,7 @@ export class StudentTrainerEngine {
       this.liveAnalyser = this.ctx.createAnalyser(); this.liveAnalyser.fftSize = 2048;
       micSrc.connect(this.liveAnalyser); this.activeNodes.push(micSrc);
     } catch {}
-
-    const beatDur = 60 / config.bpm, measureDur = config.beatsPerMeasure * beatDur;
-    const hasCue = config.scope === 'toada' && !!config.cuePattern;
+    const beatDur = 60 / config.bpm, measureDur = config.beatsPerMeasure * beatDur, hasCue = config.scope === 'toada' && !!config.cuePattern;
     const preRollMeasures = hasCue && config.cuePattern ? 1 + config.cuePattern.measuresCount : 1;
     const hasAnac = config.pattern.hasAnacrusis !== false, singingMeasures = (hasAnac ? 1 : 0) + config.measuresCount;
     const countdownSec = preRollMeasures * measureDur, singingSec = singingMeasures * measureDur;
@@ -76,23 +75,25 @@ export class StudentTrainerEngine {
     }
     this.recorder.start(singStartTime, singingSec);
     const stepDurSec = beatDur / 4, timeBuf = new Float32Array(2048), freqBuf = new Float32Array(1024);
-    const projectionFrames: RodaProjectionFrameResult[] = [];
+    const allTargetSteps = [...(hasAnac ? (config.pattern.anacrusisSteps || []) : []), ...(config.pattern.mainSteps || [])];
+    const tracker = new CausalStudentPitchTracker(), projectionFrames: RodaProjectionFrameResult[] = [];
     let prevMidi = 0;
     const tick = () => {
       if (!this.isRunning || !this.ctx) return;
       const elapsed = this.ctx.currentTime - singStartTime;
       if (elapsed >= 0 && elapsed <= singingSec) {
+        const stepIdx = Math.floor(elapsed / stepDurSec);
         let livePt: PitchCurvePoint | undefined, liveProj: RodaProjectionFrameResult | undefined;
         if (this.liveAnalyser) {
           this.liveAnalyser.getFloatTimeDomainData(timeBuf); this.liveAnalyser.getFloatFrequencyData(freqBuf);
-          const { pitchMidi, rms } = detectRealtimePitch(timeBuf, this.ctx.sampleRate);
-          const jitterCents = prevMidi > 0 && pitchMidi > 0 ? Math.min(120, Math.abs(pitchMidi - prevMidi) * 100) : 12;
-          if (pitchMidi > 0) prevMidi = pitchMidi;
-          if (pitchMidi > 0 && rms >= 0.01) livePt = { timeSec: elapsed, midiFloat: pitchMidi };
+          const { pitchMidi, rms, clarity, zcr } = detectRealtimePitch(timeBuf, this.ctx.sampleRate);
+          livePt = tracker.update(elapsed, pitchMidi, rms, clarity ?? 0.85, zcr ?? 0.08, allTargetSteps[stepIdx]?.midiNumber || 0);
+          const trk = livePt?.midiFloat ?? 0, jitterCents = prevMidi > 0 && trk > 0 ? Math.min(120, Math.abs(trk - prevMidi) * 100) : 12;
+          if (trk > 0) prevMidi = trk;
           liveProj = analyzeVocalProjectionFrame(freqBuf, this.ctx.sampleRate, this.liveAnalyser.fftSize, rms, jitterCents);
           if (liveProj.isVoiced) projectionFrames.push(liveProj);
         }
-        onPlayhead(elapsed, Math.floor(elapsed / stepDurSec), livePt, liveProj);
+        onPlayhead(elapsed, stepIdx, livePt, liveProj);
       }
       this.animId = requestAnimationFrame(tick);
     };
