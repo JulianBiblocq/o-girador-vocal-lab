@@ -59,8 +59,8 @@ export const CuePatternSelector: React.FC<{ disabled?: boolean }> = ({ disabled 
         </select>
 
         {isCueReady && effectiveCuePattern && (
-          <span className="flex items-center gap-1 text-[10px] font-bold text-cyan-400 bg-cyan-950/40 border border-cyan-500/40 px-1.5 py-0.5 rounded">
-            <CheckCircle2 className="w-3 h-3 text-cyan-400" />
+          <span className="flex items-center gap-1 text-[10px] font-bold text-white bg-[#0f766e] border border-[#0f766e] px-2 py-0.5 rounded">
+            <CheckCircle2 className="w-3 h-3 text-white" />
             <span>{t('cueReadyBadge', { measures: effectiveCuePattern.measuresCount })}</span>
           </span>
         )}

@@ -93,22 +93,26 @@ export const WaveformGridCanvas: React.FC<WaveformGridCanvasProps> = ({
       }
     }
 
-    ctx.strokeStyle = '#d4af37'; ctx.lineWidth = 2.5;
+    ctx.strokeStyle = isLight ? '#9a3412' : '#d4af37'; ctx.lineWidth = 2.5;
     ctx.beginPath(); ctx.moveTo(xTemps1, 0); ctx.lineTo(xTemps1, height); ctx.stroke();
 
-    ctx.font = 'bold 9px monospace';
+    ctx.font = 'bold 10px monospace';
     if (hasAnac) {
-      ctx.fillStyle = isLight ? 'rgba(26, 26, 26, 0.7)' : 'rgba(244, 236, 216, 0.7)';
-      ctx.fillText(t('chordGridElanLabel'), 6, 12);
+      ctx.fillStyle = isLight ? '#451a03' : 'rgba(244, 236, 216, 0.85)';
+      ctx.fillText(t('chordGridElanLabel'), 6, 13);
     }
-    ctx.fillStyle = '#d4af37';
-    ctx.fillText(`${t('measure1')} ▶`, xTemps1 + 4, 12);
+    const m1Txt = `${t('measure1')} ▶`;
+    const m1W = ctx.measureText(m1Txt).width + 10;
+    ctx.fillStyle = '#9a3412';
+    ctx.beginPath(); ctx.roundRect(xTemps1 + 3, 2, m1W, 15, 3); ctx.fill();
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText(m1Txt, xTemps1 + 8, 13);
 
-    for (let m = 0; m < measuresCount; m++) {
+    for (let m = 1; m < measuresCount; m++) {
       const mStartSec = t1Offset + m * measureDurationSec;
       const mX = (mStartSec / totalDurationSec) * width;
-      ctx.fillStyle = isLight ? 'rgba(26, 26, 26, 0.7)' : 'rgba(244, 236, 216, 0.7)';
-      ctx.fillText(`M${m + 1}`, mX + (m === 0 ? 65 : 4), 12);
+      ctx.fillStyle = isLight ? '#1a1a1a' : 'rgba(244, 236, 216, 0.85)';
+      ctx.fillText(`M${m + 1}`, mX + 4, 13);
     }
 
     if (tNextT1 < totalDurationSec) {

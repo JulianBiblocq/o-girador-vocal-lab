@@ -123,6 +123,7 @@ export const PianoRollEditor: React.FC<PianoRollEditorProps> = (p) => {
             seekStartSec={p.seekStartSec} isPlaying={p.isPlaying} hasAnacrusis={p.hasAnacrusis} bpm={p.bpm} t1OffsetSec={t1OffsetSec}
             getPlayheadSec={p.getPlayheadSec} onSeek={p.onSeek}
           />
+          <BeatRhythmPresetBar allSteps={p.allSteps} gridWidth={gridWidth} resPerBeat={p.beatResolutions?.[0] || 4} readOnly={p.readOnly} onUpdateSteps={p.onUpdateSteps} />
           <div className="flex relative" style={{ width: `${64 + gridWidth}px`, height: `${canvasHeight}px` }}>
             <PianoRollKeyboard minMidi={minMidi} maxMidi={maxMidi} rowHeight={ROW_HEIGHT} onPlayNote={p.onPlayNotePreview} />
             <div className="relative" style={{ width: `${gridWidth}px`, height: `${canvasHeight}px` }}>
@@ -131,7 +132,6 @@ export const PianoRollEditor: React.FC<PianoRollEditorProps> = (p) => {
             </div>
           </div>
           <PianoRollSyllablesRow allSteps={p.allSteps} gridWidth={gridWidth} readOnly={p.readOnly} onUpdateSteps={p.onUpdateSteps} />
-          <BeatRhythmPresetBar allSteps={p.allSteps} gridWidth={gridWidth} resPerBeat={p.beatResolutions?.[0] || 4} readOnly={p.readOnly} onUpdateSteps={p.onUpdateSteps} />
         </div>
       </div>
       {palettePos && <PianoRollContextMenu x={palettePos.x} y={palettePos.y} activeTool={activeTool} onSelectTool={setActiveTool} onClose={() => setPalettePos(null)} />}

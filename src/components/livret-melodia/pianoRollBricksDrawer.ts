@@ -82,14 +82,14 @@ export function drawPianoRollBricks(params: DrawBricksParams): void {
     const cx = x + w / 2, hy = y + 1;
     if (pullPct > 0 || isSel || isHov) {
       const badgeTxt = `◆ ${pullPct}%`;
-      ctx.font = 'bold 8.5px monospace';
-      const tw = ctx.measureText(badgeTxt).width + 6;
-      ctx.fillStyle = pullPct > 0 ? '#facc15' : '#0284c7';
-      ctx.beginPath(); ctx.roundRect(cx - tw / 2, hy - 6, tw, 11, 3); ctx.fill();
-      ctx.fillStyle = pullPct > 0 ? '#1c1917' : '#ffffff';
-      ctx.fillText(badgeTxt, cx - tw / 2 + 3, hy + 2.5);
+      ctx.font = 'bold 11px monospace';
+      const tw = ctx.measureText(badgeTxt).width + 8;
+      ctx.fillStyle = pullPct > 0 ? '#9a3412' : '#1a1a1a';
+      ctx.beginPath(); ctx.roundRect(cx - tw / 2, hy - 8, tw, 14, 3); ctx.fill();
+      ctx.fillStyle = '#ffffff';
+      ctx.fillText(badgeTxt, cx - tw / 2 + 4, hy + 2.5);
     } else if (w >= 14) {
-      ctx.fillStyle = '#fde047';
+      ctx.fillStyle = '#9a3412';
       ctx.beginPath();
       ctx.moveTo(cx, hy - 3.5); ctx.lineTo(cx + 4, hy); ctx.lineTo(cx, hy + 3.5); ctx.lineTo(cx - 4, hy);
       ctx.closePath(); ctx.fill();

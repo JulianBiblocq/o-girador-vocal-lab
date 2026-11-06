@@ -54,22 +54,22 @@ export const PreviewControls: React.FC<PreviewControlsProps> = ({
               className="accent-[var(--cordel-wood)] w-3.5 h-3.5 cursor-pointer"
             />
             <span className="flex items-center gap-1.5">
-              <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+              <Sparkles className="w-3.5 h-3.5 text-[#9a3412] dark:text-amber-400" />
               <span>{t('clarityDeEsser')}</span>
             </span>
           </label>
         </div>
-        <span className="text-[10px] text-emerald-400 font-mono flex items-center gap-1">
-          <Zap className="w-3 h-3 text-amber-400" />
+        <span className="text-[10px] text-emerald-800 dark:text-emerald-300 font-bold font-mono flex items-center gap-1">
+          <Zap className="w-3 h-3 text-[#9a3412] dark:text-amber-400" />
           <span>{t('normalizedVolume')}</span>
         </span>
       </div>
 
       {/* 3. Barre d'actions de pré-écoute & Clic */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1 border-t border-theme-border/20">
+      <div className="flex flex-wrap items-center justify-center gap-3 pt-1.5 border-t border-theme-border/20">
         <button
           type="button" disabled={disabled} onClick={onTogglePlay}
-          className={`py-2 px-3 flex items-center justify-center gap-1.5 text-xs font-bold transition-all cursor-pointer ${
+          className={`w-auto px-5 py-2 rounded flex items-center justify-center gap-1.5 text-xs font-bold transition-all cursor-pointer ${
             isPlaying ? 'bg-red-900 text-[#f4ecd8] border-2 border-theme-border' : 'cordel-btn-primary'
           }`}
         >
@@ -88,7 +88,7 @@ export const PreviewControls: React.FC<PreviewControlsProps> = ({
 
         <button
           type="button" disabled={disabled} onClick={onToggleClick}
-          className={`py-2 px-3 flex items-center justify-center gap-1.5 text-xs font-bold transition-all cursor-pointer ${
+          className={`w-auto px-5 py-2 rounded flex items-center justify-center gap-1.5 text-xs font-bold transition-all cursor-pointer ${
             clickEnabled ? 'cordel-btn-primary' : 'cordel-btn opacity-70'
           }`}
           title={t('clickWitness')}
@@ -99,7 +99,7 @@ export const PreviewControls: React.FC<PreviewControlsProps> = ({
 
         <button
           type="button" disabled={disabled || isPlaying} onClick={onReset}
-          className="cordel-btn py-2 px-3 flex items-center justify-center gap-1.5 text-xs font-bold cursor-pointer opacity-80 hover:opacity-100"
+          className="cordel-btn w-auto px-5 py-2 rounded flex items-center justify-center gap-1.5 text-xs font-bold cursor-pointer opacity-85 hover:opacity-100"
         >
           <RotateCcw className="w-3.5 h-3.5" />
           <span>{t('rerecordTake')}</span>
@@ -107,7 +107,7 @@ export const PreviewControls: React.FC<PreviewControlsProps> = ({
 
         <button
           type="button" disabled={disabled || isPlaying} onClick={onProceedToExtraction}
-          className="cordel-btn-primary py-2 px-3 flex items-center justify-center gap-1.5 text-xs font-bold cursor-pointer bg-emerald-800 hover:bg-emerald-700"
+          className="cordel-btn-primary w-auto px-5 py-2 rounded flex items-center justify-center gap-1.5 text-xs font-bold cursor-pointer bg-emerald-800 hover:bg-emerald-700"
         >
           <span>{t('extractMelodyAndLyrics')}</span>
           <ArrowRight className="w-4 h-4" />

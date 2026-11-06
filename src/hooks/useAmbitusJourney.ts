@@ -17,7 +17,7 @@ export function useAmbitusJourney(t: (k: any, p?: any) => string) {
   const engine = useMemo(() => new AmbitusAudioEngine(), []);
   const saved = useMemo(() => loadVocalProfile(), []);
 
-  const [stage, setStage] = useState<AmbitusStage>(() => (saved ? 'completed' : 'sweep'));
+  const [stage, setStage] = useState<AmbitusStage>('sweep');
   const [lowestMidi, setLowestMidi] = useState(() => (saved ? noteNameToMidi(saved.vocalProfile.lowestSolidNote) : 50));
   const [highestMidi, setHighestMidi] = useState(() => (saved ? noteNameToMidi(saved.vocalProfile.highestSolidNote) : 64));
   const [medianMidi, setMedianMidi] = useState(() => (saved ? Math.round((noteNameToMidi(saved.vocalProfile.lowestSolidNote) + noteNameToMidi(saved.vocalProfile.highestSolidNote)) / 2) : 55));

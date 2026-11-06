@@ -73,8 +73,8 @@ export const StructureTopControls: React.FC<StructureTopControlsProps> = ({
           <button type="button" onClick={() => onBpmChange(Math.max(30, bpm - 1))} className="px-2 py-1 hover:bg-amber-500/20 font-bold cursor-pointer" title="Diminuer le BPM (-1)">
             <Minus className="w-3 h-3" />
           </button>
-          <NumericDraftInput min={30} max={240} value={bpm} onChange={onBpmChange} className="w-12 bg-transparent text-center font-mono font-bold text-xs py-0.5 text-amber-600 dark:text-amber-400" />
-          <span className="pr-1.5 text-[10px] opacity-70 font-bold">BPM</span>
+          <NumericDraftInput min={30} max={240} value={bpm} onChange={onBpmChange} className="w-12 bg-transparent text-center font-mono font-bold text-xs py-0.5 text-[#9a3412] dark:text-amber-300" />
+          <span className="pr-1.5 text-[10px] opacity-80 font-bold">BPM</span>
           <button type="button" onClick={() => onBpmChange(Math.min(240, bpm + 1))} className="px-2 py-1 hover:bg-amber-500/20 font-bold cursor-pointer" title="Augmenter le BPM (+1)">
             <Plus className="w-3 h-3" />
           </button>
@@ -86,7 +86,7 @@ export const StructureTopControls: React.FC<StructureTopControlsProps> = ({
 
         <button type="button" onClick={() => fileRef.current?.click()} className="px-2.5 py-1 cordel-card-sm hover:border-amber-500 font-bold flex items-center gap-1 rounded cursor-pointer text-theme-accent" title="Importer un fichier audio d'accompagnement Batuque (.wav)">
           <Drum className="w-3.5 h-3.5" />
-          <span>🥁 {backingTrack ? backingTrack.fileName.slice(0, 16) : 'Importer Batuque (.wav)'}</span>
+          <span>{backingTrack ? backingTrack.fileName.slice(0, 16) : 'Importer Batuque (.wav)'}</span>
         </button>
         <input ref={fileRef} type="file" accept=".wav,.mp3,.ogg,audio/*" onChange={handleImportBatuqueWav} className="hidden" />
       </div>
@@ -98,11 +98,11 @@ export const StructureTopControls: React.FC<StructureTopControlsProps> = ({
         </span>
         <button type="button" onClick={onPlayTonicPreview} className="px-2.5 py-1 cordel-btn font-bold flex items-center gap-1 rounded cursor-pointer" title={`Écouter la tonique du chant (${tonicSolfege} / ${referencePitch})`}>
           <Volume2 className="w-3.5 h-3.5 text-theme-accent" />
-          <span>🔊 Écouter la tonique ({tonicSolfege})</span>
+          <span>Écouter la tonique ({tonicSolfege})</span>
         </button>
         <button type="button" onClick={onAnalyzeProjectScale} className="px-2.5 py-1 rounded bg-amber-600/20 hover:bg-amber-600/30 border border-amber-500/60 text-amber-900 dark:text-amber-200 font-bold flex items-center gap-1 cursor-pointer" title="Analyser ou relancer la détection de gamme sur toutes les phrases enregistrées du chant">
           <Search className="w-3.5 h-3.5" />
-          <span>🔍 Analyser / Relancer la gamme du chant</span>
+          <span>Analyser / Relancer la gamme du chant</span>
         </button>
       </div>
 
@@ -110,12 +110,12 @@ export const StructureTopControls: React.FC<StructureTopControlsProps> = ({
       <button
         type="button" onClick={onToggleManualStructureEdit}
         className={`px-2.5 py-1 rounded font-bold flex items-center gap-1.5 cursor-pointer border transition-colors ${
-          isManualStructureEdit ? 'bg-amber-600 text-white border-amber-500 shadow-2xs' : 'cordel-card-sm text-[var(--cordel-secondary-text)] hover:text-theme-ink'
+          isManualStructureEdit ? 'bg-[#9a3412] text-white border-[#9a3412] shadow-2xs' : 'cordel-card-sm text-[var(--cordel-secondary-text)] hover:text-theme-ink'
         }`}
         title="Déverrouiller ou verrouiller les outils d'édition manuelle de la structure"
       >
-        {isManualStructureEdit ? <Edit3 className="w-3.5 h-3.5" /> : <Lock className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />}
-        <span>{isManualStructureEdit ? '✏️ Modifier la structure' : '🔒 Structure Organizador'}</span>
+        {isManualStructureEdit ? <Edit3 className="w-3.5 h-3.5" /> : <Lock className="w-3.5 h-3.5 text-emerald-700 dark:text-emerald-400" />}
+        <span>{isManualStructureEdit ? 'Modifier la structure' : 'Structure Organizador'}</span>
       </button>
     </div>
   );

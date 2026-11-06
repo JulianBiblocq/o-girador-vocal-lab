@@ -4,7 +4,7 @@
  */
 export const treinoSubTranslationsFr = {
   tabAmbitus: '1. Mon Ambitus',
-  tabWarmup: '2. Jeux de Voix (Baque)',
+  tabWarmup: '2. Jeux de Voix (Roda)',
   tabPostureDiction: '3. Prononciation & Cartes Sonores',
   tabChanterToada: '4. Chanter la Toada',
 
@@ -122,7 +122,7 @@ export const treinoSubTranslationsFr = {
   culturalAnecdoteLabel: 'Histoire & Contexte :',
   culturalLexiqueLabel: 'Lexique & Symboles (notesLexique) :',
   customTeacherTip: 'Conseil vocal du Mestre pour cette Toada',
-  calageAutoSnapVoiceBtn: '🎯 Auto-caler sur la voix', conductorAddSilenceBtn: '🔇 Pause Batuque', conductorPauseShort: 'Pause Batuque',
+  calageAutoSnapVoiceBtn: 'Auto-caler sur la voix', conductorAddSilenceBtn: 'Pause Batuque', conductorPauseShort: 'Pause Batuque',
   trainerLoopBtn: 'Boucle', studentDiagCentered: 'Pile au centre', studentDiagOnTime: 'Dans le temps',
   studentDiagPitchTitle: '🎯 Justesse Mélodique', studentDiagAttackTitle: '🥁 Attaque Rythmique', studentDiagStabilityTitle: '🌬️ Tenue & Stabilité',
   studentDiagScoreGlobal: 'Score global : {score}%', studentListenMixBtn: 'Mix Mestre + Moi', studentListenMestreBtn: 'Mestre Seul',

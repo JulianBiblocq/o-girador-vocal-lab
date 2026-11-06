@@ -140,3 +140,4 @@ export const ScaleProposalBanner: React.FC<ScaleProposalBannerProps> = ({
     </div>
   );
 };
+

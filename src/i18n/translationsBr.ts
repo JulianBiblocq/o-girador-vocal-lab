@@ -19,7 +19,7 @@ export const translationsBr: VocalLabTranslations = {
   cueSelectorLabel: 'Chamada antes da tomada (C-2 e C-1) :', cueNone: 'Nenhuma (Apenas clique)',
   cueAutoPrevious: 'Padrao anterior da Regencia', cueCustomPrefix: 'Padrao :', cueReadyBadge: 'Pronto ({measures} C)',
   swapPuxadorCoroBtn: '⇄ Inverter Puxador ↔ Coro', swapRolesTooltip: 'Inverter globalmente os papéis Puxador e Coro (padrões, condutor e ficha)', duplicateVariation: '❐ (2)', duplicateVariationTooltip: 'Duplicar este padrão em uma variação independente (2)',
-  scopeAll: '🌍 Toda a toada', scopeActive: '🎯 Apenas este bloco', scopeSelected: '☑ Blocos marcados ({n})', selectAll: 'Marcar todos', deselectAll: 'Desmarcar todos', selectPatternCheckbox: 'Selecionar este bloco',
+  scopeAll: 'Toda a toada', scopeActive: 'Apenas este bloco', scopeSelected: '☑ Blocos marcados ({n})', selectAll: 'Marcar todos', deselectAll: 'Desmarcar todos', selectPatternCheckbox: 'Selecionar este bloco',
   importPreconfigTitle: 'CONFIGURAÇÕES PADRÃO DO CANTO', importDefaultBpm: 'BPM :', importMeasuresPerLine: 'Compassos / linha :', importAnacrusisDefault: 'Anacruse :',
   btnSaveToada: 'Salvar', btnSavedSuccess: 'Salvo !', saveToadaTooltip: 'Salvar Toada (Ctrl+S)', toadaSavedToast: 'Toada salva com sucesso!', saveAndExportMenu: 'Salvar & Exportar', exportFullSongWav: 'Exportar áudio do canto (.wav)', wavExportSuccess: 'Canto completo exportado em .wav com sucesso!',
   export_toada_pack: 'Baixar Pack Toada JSON', export_toada_pack_success: 'Pack Toada multi-declinações pronto para Sequenciador!',
@@ -40,8 +40,8 @@ export const translationsBr: VocalLabTranslations = {
   phaseSinging: 'CANTO: COMPASSO {current} / {total} (TEMPO {beat} / {beats})', phaseCompletedTitle: 'CICLO CONCLUIDO (PUNCH-OUT)',
 
   metricTitle: 'Metrica e Andamento', timeSignature: 'Formula de Compasso', tempoBpm: 'Andamento (BPM)', measuresCount: 'Compassos Canto', subdivisions: 'Subdivisoes',
-  elanAnacrusis: 'Anacruse / Impulso (C-1)', measure1: 'C1 (T1)', measureAbbr: 'C', btnStartRecording: 'GRAVAR A VOZ (1 C ANACRUSE + {measures} C CANTO)',
-  btnStopRecording: 'PARAR GRAVACAO', recordBtnStop: 'PARAR GRAVACAO', measureUnitShort: '{n} C',
+  elanAnacrusis: 'Anacruse / Impulso (C-1)', measure1: 'C1 (T1)', measureAbbr: 'C', btnStartRecording: 'GRAVAR A VOZ',
+  btnStopRecording: 'PARAR GRAVAÇÃO', recordBtnStop: 'PARAR GRAVAÇÃO', measureUnitShort: '{n} C',
 
   listeningModeTitle: 'Modo de Escuta e Referencia', modeHeadphones: 'Com Fone (Clique + Guia)', modeVisual: 'Sem Fone (Silencioso)',
   referencePitch: 'Nota de Referencia (Diapasao)', octave: 'Oitava', octaveShort: 'Oit {oct}', testPitch: 'Testar', clickVolumeLabel: 'VOLUME (CLIQUE)',
@@ -52,7 +52,7 @@ export const translationsBr: VocalLabTranslations = {
   connected: 'CONECTADO', deviceConnectedBadge: 'CONECTADO', refresh: 'Atualizar', deviceRefreshBtn: 'Atualizar', authorizeAudio: 'Autorizar Audio',
   micInputPureDirect: 'Entrada de Microfone (Sinal Puro)', deviceMicInputLabel: 'Entrada de Microfone (Sinal Puro)', headphonesOutputDirect: 'Saida de Fone / Escuta (Roteamento direto)', deviceOutputLabel: 'Saida de Fone / Escuta (Roteamento direto)',
   clickAuthorizeAudio: 'Clique em « Autorizar Audio »', defaultMicLabel: 'Microphone {n}', defaultOutputLabel: 'Saida de audio {n}',
-  calibReadyBadge: 'Aparelho calibrado ({ms} ms)', calibRecalibrateBtn: 'Recalibrar', calibNewDeviceWarn: 'Novo aparelho de audio detecte - CALIBRACAO NECESSARIA', calibNewDeviceWarnBtn: 'Calibrar',
+  calibReadyBadge: 'Aparelho calibrado ({ms} ms)', calibRecalibrateBtn: 'Recalibrar', calibNewDeviceWarn: 'Novo aparelho de áudio detectado — CALIBRAÇÃO NECESSÁRIA', calibNewDeviceWarnBtn: 'Calibrar',
   calibBtnFirstTime: 'Calibrar', calibBtnRecalibrate: 'Recalibrar', calibMethodAutoPing: 'Auto-Ping (2 s)', calibMethodHumanSync: 'Sincronia Humana (8 palmas)',
   calibAutoPingTooltip: 'Emite 3 pulsos para medir automaticamente a latencia de ida e volta', calibHumanSyncTooltip: 'Bata 8 palmas no ritmo do metronomo',
   calibPingInstruction: 'Silencio... Emitindo 3 pings acusticos', calibPingFailed: 'Sinal fraco ou nao detectado. Tente novamente ou use a Sincronia Humana.',

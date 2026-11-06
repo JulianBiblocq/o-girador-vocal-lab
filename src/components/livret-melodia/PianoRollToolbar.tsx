@@ -37,11 +37,11 @@ export const PianoRollToolbar: React.FC<PianoRollToolbarProps> = (props) => {
   const { t } = useLanguage();
 
   const tools: { id: PianoRollTool; label: string; icon: React.FC<{ className?: string }> }[] = [
-    { id: 'pointer', label: '🖱️ Sélection', icon: MousePointer },
-    { id: 'draw_move', label: '✏️ Crayon', icon: Pencil },
-    { id: 'cut', label: '✂️ Ciseaux', icon: Scissors },
-    { id: 'glue', label: '🔗 Colle (Souder)', icon: Link2 },
-    { id: 'erase', label: '🗑️ Gomme', icon: Eraser },
+    { id: 'pointer', label: 'Sélection', icon: MousePointer },
+    { id: 'draw_move', label: 'Crayon', icon: Pencil },
+    { id: 'cut', label: 'Ciseaux', icon: Scissors },
+    { id: 'glue', label: 'Colle (Souder)', icon: Link2 },
+    { id: 'erase', label: 'Gomme', icon: Eraser },
   ];
 
   return (
@@ -78,7 +78,7 @@ export const PianoRollToolbar: React.FC<PianoRollToolbarProps> = (props) => {
             title="Garde le rythme et les syllabes intacts et pose chaque brique MIDI exactement sur la courbe verte de la voix"
             className="px-2.5 py-1 text-xs font-mono font-bold flex items-center gap-1.5 border border-emerald-500/60 bg-emerald-600/15 text-emerald-900 dark:text-emerald-300 hover:bg-emerald-600/25 rounded cursor-pointer"
           >
-            <Target className="w-3.5 h-3.5" /><span>🎯 Poser les notes sur la ligne verte</span>
+            <Target className="w-3.5 h-3.5" /><span>Poser les notes sur la ligne verte</span>
           </button>
         )}
 
@@ -92,7 +92,7 @@ export const PianoRollToolbar: React.FC<PianoRollToolbarProps> = (props) => {
             title="Recalcule le découpage rythmique Maracatu et les hauteurs depuis l'onde"
             className="px-2.5 py-1 text-xs font-mono font-bold flex items-center gap-1.5 border border-amber-500/50 bg-amber-500/15 text-amber-900 dark:text-amber-300 hover:bg-amber-500/25 rounded cursor-pointer"
           >
-            <RefreshCw className="w-3.5 h-3.5" /><span>🔄 Réinitialiser Rythme & Notes</span>
+            <RefreshCw className="w-3.5 h-3.5" /><span>Réinitialiser Rythme & Notes</span>
           </button>
         )}
       </div>
@@ -104,9 +104,9 @@ export const PianoRollToolbar: React.FC<PianoRollToolbarProps> = (props) => {
             <input
               type="range" min={0} max={100} step={5} value={globalVariAudioPct}
               onChange={(e) => onChangeGlobalVariAudioPct(Number(e.target.value))}
-              className="w-20 accent-amber-500 cursor-pointer"
+              className="w-20 accent-[#9a3412] cursor-pointer"
             />
-            <span className={`font-bold min-w-[78px] ${globalVariAudioPct > 0 ? 'text-amber-500' : 'text-emerald-500'}`}>
+            <span className={`font-bold min-w-[78px] ${globalVariAudioPct > 0 ? 'text-[#9a3412] dark:text-amber-400' : 'text-emerald-700 dark:text-emerald-400'}`}>
               {globalVariAudioPct === 0 ? '0 % (Voix brute)' : `${globalVariAudioPct} %`}
             </span>
             {onPurgeVariAudio && globalVariAudioPct > 0 && (

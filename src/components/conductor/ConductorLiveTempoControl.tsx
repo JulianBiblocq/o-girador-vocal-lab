@@ -25,7 +25,7 @@ export const ConductorLiveTempoControl: React.FC<ConductorLiveTempoControlProps>
 
   return (
     <div className="flex items-center gap-1.5 px-2 py-0.5 rounded border border-[var(--cordel-border-panel)] bg-[var(--cordel-surface)] text-[11px] font-mono select-none">
-      <span className="font-bold flex items-center gap-1 text-amber-600 dark:text-amber-400 uppercase tracking-wider text-[10px]">
+      <span className="font-bold flex items-center gap-1 text-[#9a3412] dark:text-amber-300 uppercase tracking-wider text-[10px]">
         <Zap className="w-3 h-3 fill-current" />
         <span>{t('conductorLiveTempoLabel')}</span>
       </span>
@@ -34,7 +34,7 @@ export const ConductorLiveTempoControl: React.FC<ConductorLiveTempoControlProps>
       <input
         type="range" min={45} max={180} value={liveBpm} disabled={disabled}
         onChange={(e) => onBpmChange(Number(e.target.value))}
-        className="w-16 h-1.5 accent-amber-500 cursor-pointer"
+        className="w-16 h-1.5 accent-[#9a3412] cursor-pointer"
       />
       <button type="button" disabled={disabled} onClick={() => nudge(1)} className="px-1 py-0.2 cordel-card-sm rounded hover:bg-amber-500/20 font-bold text-[10px] cursor-pointer" title="+1 BPM">+1</button>
       <button type="button" disabled={disabled} onClick={() => nudge(5)} className="px-1 py-0.2 cordel-card-sm rounded hover:bg-amber-500/20 font-bold text-[10px] cursor-pointer" title="+5 BPM">+5</button>

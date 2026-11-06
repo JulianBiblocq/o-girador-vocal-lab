@@ -14,12 +14,9 @@ import { StudioSettingsStatusBar } from './StudioSettingsStatusBar';
 import { CabineMonitoringAndPunchBar } from './CabineMonitoringAndPunchBar';
 import type { ComfortMonitoringPreset } from '../../audio/ComfortMonitoringNode';
 import { getActiveBackingTrack, subscribeBackingTrack } from '../../utils/backingTrackStorage';
-import { PatternLyricsBanner } from './PatternLyricsBanner';
-import { ChordGridBar } from '../common/ChordGridBar';
 import { CabineTimelineRibbon } from './CabineTimelineRibbon';
 import { RecordActionButton } from './RecordActionButton';
 import { CuePatternSelector } from './CuePatternSelector';
-import { HarmonyProfileSelector } from '../common/HarmonyProfileSelector';
 import { CordelAccordion } from '../common/CordelAccordion';
 import { PatternVariantSelector } from './PatternVariantSelector';
 import { TakeModeSelector } from './TakeModeSelector';
@@ -30,7 +27,7 @@ import { getBeatsPerMeasure, transposePitchNote } from '../../utils/musicalMath'
 import { RotateCcw, Scissors, Music } from 'lucide-react';
 
 export const LivretPrise: React.FC = () => {
-  const { project, activePattern, activeVariant, updatePattern, updateVariant, updatePatternAndVariant, cueMode, getPreviousConductorPattern, updateHarmonyConfig, loadProject } = useToadaProject();
+  const { project, activePattern, activeVariant, updatePattern, updateVariant, updatePatternAndVariant, cueMode, getPreviousConductorPattern, loadProject } = useToadaProject();
   const { engine, recorder, selectedDeviceId, selectedOutputDeviceId, listeningMode, recordedSampleRate, setRecordedSampleRate } = useAudioHardware();
   const { t } = useLanguage();
   const activeLivret = useVocalTransportStore((s) => s.activeLivret), setActiveLivret = useVocalTransportStore((s) => s.setActiveLivret);
@@ -96,22 +93,14 @@ export const LivretPrise: React.FC = () => {
         peakDb={peakDb} hasClipped={hasClipped} onResetClipIndicator={resetClipIndicator} disabled={isRecordingAny}
       />
 
-      <div className="flex flex-col gap-2">
-        <PatternLyricsBanner />
-        <div className="cordel-card p-1.5 rounded">
-          <ChordGridBar harmonyGrid={activePattern.harmonyGrid} measuresCount={measuresCount} beatsPerMeasure={beatsPerMeasure} hasAnacrusis={hasAnacrusis} onUpdateGrid={(g) => updatePattern(activePattern.id, { harmonyGrid: g })} />
-        </div>
-      </div>
-
       <CabineTimelineRibbon
         engine={engine} isActive={isRecordingAny} takeMode={takeMode} project={project} activePattern={activePattern}
         cuePattern={effectiveCuePattern} beatsPerMeasure={beatsPerMeasure} isPunchIn={Boolean(punchMeasureIndex && punchMeasureIndex >= 1 && hasRecording)}
         counterRoleCueEnabled={counterRoleCueEnabled} onToggleCounterRoleCue={() => setCounterRoleCueEnabled((v) => !v)} getContinuousLiveStatus={getContinuousLiveStatus}
       >
         <RecordActionButton isCycleActive={takeMode === 'pattern' ? isCycleActive : isContinuousActive} measuresCount={measuresCount} onToggleRecord={takeMode === 'pattern' ? handleToggleRecord : handleToggleContinuous} />
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 pt-1 border-t border-[var(--cordel-border-sub)]">
-          <div className="flex-1 min-w-[200px]"><CuePatternSelector disabled={isRecordingAny} /></div>
-          <div className="shrink-0"><HarmonyProfileSelector config={project.harmonyConfig ?? { enabled: true, profile: 'maracatu', volume: 0.7 }} onChange={updateHarmonyConfig} disabled={isRecordingAny} /></div>
+        <div className="pt-1 border-t border-[var(--cordel-border-sub)]">
+          <CuePatternSelector disabled={isRecordingAny} />
         </div>
         {hasRecording && (
           <div className="flex flex-wrap items-center justify-center gap-2 pt-2 border-t border-[var(--cordel-border-sub)]">

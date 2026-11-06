@@ -120,12 +120,12 @@ export const CabineTimelineRibbon: React.FC<CabineTimelineRibbonProps> = ({
             type="button" onClick={onToggleCounterRoleCue} disabled={isActive}
             className={`px-2.5 py-1 rounded text-xs font-mono font-bold flex items-center gap-1.5 border cursor-pointer transition-colors ${
               counterRoleCueEnabled
-                ? 'bg-cyan-950/70 text-cyan-300 border-cyan-500/60'
+                ? 'bg-[#0f766e] text-white border-[#0f766e]'
                 : 'bg-[var(--cordel-subcard-bg)] text-stone-400 border-[var(--cordel-border-sub)]'
             } ${isActive ? 'opacity-60 cursor-not-allowed' : ''}`}
           >
             <Headphones className="w-3.5 h-3.5" />
-            <span>🎧 Voix témoin : {counterRoleCueEnabled ? 'ON' : 'OFF'}{counterRoleRecordedCount > 0 ? ` (${counterRoleRecordedCount})` : ''}</span>
+            <span>Voix témoin : {counterRoleCueEnabled ? 'ON' : 'OFF'}{counterRoleRecordedCount > 0 ? ` (${counterRoleRecordedCount})` : ''}</span>
           </button>
         )}
       </div>

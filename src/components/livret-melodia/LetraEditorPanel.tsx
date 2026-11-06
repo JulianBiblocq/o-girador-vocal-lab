@@ -5,7 +5,8 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import type { VocalStepData } from '../../types/vocalPack.types';
 import { assignSyllablesStrictlyToExistingBricks, reconstructWordsFromSteps } from '../../utils/syllableAligner';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { joinSyllableWithPrevious } from '../../utils/syllableImpulseMerger';
+import { ChevronLeft, ChevronRight, Link2 } from 'lucide-react';
 import { CordelScroll, CordelBulb, CordelSpark } from '../common/CordelIcons';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { useToadaProject } from '../../context/ToadaProjectContext';
@@ -103,19 +104,26 @@ export const LetraEditorPanel: React.FC<LetraEditorPanelProps> = ({ allSteps, on
         <button type="button" onClick={handleAlign} className="cordel-btn-primary px-3 py-1.5 text-xs font-mono flex items-center gap-1 font-bold rounded cursor-pointer"><CordelSpark className="w-3.5 h-3.5" /><span>{t('alignBtn')}</span></button>
       </div>
       <p className="text-[10px] font-mono text-theme-ink/80 leading-snug px-0.5 flex items-center gap-1"><CordelBulb className="w-3.5 h-3.5 text-theme-accent shrink-0" /><span>{t('syntaxGuide')}</span></p>
-      <div className="flex items-center gap-1.5 overflow-x-auto py-1 cordel-scrollbar">
+      <div className="flex items-center gap-1 overflow-x-auto py-1 cordel-scrollbar">
         {activeStepEntries.length === 0 ? <span className="text-[11px] font-mono text-theme-ink/50 italic">{t('letraNoActiveNotes')}</span> : activeStepEntries.map((entry, cardIdx) => {
           const { step: st, arrayIdx } = entry, hasSpace = (st.syllable ?? '').endsWith(' ');
           return (
-            <div key={arrayIdx} className="flex flex-col items-center bg-white/5 border border-theme-border/60 p-1 min-w-[64px] shrink-0 rounded-none">
-              <div className="flex items-center justify-between w-full px-0.5 text-[9px] font-mono"><span className="opacity-50">#{cardIdx + 1}</span><span className="text-theme-accent font-black">{st.note}</span></div>
-              <input ref={(el) => { sylInputRefs.current[cardIdx] = el; }} data-syllable-idx={cardIdx} type="text" value={st.syllable ?? ''} onFocus={(e) => setFocusSyl(e.target.value)} onChange={(e) => handleSyllableChange(arrayIdx, e.target.value)} onBlur={(e) => { if (e.target.value !== focusSyl) onCommitHistory?.(); }} onKeyDown={(e) => handleSyllableKeyDown(e, cardIdx)} className="letra-syllable-input w-full text-center text-[11px] font-mono px-0.5 py-0.5 mt-0.5 focus:outline-none rounded-none" />
-              <button type="button" tabIndex={-1} onClick={() => handleToggleTrailingSpace(arrayIdx)} className={`mt-1 px-1 py-0.5 text-[8.5px] font-mono w-full transition-all rounded-none cursor-pointer ${hasSpace ? 'letra-space-btn-active' : 'bg-white/5 text-theme-ink/60 hover:bg-white/10'}`} title={hasSpace ? t('letraSpaceTooltip') : t('letraTiedTooltip')}>{hasSpace ? t('letraSpaceBadge') : t('letraTiedBadge')}</button>
-              <div className="flex items-center justify-between w-full mt-1 px-0.5">
-                <button type="button" tabIndex={-1} onClick={() => handleShiftSyllable(arrayIdx, -1)} className="p-0.5 hover:bg-white/10 rounded-none cursor-pointer" title="Décaler syllabe à gauche"><ChevronLeft className="w-3 h-3 text-theme-ink/60" /></button>
-                <button type="button" tabIndex={-1} onClick={() => handleShiftSyllable(arrayIdx, 1)} className="p-0.5 hover:bg-white/10 rounded-none cursor-pointer" title="Décaler syllabe à droite"><ChevronRight className="w-3 h-3 text-theme-ink/60" /></button>
+            <React.Fragment key={arrayIdx}>
+              {cardIdx > 0 && (
+                <button type="button" tabIndex={-1} onClick={() => { onCommitHistory?.(); onUpdateSteps(joinSyllableWithPrevious(allSteps, arrayIdx), true); }} title="Fusionner ces 2 syllabes en 1 clic sans décaler le reste" className="px-1 py-1.5 rounded bg-[#9a3412]/15 hover:bg-[#9a3412] text-[#9a3412] dark:text-amber-300 hover:text-white border border-[#9a3412]/40 flex items-center justify-center shrink-0 cursor-pointer transition-colors">
+                  <Link2 className="w-3 h-3" />
+                </button>
+              )}
+              <div className="flex flex-col items-center bg-white/5 border border-theme-border/60 p-1 min-w-[64px] shrink-0 rounded-none">
+                <div className="flex items-center justify-between w-full px-0.5 text-[9px] font-mono"><span className="opacity-50">#{cardIdx + 1}</span><span className="text-theme-accent font-black">{st.note}</span></div>
+                <input ref={(el) => { sylInputRefs.current[cardIdx] = el; }} data-syllable-idx={cardIdx} type="text" value={st.syllable ?? ''} onFocus={(e) => setFocusSyl(e.target.value)} onChange={(e) => handleSyllableChange(arrayIdx, e.target.value)} onBlur={(e) => { if (e.target.value !== focusSyl) onCommitHistory?.(); }} onKeyDown={(e) => handleSyllableKeyDown(e, cardIdx)} className="letra-syllable-input w-full text-center text-[11px] font-mono px-0.5 py-0.5 mt-0.5 focus:outline-none rounded-none" />
+                <button type="button" tabIndex={-1} onClick={() => handleToggleTrailingSpace(arrayIdx)} className={`mt-1 px-1 py-0.5 text-[8.5px] font-mono w-full transition-all rounded-none cursor-pointer ${hasSpace ? 'letra-space-btn-active' : 'bg-white/5 text-theme-ink/60 hover:bg-white/10'}`} title={hasSpace ? t('letraSpaceTooltip') : t('letraTiedTooltip')}>{hasSpace ? t('letraSpaceBadge') : t('letraTiedBadge')}</button>
+                <div className="flex items-center justify-between w-full mt-1 px-0.5">
+                  <button type="button" tabIndex={-1} onClick={() => handleShiftSyllable(arrayIdx, -1)} className="p-0.5 hover:bg-white/10 rounded-none cursor-pointer" title="Décaler syllabe à gauche"><ChevronLeft className="w-3 h-3 text-theme-ink/60" /></button>
+                  <button type="button" tabIndex={-1} onClick={() => handleShiftSyllable(arrayIdx, 1)} className="p-0.5 hover:bg-white/10 rounded-none cursor-pointer" title="Décaler syllabe à droite"><ChevronRight className="w-3 h-3 text-theme-ink/60" /></button>
+                </div>
               </div>
-            </div>
+            </React.Fragment>
           );
         })}
       </div>

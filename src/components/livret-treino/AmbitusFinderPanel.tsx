@@ -19,7 +19,10 @@ export const AmbitusFinderPanel: React.FC = () => {
   const j = useAmbitusJourney(t);
 
   const handleSelectStage = (next: AmbitusStage) => {
-    if (j.isTesting) return;
+    if (j.isTesting) {
+      j.engine.stopListening();
+      j.setIsTesting(false);
+    }
     j.setSamples([]); j.setFeedback(null);
     if (next === 'low_test') j.setCurrentMidi(j.medianMidi);
     if (next === 'high_test') j.setCurrentMidi(Math.max(j.highestMidi, j.lowestMidi + 5));
@@ -115,7 +118,7 @@ export const AmbitusFinderPanel: React.FC = () => {
           />
         )}
 
-        {j.stage === 'staircase' && (
+        {(j.stage === 'staircase' || j.stage === 'completed') && (
           <AmbitusWizardStepStaircase
             lowestMidi={j.lowestMidi} highestMidi={j.highestMidi} engine={j.engine}
             isTesting={j.isTesting} setIsTesting={j.setIsTesting}

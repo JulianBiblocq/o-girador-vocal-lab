@@ -11,7 +11,6 @@ import { useWaveformZoom } from '../../hooks/useWaveformZoom'; import { usePlayh
 import { computeAlignmentMeta } from '../../utils/alignmentMath'; import { getPatternT1OffsetSec } from '../../utils/anacrusisTimingHelper';
 import { generateVocalPack } from '../../utils/packGenerator'; import { autoSnapT1ToVocalOnset } from '../../audio/vocalOnsetDetector';
 import { useLanguage } from '../../i18n/LanguageContext';
-import { ChordGridBar } from '../common/ChordGridBar'; import { HarmonyProfileSelector } from '../common/HarmonyProfileSelector';
 import type { TimeSignatureString, VocalPackExport } from '../../types/vocalPack.types';
 import type { PatternHarmonyGrid, HarmonyConfig } from '../../types/harmony.types';
 import type { TimeAnchor } from '../../types/toadaDocument.types';
@@ -31,7 +30,7 @@ export const WaveformTrimEditor: React.FC<WaveformTrimEditorProps> = (props) => 
     rawPCM, sampleRate, bpm, timeSignature, measuresCount, beatsPerMeasure,
     beatResolutions, referencePitch, initialTrimStartSec, initialTrimEndSec, initialT1OffsetSec,
     hasAnacrusis = true, outputDeviceId, timeAnchors, harmonyGrid, harmonyConfig, pitchShiftSemitones = 0,
-    onUpdateGrid, onUpdateHarmonyConfig, onReset, onTrimChange, onT1OffsetChange, onPackReady,
+    onReset, onTrimChange, onT1OffsetChange, onPackReady,
   } = props;
   const { t } = useLanguage(), containerRef = useRef<HTMLDivElement>(null);
   const [containerWidth, setContainerWidth] = useState<number>(600);
@@ -95,12 +94,6 @@ export const WaveformTrimEditor: React.FC<WaveformTrimEditorProps> = (props) => 
 
   return (
     <div className="flex flex-col gap-2 w-full">
-      {harmonyConfig && onUpdateGrid && onUpdateHarmonyConfig && (
-        <div className="cordel-card flex items-center justify-between gap-2 p-1.5 rounded">
-          <ChordGridBar harmonyGrid={harmonyGrid} measuresCount={measuresCount} beatsPerMeasure={beatsPerMeasure} hasAnacrusis={hasAnacrusis} onUpdateGrid={onUpdateGrid} />
-          <HarmonyProfileSelector config={harmonyConfig} onChange={onUpdateHarmonyConfig} />
-        </div>
-      )}
       <WaveformZoomBar zoomLevel={zoomLevel} onSetZoom={setZoom} onZoomIn={zoomIn} onZoomOut={zoomOut} onSeeStart={() => scrollToSec(trimStartSec, totalDurationSec, containerWidth)} onSeeEnd={() => scrollToSec(trimEndSec, totalDurationSec, containerWidth)} />
       <div ref={containerRef} className="w-full cordel-card overflow-hidden select-none rounded">
         <div ref={scrollContainerRef} className="w-full h-36 overflow-x-auto overflow-y-hidden relative cordel-scrollbar">

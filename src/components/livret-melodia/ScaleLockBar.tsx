@@ -100,12 +100,12 @@ export const ScaleLockBar: React.FC<ScaleLockBarProps> = ({
           className={`px-2.5 py-1 rounded font-bold flex items-center gap-1.5 cursor-pointer border transition-colors ${
             isLocked
               ? 'bg-emerald-700 text-white border-emerald-500 shadow-2xs'
-              : 'bg-stone-800/80 text-amber-300 border-amber-500/50 hover:bg-stone-700'
+              : 'bg-[#451a03] text-[#f4ecd8] border-[#9a3412] hover:opacity-90'
           }`}
           title="Débrayer ou verrouiller la gamme à tout moment en 1 clic"
         >
           {isLocked ? <Lock className="w-3.5 h-3.5" /> : <Unlock className="w-3.5 h-3.5" />}
-          <span>{isLocked ? `🔒 Gamme verrouillée : ${SOLFEGE_LABELS[tonicIdx]} ${activeModeLabel}` : '🔓 Gamme débrayée (Libre)'}</span>
+          <span>{isLocked ? `Gamme verrouillée : ${SOLFEGE_LABELS[tonicIdx]} ${activeModeLabel}` : 'Gamme débrayée (Libre)'}</span>
         </button>
 
         <select value={tonic} onChange={(e) => onUpdateScale(e.target.value, isLocked ? scaleType : lastActiveMode, null)} className="cordel-card-sm px-1.5 py-1 font-bold text-theme-accent rounded cursor-pointer">
@@ -122,15 +122,15 @@ export const ScaleLockBar: React.FC<ScaleLockBarProps> = ({
             const det = detectBestScaleFromPitchCurve(pitchCurve, defaultKeyStr);
             onUpdateScale(det.tonic, det.scaleType, null);
           }}
-          className="px-2.5 py-1 rounded cordel-card-sm hover:border-amber-500 font-bold flex items-center gap-1 cursor-pointer text-amber-600 dark:text-amber-300"
+          className="px-2.5 py-1 rounded cordel-card-sm hover:border-amber-500 font-bold flex items-center gap-1 cursor-pointer text-[#9a3412] dark:text-amber-300"
           title="Analyser la gamme sur l'ensemble des phrases enregistrées du chant"
         >
-          <Target className="w-3.5 h-3.5" /><span>🔍 Analyser la gamme du chant</span>
+          <Target className="w-3.5 h-3.5" /><span>Analyser la gamme du chant</span>
         </button>
       </div>
 
       <div className="flex items-center gap-1 flex-wrap">
-        {SOLFEGE_LABELS.map((lbl, pc) => (
+        {isLocked && SOLFEGE_LABELS.map((lbl, pc) => (
           <button key={pc} type="button" onClick={() => { const next = new Set(allowedSet); if (next.has(pc) && next.size > 1) next.delete(pc); else next.add(pc); onUpdateScale(tonic, scaleType === 'chromatic' ? lastActiveMode : scaleType, Array.from(next).sort((a, b) => a - b)); }} className={`px-1.5 py-0.5 rounded text-[10px] font-bold cursor-pointer border ${allowedSet.has(pc) ? 'bg-emerald-600 text-white border-emerald-500' : 'bg-stone-500/10 text-theme-ink/40 border-transparent'}`}>{lbl}</button>
         ))}
         <button type="button" onClick={startLearning} className={`ml-1 px-2 py-0.5 rounded font-bold flex items-center gap-1 cursor-pointer border ${isLearning ? 'bg-red-600 text-white border-red-400 animate-pulse' : 'bg-amber-500/15 text-amber-800 dark:text-amber-300 border-amber-500/50'}`}>

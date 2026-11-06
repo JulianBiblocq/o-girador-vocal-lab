@@ -38,10 +38,10 @@ export const ListeningModePanel: React.FC<ListeningModePanelProps> = ({
   const currentOctave = match ? match[2] : '4';
 
   const scopeLabel = applyScope === 'all'
-    ? t('scopeAll')
+    ? `🌍 ${t('scopeAll')}`
     : applyScope === 'selected'
     ? t('scopeSelected', { n: selectedPatternIds.length })
-    : t('scopeActive');
+    : `🎯 ${t('scopeActive')}`;
 
   return (
     <div className="cordel-card p-3 h-full flex flex-col justify-between gap-2.5">
@@ -90,7 +90,7 @@ export const ListeningModePanel: React.FC<ListeningModePanelProps> = ({
             <Volume2 className="w-3.5 h-3.5 text-theme-accent" />
             <span>{t('referencePitch')}</span>
           </span>
-          <span className="text-[10px] font-mono text-amber-400 opacity-90">{scopeLabel}</span>
+          <span className="text-[10px] font-mono text-[#9a3412] dark:text-amber-300 font-bold">{scopeLabel}</span>
         </div>
         <div className="flex items-center gap-2">
           <select

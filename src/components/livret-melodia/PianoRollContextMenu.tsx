@@ -16,11 +16,11 @@ export interface PianoRollContextMenuProps {
 }
 
 const CUBASE_TOOLS: Array<{ id: PianoRollTool; label: string; icon: React.FC<{ className?: string }> }> = [
-  { id: 'pointer', label: '🖱️ Sélection', icon: MousePointer },
-  { id: 'draw_move', label: '✏️ Crayon', icon: Pencil },
-  { id: 'cut', label: '✂️ Ciseaux', icon: Scissors },
-  { id: 'glue', label: '🔗 Colle', icon: Link2 },
-  { id: 'erase', label: '🗑️ Gomme', icon: Eraser },
+  { id: 'pointer', label: 'Sélection', icon: MousePointer },
+  { id: 'draw_move', label: 'Crayon', icon: Pencil },
+  { id: 'cut', label: 'Ciseaux', icon: Scissors },
+  { id: 'glue', label: 'Colle', icon: Link2 },
+  { id: 'erase', label: 'Gomme', icon: Eraser },
 ];
 
 export const PianoRollContextMenu: React.FC<PianoRollContextMenuProps> = ({

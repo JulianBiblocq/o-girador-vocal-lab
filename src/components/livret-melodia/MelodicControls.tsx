@@ -7,7 +7,6 @@ import React from 'react';
 import type { MelodicPlayMode } from '../../audio/MelodicPreviewPlayer';
 import { Play, Square, ArrowLeft, SkipBack } from 'lucide-react';
 import { CordelMic, CordelPiano, CordelSpeaker } from '../common/CordelIcons';
-import { PatternCompassBar } from '../common/PatternCompassBar';
 import { useLanguage } from '../../i18n/LanguageContext';
 
 interface MelodicControlsProps {
@@ -33,7 +32,6 @@ export const MelodicControls: React.FC<MelodicControlsProps> = (props) => {
 
   return (
     <div className="cordel-card p-2 w-full flex flex-wrap items-center justify-between gap-2 select-none rounded">
-      {/* 1. Gauche : Retour à la Prise + Sélecteur direct de Pattern [ ◀ ] [ Pattern ▾ ] [ ▶ ] */}
       <div className="flex flex-wrap items-center gap-2">
         <button
           type="button" onClick={onBackToPrise}
@@ -42,7 +40,6 @@ export const MelodicControls: React.FC<MelodicControlsProps> = (props) => {
           <ArrowLeft className="w-3.5 h-3.5 text-theme-accent" />
           <span>{t('backToRecording')}</span>
         </button>
-        <PatternCompassBar compact />
       </div>
 
       {/* 2. Centre : Sélecteur d'écoute [ 🎹 Synthé | 🎙️ Voix seule | 🎙️🎹 Duo ] + Clic */}

@@ -134,3 +134,4 @@ export const BlockMusicalSettingsCard: React.FC<BlockMusicalSettingsCardProps> =
     </div>
   );
 };
+

@@ -33,12 +33,13 @@ export const AmbitusStageBar: React.FC<Props> = ({ currentStage, isStageDone, on
             key={st.key}
             type="button"
             onClick={() => onSelectStage(st.key)}
-            className={`py-1 px-2 text-xs font-mono font-bold flex items-center justify-center gap-1.5 border rounded transition-all cursor-pointer ${
+            title="Cliquer pour revenir sur cette étape ou la refaire"
+            className={`py-1.5 px-2 text-xs font-mono font-bold flex items-center justify-center gap-1.5 border rounded transition-all cursor-pointer ${
               isActive
-                ? 'bg-[var(--cordel-coro)] text-[#f4ecd8] border-[var(--cordel-coro)] shadow-sm'
+                ? 'bg-[#9a3412] text-white border-[#9a3412] shadow-sm'
                 : isDone
-                ? 'bg-[#0f766e]/15 text-[#0f766e] dark:text-[#2dd4bf] border-[#0f766e]/35 hover:bg-[#0f766e]/25'
-                : 'bg-[var(--cordel-surface)] text-[var(--cordel-text)]/70 border-[var(--cordel-border-sub)] hover:text-[var(--cordel-text)]'
+                ? 'bg-[#0f766e]/15 text-[#0f766e] dark:text-[#2dd4bf] border-[#0f766e]/40 hover:bg-[#0f766e]/25'
+                : 'bg-[var(--cordel-surface)] text-[var(--cordel-text)]/80 border-[var(--cordel-border-sub)] hover:text-[var(--cordel-text)]'
             }`}
           >
             <span>{isDone ? '✓' : '○'}</span>
