@@ -1,7 +1,7 @@
 /**
  * cloudToadaPublisher.ts
- * Téléversement des WAV découpés (uniquement les patterns ayant usageCount > 0 dans project.slots),
- * nettoyage des WAV orphelins dans Storage et publication du pack dans Firestore `/toada_packs` (< 135 lignes).
+ * Téléversement d'un unique fichier .wav maître 16-bit Mono par pattern actif (usageCount > 0),
+ * zéro speedVariants (75%/88%), zéro double-trim, et publication dans Firestore `/toada_packs` (< 138 lignes).
  */
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { doc, setDoc } from 'firebase/firestore';
@@ -44,9 +44,18 @@ export function buildSequencerToadaPackDocument(project: ToadaProject, processed
   const sequenciadorExportMode = project.sequenciadorExportMode ?? 'rhythm_only';
   const ignoreMelodyPitch = sequenciadorExportMode === 'rhythm_only';
   const sourcePatterns = getActiveTimelinePatterns(project);
-  const patterns = (processedPatterns ?? sourcePatterns.map((p) =>
-    sanitizePatternForFirestore(p, (p as any).audioUrl, p.trimEndSec, p.t1OffsetSec, undefined, shiftSt)
-  )).map((pat) => ({ ...pat, ignoreMelodyPitch }));
+  const patterns = (processedPatterns ?? sourcePatterns.map((p) => {
+    const recBpm = Number(p.recordingResult?.recordedBpm || p.baseBpm || p.bpm || projectBpm);
+    return sanitizePatternForFirestore(p, (p as any).audioUrl, undefined, p.t1OffsetSec, undefined, shiftSt, {
+      sungKey: dualScale.sungScaleLabel, troupeKey: dualScale.troupeScaleLabel, ignoreMelodyPitch, recordedBpm: recBpm,
+    });
+  })).map((pat) => ({
+    ...pat,
+    sungKey: pat.sungKey ?? dualScale.sungScaleLabel,
+    troupeKey: pat.troupeKey ?? dualScale.troupeScaleLabel,
+    transpositionSemitones: pat.transpositionSemitones ?? shiftSt,
+    ignoreMelodyPitch,
+  }));
 
   return {
     id: toadaId, title: project.title, bpm: projectBpm, timeSignature: project.timeSignature,
@@ -83,7 +92,9 @@ export async function publishToadaToSequencer(
   const processedPatterns: Record<string, any>[] = [];
   const projectBpm = Number(project.bpm || project.toadaMeta?.bpmDefaut || DEFAULT_TOADA_BPM);
   const beatsPerMeasure = getBeatsPerMeasure(project.timeSignature);
-  const shiftSt = resolveProjectDualScale(project, 'fr').transpositionSemitones;
+  const dualScale = resolveProjectDualScale(project, 'fr');
+  const shiftSt = dualScale.transpositionSemitones;
+  const ignoreMelodyPitch = (project.sequenciadorExportMode ?? 'rhythm_only') === 'rhythm_only';
   const activePatterns = getActiveTimelinePatterns(project);
   const unusedSummary = getUnusedPatternsSummary(project);
 
@@ -93,35 +104,37 @@ export async function publishToadaToSequencer(
 
   for (let i = 0; i < activePatterns.length; i++) {
     const p = activePatterns[i];
-    onProgress?.(`Téléversement audio (${i + 1}/${activePatterns.length})...`);
+    onProgress?.(`Téléversement audio maître (${i + 1}/${activePatterns.length})...`);
     let audioUrl: string | undefined;
-    const patBpm = Number(p.baseBpm || p.bpm || projectBpm);
-    const measureDurationSec = beatsPerMeasure * (60 / patBpm);
-    const variant = p.variants?.[p.activeVariantKey] || Object.values(p.variants || {})[0];
-    const rec = variant?.recordingResult ?? p.recordingResult;
+    const masterVar = p.variants?.norm_norm || p.variants?.[p.activeVariantKey];
+    const rec = p.recordingResult ?? masterVar?.recordingResult;
+    const recordedBpm = Number(rec?.recordedBpm || p.baseBpm || p.bpm || projectBpm);
+    const measureDurationSec = beatsPerMeasure * (60 / recordedBpm);
     const sampleRate = rec?.sampleRate || p.pack?.audio?.sampleRate || 44100;
     const useCorr = Boolean(p.correctedAudioSamples && p.correctedAudioSamples.length > 0);
     const fullPcm = useCorr ? p.correctedAudioSamples : (rec?.pcm ?? p.rawAudioSamples);
-    const explicitT1 = p.t1OffsetSec ?? variant?.t1OffsetSec ?? rec?.t1OffsetSec;
+    const explicitT1 = p.t1OffsetSec ?? masterVar?.t1OffsetSec ?? rec?.t1OffsetSec;
     const rawT1 = useCorr ? getPatternT1OffsetSec(p.hasAnacrusis, measureDurationSec) : getPatternT1OffsetSec(p.hasAnacrusis, measureDurationSec, explicitT1);
-    const trimStart = useCorr ? (p.pack?.audio?.trim?.startSec ?? 0) : (variant?.trimStartSec ?? p.trimStartSec ?? 0);
-    const rawEnd = useCorr ? (p.pack?.audio?.trim?.endSec ?? 0) : (variant?.trimEndSec || p.trimEndSec || 0);
-    const trimEnd = rawEnd > 0 ? rawEnd : (fullPcm ? fullPcm.length / sampleRate : 0);
+    const rawTrimStart = useCorr ? (p.pack?.audio?.trim?.startSec ?? 0) : (p.trimStartSec ?? masterVar?.trimStartSec ?? 0);
+    const rawEnd = useCorr ? (p.pack?.audio?.trim?.endSec ?? 0) : (p.trimEndSec || masterVar?.trimEndSec || 0);
+    const rawTrimEnd = rawEnd > 0 ? rawEnd : (fullPcm ? fullPcm.length / sampleRate : 0);
 
     let slicedDurationSec: number | undefined, exportedT1OffsetSec: number | undefined, startOffsetSec: number | undefined;
     if (fullPcm && fullPcm.length > 0) {
       try {
-        const sliced = slicePatternPcm(fullPcm, sampleRate, rawT1, trimStart, trimEnd);
+        const sliced = slicePatternPcm(fullPcm, sampleRate, rawT1, rawTrimStart, rawTrimEnd);
         slicedDurationSec = sliced.slicedDurationSec; exportedT1OffsetSec = sliced.exportedT1OffsetSec; startOffsetSec = sliced.startOffsetSec;
         const troupePcm = shiftSt !== 0 ? getOrComputeTroupeTransposedPCM(sliced.slicedPcm, sampleRate, shiftSt) : sliced.slicedPcm;
         const storageRef = ref(storage, `vocalRecordings/${toadaId}_${p.id}.wav`);
         await uploadBytes(storageRef, pcmToWavBlob(troupePcm, sampleRate), { contentType: 'audio/wav' });
         audioUrl = await getDownloadURL(storageRef);
       } catch (err) {
-        console.warn(`[cloudToadaPublisher] Échec upload audio ${p.id} :`, err);
+        console.warn(`[cloudToadaPublisher] Échec upload audio maître ${p.id} :`, err);
       }
     }
-    processedPatterns.push(sanitizePatternForFirestore(p, audioUrl, slicedDurationSec, exportedT1OffsetSec, startOffsetSec, shiftSt));
+    processedPatterns.push(sanitizePatternForFirestore(p, audioUrl, slicedDurationSec, exportedT1OffsetSec, startOffsetSec, shiftSt, {
+      sungKey: dualScale.sungScaleLabel, troupeKey: dualScale.troupeScaleLabel, ignoreMelodyPitch, recordedBpm,
+    }));
   }
 
   onProgress?.('Enregistrement du pack dans Firestore...');

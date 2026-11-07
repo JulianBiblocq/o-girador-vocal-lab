@@ -20,7 +20,7 @@ export function getPatternT1OffsetSec(
   measureDurationSec: number,
   explicitT1OffsetSec?: number | null
 ): number {
-  if (typeof explicitT1OffsetSec === 'number' && explicitT1OffsetSec >= 0) {
+  if (typeof explicitT1OffsetSec === 'number' && Number.isFinite(explicitT1OffsetSec)) {
     return explicitT1OffsetSec;
   }
   return hasAnacrusis === false ? NO_ANACRUSIS_PRE_MARGIN_SEC : measureDurationSec;
