@@ -5,16 +5,16 @@
  */
 import type { VocalStepData } from '../../types/vocalPack.types';
 import { midiToNoteName } from '../../utils/noteUtils';
+import { findLastTiedStepIndex } from '../../utils/tripletBeatHelper';
 
 export type PianoRollTool = 'pointer' | 'glue' | 'cut' | 'erase' | 'text' | 'draw_move' | 'paste' | 'split' | 'lyric' | 'melodyne_cut';
 
 export function findBrickRange(steps: VocalStepData[], stepIndex: number): { rootIndex: number; endIndex: number } | null {
   const target = steps[stepIndex];
-  if (!target || !target.active) return null;
+  if (!target || !target.active || target.tripletSlot === 'unused') return null;
   let rootIndex = stepIndex;
-  while (rootIndex > 0 && steps[rootIndex].note === '───') rootIndex--;
-  let endIndex = rootIndex;
-  while (endIndex + 1 < steps.length && steps[endIndex + 1].note === '───') endIndex++;
+  while (rootIndex > 0 && (steps[rootIndex].note === '───' || steps[rootIndex].tripletSlot === 'unused')) rootIndex--;
+  const endIndex = findLastTiedStepIndex(steps, rootIndex);
   return { rootIndex, endIndex };
 }
 
@@ -28,6 +28,7 @@ export function moveBrick(steps: VocalStepData[], stepIndex: number, newMidi: nu
     manualPitchMoved: true, isUncertain: false, alternativeNote: undefined, doubtReason: undefined,
   };
   for (let i = range.rootIndex + 1; i <= range.endIndex; i++) {
+    if (next[i].tripletSlot === 'unused') continue;
     next[i] = { ...next[i], midiNumber: newMidi, note: '───', isTie: true, manualPitchMoved: true, isUncertain: false };
   }
   return next;

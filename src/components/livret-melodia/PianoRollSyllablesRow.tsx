@@ -1,10 +1,11 @@
 /**
  * PianoRollSyllablesRow.tsx
  * Ligne épinglée (Docked Footer) d'édition directe des syllabes sous les briques MIDI
- * avec navigation 1-Tab et bouton [ ] de fusion 1-clic entre deux briques (< 95 lignes).
+ * (positionnées aux abscisses binaires ou aux tiers exacts 0%, 33.3%, 66.7% en triolet) (< 105 lignes).
  */
 import React, { useRef, useMemo } from 'react';
 import type { VocalStepData } from '../../types/vocalPack.types';
+import { getStepHorizontalBoundsPx, findLastTiedStepIndex } from '../../utils/tripletBeatHelper';
 import { joinSyllableWithPrevious } from '../../utils/syllableImpulseMerger';
 import { Link2 } from 'lucide-react';
 import { useLanguage } from '../../i18n/LanguageContext';
@@ -24,15 +25,23 @@ export const PianoRollSyllablesRow: React.FC<PianoRollSyllablesRowProps> = ({
 
   const activeNotes = useMemo(() => {
     const list: { stepIndex: number; note: string; syllable: string; spanSteps: number; width: number; x: number }[] = [];
-    const stepW = allSteps.length > 0 ? gridWidth / allSteps.length : 0;
     for (let i = 0; i < allSteps.length; i++) {
       const s = allSteps[i];
+      if (s.tripletSlot === 'unused') continue;
       if (s.active && s.note !== '───') {
-        let ties = 0;
-        while (i + 1 + ties < allSteps.length && allSteps[i + 1 + ties].note === '───') ties++;
-        const spanSteps = 1 + ties, x = i * stepW, w = Math.max(stepW * spanSteps, 28);
-        list.push({ stepIndex: i, note: s.note, syllable: s.syllable || '', spanSteps, width: w, x });
-        i += ties;
+        const endIdx = findLastTiedStepIndex(allSteps, i);
+        const bounds = getStepHorizontalBoundsPx(allSteps, i, gridWidth);
+        if (!bounds.hidden && bounds.widthPx > 0) {
+          list.push({
+            stepIndex: i,
+            note: s.note,
+            syllable: s.syllable || '',
+            spanSteps: endIdx - i + 1,
+            width: Math.max(bounds.widthPx, 24),
+            x: bounds.xPx,
+          });
+        }
+        i = endIdx;
       }
     }
     return list;
@@ -76,7 +85,7 @@ export const PianoRollSyllablesRow: React.FC<PianoRollSyllablesRowProps> = ({
               onChange={(e) => handleSyllableChange(n.stepIndex, e.target.value)}
               onBlur={() => onUpdateSteps(allSteps, true)}
               onKeyDown={(e) => handleKeyDown(e, idx)}
-              style={{ left: `${n.x}px`, width: `${Math.max(24, n.width - 2)}px` }}
+              style={{ left: `${n.x}px`, width: `${Math.max(20, n.width - 2)}px` }}
               className="letra-syllable-input absolute top-1 bottom-1 text-center text-[10.5px] font-mono font-bold px-0.5 focus:outline-none transition-colors rounded-xs"
               title={t('syllableInputTitle', { note: n.note })}
             />

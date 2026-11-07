@@ -9,6 +9,7 @@ import { drawPianoRollGrid } from './pianoRollDrawer';
 import { isOnBrickVariAudioHandle } from './pianoRollBricksDrawer';
 import { findBrickRange, moveBrick, glueBrickToNext, splitTieAtStep, eraseBrick, createSingleNote, setBrickMelodynePullPct, type PianoRollTool } from './pianoRollInteractions';
 import { isOnBrickRightResizeHandle, resizeBrickRightEdge, findBrickJunctionAtX, weldAdjacentBricks } from './pianoRollBrickInteractions';
+import { getStepHorizontalBoundsPx, resolveStepIndexAtXPx } from '../../utils/tripletBeatHelper';
 import { getToolCursorStyle } from '../../utils/toolCursors';
 
 export interface PianoRollCanvasProps {
@@ -18,7 +19,7 @@ export interface PianoRollCanvasProps {
   getPlayheadSec?: () => number; onOpenContextMenu: (x: number, y: number) => void; onUpdateSteps: (newSteps: VocalStepData[], commit?: boolean) => void;
   onPlayNotePreview: (midi: number) => void; onOpenTextInput: (stepIndex: number, rect: { x: number; y: number; w: number; h: number }) => void;
   onSelectStep?: (idx: number | null) => void; onBrickMoved?: (rootIdx: number, newSteps: VocalStepData[]) => void;
-  harmonyGrid?: PatternHarmonyGrid; pitchShiftSemitones?: number; allowedPitchClasses?: Set<number> | null; readOnly?: boolean; foldNotesView?: boolean;
+  harmonyGrid?: PatternHarmonyGrid; pitchShiftSemitones?: number; allowedPitchClasses?: Set<number> | null; tonic?: string; rootPitchClass?: number | null; readOnly?: boolean; foldNotesView?: boolean;
 }
 export const PianoRollCanvas: React.FC<PianoRollCanvasProps> = (p) => {
   const canvasRef = useRef<HTMLCanvasElement>(null), dragRef = useRef<any>(null);
@@ -45,13 +46,13 @@ export const PianoRollCanvas: React.FC<PianoRollCanvasProps> = (p) => {
   const getCoords = (e: React.MouseEvent<HTMLCanvasElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
     const x = Math.max(0, Math.min(p.width - 1, e.clientX - rect.left)), y = Math.max(0, Math.min(p.height - 1, e.clientY - rect.top));
-    const stepIdx = p.allSteps.length > 0 ? Math.min(p.allSteps.length - 1, Math.floor((x / p.width) * p.allSteps.length)) : 0;
+    const stepIdx = resolveStepIndexAtXPx(p.allSteps, x, p.width, p.beatResolutions?.[0] || 4);
     return { stepIdx, midi: p.maxMidi - Math.min(p.maxMidi - p.minMidi, Math.max(0, Math.floor(y / p.rowHeight))), x, y };
   };
   const triggerTextInput = (stepIdx: number) => {
-    const range = findBrickRange(p.allSteps, stepIdx), targetIdx = range ? range.rootIndex : stepIdx, stepW = p.width / Math.max(1, p.allSteps.length);
-    const brickW = range ? (range.endIndex - range.rootIndex + 1) * stepW : stepW, step = p.allSteps[targetIdx], y = (p.maxMidi - (step?.midiNumber ?? p.minMidi)) * p.rowHeight;
-    p.onOpenTextInput(targetIdx, { x: targetIdx * stepW, y, w: brickW, h: p.rowHeight });
+    const range = findBrickRange(p.allSteps, stepIdx), targetIdx = range ? range.rootIndex : stepIdx;
+    const bounds = getStepHorizontalBoundsPx(p.allSteps, targetIdx, p.width), step = p.allSteps[targetIdx], y = (p.maxMidi - (step?.midiNumber ?? p.minMidi)) * p.rowHeight;
+    p.onOpenTextInput(targetIdx, { x: bounds.xPx, y, w: Math.max(24, bounds.widthPx), h: p.rowHeight });
   };
 
   const handlePointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
@@ -76,8 +77,8 @@ export const PianoRollCanvas: React.FC<PianoRollCanvasProps> = (p) => {
     if (range) {
       p.onSelectStep?.(range.rootIndex);
       const rootStep = p.allSteps[range.rootIndex];
-      const onVariHandle = !p.foldNotesView && isOnBrickVariAudioHandle(x, y, range.rootIndex, range.endIndex, rootStep.midiNumber, stepW, p.maxMidi, p.rowHeight);
-      const isNearRight = !onVariHandle && isOnBrickRightResizeHandle(x, p.width, p.allSteps.length, range.endIndex, 8);
+      const onVariHandle = !p.foldNotesView && isOnBrickVariAudioHandle(x, y, range.rootIndex, range.endIndex, rootStep.midiNumber, stepW, p.maxMidi, p.rowHeight, p.allSteps);
+      const isNearRight = !onVariHandle && isOnBrickRightResizeHandle(x, p.width, p.allSteps.length, range.endIndex, 8, p.allSteps);
       e.currentTarget.setPointerCapture(e.pointerId);
       if (onVariHandle) dragRef.current = { mode: 'variaudio_pull', rootIdx: range.rootIndex, startY: e.clientY, startPull: rootStep.melodynePullPct ?? 0, changed: false };
       else if (p.foldNotesView) {
@@ -94,8 +95,8 @@ export const PianoRollCanvas: React.FC<PianoRollCanvasProps> = (p) => {
     if (!dragRef.current) {
       const range = findBrickRange(p.allSteps, stepIdx);
       setHoveredBrickRootIdx(range ? range.rootIndex : null);
-      if (!p.foldNotesView && range && isOnBrickVariAudioHandle(x, y, range.rootIndex, range.endIndex, p.allSteps[range.rootIndex].midiNumber, stepW, p.maxMidi, p.rowHeight)) setHoverHandleCursor('ns-resize');
-      else if (range && isOnBrickRightResizeHandle(x, p.width, p.allSteps.length, range.endIndex, 8)) setHoverHandleCursor('ew-resize');
+      if (!p.foldNotesView && range && isOnBrickVariAudioHandle(x, y, range.rootIndex, range.endIndex, p.allSteps[range.rootIndex].midiNumber, stepW, p.maxMidi, p.rowHeight, p.allSteps)) setHoverHandleCursor('ns-resize');
+      else if (range && isOnBrickRightResizeHandle(x, p.width, p.allSteps.length, range.endIndex, 8, p.allSteps)) setHoverHandleCursor('ew-resize');
       else setHoverHandleCursor(null);
       return;
     }

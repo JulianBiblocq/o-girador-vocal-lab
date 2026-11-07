@@ -5,6 +5,7 @@
 export type {
   VocalStepData,
   MelodicStep,
+  TripletSlot,
   DoubtReason,
   PitchCurvePoint,
   MelodyneRegion,

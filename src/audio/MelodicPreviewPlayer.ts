@@ -6,9 +6,12 @@ import type { VocalStepData } from '../types/vocalPack.types';
 import type { PatternHarmonyGrid, HarmonyConfig } from '../types/harmony.types';
 import { getSharedAudioContext, setSharedSinkId, registerAudioKillSwitch, stopAllActiveAudioEngines } from './sharedAudioContext';
 import { playSingleSynthNote, scheduleMelodySteps, type SynthScheduledNode } from './synthVoiceHelper';
+import { getStepTimeWindowSec } from '../utils/tripletBeatHelper';
 import { getPatternT1OffsetSec } from '../utils/anacrusisTimingHelper';
 import { schedulePreviewClick } from './previewClickHelper';
 import { HarmonyPlayerEngine } from './harmony/HarmonyPlayerEngine';
+
+export { getStepTimeWindowSec };
 
 export type MelodicPlayMode = 'voice' | 'synth' | 'duo';
 export interface MelodicPlayOptions {

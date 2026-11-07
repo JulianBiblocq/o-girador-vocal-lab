@@ -1,8 +1,11 @@
 /**
  * pianoRollRulerDrawer.ts
- * Rendu Canvas 2D de la règle temporelle supérieure (42 px : Mesures / Temps + indicateurs i18n purs).
- * Supporte le repliage de l'Élan M-1 en mode hasAnacrusis === false (< 90 lignes).
+ * Rendu Canvas 2D de la règle temporelle supérieure (42 px : Mesures / Temps + badge ┌ 3 ┐ sur temps en triolet).
+ * Supporte le repliage de l'Élan M-1 en mode hasAnacrusis === false (< 95 lignes).
  */
+import type { VocalStepData } from '../../types/vocalPack.types';
+import { isBeatTriplet } from '../../utils/tripletBeatHelper';
+
 export const RULER_HEIGHT = 42;
 
 export interface DrawRulerOptions {
@@ -21,18 +24,20 @@ export interface DrawRulerOptions {
   hasAnacrusis?: boolean;
   t1OffsetSec?: number;
   bpm?: number;
+  allSteps?: VocalStepData[];
 }
 
 export function drawRulerBar(ctx: CanvasRenderingContext2D, opts: DrawRulerOptions): void {
-  const { width, height, dpr, beatsPerMeasure, totalDurationSec, anacrusisDurationSec, seekStartSec, playheadSec, isPlaying, elanLabel, m1Label, measurePrefix, hasAnacrusis = true, bpm } = opts;
+  const { width, height, dpr, beatsPerMeasure, totalDurationSec, anacrusisDurationSec, seekStartSec, playheadSec, isPlaying, elanLabel, m1Label, measurePrefix, hasAnacrusis = true, bpm, allSteps } = opts;
   ctx.save();
   ctx.scale(dpr, dpr);
   ctx.clearRect(0, 0, width, height);
 
   const tGridStart = hasAnacrusis ? 0 : (opts.t1OffsetSec ?? 0.15);
   const beatDur = bpm ? 60 / bpm : (hasAnacrusis && beatsPerMeasure > 0 ? anacrusisDurationSec / beatsPerMeasure : 0.6);
-  const totalBeats = Math.max(1, Math.round((totalDurationSec - tGridStart - 0.25) / beatDur));
+  const totalBeats = Math.max(1, allSteps && allSteps.length >= 4 ? Math.floor(allSteps.length / 4) : Math.round((totalDurationSec - tGridStart - 0.25) / beatDur));
   const gridDur = totalBeats * beatDur;
+  const beatW = width / totalBeats;
 
   const isLight = typeof document !== 'undefined' && document.documentElement.getAttribute('data-theme') === 'light';
 
@@ -69,6 +74,12 @@ export function drawRulerBar(ctx: CanvasRenderingContext2D, opts: DrawRulerOptio
     ctx.font = isT1 ? 'bold 9.5px monospace' : '9px monospace';
     ctx.fillStyle = isT1 ? '#d4af37' : isExtraEndBeat ? '#f59e0b' : (isLight ? 'rgba(26, 26, 26, 0.65)' : 'rgba(245, 240, 230, 0.65)');
     ctx.fillText(`T${bm + 1}`, x + 5, 34);
+
+    if (allSteps && isBeatTriplet(allSteps, b * 4)) {
+      ctx.font = 'bold 8.5px monospace';
+      ctx.fillStyle = isLight ? '#9a3412' : '#fbbf24';
+      ctx.fillText('┌ 3 ┐', x + Math.max(24, beatW / 2 - 12), 34);
+    }
   }
 
   if (seekStartSec > 0 && (!isPlaying || playheadSec < 0)) {

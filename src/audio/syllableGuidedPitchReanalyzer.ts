@@ -6,6 +6,7 @@
  */
 import type { VocalStepData, PitchCurvePoint, DoubtReason } from '../types/vocalPack.types';
 import { midiToNoteName } from '../utils/noteUtils';
+import { getStepTimeWindowSec, findLastTiedStepIndex } from '../utils/tripletBeatHelper';
 import { getEffectiveVocalBounds, type EffectiveVocalBounds } from '../utils/ambitusStorage';
 import { buildAllowedPitchClasses, type ScaleType } from './scaleQuantizer';
 import {
@@ -18,7 +19,8 @@ export interface ReanalyzeSyllablesOptions {
   steps: VocalStepData[];
   pitchCurve: PitchCurvePoint[];
   gridStartSec?: number;
-  stepDurationSec: number;
+  stepDurationSec?: number;
+  beatDurationSec?: number;
   tonic?: string;
   scaleType?: ScaleType;
   allowedPitchClasses?: Set<number> | number[] | null;
@@ -26,8 +28,9 @@ export interface ReanalyzeSyllablesOptions {
 }
 
 export function reanalyzeNotesOnAlignedSyllables(options: ReanalyzeSyllablesOptions): VocalStepData[] {
-  const { steps, pitchCurve, gridStartSec = 0, stepDurationSec, tonic = 'C', scaleType = 'chromatic', allowedPitchClasses, vocalBounds } = options;
-  if (!steps || steps.length === 0 || stepDurationSec <= 0) return steps;
+  const { steps, pitchCurve, gridStartSec = 0, stepDurationSec, beatDurationSec, tonic = 'C', scaleType = 'chromatic', allowedPitchClasses, vocalBounds } = options;
+  const effBeatDur = beatDurationSec ?? ((stepDurationSec ?? 0.15) * 4);
+  if (!steps || steps.length === 0 || effBeatDur <= 0) return steps;
 
   const cleanCurve = cleanConsonantDipsInPitchCurve(pitchCurve || []);
   const weights = computeStationaryVowelWeights(cleanCurve);
@@ -45,12 +48,10 @@ export function reanalyzeNotesOnAlignedSyllables(options: ReanalyzeSyllablesOpti
   let prevChosenMidi: number | null = null;
 
   for (let i = 0; i < out.length; i++) {
-    if (!out[i].active || out[i].isTie || out[i].note === '───') continue;
-    let endIdx = i;
-    while (endIdx + 1 < out.length && out[endIdx + 1].active && (out[endIdx + 1].isTie || out[endIdx + 1].note === '───')) endIdx++;
-
-    const startSec = gridStartSec + i * stepDurationSec, endSec = gridStartSec + (endIdx + 1) * stepDurationSec;
-    const dur = Math.max(0.01, endSec - startSec), attTrim = dur >= 0.11 ? 0.04 : dur * 0.225, relTrim = dur >= 0.11 ? 0.02 : dur * 0.225;
+    if (out[i].tripletSlot === 'unused' || !out[i].active || out[i].isTie || out[i].note === '───') continue;
+    const endIdx = findLastTiedStepIndex(out, i);
+    const { startSec, endSec, durationSec } = getStepTimeWindowSec(out, i, gridStartSec, effBeatDur);
+    const dur = Math.max(0.01, durationSec), attTrim = dur >= 0.11 ? 0.04 : dur * 0.225, relTrim = dur >= 0.11 ? 0.02 : dur * 0.225;
 
     let indices: number[] = [];
     for (let idx = 0; idx < cleanCurve.length; idx++) {
@@ -114,6 +115,7 @@ export function reanalyzeNotesOnAlignedSyllables(options: ReanalyzeSyllablesOpti
       alternativeNote: isUncertain ? midiToNoteName(altMidi) : undefined, doubtReason: isUncertain ? doubtReason : undefined,
     };
     for (let k = i + 1; k <= endIdx; k++) {
+      if (out[k].tripletSlot === 'unused') continue;
       out[k] = { ...out[k], midiNumber: chosenMidi, originalVoiceMidi: origVoice, manualPitchMoved: false, isUncertain: false, alternativeNote: undefined, doubtReason: undefined };
     }
     prevChosenMidi = chosenMidi;

@@ -2,13 +2,13 @@
  * toadaProject.types.ts
  * Modèle de données de la Toada : Multi-patterns, Déclinaisons Audio, Tessiture & Frise Conducteur (< 115 lignes).
  */
-import type { TimeSignatureString, VocalStepData, MelodicStep, DoubtReason, PitchCurvePoint, VocalPackExport, MelodyneRegion } from './vocalPack.types';
+import type { TimeSignatureString, VocalStepData, MelodicStep, TripletSlot, DoubtReason, PitchCurvePoint, VocalPackExport, MelodyneRegion } from './vocalPack.types';
 import type { ToadaDocument, TimeAnchor } from './toadaDocument.types';
 import type { TessituraRange } from './tessitura.types';
 import type { PatternHarmonyGrid, HarmonyConfig } from './harmony.types';
 import type { PatternStepStatus } from './project.types';
 
-export type { PatternStepStatus, MelodicStep, DoubtReason };
+export type { PatternStepStatus, MelodicStep, TripletSlot, DoubtReason };
 export * from './tessitura.types';
 export * from './harmony.types';
 export {

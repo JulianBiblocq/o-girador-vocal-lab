@@ -6,6 +6,7 @@
  */
 import type { VocalStepData } from '../types/vocalPack.types';
 import { midiToFrequency } from '../utils/noteUtils';
+import { getStepTimeWindowSec, findLastTiedStepIndex } from '../utils/tripletBeatHelper';
 
 export interface SynthScheduledNode {
   stop: () => void;
@@ -66,15 +67,14 @@ export function scheduleMelodySteps(
   const nodes: SynthScheduledNode[] = [];
   let i = 0;
 
+  const beatDurationSec = stepDurationSec * 4;
   while (i < steps.length) {
     const step = steps[i];
-    if (step.active && step.note !== '───' && step.midiNumber > 0) {
-      let tieCount = 0;
-      while (i + 1 + tieCount < steps.length && steps[i + 1 + tieCount].note === '───') {
-        tieCount++;
-      }
-      const noteStartTime = startOffsetSec + i * stepDurationSec;
-      const noteEndTime = startOffsetSec + (i + 1 + tieCount) * stepDurationSec;
+    if (step.tripletSlot !== 'unused' && step.active && step.note !== '───' && step.midiNumber > 0) {
+      const endIdx = findLastTiedStepIndex(steps, i);
+      const { startSec: noteStartTime, endSec: noteEndTime } = getStepTimeWindowSec(
+        steps, i, startOffsetSec, beatDurationSec
+      );
 
       if (noteEndTime > seekStartSec + 0.005) {
         let actualStart = startTime;
@@ -90,7 +90,7 @@ export function scheduleMelodySteps(
         nodes.push(node);
       }
 
-      i += 1 + tieCount;
+      i = endIdx + 1;
     } else {
       i++;
     }

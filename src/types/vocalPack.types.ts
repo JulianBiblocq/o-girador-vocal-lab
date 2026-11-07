@@ -10,6 +10,7 @@ export type VocalRoleTarget = 'puxador' | 'coro';
 export type TimeSignatureString = '4/4' | '2/4' | '3/4' | '6/8' | '12/8';
 
 export type DoubtReason = 'between_notes' | 'short_or_noisy' | 'out_of_scale';
+export type TripletSlot = 1 | 2 | 3 | 'unused';
 
 /** Données d'un pas de quantification vocale sur la grille */
 export interface VocalStepData {
@@ -20,6 +21,7 @@ export interface VocalStepData {
   syllable?: string; // Syllabe de la Letra chantée
   syllableAttack?: boolean; // Attaque franche ou plosive détectée
   isTie?: boolean; // Note tenue liée au pas précédent
+  tripletSlot?: TripletSlot; // 1 | 2 | 3 | 'unused' lorsque le temps est en triolet
   velocity: number; // 0..127 ou 0..1
   decay: number; // Durée relative ou millisecondes
   microtiming?: number; // Décalage fin (nudge en ms ou fraction de pas)

@@ -1,8 +1,9 @@
 /**
- * pianoRollBricksDrawer.ts — Rendu Canvas des briques MIDI, mode Rythme Replié, poignées VariAudio (0..100%)
- * et courbes ambre/dorées de correction vocale par brique (< 130 lignes).
+ * pianoRollBricksDrawer.ts — Rendu Canvas des briques MIDI (binaire & triolets via getStepHorizontalBoundsPx),
+ * mode Rythme Replié, poignées VariAudio (0..100%) et courbes ambre/dorées de correction vocale (< 130 lignes).
  */
 import type { PitchCurvePoint, VocalStepData } from '../../types/vocalPack.types';
+import { getStepHorizontalBoundsPx, getStepTimeWindowSec, findLastTiedStepIndex } from '../../utils/tripletBeatHelper';
 import { midiToRowY } from './PianoRollKeyboard';
 
 export interface DrawBricksParams {
@@ -13,26 +14,33 @@ export interface DrawBricksParams {
 
 export function isOnBrickVariAudioHandle(
   x: number, y: number, rootIndex: number, endIndex: number,
-  midiNumber: number, stepW: number, maxMidi: number, rowHeight: number
+  midiNumber: number, stepW: number, maxMidi: number, rowHeight: number,
+  allSteps?: VocalStepData[]
 ): boolean {
-  const bx = rootIndex * stepW, bw = Math.max(4, stepW * (endIndex - rootIndex + 1) - 2);
+  const bounds = allSteps && allSteps.length > 0
+    ? getStepHorizontalBoundsPx(allSteps, rootIndex, stepW * allSteps.length)
+    : { xPx: rootIndex * stepW, widthPx: stepW * (endIndex - rootIndex + 1), hidden: false };
+  if (bounds.hidden) return false;
+  const bx = bounds.xPx, bw = Math.max(4, bounds.widthPx - 2);
   const by = (maxMidi - midiNumber) * rowHeight + 1.5;
   return x >= bx + 3 && x <= bx + bw - 6 && y >= by - 5 && y <= by + 7;
 }
 
 export function drawPianoRollBricks(params: DrawBricksParams): void {
   const { ctx, allSteps, stepW, minMidi, maxMidi, rowHeight, selectedStepIdx, hoveredBrickRootIdx } = params;
+  const gridWidth = stepW * allSteps.length;
   for (let i = 0; i < allSteps.length; i++) {
     const step = allSteps[i];
-    if (!step.active || step.note === '───' || step.midiNumber < minMidi || step.midiNumber > maxMidi) continue;
-    let ties = 0;
-    while (i + 1 + ties < allSteps.length && allSteps[i + 1 + ties].note === '───') ties++;
-    const x = i * stepW, w = Math.max(4, stepW * (1 + ties) - 2);
+    if (step.tripletSlot === 'unused' || !step.active || step.note === '───' || step.midiNumber < minMidi || step.midiNumber > maxMidi) continue;
+    const endIdx = findLastTiedStepIndex(allSteps, i);
+    const bounds = getStepHorizontalBoundsPx(allSteps, i, gridWidth);
+    if (bounds.hidden || bounds.widthPx <= 0) { i = endIdx; continue; }
+    const x = bounds.xPx, w = Math.max(4, bounds.widthPx - 2);
     const y = midiToRowY(step.midiNumber, maxMidi, rowHeight) + 1.5, h = Math.max(4, rowHeight - 3);
     const cutRatio = step.melodyneStartRatio !== undefined ? step.melodyneStartRatio : 0.25;
     const cutW = Math.max(0, Math.min(w, w * cutRatio));
     const pullPct = Math.max(0, Math.min(100, Math.round(step.melodynePullPct ?? 0)));
-    const isSel = selectedStepIdx !== undefined && selectedStepIdx !== null && selectedStepIdx >= i && selectedStepIdx <= i + ties;
+    const isSel = selectedStepIdx !== undefined && selectedStepIdx !== null && selectedStepIdx >= i && selectedStepIdx <= endIdx;
     const isHov = hoveredBrickRootIdx === i;
     const isUncertain = Boolean(step.isUncertain);
     const isLight = typeof document !== 'undefined' && document.documentElement.getAttribute('data-theme') === 'light';
@@ -72,28 +80,29 @@ export function drawPianoRollBricks(params: DrawBricksParams): void {
       ctx.fillStyle = '#9a3412';
       ctx.beginPath(); ctx.moveTo(cx, hy - 3.5); ctx.lineTo(cx + 4, hy); ctx.lineTo(cx, hy + 3.5); ctx.lineTo(cx - 4, hy); ctx.closePath(); ctx.fill();
     }
-    i += ties;
+    i = endIdx;
   }
 }
 
 export function drawFoldedRhythmBricks(
   ctx: CanvasRenderingContext2D, allSteps: VocalStepData[], stepW: number, height: number, selectedStepIdx?: number | null
 ): void {
-  const y = Math.round((height - 38) / 2), h = 38;
+  const y = Math.round((height - 38) / 2), h = 38, gridWidth = stepW * allSteps.length;
   for (let i = 0; i < allSteps.length; i++) {
     const step = allSteps[i];
-    if (!step.active || step.note === '───') continue;
-    let ties = 0;
-    while (i + 1 + ties < allSteps.length && allSteps[i + 1 + ties].note === '───') ties++;
-    const x = i * stepW, w = Math.max(6, stepW * (1 + ties) - 2);
-    const isSel = selectedStepIdx !== undefined && selectedStepIdx !== null && selectedStepIdx >= i && selectedStepIdx <= i + ties;
+    if (step.tripletSlot === 'unused' || !step.active || step.note === '───') continue;
+    const endIdx = findLastTiedStepIndex(allSteps, i), ties = endIdx - i;
+    const bounds = getStepHorizontalBoundsPx(allSteps, i, gridWidth);
+    if (bounds.hidden || bounds.widthPx <= 0) { i = endIdx; continue; }
+    const x = bounds.xPx, w = Math.max(6, bounds.widthPx - 2);
+    const isSel = selectedStepIdx !== undefined && selectedStepIdx !== null && selectedStepIdx >= i && selectedStepIdx <= endIdx;
     ctx.fillStyle = isSel ? '#d97706' : '#b45309'; ctx.strokeStyle = isSel ? '#fde047' : '#f59e0b'; ctx.lineWidth = isSel ? 2.2 : 1.5;
     ctx.beginPath(); ctx.roundRect(x, y, w, h, 4); ctx.fill(); ctx.stroke();
     if (w > 12) { ctx.fillStyle = '#fde68a'; ctx.fillRect(x + w - 3, y + 3, 1.5, h - 6); }
     ctx.fillStyle = '#ffffff'; ctx.font = 'bold 10.5px monospace';
     const syl = step.syllable?.trim() || '•', tieSuffix = ties > 0 ? ` ${'─'.repeat(Math.min(4, ties))}` : '';
     ctx.fillText(`${syl}${tieSuffix}`, x + 5, y + h / 2 + 4);
-    i += ties;
+    i = endIdx;
   }
 }
 
@@ -102,14 +111,13 @@ export function drawVariAudioPulledCurveOverlay(
   tGridStart: number, gridDur: number, width: number, maxMidi: number, rowHeight: number
 ): void {
   if (!pitchCurve || pitchCurve.length < 2 || allSteps.length === 0 || gridDur <= 0) return;
-  const stepDur = gridDur / allSteps.length;
+  const beatDur = (gridDur / allSteps.length) * 4;
   for (let i = 0; i < allSteps.length; i++) {
     const step = allSteps[i];
-    if (!step.active || step.note === '───') continue;
-    let ties = 0;
-    while (i + 1 + ties < allSteps.length && allSteps[i + 1 + ties].note === '───') ties++;
+    if (step.tripletSlot === 'unused' || !step.active || step.note === '───') continue;
+    const endIdx = findLastTiedStepIndex(allSteps, i);
     if ((step.melodynePullPct ?? 0) > 0) {
-      const bStart = tGridStart + i * stepDur, bEnd = tGridStart + (i + 1 + ties) * stepDur;
+      const { startSec: bStart, endSec: bEnd } = getStepTimeWindowSec(allSteps, i, tGridStart, beatDur);
       ctx.strokeStyle = '#f59e0b'; ctx.lineWidth = 3;
       for (let p = 0; p < pitchCurve.length - 1; p++) {
         const p1 = pitchCurve[p], p2 = pitchCurve[p + 1];
@@ -119,6 +127,6 @@ export function drawVariAudioPulledCurveOverlay(
         ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
       }
     }
-    i += ties;
+    i = endIdx;
   }
 }

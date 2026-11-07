@@ -4,6 +4,7 @@
  * de liaison (m, n, nh, l, lh, r) par stabilité instantanée et décomposition f0(t) à 3 DDL (< 138 lignes).
  */
 import type { PitchCurvePoint, VocalStepData, MelodyneRegion } from '../types/vocalPack.types';
+import { getStepTimeWindowSec, findLastTiedStepIndex } from '../utils/tripletBeatHelper';
 import { filterConsonantPitchDips } from './pitchStepSegmentation';
 
 export interface NoteBrickSpan {
@@ -46,19 +47,18 @@ export function buildNoteBrickSpans(
   const cleanCurve = filterConsonantPitchDips(rawPitchCurve);
   const geom = resolveMelodyneGridGeometry(allSteps, totalDurationSec, tGridStart, gridDur);
   const spans: NoteBrickSpan[] = [];
+  const beatDur = (geom.gridDur / allSteps.length) * 4;
   for (let i = 0; i < allSteps.length; i++) {
     const step = allSteps[i];
-    if (!step.active || step.note === '───' || step.isTie || step.midiNumber <= 0) continue;
-    let ties = 0;
-    while (i + 1 + ties < allSteps.length && (allSteps[i + 1 + ties].note === '───' || allSteps[i + 1 + ties].isTie)) ties++;
-    const startSec = geom.tGridStart + (i / allSteps.length) * geom.gridDur;
-    const endSec = geom.tGridStart + ((i + 1 + ties) / allSteps.length) * geom.gridDur;
+    if (step.tripletSlot === 'unused' || !step.active || step.note === '───' || step.isTie || step.midiNumber <= 0) continue;
+    const endIdx = findLastTiedStepIndex(allSteps, i);
+    const { startSec, endSec } = getStepTimeWindowSec(allSteps, i, geom.tGridStart, beatDur);
     const cutRatio = step.melodyneStartRatio !== undefined ? Math.max(0, Math.min(0.85, step.melodyneStartRatio)) : 0;
     const attackEndSec = startSec + (endSec - startSec) * cutRatio;
     const rawMed = computeIntervalMedianPitch(cleanCurve, Math.min(endSec, attackEndSec), endSec, step.midiNumber);
     const sungMedian = rawMed + Math.round((step.midiNumber - rawMed) / 12) * 12;
     spans.push({ rootIndex: i, startSec, endSec, attackEndSec, targetMidi: step.midiNumber, sungMedian, isManualMove: Boolean(step.manualPitchMoved) });
-    i += ties;
+    i = endIdx;
   }
   return spans;
 }

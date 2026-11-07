@@ -6,6 +6,7 @@
  * - Soudure directe de deux briques voisines (Shift+Clic, Double-clic jonction ou bouton [ Lier ])
  */
 import type { VocalStepData } from '../../types/vocalPack.types';
+import { getStepHorizontalBoundsPx } from '../../utils/tripletBeatHelper';
 import { findBrickRange } from './pianoRollInteractions';
 
 export function isOnBrickRightResizeHandle(
@@ -13,11 +14,13 @@ export function isOnBrickRightResizeHandle(
   canvasWidthPx: number,
   totalSteps: number,
   brickEndIndex: number,
-  handleWidthPx = 8
+  handleWidthPx = 8,
+  steps?: VocalStepData[]
 ): boolean {
   if (totalSteps <= 0 || canvasWidthPx <= 0) return false;
-  const stepW = canvasWidthPx / totalSteps;
-  const brickRightX = (brickEndIndex + 1) * stepW;
+  const brickRightX = steps && steps.length > 0
+    ? (() => { const b = getStepHorizontalBoundsPx(steps, brickEndIndex, canvasWidthPx, false); return b.xPx + b.widthPx; })()
+    : (brickEndIndex + 1) * (canvasWidthPx / totalSteps);
   return xPx >= brickRightX - handleWidthPx && xPx <= brickRightX + 3;
 }
 
@@ -28,11 +31,13 @@ export function findBrickJunctionAtX(
   tolerancePx = 8
 ): number | null {
   if (!steps.length || canvasWidthPx <= 0) return null;
-  const stepW = canvasWidthPx / steps.length;
   for (let i = 1; i < steps.length; i++) {
-    const cur = steps[i], prev = steps[i - 1];
-    if (cur.active && cur.note !== '───' && prev.active) {
-      const boundaryX = i * stepW;
+    const cur = steps[i];
+    if (cur.tripletSlot === 'unused') continue;
+    const prevIdx = steps[i - 1]?.tripletSlot === 'unused' ? i - 2 : i - 1;
+    const prev = prevIdx >= 0 ? steps[prevIdx] : undefined;
+    if (cur.active && cur.note !== '───' && prev?.active) {
+      const boundaryX = getStepHorizontalBoundsPx(steps, i, canvasWidthPx, false).xPx;
       if (Math.abs(xPx - boundaryX) <= tolerancePx) return i;
     }
   }
@@ -53,6 +58,7 @@ export function resizeBrickRightEdge(
 
   if (clampedTarget > range.endIndex) {
     for (let i = range.endIndex + 1; i <= clampedTarget; i++) {
+      if (next[i].tripletSlot === 'unused') continue;
       next[i] = {
         ...next[i], active: true, midiNumber: rootMidi, note: '───',
         isTie: true, syllable: '', syllableAttack: false, velocity: 90,
@@ -60,6 +66,7 @@ export function resizeBrickRightEdge(
     }
   } else if (clampedTarget < range.endIndex) {
     for (let i = clampedTarget + 1; i <= range.endIndex; i++) {
+      if (next[i].tripletSlot === 'unused') continue;
       next[i] = {
         ...next[i], active: false, midiNumber: 0, note: '',
         isTie: false, syllable: '', syllableAttack: false, velocity: 0,

@@ -114,14 +114,14 @@ export const PianoRollEditor: React.FC<PianoRollEditorProps> = (p) => {
 
       <div ref={horizScrollRef} className="w-full cordel-card overflow-x-auto overflow-y-hidden cordel-scrollbar rounded">
         <div style={{ width: `${64 + gridWidth}px` }} className="flex flex-col">
-          <PianoRollStickyHeader gridWidth={gridWidth} beatsPerMeasure={p.beatsPerMeasure} totalDurationSec={p.totalDurationSec} anacrusisDurationSec={p.anacrusisDurationSec} seekStartSec={p.seekStartSec} isPlaying={p.isPlaying} hasAnacrusis={p.hasAnacrusis} bpm={p.bpm} t1OffsetSec={t1OffsetSec} getPlayheadSec={p.getPlayheadSec} onSeek={p.onSeek} />
+          <PianoRollStickyHeader gridWidth={gridWidth} beatsPerMeasure={p.beatsPerMeasure} totalDurationSec={p.totalDurationSec} anacrusisDurationSec={p.anacrusisDurationSec} seekStartSec={p.seekStartSec} isPlaying={p.isPlaying} hasAnacrusis={p.hasAnacrusis} bpm={p.bpm} t1OffsetSec={t1OffsetSec} allSteps={p.allSteps} getPlayheadSec={p.getPlayheadSec} onSeek={p.onSeek} />
           <div ref={notesScrollRef} className="flex items-start relative overflow-y-auto overflow-x-hidden cordel-scrollbar" style={{ width: `${64 + gridWidth}px`, height: `${viewportHeight}px` }}>
             {isFolded ? (
               <div className="sticky left-0 z-20 shrink-0 w-[64px] bg-[var(--cordel-surface)] border-r-2 border-[var(--cordel-border-panel)] flex flex-col items-center justify-center gap-0.5 text-[8px] font-mono font-bold text-[#9a3412] dark:text-amber-300 uppercase" style={{ height: `${FOLDED_RHYTHM_HEIGHT}px` }}>
                 <span>{language === 'br' ? 'DURAÇÃO' : 'TENUES'}</span><span className="opacity-70">{language === 'br' ? '& VOZ' : '& VOIX'}</span>
               </div>
             ) : (
-              <PianoRollKeyboard minMidi={minMidi} maxMidi={maxMidi} rowHeight={ROW_HEIGHT} onPlayNote={p.onPlayNotePreview} />
+              <PianoRollKeyboard minMidi={minMidi} maxMidi={maxMidi} rowHeight={ROW_HEIGHT} allowedPitchClasses={p.allowedPitchClasses} tonic={p.tonic} onPlayNote={p.onPlayNotePreview} />
             )}
             <div className="relative shrink-0" style={{ width: `${gridWidth}px`, height: `${canvasHeight}px` }}>
               <PianoRollCanvas {...p} foldNotesView={isFolded} t1OffsetSec={t1OffsetSec} readOnly={p.readOnly} width={gridWidth} height={canvasHeight} minMidi={minMidi} maxMidi={maxMidi} rowHeight={ROW_HEIGHT} activeTool={activeTool} onOpenContextMenu={(x, y) => setPalettePos({ x, y })} onOpenTextInput={(idx, rect) => setTextInput({ stepIndex: idx, rect })} />

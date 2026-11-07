@@ -70,6 +70,7 @@ export function joinSyllableWithPrevious(
     let endMerge = targetStepIdx;
     while (endMerge + 1 < next.length && next[endMerge + 1].active && next[endMerge + 1].note === '───') endMerge++;
     for (let i = prevRootIdx + 1; i <= endMerge; i++) {
+      if (next[i].tripletSlot === 'unused') continue;
       next[i] = { ...next[i], active: true, midiNumber: prevMidi, note: '───', isTie: true, syllable: '', syllableAttack: false };
     }
   } else {

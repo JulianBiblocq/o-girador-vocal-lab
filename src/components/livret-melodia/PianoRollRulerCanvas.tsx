@@ -4,6 +4,7 @@
  * Fixé en sticky top-0, avec Seek immédiat au clic/glisser et indicateurs 60 FPS (i18n pur via t).
  */
 import React, { useRef, useEffect, useCallback } from 'react';
+import type { VocalStepData } from '../../types/vocalPack.types';
 import { drawRulerBar, RULER_HEIGHT } from './pianoRollRulerDrawer';
 import { useLanguage } from '../../i18n/LanguageContext';
 
@@ -17,12 +18,13 @@ interface PianoRollRulerCanvasProps {
   hasAnacrusis?: boolean;
   t1OffsetSec?: number;
   bpm?: number;
+  allSteps?: VocalStepData[];
   getPlayheadSec?: () => number;
   onSeek: (sec: number) => void;
 }
 
 export const PianoRollRulerCanvas: React.FC<PianoRollRulerCanvasProps> = (props) => {
-  const { width, beatsPerMeasure, totalDurationSec, anacrusisDurationSec, seekStartSec, isPlaying, hasAnacrusis = true, t1OffsetSec, bpm, getPlayheadSec, onSeek } = props;
+  const { width, beatsPerMeasure, totalDurationSec, anacrusisDurationSec, seekStartSec, isPlaying, hasAnacrusis = true, t1OffsetSec, bpm, allSteps, getPlayheadSec, onSeek } = props;
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const isDraggingRef = useRef<boolean>(false);
   const { t } = useLanguage();
@@ -53,12 +55,12 @@ export const PianoRollRulerCanvas: React.FC<PianoRollRulerCanvasProps> = (props)
     drawRulerBar(ctx, {
       width, height: RULER_HEIGHT, dpr, beatsPerMeasure, totalDurationSec,
       anacrusisDurationSec, seekStartSec, playheadSec: playhead, isPlaying,
-      hasAnacrusis, t1OffsetSec, bpm,
+      hasAnacrusis, t1OffsetSec, bpm, allSteps,
       elanLabel: t('rulerElan'),
       m1Label: t('rulerMeasure1'),
       measurePrefix: t('measureAbbr'),
     });
-  }, [width, beatsPerMeasure, totalDurationSec, anacrusisDurationSec, seekStartSec, isPlaying, hasAnacrusis, t1OffsetSec, bpm, getPlayheadSec, t, themeTick]);
+  }, [width, beatsPerMeasure, totalDurationSec, anacrusisDurationSec, seekStartSec, isPlaying, hasAnacrusis, t1OffsetSec, bpm, allSteps, getPlayheadSec, t, themeTick]);
 
   useEffect(() => {
     draw();

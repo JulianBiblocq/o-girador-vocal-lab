@@ -3,6 +3,7 @@
  * En-tête sticky top-0 combinant les Mesures et les Temps (sans l'ancien rail [IN-OUT]) (< 55 lignes).
  */
 import React from 'react';
+import type { VocalStepData } from '../../types/vocalPack.types';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { PianoRollRulerCanvas } from './PianoRollRulerCanvas';
 
@@ -16,6 +17,7 @@ interface PianoRollStickyHeaderProps {
   hasAnacrusis?: boolean;
   t1OffsetSec?: number;
   bpm?: number;
+  allSteps?: VocalStepData[];
   getPlayheadSec?: () => number;
   onSeek: (sec: number) => void;
 }
@@ -23,7 +25,7 @@ interface PianoRollStickyHeaderProps {
 export const PianoRollStickyHeader: React.FC<PianoRollStickyHeaderProps> = (props) => {
   const {
     gridWidth, beatsPerMeasure, totalDurationSec, anacrusisDurationSec,
-    seekStartSec, isPlaying, hasAnacrusis = true, t1OffsetSec, bpm,
+    seekStartSec, isPlaying, hasAnacrusis = true, t1OffsetSec, bpm, allSteps,
     getPlayheadSec, onSeek,
   } = props;
   const { t } = useLanguage();
@@ -43,7 +45,7 @@ export const PianoRollStickyHeader: React.FC<PianoRollStickyHeaderProps> = (prop
         <PianoRollRulerCanvas
           width={gridWidth} beatsPerMeasure={beatsPerMeasure} totalDurationSec={totalDurationSec}
           anacrusisDurationSec={anacrusisDurationSec} seekStartSec={seekStartSec} isPlaying={isPlaying}
-          hasAnacrusis={hasAnacrusis} t1OffsetSec={t1OffsetSec} bpm={bpm}
+          hasAnacrusis={hasAnacrusis} t1OffsetSec={t1OffsetSec} bpm={bpm} allSteps={allSteps}
           getPlayheadSec={getPlayheadSec} onSeek={onSeek}
         />
       </div>
