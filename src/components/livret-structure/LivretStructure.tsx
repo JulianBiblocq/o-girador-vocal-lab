@@ -15,21 +15,14 @@ import { StructureTopControls } from './StructureTopControls';
 import { BlockMusicalSettingsCard } from './BlockMusicalSettingsCard';
 import { ScaleProposalBanner } from '../common/ScaleProposalBanner';
 import { AmbitusReminderBanner } from '../common/AmbitusReminderBanner';
-import {
-  analyzeFullProjectScale,
-  type ProjectScaleAnalysisResult,
-} from '../../audio/projectScaleAnalyzer';
-import {
-  resolveProjectDualScale,
-  applyDualScaleToProject,
-} from '../../utils/scaleTranspositionHelper';
+import { TwinPatternsManagerBar } from '../common/TwinPatternsManagerBar';
+import { analyzeFullProjectScale, type ProjectScaleAnalysisResult } from '../../audio/projectScaleAnalyzer';
+import { resolveProjectDualScale, applyDualScaleToProject } from '../../utils/scaleTranspositionHelper';
 import type { ScaleType } from '../../audio/scaleQuantizer';
 
 export function resolveDefaultManualStructureEdit(project: ToadaProject): boolean {
   if (project.source === 'local') return true;
-  if (project.source === 'organizador' || project.toadaMeta?.id || project.toadaMeta?.repertoireId || project.sheetLines?.length) {
-    return false;
-  }
+  if (project.source === 'organizador' || project.toadaMeta?.id || project.toadaMeta?.repertoireId || project.sheetLines?.length) return false;
   return false;
 }
 
@@ -41,9 +34,7 @@ export const LivretStructure: React.FC = () => {
   } = useToadaProject();
   const { engine, selectedOutputDeviceId } = useAudioHardware();
 
-  const [isManualStructureEdit, setIsManualStructureEdit] = useState<boolean>(() =>
-    resolveDefaultManualStructureEdit(project)
-  );
+  const [isManualStructureEdit, setIsManualStructureEdit] = useState<boolean>(() => resolveDefaultManualStructureEdit(project));
   const [scaleProposal, setScaleProposal] = useState<ProjectScaleAnalysisResult | null>(null);
 
   useEffect(() => {
@@ -60,10 +51,7 @@ export const LivretStructure: React.FC = () => {
 
   const timeSignature = project.timeSignature || '4/4';
   const bpm = activePattern.bpm ?? activePattern.baseBpm ?? project.bpm ?? DEFAULT_TOADA_BPM;
-  const dualScale = useMemo(
-    () => resolveProjectDualScale(project, language, scaleProposal || undefined),
-    [project, language, scaleProposal]
-  );
+  const dualScale = useMemo(() => resolveProjectDualScale(project, language, scaleProposal || undefined), [project, language, scaleProposal]);
   const referencePitch = dualScale.troupeReferencePitch;
   const activeScaleLabel =
     project.toadaMeta?.tonaliteDefaut || scaleProposal
@@ -73,23 +61,18 @@ export const LivretStructure: React.FC = () => {
   const handleAnalyzeProjectScale = useCallback(() => {
     const res = analyzeFullProjectScale(project.patterns, language);
     setScaleProposal(res);
-    loadProject({
-      ...project,
-      patterns: res.updatedPatterns.map((p) => ({ ...p, referencePitch: res.referencePitch })),
-    });
+    loadProject({ ...project, patterns: res.updatedPatterns.map((p) => ({ ...p, referencePitch: res.referencePitch })) });
   }, [project, loadProject, language]);
 
   const handleApplyScale = useCallback((tonic: string, scaleType: ScaleType, refPitch?: string) => {
-    const updated = applyDualScaleToProject(project, tonic, scaleType, dualScale.transpositionSemitones, refPitch, language);
-    loadProject(updated);
+    loadProject(applyDualScaleToProject(project, tonic, scaleType, dualScale.transpositionSemitones, refPitch, language));
     setScaleProposal(null);
   }, [project, loadProject, dualScale.transpositionSemitones, language]);
 
   const handleDisengageFreeMode = useCallback(() => {
     const tonic = scaleProposal?.tonic || dualScale.sungScaleRoot || 'A';
     const refPitch = scaleProposal?.referencePitch || dualScale.sungReferencePitch;
-    const updated = applyDualScaleToProject(project, tonic, 'chromatic', dualScale.transpositionSemitones, refPitch, language);
-    loadProject(updated);
+    loadProject(applyDualScaleToProject(project, tonic, 'chromatic', dualScale.transpositionSemitones, refPitch, language));
     setScaleProposal(null);
   }, [project, loadProject, scaleProposal, dualScale, language]);
 
@@ -107,6 +90,8 @@ export const LivretStructure: React.FC = () => {
         isManualStructureEdit={isManualStructureEdit}
         onToggleManualStructureEdit={() => setIsManualStructureEdit((prev) => !prev)}
       />
+
+      <TwinPatternsManagerBar />
 
       <ScaleProposalBanner
         proposal={scaleProposal}

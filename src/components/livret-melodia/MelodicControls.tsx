@@ -1,13 +1,15 @@
 /**
  * MelodicControls.tsx
  * Barre de contrôle épurée bilingue (FR / PT-BR) du Livret 4 :
- * [ Retour à la Prise ], Sélecteur de Pattern, [ Synthé | Voix seule | Duo ] et [ ÉCOUTER / ARRÊTER ] (< 105 lignes).
+ * [ Retour à la Prise ], [ Copier Notes & Syllabes ➔ Jumeaux ], [ Synthé | Voix seule | Duo ] et [ ÉCOUTER / ARRÊTER ] (< 130 lignes).
  */
 import React from 'react';
 import type { MelodicPlayMode } from '../../audio/MelodicPreviewPlayer';
 import { Play, Square, ArrowLeft, SkipBack, Music } from 'lucide-react';
 import { CordelMic, CordelPiano, CordelSpeaker } from '../common/CordelIcons';
 import { useLanguage } from '../../i18n/LanguageContext';
+import { useToadaProject } from '../../context/ToadaProjectContext';
+import { findTwinPatterns, copyMidiAndSyllablesToTwins } from '../../utils/twinPatternsHelper';
 
 interface MelodicControlsProps {
   isPlaying: boolean;
@@ -29,6 +31,17 @@ export const MelodicControls: React.FC<MelodicControlsProps> = (props) => {
     onTogglePlay, onResetSeek, onSetPlayMode, onToggleClick, onBackToPrise,
   } = props;
   const { t, language } = useLanguage();
+  const { project, loadProject } = useToadaProject();
+
+  const twins = findTwinPatterns(project, project.activePatternId);
+  const handleCopyToTwins = () => {
+    loadProject(copyMidiAndSyllablesToTwins(project, project.activePatternId));
+    window.dispatchEvent(new CustomEvent('app-toast', {
+      detail: language === 'br'
+        ? 'Notas MIDI, ritmo e sílabas copiados para o padrão gêmeo (Áudio preservado)'
+        : 'Notes MIDI, rythme et syllabes copiés vers le pattern jumeau (Audio conservé)',
+    }));
+  };
 
   return (
     <div className="cordel-card p-2 w-full flex flex-wrap items-center justify-between gap-2 select-none rounded">
@@ -40,6 +53,14 @@ export const MelodicControls: React.FC<MelodicControlsProps> = (props) => {
           <ArrowLeft className="w-3.5 h-3.5 text-theme-accent" />
           <span>{t('backToRecording')}</span>
         </button>
+        {twins.length > 1 && (
+          <button
+            type="button" onClick={handleCopyToTwins}
+            className="cordel-btn px-2.5 py-1.5 text-xs font-mono font-bold flex items-center gap-1.5 rounded cursor-pointer border border-[var(--cordel-accent)] text-[var(--cordel-accent)]"
+          >
+            <span>{language === 'br' ? `Copiar Notas & Sílabas ➔ Gêmeos (${twins.length - 1}) (manter Áudio)` : `Copier Notes & Syllabes ➔ Jumeaux (${twins.length - 1}) (garder leur Audio)`}</span>
+          </button>
+        )}
       </div>
 
       {/* 2. Centre : Sélecteur d'écoute [ Synthé | Voix seule | Duo ] + Clic */}

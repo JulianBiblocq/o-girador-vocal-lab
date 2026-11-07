@@ -1,6 +1,6 @@
 /**
  * LetraEditorPanel.tsx
- * Barre compacte « Letra da Toada » (saisie rapide de la phrase complète + bouton [Aligner] + aperçu des mots) (< 85 lignes).
+ * Barre compacte « Letra da Toada » (saisie rapide de la phrase complète + bouton [Aligner] + copie vers jumeaux) (< 120 lignes).
  * Les syllabes individuelles et liaisons sont éditées directement dans le bandeau épinglé sous le Piano Roll.
  */
 import React, { useState, useEffect, useMemo } from 'react';
@@ -9,6 +9,7 @@ import { assignSyllablesStrictlyToExistingBricks, reconstructWordsFromSteps } fr
 import { CordelScroll, CordelSpark } from '../common/CordelIcons';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { useToadaProject } from '../../context/ToadaProjectContext';
+import { findTwinPatterns, copyMidiAndSyllablesToTwins } from '../../utils/twinPatternsHelper';
 
 interface LetraEditorPanelProps {
   allSteps: VocalStepData[];
@@ -17,8 +18,8 @@ interface LetraEditorPanelProps {
 }
 
 export const LetraEditorPanel: React.FC<LetraEditorPanelProps> = ({ allSteps, onUpdateSteps, onCommitHistory }) => {
-  const { t } = useLanguage();
-  const { activePattern, updatePattern, project } = useToadaProject();
+  const { t, language } = useLanguage();
+  const { activePattern, updatePattern, project, loadProject } = useToadaProject();
   const [rawText, setRawText] = useState<string>(activePattern.assignedLyricsText || '');
   const [focusPhrase, setFocusPhrase] = useState('');
 
@@ -32,6 +33,8 @@ export const LetraEditorPanel: React.FC<LetraEditorPanelProps> = ({ allSteps, on
     return Array.from(set);
   }, [project.patterns]);
 
+  const twins = useMemo(() => findTwinPatterns(project, activePattern.id), [project, activePattern.id]);
+
   const handleSelectPhrase = (phrase: string) => {
     setRawText(phrase);
     const match = project.patterns.find((p) => p.assignedLyricsText === phrase);
@@ -44,6 +47,16 @@ export const LetraEditorPanel: React.FC<LetraEditorPanelProps> = ({ allSteps, on
     const aligned = assignSyllablesStrictlyToExistingBricks(allSteps, rawText);
     updatePattern(activePattern.id, { assignedLyricsText: rawText, midiLocked: true });
     onUpdateSteps(aligned, true);
+  };
+
+  const handleCopyToTwins = () => {
+    onCommitHistory?.();
+    loadProject(copyMidiAndSyllablesToTwins(project, activePattern.id));
+    window.dispatchEvent(new CustomEvent('app-toast', {
+      detail: language === 'br'
+        ? 'Notas MIDI, ritmo e sílabas copiados para o padrão gêmeo (Áudio preservado)'
+        : 'Notes MIDI, rythme et syllabes copiés vers le pattern jumeau (Audio conservé)',
+    }));
   };
 
   const activeNotesCount = useMemo(
@@ -89,6 +102,11 @@ export const LetraEditorPanel: React.FC<LetraEditorPanelProps> = ({ allSteps, on
           <CordelSpark className="w-3.5 h-3.5" />
           <span>{t('alignBtn')}</span>
         </button>
+        {twins.length > 1 && (
+          <button type="button" onClick={handleCopyToTwins} className="cordel-btn px-2.5 py-1.5 text-xs font-mono font-bold rounded cursor-pointer border border-[var(--cordel-accent)] text-[var(--cordel-accent)]">
+            {language === 'br' ? `Copiar Notas & Sílabas ➔ Gêmeos (${twins.length - 1}) (manter Áudio)` : `Copier Notes & Syllabes ➔ Jumeaux (${twins.length - 1}) (garder leur Audio)`}
+          </button>
+        )}
       </div>
     </div>
   );

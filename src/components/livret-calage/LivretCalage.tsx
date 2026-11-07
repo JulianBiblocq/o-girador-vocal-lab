@@ -7,6 +7,7 @@ import { useToadaProject } from '../../context/ToadaProjectContext';
 import { useAudioHardware } from '../../context/AudioHardwareContext';
 import { useVocalTransportStore } from '../../stores/useVocalTransportStore';
 import { PatternCompassBar } from '../common/PatternCompassBar';
+import { TwinPatternsManagerBar } from '../common/TwinPatternsManagerBar';
 import { WaveformTrimEditor } from '../livret-prise/WaveformTrimEditor';
 import { CalageEmptyNotice } from './CalageEmptyNotice';
 import { LongAudioSlicerBanner } from './LongAudioSlicerBanner';
@@ -84,6 +85,7 @@ export const LivretCalage: React.FC = () => {
   return (
     <div className="flex flex-col gap-3.5 w-full">
       <PatternCompassBar />
+      <TwinPatternsManagerBar />
       {isLongAudio && <LongAudioSlicerBanner durationSec={audioDurationSec} onOpenSlicer={() => setIsSlicerOpen(true)} />}
       <div className="flex flex-wrap items-center justify-between gap-2.5">
         <span className="text-xs font-mono font-bold text-[var(--cordel-secondary-text)] uppercase tracking-wider">{activePattern.name} ({activePattern.measuresCount}{t('measureAbbr')})</span>

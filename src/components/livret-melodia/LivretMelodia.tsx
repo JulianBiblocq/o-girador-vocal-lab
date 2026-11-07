@@ -8,6 +8,7 @@ import type { VocalPackExport, PitchCurvePoint, VocalStepData } from '../../type
 import { useToadaProject } from '../../context/ToadaProjectContext';
 import { useAudioHardware } from '../../context/AudioHardwareContext';
 import { PatternCompassBar, resolvePatternAudioSource, checkPatternHasMidi } from '../common/PatternCompassBar';
+import { TwinPatternsManagerBar } from '../common/TwinPatternsManagerBar';
 import { MelodiaEmptyNotice } from './MelodiaEmptyNotice';
 import { LivretMelodiaWorkspace } from './LivretMelodiaWorkspace';
 import { ScaleProposalBanner } from '../common/ScaleProposalBanner';
@@ -82,7 +83,7 @@ export const LivretMelodia: React.FC<LivretMelodiaProps> = (props) => {
 
   const pack = props.initialPack ?? activePattern.pack;
   if (!hasAudio && !pack) {
-    return <div className="flex flex-col gap-3 w-full"><PatternCompassBar /><MelodiaEmptyNotice /></div>;
+    return <div className="flex flex-col gap-3 w-full"><PatternCompassBar /><TwinPatternsManagerBar /><MelodiaEmptyNotice /></div>;
   }
   if (!pack || !activePattern.rawAudioSamples) {
     return (
@@ -104,6 +105,7 @@ export const LivretMelodia: React.FC<LivretMelodiaProps> = (props) => {
   return (
     <div className="flex flex-col gap-3 w-full">
       <PatternCompassBar />
+      <TwinPatternsManagerBar />
       <ScaleProposalBanner
         proposal={scaleProposal}
         onApplyScale={handleApplyScale}
