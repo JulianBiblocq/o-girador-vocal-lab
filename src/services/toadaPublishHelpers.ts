@@ -1,18 +1,36 @@
 /**
  * toadaPublishHelpers.ts
- * Extraction du buffer WAV découpé (avec transposition Studio dans la Tonalité Troupe)
- * et assainissement strict (< 50 Ko, zéro Base64) du payload Firestore `/toada_packs` (< 138 lignes).
+ * Extraction du buffer WAV unique 48 kHz Haute Définition par motif vocal (avec transposition
+ * Studio dans la Tonalité Troupe) et assainissement strict (< 50 Ko, zéro Base64) de `/toada_packs` (< 130 lignes).
  */
 import type { VocalPatternItem } from '../types/toadaProject.types';
 import { transposeVocalSteps } from '../utils/scaleTranspositionHelper';
 import { transposePitchNote } from '../utils/musicalMath';
 import { isPatternReadyForSequenciador } from '../utils/toadaPackExporter';
 
+export const EXPORT_WAV_SAMPLE_RATE = 48000;
+
+export function resamplePcmHermite(pcm: Float32Array, srcRate: number, dstRate = EXPORT_WAV_SAMPLE_RATE): Float32Array {
+  if (!pcm || pcm.length === 0 || srcRate <= 0 || srcRate === dstRate) return pcm;
+  const nIn = pcm.length, ratio = srcRate / dstRate, nOut = Math.max(1, Math.round(nIn / ratio));
+  const out = new Float32Array(nOut);
+  for (let i = 0; i < nOut; i++) {
+    const pos = i * ratio, idx = Math.floor(pos), t = pos - idx;
+    const y0 = pcm[Math.max(0, idx - 1)], y1 = pcm[Math.min(nIn - 1, idx)];
+    const y2 = pcm[Math.min(nIn - 1, idx + 1)], y3 = pcm[Math.min(nIn - 1, idx + 2)];
+    const c1 = 0.5 * (y2 - y0), c2 = y0 - 2.5 * y1 + 2 * y2 - 0.5 * y3, c3 = 0.5 * (y3 - y0) + 1.5 * (y1 - y2);
+    out[i] = Math.max(-1, Math.min(1, ((c3 * t + c2) * t + c1) * t + y1));
+  }
+  return out;
+}
+
 export function pcmToWavBlob(pcm: Float32Array, sampleRate: number): Blob {
+  const hdPcm = resamplePcmHermite(pcm, sampleRate, EXPORT_WAV_SAMPLE_RATE);
+  const outRate = EXPORT_WAV_SAMPLE_RATE;
   const numChannels = 1, bitsPerSample = 16;
-  const byteRate = sampleRate * numChannels * (bitsPerSample / 8);
+  const byteRate = outRate * numChannels * (bitsPerSample / 8);
   const blockAlign = numChannels * (bitsPerSample / 8);
-  const dataSize = pcm.length * (bitsPerSample / 8);
+  const dataSize = hdPcm.length * (bitsPerSample / 8);
   const buffer = new ArrayBuffer(44 + dataSize);
   const view = new DataView(buffer);
 
@@ -26,7 +44,7 @@ export function pcmToWavBlob(pcm: Float32Array, sampleRate: number): Blob {
   view.setUint32(16, 16, true);
   view.setUint16(20, 1, true);
   view.setUint16(22, numChannels, true);
-  view.setUint32(24, sampleRate, true);
+  view.setUint32(24, outRate, true);
   view.setUint32(28, byteRate, true);
   view.setUint16(32, blockAlign, true);
   view.setUint16(34, bitsPerSample, true);
@@ -34,8 +52,8 @@ export function pcmToWavBlob(pcm: Float32Array, sampleRate: number): Blob {
   view.setUint32(40, dataSize, true);
 
   let offset = 44;
-  for (let i = 0; i < pcm.length; i++) {
-    const s = Math.max(-1, Math.min(1, pcm[i]));
+  for (let i = 0; i < hdPcm.length; i++) {
+    const s = Math.max(-1, Math.min(1, hdPcm[i]));
     view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
     offset += 2;
   }
@@ -79,58 +97,40 @@ export function sanitizePatternForFirestore(
   startOffsetSec?: number,
   transpositionSemitones = 0
 ): Record<string, any> {
-  const sanitizedVariants: Record<string, any> = {};
-  const speedVariants: Record<string, string> = {};
-  const activeKey = p.activeVariantKey || 'spd100_pit+0';
   const patBpm = p.bpm ?? p.baseBpm ?? 88;
-  if (audioUrl) speedVariants['100'] = audioUrl;
-
-  for (const [key, v] of Object.entries(p.variants || {})) {
-    const isActive = key === activeKey;
-    const hasOwnRecording = Boolean(v.recordingResult?.pcm?.length || (v as any).audioUrl);
-    if (!isActive && !hasOwnRecording) continue;
-
-    const { recordingResult: _rec, audioBuffer: _buf, audioBase64: _b64, ...vRest } = v as any;
-    const varAudioUrl = isActive ? (audioUrl || (v as any).audioUrl) : (v as any).audioUrl;
-    if (!varAudioUrl) continue;
-    const spdPct = String(Math.round((v.speedRatio || 1) * 100));
-    if ((v.pitchShiftSemitones ?? 0) === 0 && (spdPct === '75' || spdPct === '88' || spdPct === '100')) {
-      speedVariants[spdPct] = varAudioUrl;
-    }
-
-    sanitizedVariants[key] = {
-      ...vRest,
-      audioUrl: varAudioUrl,
-      recordedBpm: v.recordingResult?.recordedBpm || Math.round(patBpm * (v.speedRatio || 1)),
-      trimStartSec: 0,
-      trimEndSec: isActive ? (slicedDurationSec ?? v.trimEndSec) : v.trimEndSec,
-      t1OffsetSec: isActive ? (exportedT1OffsetSec ?? v.t1OffsetSec) : v.t1OffsetSec,
-      startOffsetSec: isActive ? (startOffsetSec ?? (v as any).startOffsetSec) : (v as any).startOffsetSec,
-      durationSec: isActive ? (slicedDurationSec ?? (v as any).durationSec) : (v as any).durationSec,
-    };
-  }
+  const resolvedAudioUrl = audioUrl || (p as any).audioUrl;
+  const resolvedTrimEnd = slicedDurationSec ?? p.trimEndSec ?? 0;
+  const resolvedT1 = exportedT1OffsetSec ?? p.t1OffsetSec ?? 0;
+  const resolvedStartOffset = startOffsetSec ?? (p as any).startOffsetSec ?? -resolvedT1;
 
   const {
     pack: _pack, rawAudioSamples: _raw, correctedAudioSamples: _corr, troupeTransposedPCM: _troupePcm,
-    recordingResult: _recRes, rawPitchCurve: _rawCurve, pitchCurve: _curve, ...patternRest
+    recordingResult: _recRes, rawPitchCurve: _rawCurve, pitchCurve: _curve, variants: _variants, ...patternRest
   } = p as any;
 
   const transposedAnacrusis = transposeVocalSteps(p.anacrusisSteps || [], transpositionSemitones);
   const transposedMain = transposeVocalSteps(p.mainSteps || [], transpositionSemitones);
   const exportedRefPitch = transposePitchNote(p.referencePitch || 'A3', transpositionSemitones);
-  const isReady = Boolean(audioUrl || isPatternReadyForSequenciador(p));
+  const isReady = Boolean(resolvedAudioUrl || isPatternReadyForSequenciador(p));
 
   return {
     ...patternRest,
-    isReady, bpm: patBpm, baseBpm: patBpm, recordedBpm: patBpm,
-    referencePitch: exportedRefPitch, sungReferencePitch: p.referencePitch || 'A3',
-    transpositionSemitones, hasAnacrusis: p.hasAnacrusis !== false,
+    isReady,
+    bpm: patBpm,
+    baseBpm: patBpm,
+    recordedBpm: patBpm,
+    sampleRate: EXPORT_WAV_SAMPLE_RATE,
+    referencePitch: exportedRefPitch,
+    sungReferencePitch: p.referencePitch || 'A3',
+    transpositionSemitones,
+    hasAnacrusis: p.hasAnacrusis !== false,
     hasTailBeat: Boolean(p.hasTailBeat || p.exitBeat === 1),
-    anacrusisSteps: transposedAnacrusis, mainSteps: transposedMain, audioUrl,
-    t1OffsetSec: exportedT1OffsetSec ?? p.t1OffsetSec ?? 0,
-    startOffsetSec: startOffsetSec ?? (p as any).startOffsetSec ?? 0,
-    trimStartSec: 0, trimEndSec: slicedDurationSec ?? p.trimEndSec ?? 0,
-    speedVariants: Object.keys(speedVariants).length > 0 ? speedVariants : undefined,
-    variants: sanitizedVariants,
+    anacrusisSteps: transposedAnacrusis,
+    mainSteps: transposedMain,
+    audioUrl: resolvedAudioUrl,
+    t1OffsetSec: resolvedT1,
+    startOffsetSec: resolvedStartOffset,
+    trimStartSec: 0,
+    trimEndSec: resolvedTrimEnd,
   };
 }
