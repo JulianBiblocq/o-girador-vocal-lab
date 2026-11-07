@@ -17,7 +17,7 @@ export interface PianoRollToolbarProps {
   foldNotesView?: boolean; onToggleFoldNotes?: (folded: boolean) => void; onApplyFoldToAllPatterns?: (folded: boolean) => void;
   alignedPatternsCount?: number; totalPatternsCount?: number;
   canUndo?: boolean; canRedo?: boolean; historyCount?: number; onUndo?: () => void; onRedo?: () => void;
-  onSnapToGreenLine?: () => void; onReExtractNotes?: () => void;
+  onSnapToGreenLine?: () => void; onAnalyzeFullSongMelody?: () => void; onReExtractNotes?: () => void;
   globalVariAudioPct?: number; onChangeGlobalVariAudioPct?: (pct: number) => void; onPurgeVariAudio?: () => void;
 }
 
@@ -25,7 +25,7 @@ export const PianoRollToolbar: React.FC<PianoRollToolbarProps> = (props) => {
   const {
     activeTool, onSelectTool, zoomLevel, onSetZoom, foldNotesView = false, onToggleFoldNotes, onApplyFoldToAllPatterns,
     alignedPatternsCount, totalPatternsCount, canUndo, canRedo, historyCount, onUndo, onRedo,
-    onSnapToGreenLine, onReExtractNotes, globalVariAudioPct = 0, onChangeGlobalVariAudioPct, onPurgeVariAudio,
+    onSnapToGreenLine, onAnalyzeFullSongMelody, onReExtractNotes, globalVariAudioPct = 0, onChangeGlobalVariAudioPct, onPurgeVariAudio,
   } = props;
   const { t, language } = useLanguage(), isBr = language === 'br';
   const { activePattern, project, updatePatternStepStatus } = useToadaProject();
@@ -93,6 +93,11 @@ export const PianoRollToolbar: React.FC<PianoRollToolbarProps> = (props) => {
         {!foldNotesView && onSnapToGreenLine && (
           <button type="button" onClick={onSnapToGreenLine} className="px-2 py-1 text-xs font-mono font-bold flex items-center gap-1 border border-emerald-500/60 bg-emerald-600/15 text-emerald-900 dark:text-emerald-300 hover:bg-emerald-600/25 rounded cursor-pointer">
             <Target className="w-3.5 h-3.5" /><span>{isBr ? 'Alinhar notas na linha verde' : 'Poser les notes sur la ligne verte'}</span>
+          </button>
+        )}
+        {onAnalyzeFullSongMelody && (
+          <button type="button" onClick={onAnalyzeFullSongMelody} className="px-2 py-1 text-xs font-mono font-bold flex items-center gap-1 border border-teal-500/60 bg-teal-600/15 text-teal-900 dark:text-teal-300 hover:bg-teal-600/25 rounded cursor-pointer" title={isBr ? 'Re-analisar a melodia de toda a toada preservando 100% do ritmo e das sílabas' : 'Analyser la mélodie de toutes les phrases enregistrées en préservant 100 % du rythme et des syllabes'}>
+            <Globe className="w-3.5 h-3.5" /><span>{isBr ? 'Analisar melodia de toda a toada' : 'Analyser la mélodie de tout le chant'}</span>
           </button>
         )}
 

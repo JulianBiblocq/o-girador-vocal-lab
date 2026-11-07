@@ -12,10 +12,11 @@ import { buildDeviceSignature, getCalibratedLatency } from '../../utils/deviceSi
 import { useQuickScaleDetector } from '../../hooks/useQuickScaleDetector';
 import { analyzeFullProjectScale, formatProjectScaleLabel, SOLFEGE_NOTE_NAMES, SOLFEGE_NOTE_NAMES_BR } from '../../audio/projectScaleAnalyzer';
 import { resolveProjectDualScale, applyDualScaleToProject, clampTranspositionSemitones, computeSemitoneDistance } from '../../utils/scaleTranspositionHelper';
-import { NOTE_NAMES } from '../../utils/noteUtils';
+import { NOTE_NAMES, midiToNoteName } from '../../utils/noteUtils';
+import { hasSavedAmbitusProfile, getEffectiveVocalBounds } from '../../utils/ambitusStorage';
 import type { ScaleType } from '../../audio/scaleQuantizer';
 import { useLanguage } from '../../i18n/LanguageContext';
-import { Zap, Check, Drum, Hand, Mic, Target, Ear, ChevronLeft, ChevronRight, RefreshCw, HelpCircle, Unlock, Settings, Loader2 } from 'lucide-react';
+import { Zap, Check, Drum, Hand, Mic, Target, Ear, ChevronLeft, ChevronRight, RefreshCw, HelpCircle, Unlock, Settings, Loader2, Sliders } from 'lucide-react';
 
 const MODES_FR: Array<{ key: ScaleType; label: string }> = [
   { key: 'natural_minor', label: 'Mineur' }, { key: 'major', label: 'Majeur' },
@@ -68,6 +69,8 @@ export const PreTakeSetupAssistantBar: React.FC = () => {
   };
 
   const isDeviceCalibrated = calibratedMs !== null && isLatencyCalibrated(selectedDeviceId);
+  const hasAmbitus = hasSavedAmbitusProfile();
+  const ambBounds = hasAmbitus ? getEffectiveVocalBounds() : null;
 
   return (
     <div className="cordel-card p-2 rounded flex flex-wrap items-center justify-between gap-2 text-xs font-mono">
@@ -75,53 +78,38 @@ export const PreTakeSetupAssistantBar: React.FC = () => {
         {!isDeviceCalibrated ? (
           <div className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-[#9a3412]/15 border border-[#9a3412] text-[#9a3412] dark:text-amber-200 font-bold">
             <span>1. {isBr ? 'Latência não calibrada' : 'Latence non calée'}</span>
-            <button type="button" onClick={() => setActiveLivret('reglages')} className="px-2 py-0.5 bg-[#9a3412] hover:opacity-90 text-white font-bold rounded flex items-center gap-1 cursor-pointer">
-              <Zap className="w-3 h-3" /><span>{isBr ? 'Calibrar' : 'Calibrer'}</span>
-            </button>
+            <button type="button" onClick={() => setActiveLivret('reglages')} className="px-2 py-0.5 bg-[#9a3412] hover:opacity-90 text-white font-bold rounded flex items-center gap-1 cursor-pointer"><Zap className="w-3 h-3" /><span>{isBr ? 'Calibrar' : 'Calibrer'}</span></button>
           </div>
         ) : (
           <button type="button" onClick={() => setActiveLivret('reglages')} className="px-2.5 py-1 rounded bg-emerald-700/15 border border-emerald-600/40 text-emerald-800 dark:text-emerald-300 font-bold flex items-center gap-1.5 cursor-pointer">
             <Check className="w-3.5 h-3.5" /><span>1. {isBr ? `Latência (${calibratedMs} ms)` : `Latence calée (${calibratedMs} ms)`}</span><Settings className="w-3 h-3 opacity-70" />
           </button>
         )}
-        <span className="px-2 py-1 cordel-card-sm rounded font-bold inline-flex items-center gap-1">
-          <Drum className="w-3.5 h-3.5 text-[#9a3412] dark:text-amber-300" />
-          <span>2. {isBr ? 'Andamento :' : 'Tempo :'} <strong className="text-[#9a3412] dark:text-amber-300">{bpm} BPM</strong></span>
-        </span>
-        <button type="button" onClick={handleTapTempo} className="px-2 py-1 cordel-btn font-bold flex items-center gap-1 rounded cursor-pointer">
-          <Hand className="w-3.5 h-3.5 text-[#9a3412] dark:text-amber-300" /><span>Tap {tapCount >= 2 ? `(${tapCount})` : ''}</span>
-        </button>
+        {ambBounds && (
+          <span className="px-2 py-1 rounded bg-emerald-700/15 border border-emerald-600/40 text-emerald-800 dark:text-emerald-300 font-bold inline-flex items-center gap-1">
+            <Sliders className="w-3.5 h-3.5" />
+            <span>Ambitus : {midiToNoteName(ambBounds.minMidi + 2)} → {midiToNoteName(ambBounds.maxMidi - 2)} ({isBr ? 'Conforto' : 'Confort'} : {midiToNoteName(ambBounds.comfortMidi)})</span>
+          </span>
+        )}
+        <span className="px-2 py-1 cordel-card-sm rounded font-bold inline-flex items-center gap-1"><Drum className="w-3.5 h-3.5 text-[#9a3412] dark:text-amber-300" /><span>2. {isBr ? 'Andamento :' : 'Tempo :'} <strong className="text-[#9a3412] dark:text-amber-300">{bpm} BPM</strong></span></span>
+        <button type="button" onClick={handleTapTempo} className="px-2 py-1 cordel-btn font-bold flex items-center gap-1 rounded cursor-pointer"><Hand className="w-3.5 h-3.5 text-[#9a3412] dark:text-amber-300" /><span>Tap {tapCount >= 2 ? `(${tapCount})` : ''}</span></button>
       </div>
 
       <div className="flex items-center gap-1.5 flex-wrap">
-        <span className="px-2 py-1 cordel-card-sm rounded font-bold inline-flex items-center gap-1">
-          <Mic className="w-3.5 h-3.5 text-[#9a3412] dark:text-amber-300" />
-          <span>3. {isBr ? 'Gravação cantada :' : 'Prise chantée :'} <strong className="text-[#9a3412] dark:text-amber-300">{activeSungLabel}</strong></span>
-        </span>
-        <button type="button" onClick={() => applyDual(activeSungTonic, activeSungMode, shiftSt)} className="px-2 py-1 rounded bg-emerald-700 hover:bg-emerald-600 text-white font-bold flex items-center gap-1 cursor-pointer">
-          <Check className="w-3 h-3" /><span>{isBr ? 'Validar' : 'Valider'}</span>
-        </button>
-        <button type="button" onClick={() => { setSelTonic(activeSungTonic); setSelMode(activeSungMode === 'chromatic' ? 'natural_minor' : activeSungMode); setIsEditingScale((v) => !v); }} className="px-2 py-1 rounded cordel-btn font-bold flex items-center gap-1 cursor-pointer">
-          <RefreshCw className="w-3 h-3 text-[#9a3412] dark:text-amber-300" /><span>{isBr ? 'Alterar ▾' : 'Changer ▾'}</span>
-        </button>
+        <span className="px-2 py-1 cordel-card-sm rounded font-bold inline-flex items-center gap-1"><Mic className="w-3.5 h-3.5 text-[#9a3412] dark:text-amber-300" /><span>3. {isBr ? 'Gravação cantada :' : 'Prise chantée :'} <strong className="text-[#9a3412] dark:text-amber-300">{activeSungLabel}</strong></span></span>
+        <button type="button" onClick={() => applyDual(activeSungTonic, activeSungMode, shiftSt)} className="px-2 py-1 rounded bg-emerald-700 hover:bg-emerald-600 text-white font-bold flex items-center gap-1 cursor-pointer"><Check className="w-3 h-3" /><span>{isBr ? 'Validar' : 'Valider'}</span></button>
+        <button type="button" onClick={() => { setSelTonic(activeSungTonic); setSelMode(activeSungMode === 'chromatic' ? 'natural_minor' : activeSungMode); setIsEditingScale((v) => !v); }} className="px-2 py-1 rounded cordel-btn font-bold flex items-center gap-1 cursor-pointer"><RefreshCw className="w-3 h-3 text-[#9a3412] dark:text-amber-300" /><span>{isBr ? 'Alterar ▾' : 'Changer ▾'}</span></button>
         {isEditingScale && (
           <div className="flex items-center gap-1 px-1.5 py-0.5 rounded cordel-card-sm">
-            <select value={selTonic} onChange={(e) => setSelTonic(e.target.value)} className="bg-transparent font-bold text-[#9a3412] dark:text-amber-300 cursor-pointer">
-              {NOTE_NAMES.map((n, i) => <option key={n} value={n}>{solfegeNames[i]} ({n})</option>)}
-            </select>
-            <select value={selMode} onChange={(e) => setSelMode(e.target.value as ScaleType)} className="bg-transparent font-bold text-[#9a3412] dark:text-amber-300 cursor-pointer">
-              {modeList.map((m) => <option key={m.key} value={m.key}>{m.label}</option>)}
-            </select>
+            <select value={selTonic} onChange={(e) => setSelTonic(e.target.value)} className="bg-transparent font-bold text-[#9a3412] dark:text-amber-300 cursor-pointer">{NOTE_NAMES.map((n, i) => <option key={n} value={n}>{solfegeNames[i]} ({n})</option>)}</select>
+            <select value={selMode} onChange={(e) => setSelMode(e.target.value as ScaleType)} className="bg-transparent font-bold text-[#9a3412] dark:text-amber-300 cursor-pointer">{modeList.map((m) => <option key={m.key} value={m.key}>{m.label}</option>)}</select>
             <button type="button" onClick={() => applyDual(selTonic, selMode, shiftSt)} className="px-1.5 py-0.5 rounded bg-emerald-700 text-white font-bold cursor-pointer">OK</button>
           </div>
         )}
         <div className="flex items-center gap-1 px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/40">
-          <Target className="w-3.5 h-3.5 text-[#9a3412] dark:text-amber-300" />
-          <span className="font-bold">{isBr ? 'Tropa :' : 'Troupe :'}</span>
+          <Target className="w-3.5 h-3.5 text-[#9a3412] dark:text-amber-300" /><span className="font-bold">{isBr ? 'Tropa :' : 'Troupe :'}</span>
           <button type="button" onClick={() => applyDual(activeSungTonic, activeSungMode, clampTranspositionSemitones(shiftSt - 1))} className="px-1 cordel-btn rounded font-bold flex items-center cursor-pointer"><ChevronLeft className="w-3 h-3" />-1</button>
-          <select value={dualScale.troupeScaleRoot} onChange={(e) => applyDual(activeSungTonic, activeSungMode, computeSemitoneDistance(activeSungTonic, e.target.value))} className="bg-transparent font-bold text-[#9a3412] dark:text-amber-300 cursor-pointer">
-            {NOTE_NAMES.map((n, i) => <option key={n} value={n}>{solfegeNames[i]}</option>)}
-          </select>
+          <select value={dualScale.troupeScaleRoot} onChange={(e) => applyDual(activeSungTonic, activeSungMode, computeSemitoneDistance(activeSungTonic, e.target.value))} className="bg-transparent font-bold text-[#9a3412] dark:text-amber-300 cursor-pointer">{NOTE_NAMES.map((n, i) => <option key={n} value={n}>{solfegeNames[i]}</option>)}</select>
           <span className="font-bold text-[#9a3412] dark:text-amber-300">({stBadge})</span>
           <button type="button" onClick={() => applyDual(activeSungTonic, activeSungMode, clampTranspositionSemitones(shiftSt + 1))} className="px-1 cordel-btn rounded font-bold flex items-center cursor-pointer">+1<ChevronRight className="w-3 h-3" /></button>
         </div>
@@ -129,12 +117,9 @@ export const PreTakeSetupAssistantBar: React.FC = () => {
           <Ear className="w-3.5 h-3.5 text-theme-accent" /><span>{listenTarget === 'troupe' ? `${isBr ? 'Tropa' : 'Troupe'} (${dualScale.troupeSolfegeRoot})` : `${isBr ? 'Gravação' : 'Prise'} (${dualScale.sungSolfegeRoot})`}</span>
         </button>
         <button type="button" onClick={() => projectAnalysis.analyzedPatternsCount > 0 ? applyDual(projectAnalysis.tonic, projectAnalysis.scaleType, shiftSt) : startQuickScaleListen()} className="px-2 py-1 rounded cordel-card-sm font-bold flex items-center gap-1 cursor-pointer">
-          {isListeningScale ? <Loader2 className="w-3 h-3 animate-spin text-red-600" /> : <HelpCircle className="w-3 h-3 text-[#9a3412] dark:text-amber-300" />}
-          <span>{isListeningScale ? '4s...' : (isBr ? 'Não sei' : 'Je ne sais pas')}</span>
+          {isListeningScale ? <Loader2 className="w-3 h-3 animate-spin text-red-600" /> : <HelpCircle className="w-3 h-3 text-[#9a3412] dark:text-amber-300" />}<span>{isListeningScale ? '4s...' : (isBr ? 'Não sei' : 'Je ne sais pas')}</span>
         </button>
-        <button type="button" onClick={() => applyDual(activeSungTonic, 'chromatic', shiftSt)} className="px-2 py-1 rounded bg-[#451a03] text-[#f4ecd8] font-bold flex items-center gap-1 cursor-pointer">
-          <Unlock className="w-3 h-3" /><span>{isBr ? 'Desativar' : 'Débrayer'}</span>
-        </button>
+        <button type="button" onClick={() => applyDual(activeSungTonic, 'chromatic', shiftSt)} className="px-2 py-1 rounded bg-[#451a03] text-[#f4ecd8] font-bold flex items-center gap-1 cursor-pointer"><Unlock className="w-3 h-3" /><span>{isBr ? 'Desativar' : 'Débrayer'}</span></button>
       </div>
     </div>
   );

@@ -14,6 +14,7 @@ import { PianoRollToolbar } from './PianoRollToolbar'; import { PianoRollKeyboar
 import { PianoRollCanvas } from './PianoRollCanvas'; import { PianoRollStickyHeader } from './PianoRollStickyHeader';
 import { FloatingSyllableInput } from './FloatingSyllableInput'; import { PianoRollSyllablesRow } from './PianoRollSyllablesRow';
 import { BeatRhythmPresetBar } from './BeatRhythmPresetBar'; import { PianoRollContextMenu } from './PianoRollContextMenu';
+import { UncertainNotesResolverBar } from './UncertainNotesResolverBar';
 import { Piano, Drum } from 'lucide-react';
 import type { PianoRollTool } from './pianoRollInteractions';
 
@@ -29,7 +30,7 @@ export interface PianoRollEditorProps {
   getPlayheadSec?: () => number; onSeek: (sec: number) => void; onUndo?: () => void; onRedo?: () => void;
   onSetTonic: (t: string) => void; onSetScaleType: (st: ScaleType) => void; onSetSmoothingLevel: (lvl: number) => void;
   onUpdateSteps: (newSteps: VocalStepData[], commit?: boolean) => void; onPlayNotePreview: (midi: number) => void;
-  onSnapToGreenLine?: () => void; onReExtractNotes?: () => void; onSimplifyMelody?: () => void; onWeldSelected?: () => void;
+  onSnapToGreenLine?: () => void; onAnalyzeFullSongMelody?: () => void; onReExtractNotes?: () => void; onSimplifyMelody?: () => void; onWeldSelected?: () => void;
   globalVariAudioPct?: number; onChangeGlobalVariAudioPct?: (pct: number) => void; onPurgeVariAudio?: () => void;
   onSelectRegion?: (id: string | null) => void; onAddRegion?: (start: number, end: number) => void;
   onUpdateRegionBounds?: (id: string, start: number, end: number) => void; onDeleteSelectedRegion?: () => void;
@@ -74,7 +75,7 @@ export const PianoRollEditor: React.FC<PianoRollEditorProps> = (p) => {
     if (!el || lastCenteredKeyRef.current === key) return;
     const curveMidis = (p.rawPitchCurve?.length ? p.rawPitchCurve : p.pitchCurve).filter((pt) => pt.midiFloat >= 36 && pt.midiFloat <= 96).map((pt) => pt.midiFloat);
     const pool = activeMidis.length > 0 ? activeMidis : curveMidis;
-    if (pool.length === 0) return;
+    if (!pool.length) return;
     const midMidi = (Math.min(...pool) + Math.max(...pool)) / 2;
     el.scrollTop = Math.max(0, Math.round((maxMidi - midMidi) * ROW_HEIGHT + ROW_HEIGHT / 2 - NOTES_VIEWPORT_HEIGHT / 2));
     lastCenteredKeyRef.current = key;
@@ -97,15 +98,9 @@ export const PianoRollEditor: React.FC<PianoRollEditorProps> = (p) => {
 
   return (
     <div className="flex flex-col gap-2 w-full">
-      {!p.readOnly && (
-        <PianoRollToolbar
-          activeTool={activeTool} onSelectTool={setActiveTool} zoomLevel={zoomLevel} onSetZoom={setZoomLevel}
-          foldNotesView={isFolded} onToggleFoldNotes={p.onToggleFoldNotes} onApplyFoldToAllPatterns={p.onApplyFoldToAllPatterns}
-          alignedPatternsCount={p.alignedPatternsCount} totalPatternsCount={p.totalPatternsCount}
-          canUndo={p.canUndo} canRedo={p.canRedo} historyCount={p.historyCount} onUndo={p.onUndo} onRedo={p.onRedo}
-          onSnapToGreenLine={p.onSnapToGreenLine} onReExtractNotes={p.onReExtractNotes}
-          globalVariAudioPct={p.globalVariAudioPct} onChangeGlobalVariAudioPct={p.onChangeGlobalVariAudioPct} onPurgeVariAudio={p.onPurgeVariAudio}
-        />
+      {!p.readOnly && (<PianoRollToolbar activeTool={activeTool} onSelectTool={setActiveTool} zoomLevel={zoomLevel} onSetZoom={setZoomLevel} foldNotesView={isFolded} onToggleFoldNotes={p.onToggleFoldNotes} onApplyFoldToAllPatterns={p.onApplyFoldToAllPatterns} alignedPatternsCount={p.alignedPatternsCount} totalPatternsCount={p.totalPatternsCount} canUndo={p.canUndo} canRedo={p.canRedo} historyCount={p.historyCount} onUndo={p.onUndo} onRedo={p.onRedo} onSnapToGreenLine={p.onSnapToGreenLine} onAnalyzeFullSongMelody={p.onAnalyzeFullSongMelody} onReExtractNotes={p.onReExtractNotes} globalVariAudioPct={p.globalVariAudioPct} onChangeGlobalVariAudioPct={p.onChangeGlobalVariAudioPct} onPurgeVariAudio={p.onPurgeVariAudio} />)}
+      {!p.readOnly && !isFolded && (
+        <UncertainNotesResolverBar allSteps={p.allSteps} hasAnacrusis={p.hasAnacrusis} beatsPerMeasure={p.beatsPerMeasure} resPerBeat={p.beatResolutions?.[0] || 4} onUpdateSteps={p.onUpdateSteps} onPlayNotePreview={p.onPlayNotePreview} />
       )}
       <div className="flex items-center justify-between text-[11px] font-mono px-1">
         <span className="font-bold text-theme-accent flex items-center gap-1.5">
@@ -134,7 +129,7 @@ export const PianoRollEditor: React.FC<PianoRollEditorProps> = (p) => {
             </div>
           </div>
           <PianoRollSyllablesRow allSteps={p.allSteps} gridWidth={gridWidth} readOnly={p.readOnly} onUpdateSteps={p.onUpdateSteps} />
-          <BeatRhythmPresetBar allSteps={p.allSteps} gridWidth={gridWidth} resPerBeat={p.beatResolutions?.[0] || 4} readOnly={p.readOnly} onUpdateSteps={p.onUpdateSteps} />
+          <BeatRhythmPresetBar allSteps={p.allSteps} gridWidth={gridWidth} resPerBeat={p.beatResolutions?.[0] || 4} readOnly={p.readOnly} pitchCurve={p.rawPitchCurve?.length ? p.rawPitchCurve : p.pitchCurve} gridStartSec={p.hasAnacrusis !== false ? 0 : t1OffsetSec} stepDurationSec={(60 / (p.bpm || 88)) / (p.beatResolutions?.[0] || 4)} tonic={p.tonic} scaleType={p.scaleType} allowedPitchClasses={p.allowedPitchClasses} onUpdateSteps={p.onUpdateSteps} />
         </div>
       </div>
       {palettePos && <PianoRollContextMenu x={palettePos.x} y={palettePos.y} activeTool={activeTool} onSelectTool={setActiveTool} onClose={() => setPalettePos(null)} />}

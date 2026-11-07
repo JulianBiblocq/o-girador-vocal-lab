@@ -9,6 +9,8 @@ export type VocalRoleTarget = 'puxador' | 'coro';
 /** Chiffrages de mesure supportés */
 export type TimeSignatureString = '4/4' | '2/4' | '3/4' | '6/8' | '12/8';
 
+export type DoubtReason = 'between_notes' | 'short_or_noisy' | 'out_of_scale';
+
 /** Données d'un pas de quantification vocale sur la grille */
 export interface VocalStepData {
   stepIndex: number;
@@ -25,7 +27,13 @@ export interface VocalStepData {
   melodynePullPct?: number; // 0 à 100 % (défaut 0 = voix brute) correction Melodyne par brique (VariAudio)
   originalVoiceMidi?: number; // Hauteur médiane réelle de la courbe verte sous la brique
   manualPitchMoved?: boolean; // Indique que l'utilisateur a déplacé manuellement la brique MIDI
+  isUncertain?: boolean;
+  pitchConfidence?: number; // 0..1
+  alternativeNote?: string; // Ex: 'A3', 2e meilleure note candidate
+  doubtReason?: DoubtReason;
 }
+
+export type MelodicStep = VocalStepData;
 
 /** Données de calibration de l'anacrouse / mesure d'élan (M-1) */
 export interface VocalAnacrusisData {

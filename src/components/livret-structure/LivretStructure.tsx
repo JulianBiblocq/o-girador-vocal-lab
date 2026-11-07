@@ -14,6 +14,7 @@ import { ToadaConductorStrip } from '../conductor/ToadaConductorStrip';
 import { StructureTopControls } from './StructureTopControls';
 import { BlockMusicalSettingsCard } from './BlockMusicalSettingsCard';
 import { ScaleProposalBanner } from '../common/ScaleProposalBanner';
+import { AmbitusReminderBanner } from '../common/AmbitusReminderBanner';
 import {
   analyzeFullProjectScale,
   type ProjectScaleAnalysisResult,
@@ -94,6 +95,7 @@ export const LivretStructure: React.FC = () => {
 
   return (
     <div className="flex flex-col gap-3.5 w-full">
+      <AmbitusReminderBanner />
       <StructureTopControls
         projectId={project.id}
         bpm={bpm}

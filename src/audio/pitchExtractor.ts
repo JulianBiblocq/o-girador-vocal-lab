@@ -1,37 +1,53 @@
 /**
  * pitchExtractor.ts
- * Algorithme YIN multi-candidats avec repliement Plancher/Plafond et décodeur Viterbi (< 130 lignes).
+ * Algorithme YIN multi-candidats couplé au « Filtre Fantôme Inaudible » (pitchAnalysisPreFilter),
+ * au Profil d'Ambitus et au décodeur Viterbi anti-saut d'octave (< 130 lignes).
  */
 import type { PitchCurvePoint } from '../types/vocalPack.types';
 import type { TessituraRange } from '../types/tessitura.types';
 import { foldPitchToTessitura } from '../types/tessitura.types';
-import { frequencyToMidiFloat } from '../utils/noteUtils';
+import { frequencyToMidiFloat, midiToFrequency } from '../utils/noteUtils';
+import { getEffectiveVocalBounds, type EffectiveVocalBounds } from '../utils/ambitusStorage';
 import { sanitizePitchCurve } from './pitchCurveSanitizer';
-import { preFilterAudioForPitchDetection } from './pitchPreFilter';
+import { createPreConditionedAnalysisPcm } from './pitchAnalysisPreFilter';
 import { trackViterbiPitch, type CandidateFrame, type PitchCandidate } from './viterbiPitchTracker';
 
 export interface PitchExtractorOptions {
   sampleRate: number;
-  totalDurationSec: number;
-  trimStartSec: number;
-  trimEndSec: number;
+  totalDurationSec?: number;
+  trimStartSec?: number;
+  trimEndSec?: number;
   tessitura?: TessituraRange;
+  vocalBounds?: Partial<EffectiveVocalBounds>;
   yinThreshold?: number;
   rmsGate?: number;
 }
 
 export function extractContinuousPitchCurve(pcm: Float32Array, options: PitchExtractorOptions): PitchCurvePoint[] {
-  const { sampleRate, totalDurationSec, trimStartSec, trimEndSec, tessitura, yinThreshold = 0.45, rmsGate = 0.010 } = options;
   if (!pcm || pcm.length === 0) return [];
+  const sampleRate = options.sampleRate || 44100;
+  const totalDurationSec = options.totalDurationSec ?? (pcm.length / sampleRate);
+  const trimStartSec = options.trimStartSec ?? 0;
+  const trimEndSec = options.trimEndSec ?? totalDurationSec;
+  const { tessitura, yinThreshold = 0.45, rmsGate = 0.010 } = options;
 
-  const analysisPCM = preFilterAudioForPitchDetection(pcm, sampleRate, 85, 1200);
+  const baseBounds = getEffectiveVocalBounds(tessitura);
+  const minMidi = options.vocalBounds?.minMidi ?? baseBounds.minMidi;
+  const maxMidi = options.vocalBounds?.maxMidi ?? baseBounds.maxMidi;
+  const comfortMidi = options.vocalBounds?.comfortMidi ?? baseBounds.comfortMidi;
+  const minHz = options.vocalBounds?.minHz ?? midiToFrequency(minMidi);
+  const maxHz = options.vocalBounds?.maxHz ?? midiToFrequency(maxMidi);
+
+  // Filtre Fantôme Inaudible (copie mémoire dédiée à YIN, jamais envoyée au lecteur)
+  const analysisPCM = createPreConditionedAnalysisPcm(pcm, sampleRate, { minHz, maxHz });
   const windowSize = 1024, hopSize = Math.max(128, Math.floor(sampleRate * 0.01));
-  const minFreq = 65, maxFreq = 1050; // C2..C6
+  const minFreq = 65, maxFreq = 1050;
   const minPeriod = Math.floor(sampleRate / maxFreq), maxPeriod = Math.min(windowSize - 1, Math.floor(sampleRate / minFreq));
 
   const diff = new Float32Array(maxPeriod + 1);
   const candidateFrames: CandidateFrame[] = [];
   const totalFrames = Math.floor((pcm.length - windowSize) / hopSize);
+  const effRange: TessituraRange = tessitura ?? { presetId: 'custom', minPitchMidi: minMidi, maxPitchMidi: maxMidi };
 
   for (let frame = 0; frame < totalFrames; frame++) {
     const startIdx = frame * hopSize, timeSec = startIdx / sampleRate;
@@ -44,9 +60,8 @@ export function extractContinuousPitchCurve(pcm: Float32Array, options: PitchExt
       sumSq += s * s;
       if (j > 0 && ((s >= 0 && pcm[startIdx + j - 1] < 0) || (s < 0 && pcm[startIdx + j - 1] >= 0))) zc++;
     }
-    const rms = Math.sqrt(sumSq / windowSize);
-    const zcr = zc / windowSize;
-    if (rms < rmsGate || zcr > 0.42) {
+    const rms = Math.sqrt(sumSq / windowSize), zcr = zc / windowSize;
+    if (rms < rmsGate || zcr > 0.25) {
       candidateFrames.push({ timeSec, rms, zcr, isVoiced: false, candidates: [] });
       continue;
     }
@@ -68,7 +83,6 @@ export function extractContinuousPitchCurve(pcm: Float32Array, options: PitchExt
       diff[tau] = runningSum > 0 ? (diff[tau] * tau) / runningSum : 1;
     }
 
-    // Extraction des K meilleurs minima locaux (Multi-Candidats)
     const frameCandidates: PitchCandidate[] = [];
     for (let tau = minPeriod + 1; tau < maxPeriod; tau++) {
       if (diff[tau] < diff[tau - 1] && diff[tau] <= diff[tau + 1] && diff[tau] < yinThreshold) {
@@ -81,17 +95,16 @@ export function extractContinuousPitchCurve(pcm: Float32Array, options: PitchExt
         if (Number.isFinite(freq) && freq >= minFreq && freq <= maxFreq) {
           const midiFloat = frequencyToMidiFloat(freq);
           if (Number.isFinite(midiFloat)) {
-            const conf = Math.max(0.02, 1 - diff[tau] - (tau / maxPeriod) * 0.035);
+            const inAmbitus = midiFloat >= minMidi && midiFloat <= maxMidi;
+            const conf = Math.max(0.02, (1 - diff[tau] - (tau / maxPeriod) * 0.025) * (inAmbitus ? 1.0 : 0.72));
             frameCandidates.push({ midiFloat, aperiodicity: diff[tau], confidence: conf, folded: false });
 
-          // Repliement d'harmonique dans la plage Plancher/Plafond
-          if (tessitura) {
-            const folded = foldPitchToTessitura(midiFloat, tessitura);
+            const folded = foldPitchToTessitura(midiFloat, effRange);
             if (folded.folded) {
               frameCandidates.push({
                 midiFloat: folded.midiFloat,
-                aperiodicity: diff[tau] + 0.05,
-                confidence: Math.max(0.01, conf * 0.88),
+                aperiodicity: diff[tau] + 0.03,
+                confidence: Math.max(0.02, (1 - diff[tau]) * 0.92),
                 folded: true,
               });
             }
@@ -99,21 +112,13 @@ export function extractContinuousPitchCurve(pcm: Float32Array, options: PitchExt
         }
       }
     }
-  }
 
     frameCandidates.sort((a, b) => b.confidence - a.confidence);
-    const topCandidates = frameCandidates.slice(0, 4);
-
-    candidateFrames.push({
-      timeSec,
-      rms,
-      zcr,
-      isVoiced: topCandidates.length > 0,
-      candidates: topCandidates,
-    });
+    candidateFrames.push({ timeSec, rms, zcr, isVoiced: frameCandidates.length > 0, candidates: frameCandidates.slice(0, 5) });
   }
 
-  // Décodage optimal global par Trellis Viterbi
-  const viterbiCurve = trackViterbiPitch(candidateFrames, tessitura);
+  const viterbiCurve = trackViterbiPitch(candidateFrames, effRange, { minMidi, maxMidi, comfortMidi });
   return sanitizePitchCurve(viterbiCurve);
 }
+
+export const extractPitchCurve = extractContinuousPitchCurve;

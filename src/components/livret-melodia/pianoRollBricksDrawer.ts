@@ -34,11 +34,15 @@ export function drawPianoRollBricks(params: DrawBricksParams): void {
     const pullPct = Math.max(0, Math.min(100, Math.round(step.melodynePullPct ?? 0)));
     const isSel = selectedStepIdx !== undefined && selectedStepIdx !== null && selectedStepIdx >= i && selectedStepIdx <= i + ties;
     const isHov = hoveredBrickRootIdx === i;
+    const isUncertain = Boolean(step.isUncertain);
+    const isLight = typeof document !== 'undefined' && document.documentElement.getAttribute('data-theme') === 'light';
 
-    ctx.fillStyle = pullPct > 0 ? (isSel ? '#b45309' : '#92400e') : (isSel ? '#d97706' : '#b45309');
-    ctx.strokeStyle = pullPct > 0 ? '#fbbf24' : (isSel ? '#fde047' : '#f59e0b');
-    ctx.lineWidth = isSel || pullPct > 0 ? 2.2 : 1.5;
+    ctx.fillStyle = isUncertain ? (isLight ? '#b45309' : '#78350f') : pullPct > 0 ? (isSel ? '#b45309' : '#92400e') : (isSel ? '#d97706' : '#b45309');
+    ctx.strokeStyle = isUncertain ? (isLight ? '#d97706' : '#fbbf24') : pullPct > 0 ? '#fbbf24' : (isSel ? '#fde047' : '#f59e0b');
+    ctx.lineWidth = isUncertain ? 2 : (isSel || pullPct > 0 ? 2.2 : 1.5);
+    if (isUncertain) ctx.setLineDash([4, 3]);
     ctx.beginPath(); ctx.roundRect(x, y, w, h, 3); ctx.fill(); ctx.stroke();
+    if (isUncertain) ctx.setLineDash([]);
 
     if (cutW > 2) {
       ctx.save(); ctx.beginPath(); ctx.rect(x, y, cutW, h); ctx.clip();
@@ -52,8 +56,9 @@ export function drawPianoRollBricks(params: DrawBricksParams): void {
 
     if (pullPct > 0) { ctx.fillStyle = '#fde047'; ctx.fillRect(x + cutW, y, Math.max(2, (w - cutW) * (pullPct / 100)), 3); }
     if (w > 12) { ctx.fillStyle = '#fde68a'; ctx.fillRect(x + w - 3, y + 2, 1.5, h - 4); }
-    ctx.fillStyle = '#ffffff'; ctx.font = 'bold 9.5px sans-serif';
-    ctx.fillText(step.syllable?.trim() ? `${step.note} • ${step.syllable.trim()}` : step.note, x + 4, y + h / 2 + 3.5);
+    ctx.fillStyle = isUncertain ? '#fef08a' : '#ffffff'; ctx.font = 'bold 9.5px sans-serif';
+    const noteHead = isUncertain ? (w >= 64 && step.alternativeNote ? `? ${step.note}/${step.alternativeNote}` : `? ${step.note}`) : step.note;
+    ctx.fillText(step.syllable?.trim() ? `${noteHead} · ${step.syllable.trim()}` : noteHead, x + 4, y + h / 2 + 3.5);
 
     const cx = x + w / 2, hy = y + 1;
     if (pullPct > 0 || isSel || isHov) {

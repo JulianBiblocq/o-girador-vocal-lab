@@ -87,6 +87,7 @@ export function useAmbitusJourney(t: (k: any, p?: any) => string) {
       setMedianMidi(res.candidateMedianMidi);
       setHighestMidi(res.candidateHighMidi);
       setCurrentMidi(res.candidateMedianMidi);
+      createVocalProfilePayload(res.candidateLowMidi, res.candidateHighMidi, 90, true);
       setCompletedStages((prev) => (prev.includes('sweep') ? prev : [...prev, 'sweep']));
       setFeedback({
         text: `${t('ambitusSweepDonePrompt', { low: midiToNoteName(res.candidateLowMidi), high: midiToNoteName(res.candidateHighMidi) })} • Médiane confort : ${midiToNoteName(res.candidateMedianMidi)}`,
@@ -98,7 +99,7 @@ export function useAmbitusJourney(t: (k: any, p?: any) => string) {
   const onCompleteStaircase = useCallback(async (recorded: ValidationSample[]) => {
     setCompletedStages((p) => (p.includes('staircase') ? p : [...p, 'staircase']));
     setFeedback({ text: t('ambitusStaircaseSuccess'), isGood: true });
-    const payload = createVocalProfilePayload(lowestMidi, highestMidi);
+    const payload = createVocalProfilePayload(lowestMidi, highestMidi, 92, true);
     const plan = buildAmbitusStaircase(lowestMidi, highestMidi, 5);
     await syncVocalProfileToOrganizador(payload, recorded, plan.steps);
     setStage('completed');

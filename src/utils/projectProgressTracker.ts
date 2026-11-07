@@ -135,3 +135,4 @@ export function computeProjectProgress(project: ToadaProject, language: 'fr' | '
     nextAction: { stepId: nextStep.id, livret: livretMap[nextStep.id], patternId: nextStep.nextIncompletePatternId, foldNotes: nextStep.id === 'rhythm' ? true : nextStep.id === 'notes' ? false : undefined, label: nextStep.tooltip },
   };
 }
+

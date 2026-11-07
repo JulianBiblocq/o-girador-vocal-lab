@@ -114,3 +114,4 @@ export const SongProgressStrip: React.FC = () => {
     </>
   );
 };
+

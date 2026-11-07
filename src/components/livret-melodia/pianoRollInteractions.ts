@@ -23,9 +23,12 @@ export function moveBrick(steps: VocalStepData[], stepIndex: number, newMidi: nu
   if (!range) return steps;
   const next = [...steps];
   const root = next[range.rootIndex];
-  next[range.rootIndex] = { ...root, midiNumber: newMidi, note: midiToNoteName(newMidi), isTie: false, manualPitchMoved: true };
+  next[range.rootIndex] = {
+    ...root, midiNumber: newMidi, note: midiToNoteName(newMidi), isTie: false,
+    manualPitchMoved: true, isUncertain: false, alternativeNote: undefined, doubtReason: undefined,
+  };
   for (let i = range.rootIndex + 1; i <= range.endIndex; i++) {
-    next[i] = { ...next[i], midiNumber: newMidi, note: '───', isTie: true, manualPitchMoved: true };
+    next[i] = { ...next[i], midiNumber: newMidi, note: '───', isTie: true, manualPitchMoved: true, isUncertain: false };
   }
   return next;
 }

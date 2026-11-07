@@ -4,7 +4,9 @@
  * [1───], [1-3], [2-4], [1-2-4], [_2-3-4], [1-2-3-4] (< 120 lignes).
  */
 import React from 'react';
-import type { VocalStepData } from '../../types/vocalPack.types';
+import type { VocalStepData, PitchCurvePoint } from '../../types/vocalPack.types';
+import type { ScaleType } from '../../audio/scaleQuantizer';
+import { reanalyzeNotesOnAlignedSyllables } from '../../audio/syllableGuidedPitchReanalyzer';
 import { midiToNoteName } from '../../utils/noteUtils';
 import { useLanguage } from '../../i18n/LanguageContext';
 
@@ -72,11 +74,15 @@ export function applyBeatRhythmPreset(
 
 interface BeatRhythmPresetBarProps {
   allSteps: VocalStepData[]; gridWidth: number; resPerBeat?: number; readOnly?: boolean;
+  pitchCurve?: PitchCurvePoint[]; gridStartSec?: number; stepDurationSec?: number;
+  tonic?: string; scaleType?: ScaleType; allowedPitchClasses?: Set<number> | null;
   onUpdateSteps: (newSteps: VocalStepData[], commit?: boolean) => void;
 }
 
 export const BeatRhythmPresetBar: React.FC<BeatRhythmPresetBarProps> = ({
-  allSteps, gridWidth, resPerBeat = 4, readOnly = false, onUpdateSteps,
+  allSteps, gridWidth, resPerBeat = 4, readOnly = false,
+  pitchCurve, gridStartSec = 0, stepDurationSec = 0.17, tonic = 'C', scaleType = 'chromatic', allowedPitchClasses,
+  onUpdateSteps,
 }) => {
   const { language } = useLanguage();
   if (readOnly || allSteps.length === 0) return null;
@@ -108,7 +114,13 @@ export const BeatRhythmPresetBar: React.FC<BeatRhythmPresetBarProps> = ({
                 return (
                   <button
                     key={preset.id} type="button" title={`T${bIdx + 1} : ${language === 'br' ? preset.titleBr : preset.titleFr}`}
-                    onClick={() => onUpdateSteps(applyBeatRhythmPreset(allSteps, bIdx, preset.subdivs, resPerBeat), true)}
+                    onClick={() => {
+                      const rhythmUpdated = applyBeatRhythmPreset(allSteps, bIdx, preset.subdivs, resPerBeat);
+                      const reanalyzed = pitchCurve && pitchCurve.length > 0
+                        ? reanalyzeNotesOnAlignedSyllables({ steps: rhythmUpdated, pitchCurve, gridStartSec, stepDurationSec, tonic, scaleType, allowedPitchClasses })
+                        : rhythmUpdated;
+                      onUpdateSteps(reanalyzed, true);
+                    }}
                     className={`px-1 py-0.2 text-[9px] font-mono rounded-xs cursor-pointer transition-colors leading-tight ${
                       isMatch ? 'bg-[#9a3412] text-white font-black' : 'bg-[var(--cordel-subcard-bg)] text-theme-ink/80 hover:bg-amber-500/20 hover:text-theme-ink'
                     }`}
