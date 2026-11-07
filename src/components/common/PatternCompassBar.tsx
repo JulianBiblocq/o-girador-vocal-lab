@@ -38,9 +38,18 @@ export function checkPatternHasMidi(pat: VocalPatternItem): boolean {
   );
 }
 
+export function checkPatternIsAligned(pat: VocalPatternItem): boolean {
+  return Boolean(
+    checkPatternHasAudio(pat) ||
+    checkPatternHasMidi(pat) ||
+    pat.mainSteps?.some((s) => s.active) ||
+    pat.anacrusisSteps?.some((s) => s.active)
+  );
+}
+
 export const PatternCompassBar: React.FC<{ className?: string; compact?: boolean }> = ({ className = '', compact = false }) => {
   const { project, activePattern, setActivePatternId } = useToadaProject();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
 
   const patterns = project.patterns;
   const currentIndex = patterns.findIndex((p) => p.id === activePattern.id);
@@ -59,6 +68,7 @@ export const PatternCompassBar: React.FC<{ className?: string; compact?: boolean
   const isPuxador = activePattern.role === 'puxador';
   const audioCount = patterns.filter(checkPatternHasAudio).length;
   const midiCount = patterns.filter(checkPatternHasMidi).length;
+  const alignedCount = patterns.filter(checkPatternIsAligned).length;
 
   const selectEl = (
     <select
@@ -105,6 +115,9 @@ export const PatternCompassBar: React.FC<{ className?: string; compact?: boolean
           {isPuxador ? t('rolePuxador') : t('roleCoro')}
         </span>
         {selectEl}
+        <span className="px-2 py-0.5 rounded bg-emerald-600/15 border border-emerald-500/40 text-emerald-900 dark:text-emerald-300 text-[10.5px] font-mono font-bold shrink-0">
+          {language === 'br' ? `${alignedCount}/${patterns.length} padrões alinhados` : `${alignedCount}/${patterns.length} patterns calés`}
+        </span>
         <span className="text-[10.5px] font-mono font-bold text-[var(--cordel-secondary-text)] shrink-0 hidden md:inline-flex items-center gap-1">
           <span>{safeIndex + 1}/{patterns.length}</span>
           <span>•</span>

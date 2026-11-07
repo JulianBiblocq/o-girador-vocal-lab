@@ -6,6 +6,7 @@
 import type { VocalPatternItem } from '../types/toadaProject.types';
 import { transposeVocalSteps } from '../utils/scaleTranspositionHelper';
 import { transposePitchNote } from '../utils/musicalMath';
+import { isPatternReadyForSequenciador } from '../utils/toadaPackExporter';
 
 export function pcmToWavBlob(pcm: Float32Array, sampleRate: number): Blob {
   const numChannels = 1, bitsPerSample = 16;
@@ -116,9 +117,11 @@ export function sanitizePatternForFirestore(
   const transposedAnacrusis = transposeVocalSteps(p.anacrusisSteps || [], transpositionSemitones);
   const transposedMain = transposeVocalSteps(p.mainSteps || [], transpositionSemitones);
   const exportedRefPitch = transposePitchNote(p.referencePitch || 'A3', transpositionSemitones);
+  const isReady = Boolean(audioUrl || isPatternReadyForSequenciador(p));
 
   return {
     ...patternRest,
+    isReady,
     bpm: patBpm,
     baseBpm: patBpm,
     referencePitch: exportedRefPitch,

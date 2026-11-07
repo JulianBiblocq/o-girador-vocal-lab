@@ -6,7 +6,7 @@
 import type { PitchCurvePoint, VocalStepData } from '../../types/vocalPack.types';
 import type { PatternHarmonyGrid } from '../../types/harmony.types';
 import { drawPianoRollRows } from './pianoRollRowsDrawer';
-import { drawPianoRollBricks, drawVariAudioPulledCurveOverlay } from './pianoRollBricksDrawer';
+import { drawPianoRollBricks, drawFoldedRhythmBricks, drawVariAudioPulledCurveOverlay } from './pianoRollBricksDrawer';
 
 export interface DrawGridOptions {
   width: number; height: number; dpr: number; minMidi: number; maxMidi: number; rowHeight: number;
@@ -15,10 +15,11 @@ export interface DrawGridOptions {
   playheadSec: number; isPlaying: boolean; hasAnacrusis?: boolean; t1OffsetSec?: number; bpm?: number;
   selectedStepIdx?: number | null; hoveredBrickRootIdx?: number | null;
   harmonyGrid?: PatternHarmonyGrid; pitchShiftSemitones?: number; allowedPitchClasses?: Set<number> | null;
+  foldNotesView?: boolean;
 }
 
 export function drawPianoRollGrid(ctx: CanvasRenderingContext2D, opts: DrawGridOptions): void {
-  const { width, height, dpr, minMidi, maxMidi, rowHeight, beatsPerMeasure, beatResolutions, allSteps, pitchCurve, totalDurationSec, anacrusisDurationSec, seekStartSec, playheadSec, isPlaying, hasAnacrusis = true, bpm, selectedStepIdx, hoveredBrickRootIdx, harmonyGrid, pitchShiftSemitones, allowedPitchClasses } = opts;
+  const { width, height, dpr, minMidi, maxMidi, rowHeight, beatsPerMeasure, beatResolutions, allSteps, pitchCurve, totalDurationSec, anacrusisDurationSec, seekStartSec, playheadSec, isPlaying, hasAnacrusis = true, bpm, selectedStepIdx, hoveredBrickRootIdx, harmonyGrid, pitchShiftSemitones, allowedPitchClasses, foldNotesView = false } = opts;
   ctx.save(); ctx.scale(dpr, dpr); ctx.clearRect(0, 0, width, height);
 
   const beatDur = bpm ? 60 / bpm : (hasAnacrusis && beatsPerMeasure > 0 ? anacrusisDurationSec / beatsPerMeasure : 0.6);
@@ -28,11 +29,18 @@ export function drawPianoRollGrid(ctx: CanvasRenderingContext2D, opts: DrawGridO
   const tGridStart = hasAnacrusis ? 0 : (opts.t1OffsetSec ?? 0.15);
   const isLight = typeof document !== 'undefined' && document.documentElement.getAttribute('data-theme') === 'light';
 
-  // 1. Rangées de demi-tons et surbrillance harmonique dynamique
-  drawPianoRollRows({
-    ctx, width, minMidi, maxMidi, rowHeight, harmonyGrid, playheadSec, seekStartSec,
-    isPlaying, beatsPerMeasure, beatDurationSec: beatDur, hasAnacrusis, pitchShiftSemitones, allowedPitchClasses,
-  });
+  // 1. Rangées de demi-tons ou Piste Rythmique Repliée (96px)
+  if (foldNotesView) {
+    ctx.fillStyle = isLight ? 'rgba(245, 240, 230, 0.7)' : 'rgba(28, 25, 23, 0.85)';
+    ctx.fillRect(0, 0, width, height);
+    ctx.strokeStyle = isLight ? 'rgba(180, 83, 9, 0.25)' : 'rgba(245, 158, 11, 0.25)';
+    ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(0, height / 2); ctx.lineTo(width, height / 2); ctx.stroke();
+  } else {
+    drawPianoRollRows({
+      ctx, width, minMidi, maxMidi, rowHeight, harmonyGrid, playheadSec, seekStartSec,
+      isPlaying, beatsPerMeasure, beatDurationSec: beatDur, hasAnacrusis, pitchShiftSemitones, allowedPitchClasses,
+    });
+  }
 
   // 2. Grille temporelle discrète 1:1 avec les pas MIDI
   for (let i = 0; i < totalSteps; i++) {
@@ -65,23 +73,32 @@ export function drawPianoRollGrid(ctx: CanvasRenderingContext2D, opts: DrawGridO
     }
   }
 
-  // 3. Briques MIDI & Poignées VariAudio
-  drawPianoRollBricks({ ctx, allSteps, stepW, minMidi, maxMidi, rowHeight, selectedStepIdx, hoveredBrickRootIdx });
-
-  // 4. Courbe verte de la voix (rawPitchCurve) + Courbe ambre/dorée sous les briques où melodynePullPct > 0
+  // 3. Briques MIDI ou Ligne Rythmique Repliée + Enveloppe vocale
   const baseGreenCurve = opts.rawPitchCurve && opts.rawPitchCurve.length > 1 ? opts.rawPitchCurve : pitchCurve;
-  if (baseGreenCurve.length > 1) {
-    ctx.lineWidth = 2.2;
-    ctx.strokeStyle = '#10b981';
-    for (let p = 0; p < baseGreenCurve.length - 1; p++) {
-      const p1 = baseGreenCurve[p], p2 = baseGreenCurve[p + 1];
-      if (Math.abs(p2.timeSec - p1.timeSec) > 0.04) continue;
-      const x1 = ((p1.timeSec - tGridStart) / gridDur) * width, y1 = (maxMidi - p1.midiFloat) * rowHeight + rowHeight / 2;
-      const x2 = ((p2.timeSec - tGridStart) / gridDur) * width, y2 = (maxMidi - p2.midiFloat) * rowHeight + rowHeight / 2;
-      ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+  if (foldNotesView) {
+    if (baseGreenCurve.length > 1) {
+      ctx.fillStyle = isLight ? 'rgba(16, 185, 129, 0.18)' : 'rgba(16, 185, 129, 0.22)';
+      for (const pt of baseGreenCurve) {
+        const px = ((pt.timeSec - tGridStart) / gridDur) * width;
+        const ampH = Math.max(8, Math.min(height - 14, (pt.confidence ?? 0.85) * (height - 18)));
+        ctx.fillRect(px - 1.5, (height - ampH) / 2, 3, ampH);
+      }
     }
+    drawFoldedRhythmBricks(ctx, allSteps, stepW, height, selectedStepIdx);
+  } else {
+    drawPianoRollBricks({ ctx, allSteps, stepW, minMidi, maxMidi, rowHeight, selectedStepIdx, hoveredBrickRootIdx });
+    if (baseGreenCurve.length > 1) {
+      ctx.lineWidth = 2.2; ctx.strokeStyle = '#10b981';
+      for (let p = 0; p < baseGreenCurve.length - 1; p++) {
+        const p1 = baseGreenCurve[p], p2 = baseGreenCurve[p + 1];
+        if (Math.abs(p2.timeSec - p1.timeSec) > 0.04) continue;
+        const x1 = ((p1.timeSec - tGridStart) / gridDur) * width, y1 = (maxMidi - p1.midiFloat) * rowHeight + rowHeight / 2;
+        const x2 = ((p2.timeSec - tGridStart) / gridDur) * width, y2 = (maxMidi - p2.midiFloat) * rowHeight + rowHeight / 2;
+        ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+      }
+    }
+    drawVariAudioPulledCurveOverlay(ctx, allSteps, pitchCurve, tGridStart, gridDur, width, maxMidi, rowHeight);
   }
-  drawVariAudioPulledCurveOverlay(ctx, allSteps, pitchCurve, tGridStart, gridDur, width, maxMidi, rowHeight);
 
   // 5. Lignes de Playhead & Seek
   if (seekStartSec > 0 && (!isPlaying || playheadSec < 0)) {

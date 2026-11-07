@@ -28,6 +28,8 @@ const {
 const { buildOrganizadorDocumentPayload } = await import('../src/services/organizadorToadaPublisher.ts');
 const { sanitizePatternForFirestore } = await import('../src/services/toadaPublishHelpers.ts');
 const { buildSequencerToadaPackDocument } = await import('../src/services/cloudToadaPublisher.ts');
+const { buildToadaPack, isPatternReadyForSequenciador } = await import('../src/utils/toadaPackExporter.ts');
+const { applyTogglePatternFoldNotes, applySetAllPatternsFoldNotes, applySetSequenciadorExportMode } = await import('../src/utils/projectBatchOps.ts');
 const { applySequenciadorPackTranspositionToProject } = await import('../src/utils/toadaSyncService.ts');
 const { formatCantadorLockedTonalite } = await import('../../o-girador-organizador/src/components/documents/form/DocumentFormToadaFields.jsx');
 
@@ -305,6 +307,51 @@ const updatedFromSequenciador = applySequenciadorPackTranspositionToProject(tran
 assert.equal(updatedFromSequenciador.transpositionSemitones, 3, 'La passerelle retour met à jour transpositionSemitones = 3');
 assert.equal(updatedFromSequenciador.troupeScaleRoot, 'C#', 'La passerelle retour met à jour troupeScaleRoot = C#');
 assert.equal(updatedFromSequenciador.toadaMeta.tonaliteDefaut, 'Do# Majeur', 'La passerelle retour met à jour tonaliteDefaut = Do# Majeur');
+
+// Test Construction Progressive : Plier/Déplier les notes & Mode Sequenciador (Rythme seul vs Avec les notes)
+const unrecordedCoroPat = {
+  id: 'pat-coro-1',
+  name: 'Coro 1',
+  role: 'coro',
+  measuresCount: 1,
+  bpm: 85,
+  baseBpm: 85,
+  hasAnacrusis: true,
+  foldNotesView: false,
+  variants: {},
+  activeVariantKey: 'spd100_pit+0',
+  recordingResult: null,
+  trimStartSec: 0,
+  trimEndSec: 0,
+  lowCutEnabled: true,
+  anacrusisSteps: [],
+  mainSteps: [],
+  pitchCurve: [],
+};
+const progressiveProj = {
+  ...transposedProject,
+  patterns: [transposedProject.patterns[0], unrecordedCoroPat],
+};
+
+const foldedSingle = applyTogglePatternFoldNotes(progressiveProj, 'pat-pux-1', true);
+assert.equal(foldedSingle.patterns[0].foldNotesView, true, 'togglePatternFoldNotes doit plier le pattern ciblé');
+assert.equal(foldedSingle.patterns[1].foldNotesView, false, 'togglePatternFoldNotes ne doit pas modifier les autres patterns');
+
+const foldedAll = applySetAllPatternsFoldNotes(foldedSingle, true);
+assert.ok(foldedAll.patterns.every((p) => p.foldNotesView === true), 'setAllPatternsFoldNotes(true) doit plier tous les patterns');
+
+const exportedRhythmPack = buildToadaPack(foldedAll);
+assert.equal(exportedRhythmPack.sequenciadorExportMode, 'rhythm_only', 'Mode par défaut = rhythm_only');
+assert.equal(exportedRhythmPack.ignoreMelodyPitch, true, 'ignoreMelodyPitch = true en mode rhythm_only');
+assert.equal(exportedRhythmPack.patterns[0].isReady, true, 'Le pattern enregistré est marqué isReady = true');
+assert.equal(exportedRhythmPack.patterns[1].isReady, false, 'Le pattern non enregistré est marqué isReady = false');
+
+const fullNotesProj = applySetSequenciadorExportMode(foldedAll, 'full_notes');
+const exportedFullPack = buildSequencerToadaPackDocument(fullNotesProj);
+assert.equal(exportedFullPack.sequenciadorExportMode, 'full_notes', 'Mode mis à jour = full_notes');
+assert.equal(exportedFullPack.ignoreMelodyPitch, false, 'ignoreMelodyPitch = false en mode full_notes');
+assert.equal(exportedFullPack.patterns[0].isReady, true, 'Pattern 0 prêt dans /toada_packs');
+assert.equal(exportedFullPack.patterns[1].isReady, false, 'Pattern 1 non enregistré marqué isReady = false dans /toada_packs');
 
 console.log('✅ VOLET 4 VALIDÉ !');
 console.log('🎉 100% DES TESTS STUDIO FORMANT TRANSPOSITION, DOUBLE TONALITÉ, VERROUS ORGANIZADOR & /toada_packs SONT PASSÉS AVEC SUCCÈS !');

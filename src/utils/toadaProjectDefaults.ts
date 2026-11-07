@@ -63,6 +63,7 @@ export function createDefaultVocalPattern(
     name, role, measuresCount, baseBpm, bpm: baseBpm, referencePitch, variants, activeVariantKey: v1.variantKey,
     recordingResult: null, trimStartSec: 0, trimEndSec: 0, lowCutEnabled: true, enableTonePolish: true,
     anacrusisSteps: [], mainSteps: [], pitchCurve: [], pack: null, hasAnacrusis: true, melodyneRegions: [],
+    foldNotesView: false,
     variantPitchesConfig: { refSemitones: 0, lowSemitones: -4, highSemitones: 4, enableHigh: false },
     variantSpeedsConfig: { speed1Pct: 100, speed2Pct: 75, speed3Pct: 115, enableSpeed3: false },
   };
@@ -79,5 +80,6 @@ export function createDefaultToadaProject(): ToadaProject {
       { slotId: 'slot-2', puxadorPatternId: null, coroPatternId: p2.id },
     ],
     activePatternId: p1.id,
+    sequenciadorExportMode: 'rhythm_only',
   };
 }

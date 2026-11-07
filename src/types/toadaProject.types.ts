@@ -19,6 +19,7 @@ export {
 } from '../utils/toadaProjectDefaults';
 
 export type VocalRole = 'puxador' | 'coro';
+export type SequenciadorExportMode = 'rhythm_only' | 'full_notes';
 
 export interface VocalAudioVariantCoverage {
   minBpmRatio: number;
@@ -77,6 +78,7 @@ export interface VocalPatternItem {
   timeAnchors?: TimeAnchor[]; exitBeat?: number; hasTailBeat?: boolean;
   troupeTransposedPCM?: Float32Array | null;
   troupeTransposedSemitones?: number;
+  foldNotesView?: boolean;
 }
 
 export interface VariantPitchesConfig {
@@ -112,4 +114,5 @@ export interface ToadaProject {
   transpositionSemitones?: number;
   troupeScaleRoot?: string;
   previewListenTarget?: 'sung' | 'troupe';
+  sequenciadorExportMode?: SequenciadorExportMode;
 }

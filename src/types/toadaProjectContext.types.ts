@@ -1,5 +1,5 @@
 import type {
-  ToadaProject, VocalPatternItem, VocalRole, VocalAudioVariant,
+  ToadaProject, VocalPatternItem, VocalRole, VocalAudioVariant, SequenciadorExportMode,
 } from './toadaProject.types';
 import type { TimeSignatureString } from './vocalPack.types';
 import type { MetricApplyScope } from '../utils/projectBatchOps';
@@ -48,4 +48,7 @@ export interface ToadaProjectContextValue {
   updateScopedTessitura: (tessitura: import('./tessitura.types').TessituraRange) => void;
   updateHarmonyConfig: (config: import('./harmony.types').HarmonyConfig) => void;
   updateToadaMeta: (meta: Partial<import('./toadaDocument.types').ToadaDocument>) => void;
+  togglePatternFoldNotes: (patternId: string, folded?: boolean) => void;
+  setAllPatternsFoldNotes: (folded: boolean) => void;
+  setSequenciadorExportMode: (mode: SequenciadorExportMode) => void;
 }

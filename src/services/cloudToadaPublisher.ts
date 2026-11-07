@@ -40,23 +40,28 @@ export function buildSequencerToadaPackDocument(
   const projectBpm = Number(project.bpm || project.toadaMeta?.bpmDefaut || DEFAULT_TOADA_BPM);
   const dualScale = resolveProjectDualScale(project, 'fr');
   const shiftSt = dualScale.transpositionSemitones;
+  const sequenciadorExportMode = project.sequenciadorExportMode ?? 'rhythm_only';
+  const ignoreMelodyPitch = sequenciadorExportMode === 'rhythm_only';
 
-  const patterns = processedPatterns ?? project.patterns.map((p) =>
+  const patterns = (processedPatterns ?? project.patterns.map((p) =>
     sanitizePatternForFirestore(p, (p as any).audioUrl, p.trimEndSec, p.t1OffsetSec, undefined, shiftSt)
-  );
+  )).map((pat) => ({ ...pat, ignoreMelodyPitch }));
 
   return {
     id: toadaId, title: project.title, bpm: projectBpm, timeSignature: project.timeSignature,
+    sequenciadorExportMode, ignoreMelodyPitch,
     sungKey: dualScale.sungScaleLabel, troupeKey: dualScale.troupeScaleLabel,
     sungScaleRoot: dualScale.sungScaleRoot, sungScaleMode: dualScale.sungScaleMode,
     troupeScaleRoot: dualScale.troupeScaleRoot, transpositionSemitones: shiftSt,
     project: {
       id: project.id, title: project.title, bpm: projectBpm, timeSignature: project.timeSignature,
+      sequenciadorExportMode, ignoreMelodyPitch,
       sungKey: dualScale.sungScaleLabel, troupeKey: dualScale.troupeScaleLabel, transpositionSemitones: shiftSt,
       measuresCount: (project as any).measuresCount || 2, harmonyConfig: project.harmonyConfig ?? null, updatedAt: Date.now(),
     },
     metadata: {
       title: project.title, toada: project.title, bpm: projectBpm, timeSignature: project.timeSignature,
+      sequenciadorExportMode, ignoreMelodyPitch,
       sungKey: dualScale.sungScaleLabel, troupeKey: dualScale.troupeScaleLabel, transpositionSemitones: shiftSt, publishedAt: Date.now(),
     },
     toadaMeta: {

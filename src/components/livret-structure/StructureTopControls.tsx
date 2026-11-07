@@ -14,6 +14,7 @@ import {
 } from '../../utils/backingTrackStorage';
 import { formatReferencePitchSolfege } from '../../audio/projectScaleAnalyzer';
 import { useLanguage } from '../../i18n/LanguageContext';
+import { SequenciadorExportBar } from '../common/SequenciadorExportBar';
 
 export interface StructureTopControlsProps {
   projectId: string; bpm: number; onBpmChange: (bpm: number) => void;
@@ -111,17 +112,20 @@ export const StructureTopControls: React.FC<StructureTopControlsProps> = ({
         </button>
       </div>
 
-      {/* 3. Interrupteur Mode Organizador Épuré ⟷ Mode Édition Manuelle */}
-      <button
-        type="button" onClick={onToggleManualStructureEdit}
-        className={`px-2.5 py-1 rounded font-bold flex items-center gap-1.5 cursor-pointer border transition-colors ${
-          isManualStructureEdit ? 'bg-[#9a3412] text-white border-[#9a3412] shadow-2xs' : 'cordel-card-sm text-[var(--cordel-secondary-text)] hover:text-theme-ink'
-        }`}
-        title={isBr ? 'Desbloquear ou bloquear as ferramentas de edição manual da estrutura' : "Déverrouiller ou verrouiller les outils d'édition manuelle de la structure"}
-      >
-        {isManualStructureEdit ? <Edit3 className="w-3.5 h-3.5" /> : <Lock className="w-3.5 h-3.5 text-emerald-700 dark:text-emerald-400" />}
-        <span>{isManualStructureEdit ? (isBr ? 'Editar estrutura' : 'Modifier la structure') : (isBr ? 'Estrutura Organizador' : 'Structure Organizador')}</span>
-      </button>
+      {/* 3. Envoi Sequenciador & Interrupteur Mode Organizador Épuré ⟷ Mode Édition Manuelle */}
+      <div className="flex flex-wrap items-center gap-2">
+        <SequenciadorExportBar compact />
+        <button
+          type="button" onClick={onToggleManualStructureEdit}
+          className={`px-2.5 py-1 rounded font-bold flex items-center gap-1.5 cursor-pointer border transition-colors ${
+            isManualStructureEdit ? 'bg-[#9a3412] text-white border-[#9a3412] shadow-2xs' : 'cordel-card-sm text-[var(--cordel-secondary-text)] hover:text-theme-ink'
+          }`}
+          title={isBr ? 'Desbloquear ou bloquear as ferramentas de edição manual da estrutura' : "Déverrouiller ou verrouiller les outils d'édition manuelle de la structure"}
+        >
+          {isManualStructureEdit ? <Edit3 className="w-3.5 h-3.5" /> : <Lock className="w-3.5 h-3.5 text-emerald-700 dark:text-emerald-400" />}
+          <span>{isManualStructureEdit ? (isBr ? 'Editar estrutura' : 'Modifier la structure') : (isBr ? 'Estrutura Organizador' : 'Structure Organizador')}</span>
+        </button>
+      </div>
     </div>
   );
 };

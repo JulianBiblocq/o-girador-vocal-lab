@@ -3,10 +3,23 @@
  * Export JSON de la Toada complete :
  * Multi-patterns, matrice de declinaisons WAV Base64 avec plages de couverture et frise conducteur.
  */
-import type { ToadaProject, ToadaArrangementSlot, VocalRole, VocalAudioVariantCoverage } from '../types/toadaProject.types';
+import type { ToadaProject, ToadaArrangementSlot, VocalRole, VocalAudioVariantCoverage, SequenciadorExportMode, VocalPatternItem } from '../types/toadaProject.types';
 import type { VocalPackExport, VocalStepData, PitchCurvePoint, MelodyneRegion } from '../types/vocalPack.types';
 import type { ToadaDocument } from '../types/toadaDocument.types';
 import { audioBufferToWavBase64 } from './wavEncoder';
+
+export function isPatternReadyForSequenciador(p: VocalPatternItem): boolean {
+  const hasRec = Boolean(
+    p.rawAudioSamples?.length ||
+    p.recordingResult?.pcm?.length ||
+    (p as any).audioUrl ||
+    Object.values(p.variants || {}).some((v) => Boolean(v?.recordingResult?.pcm?.length || (v as any)?.audioUrl))
+  );
+  const hasActiveSteps = Boolean(
+    p.anacrusisSteps?.some((s) => s.active) || p.mainSteps?.some((s) => s.active)
+  );
+  return hasRec || hasActiveSteps;
+}
 
 export interface ExportedVariantData {
   variantKey: string;
@@ -26,6 +39,7 @@ export interface ExportedVariantData {
 
 export interface ExportedPatternData {
   id: string; cardIndex?: number; rawLineCode?: string; name: string; role: VocalRole;
+  isReady: boolean; ignoreMelodyPitch?: boolean;
   measuresCount: number; hasAnacrusis?: boolean; anacrusisBeats?: number; baseBpm?: number;
   referencePitch?: string; pitchCorrectionAmount?: number; linkedSourcePatternId?: string | null;
   activeVariantKey?: string; anacrusisSteps: VocalStepData[]; mainSteps: VocalStepData[];
@@ -37,8 +51,12 @@ export interface ExportedPatternData {
 
 export interface ToadaPackExport {
   schemaVersion: '2.0';
+  sequenciadorExportMode: SequenciadorExportMode;
+  ignoreMelodyPitch: boolean;
   project: {
-    id: string; title: string; bpm: number; timeSignature: string; createdAt: string; toadaMeta?: Partial<ToadaDocument>;
+    id: string; title: string; bpm: number; timeSignature: string; createdAt: string;
+    sequenciadorExportMode: SequenciadorExportMode; ignoreMelodyPitch: boolean;
+    toadaMeta?: Partial<ToadaDocument>;
   };
   arrangementSlots: ToadaArrangementSlot[];
   patterns: ExportedPatternData[];
@@ -48,9 +66,13 @@ export interface ToadaPackExport {
 }
 
 export function buildToadaPack(project: ToadaProject, currentPack?: VocalPackExport | null): ToadaPackExport {
+  const sequenciadorExportMode: SequenciadorExportMode = project.sequenciadorExportMode ?? 'rhythm_only';
+  const ignoreMelodyPitch = sequenciadorExportMode === 'rhythm_only';
+
   const patterns: ExportedPatternData[] = project.patterns.map((p) => {
+    const isReady = isPatternReadyForSequenciador(p);
     const exportedVariants: Record<string, ExportedVariantData> = {};
-    for (const [key, v] of Object.entries(p.variants)) {
+    for (const [key, v] of Object.entries(p.variants || {})) {
       let b64: string | undefined;
       let dur = 0;
       const sr = v.recordingResult?.sampleRate ?? 44100;
@@ -62,19 +84,10 @@ export function buildToadaPack(project: ToadaProject, currentPack?: VocalPackExp
         dur = pcmToExport.length / sr;
       }
       exportedVariants[key] = {
-        variantKey: v.variantKey,
-        speedRatio: v.speedRatio,
-        pitchShiftSemitones: v.pitchShiftSemitones,
-        coverage: v.coverage,
-        audioBase64: b64,
-        durationSec: dur,
-        sampleRate: sr,
-        trimStartSec: v.trimStartSec,
-        trimEndSec: v.trimEndSec,
-        t1OffsetSec: v.t1OffsetSec ?? p.t1OffsetSec,
-        recordedBpm: v.recordingResult?.recordedBpm || p.bpm || project.bpm,
-        lowCutEnabled: v.lowCutEnabled,
-        enableTonePolish: v.enableTonePolish ?? true,
+        variantKey: v.variantKey, speedRatio: v.speedRatio, pitchShiftSemitones: v.pitchShiftSemitones,
+        coverage: v.coverage, audioBase64: b64, durationSec: dur, sampleRate: sr,
+        trimStartSec: v.trimStartSec, trimEndSec: v.trimEndSec, t1OffsetSec: v.t1OffsetSec ?? p.t1OffsetSec,
+        recordedBpm: v.recordingResult?.recordedBpm || p.bpm || project.bpm, lowCutEnabled: v.lowCutEnabled, enableTonePolish: v.enableTonePolish ?? true,
       };
     }
     const hasAnac = p.hasAnacrusis ?? true;
@@ -84,29 +97,29 @@ export function buildToadaPack(project: ToadaProject, currentPack?: VocalPackExp
     if (hasAnac && mainSteps.length === anacCount + expectedMain && anacSteps.length === 0) {
       anacSteps = mainSteps.slice(0, anacCount); mainSteps = mainSteps.slice(anacCount);
     }
+    const mapStep = (s: VocalStepData, idx: number): VocalStepData => ({
+      ...s, stepIndex: idx, ...(s.note === '───' || Boolean((s as any).isTie) ? { isTie: true } : {}),
+    });
     return {
       id: p.id, cardIndex: p.cardIndex, rawLineCode: p.rawLineCode,
-      name: p.name, role: p.role, measuresCount: p.measuresCount,
+      name: p.name, role: p.role, isReady, ignoreMelodyPitch, measuresCount: p.measuresCount,
       hasAnacrusis: hasAnac, anacrusisBeats: p.anacrusisBeats,
-      baseBpm: p.baseBpm, referencePitch: p.referencePitch,
-      pitchCorrectionAmount: p.pitchCorrectionAmount,
-      linkedSourcePatternId: p.linkedSourcePatternId,
-      activeVariantKey: p.activeVariantKey,
-      anacrusisSteps: anacSteps, mainSteps, pitchCurve: p.pitchCurve,
-      melodyneRegions: p.melodyneRegions || [],
-      assignedLyricsText: p.assignedLyricsText,
-      assignedPhoneticText: p.assignedPhoneticText,
-      timeAnchors: p.timeAnchors,
-      harmonyGrid: p.harmonyGrid,
-      variants: exportedVariants,
+      baseBpm: p.baseBpm, referencePitch: p.referencePitch, pitchCorrectionAmount: p.pitchCorrectionAmount,
+      linkedSourcePatternId: p.linkedSourcePatternId, activeVariantKey: p.activeVariantKey,
+      anacrusisSteps: anacSteps.map(mapStep), mainSteps: mainSteps.map(mapStep), pitchCurve: p.pitchCurve,
+      melodyneRegions: p.melodyneRegions || [], assignedLyricsText: p.assignedLyricsText,
+      assignedPhoneticText: p.assignedPhoneticText, timeAnchors: p.timeAnchors,
+      harmonyGrid: p.harmonyGrid, variants: exportedVariants,
     };
   });
 
   return {
     schemaVersion: '2.0',
+    sequenciadorExportMode,
+    ignoreMelodyPitch,
     project: {
       id: project.id, title: project.title, bpm: project.bpm, timeSignature: project.timeSignature,
-      createdAt: new Date().toISOString(), toadaMeta: project.toadaMeta,
+      createdAt: new Date().toISOString(), sequenciadorExportMode, ignoreMelodyPitch, toadaMeta: project.toadaMeta,
     },
     arrangementSlots: project.slots,
     patterns,

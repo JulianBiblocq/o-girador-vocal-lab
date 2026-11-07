@@ -3,10 +3,35 @@
  * Opérations de mise à jour groupée ou ciblée sur les patterns d'une Toada (< 125 lignes).
  * Supporte les portées : 'all' (tout le chant), 'active' (ce bloc), 'selected' (sélection).
  */
-import type { ToadaProject } from '../types/toadaProject.types';
+import type { ToadaProject, SequenciadorExportMode } from '../types/toadaProject.types';
 import type { TimeSignatureString } from '../types/vocalPack.types';
 
 export type MetricApplyScope = 'all' | 'active' | 'selected';
+
+export function applyTogglePatternFoldNotes(project: ToadaProject, patternId: string, folded?: boolean): ToadaProject {
+  return {
+    ...project,
+    patterns: project.patterns.map((p) => {
+      if (p.id !== patternId) return p;
+      const nextFold = typeof folded === 'boolean' ? folded : !p.foldNotesView;
+      return { ...p, foldNotesView: nextFold };
+    }),
+  };
+}
+
+export function applySetAllPatternsFoldNotes(project: ToadaProject, folded: boolean): ToadaProject {
+  return {
+    ...project,
+    patterns: project.patterns.map((p) => ({ ...p, foldNotesView: Boolean(folded) })),
+  };
+}
+
+export function applySetSequenciadorExportMode(project: ToadaProject, mode: SequenciadorExportMode): ToadaProject {
+  return {
+    ...project,
+    sequenciadorExportMode: mode === 'full_notes' ? 'full_notes' : 'rhythm_only',
+  };
+}
 
 export function getTargetPatternIds(project: ToadaProject, scope: MetricApplyScope, selectedIds: string[]): Set<string> {
   const target = new Set<string>();
