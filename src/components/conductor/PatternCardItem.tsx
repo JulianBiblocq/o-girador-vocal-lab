@@ -1,6 +1,6 @@
 /**
  * PatternCardItem.tsx
- * Carte individuelle de pattern dans la bibliothèque avec badges [XM], [+Ana], [+1T] et durée de prise (< 135 lignes).
+ * Carte individuelle de pattern dans la bibliothèque avec badges [xN frise / Inutilisé (0x)], [XM], [+Ana], [+1T] (< 130 lignes).
  */
 import React, { useState } from 'react';
 import type { VocalPatternItem, VocalRole } from '../../types/toadaProject.types';
@@ -9,6 +9,7 @@ import { Trash2, ArrowLeftRight, X } from 'lucide-react';
 
 interface PatternCardItemProps {
   pat: VocalPatternItem; isActive: boolean; isSelected?: boolean; sourcePatternName?: string | null;
+  usageCount?: number;
   onSelect: () => void; onToggleSelect?: () => void; onRename: (newName: string) => void;
   onDelete: () => void; onMirrorToRole: (targetRole: VocalRole) => void;
   onDuplicateVariation?: () => void; onUnlink: () => void; canDelete: boolean; isManualStructureEdit?: boolean;
@@ -37,10 +38,11 @@ export function resolvePatternRecordedDurationSec(pat: VocalPatternItem): number
 }
 
 export const PatternCardItem: React.FC<PatternCardItemProps> = ({
-  pat, isActive, isSelected, sourcePatternName, onSelect, onToggleSelect,
+  pat, isActive, isSelected, sourcePatternName, usageCount, onSelect, onToggleSelect,
   onRename, onDelete, onMirrorToRole, onDuplicateVariation, onUnlink, canDelete, isManualStructureEdit = false,
 }) => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  const isBr = language === 'br';
   const [isEditing, setIsEditing] = useState(false), [editName, setEditName] = useState(pat.name);
   const durSec = resolvePatternRecordedDurationSec(pat), hasAudio = durSec > 0;
   const anaBadge = resolveAnacrusisBadgeText(pat), hasPlus1T = pat.hasTailBeat !== false || pat.exitBeat === 1;
@@ -73,6 +75,17 @@ export const PatternCardItem: React.FC<PatternCardItemProps> = ({
         </div>
 
         <div className="flex items-center gap-1 shrink-0 font-mono text-[9.5px] font-bold">
+          {typeof usageCount === 'number' && (
+            usageCount > 0 ? (
+              <span className={`px-1 py-0.2 rounded border ${isActive ? 'bg-black/30 text-amber-200 border-amber-300/40' : 'bg-teal-600/15 text-teal-800 dark:text-teal-300 border-teal-600/40'}`} title={isBr ? `Usado ${usageCount}x na linha do tempo` : `Utilisé ${usageCount}x dans la Frise Conducteur`}>
+                x{usageCount} {isBr ? 'friso' : 'frise'}
+              </span>
+            ) : (
+              <span className="px-1 py-0.2 rounded border bg-amber-500/25 text-amber-900 dark:text-amber-300 border-amber-500/60 font-black" title={isBr ? 'Não referenciado na linha do tempo' : 'Non référencé dans la Frise Conducteur'}>
+                {isBr ? 'Não usado (0x)' : 'Inutilisé (0x)'}
+              </span>
+            )
+          )}
           <span className={`px-1 py-0.2 rounded border ${isActive ? 'bg-black/25 text-white border-white/30' : 'bg-stone-500/15 text-theme-ink border-[var(--cordel-border-sub)]'}`}>{pat.measuresCount}M</span>
           {anaBadge && (
             <span className={`px-1 py-0.2 rounded border ${isActive ? 'bg-amber-400 text-stone-950 border-amber-300 font-black' : 'bg-amber-500/20 text-amber-800 dark:text-amber-300 border-amber-500/50'}`}>{anaBadge}</span>

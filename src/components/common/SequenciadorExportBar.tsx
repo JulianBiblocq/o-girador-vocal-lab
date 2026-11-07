@@ -1,57 +1,52 @@
 /**
  * SequenciadorExportBar.tsx
- * Sélecteur global d'envoi vers Sequenciador (valable pour toute la chanson) :
- * Mode Sequenciador : [ Rythme seul (Sans notes) | Avec les notes ] + [ Envoyer à Sequenciador ] (< 85 lignes).
+ * Sélecteur global d'envoi vers Sequenciador avec retour visuel ✓ Envoyé à Sequenciador ! + confirmation Cordel (< 95 lignes).
  */
-import React, { useState } from 'react';
-import { Drum, Piano, Rocket, Loader2, Upload } from 'lucide-react';
+import React from 'react';
+import { Drum, Piano, Rocket, Loader2, Upload, Check } from 'lucide-react';
 import { useToadaProject } from '../../context/ToadaProjectContext';
 import { useLanguage } from '../../i18n/LanguageContext';
-import { publishToadaToSequencer } from '../../services/cloudToadaPublisher';
+import { publishToadaToSequencer, getActiveTimelinePatterns } from '../../services/cloudToadaPublisher';
 import { isPatternReadyForSequenciador } from '../../utils/toadaPackExporter';
+import { alertAsync } from '../../stores/useCordelDialogStore';
+import { useActionFeedback } from './useActionFeedback';
 
 export const SequenciadorExportBar: React.FC<{ compact?: boolean }> = ({ compact = false }) => {
   const { project, setSequenciadorExportMode, loadProject } = useToadaProject();
   const { language } = useLanguage();
   const isBr = language === 'br';
-  const [isSending, setIsSending] = useState(false);
+  const sendFeedback = useActionFeedback(isBr ? '✓ Enviado ao Sequenciador !' : '✓ Envoyé à Sequenciador !');
 
   const exportMode = project.sequenciadorExportMode ?? 'rhythm_only';
-  const readyCount = project.patterns.filter(isPatternReadyForSequenciador).length;
-  const totalCount = project.patterns.length;
+  const activePatterns = getActiveTimelinePatterns(project);
+  const readyCount = activePatterns.filter(isPatternReadyForSequenciador).length;
+  const totalCount = activePatterns.length;
 
   const handleSendToSequenciador = async () => {
-    if (isSending) return;
-    setIsSending(true);
+    if (sendFeedback.isLoading) return;
     try {
-      const res = await publishToadaToSequencer(project);
-      loadProject({
-        ...project,
-        sequenciadorSyncedAt: Date.now(),
-        sequenciadorLastExportMode: exportMode,
+      await sendFeedback.trigger(async () => {
+        const res = await publishToadaToSequencer(project);
+        loadProject({
+          ...project,
+          sequenciadorSyncedAt: Date.now(),
+          sequenciadorLastExportMode: exportMode,
+        });
+        const label = isBr ? '✓ Enviado ao Sequenciador !' : '✓ Envoyé à Sequenciador !';
+        const summaryMsg = isBr
+          ? `${res.exportedPatternsCount} padrões ativos exportados (${res.savedMegabytes} Mo economizados).`
+          : `${res.exportedPatternsCount} patterns actifs exportés (${res.savedMegabytes} Mo économisés).`;
+        window.dispatchEvent(new CustomEvent('app-toast', { detail: { type: 'success', message: `${label} ${summaryMsg}` } }));
+        await alertAsync({
+          title: label,
+          message: summaryMsg,
+          variant: 'info',
+        });
+        if (res.sequenciadorUrl) window.open(res.sequenciadorUrl, '_blank', 'noopener,noreferrer');
+        return label;
       });
-      const modeLabel = exportMode === 'rhythm_only'
-        ? (isBr ? 'Ritmo apenas (Sem notas)' : 'Rythme seul (Sans notes)')
-        : (isBr ? 'Com as notas' : 'Avec les notes');
-      window.dispatchEvent(
-        new CustomEvent('app-toast', {
-          detail: {
-            type: 'success',
-            message: isBr
-              ? `Toada enviada ao Sequenciador (${readyCount}/${totalCount} padrões prontos • ${modeLabel})`
-              : `Toada envoyée à Sequenciador (${readyCount}/${totalCount} patterns prêts • ${modeLabel})`,
-          },
-        })
-      );
-      if (res.sequenciadorUrl) window.open(res.sequenciadorUrl, '_blank', 'noopener,noreferrer');
     } catch (err: any) {
-      window.dispatchEvent(
-        new CustomEvent('app-toast', {
-          detail: { type: 'error', message: err?.message || 'Erreur lors de l’envoi vers Sequenciador' },
-        })
-      );
-    } finally {
-      setIsSending(false);
+      window.dispatchEvent(new CustomEvent('app-toast', { detail: { type: 'error', message: err?.message || 'Erreur lors de l’envoi vers Sequenciador' } }));
     }
   };
 
@@ -82,14 +77,13 @@ export const SequenciadorExportBar: React.FC<{ compact?: boolean }> = ({ compact
       </div>
 
       <button
-        type="button" onClick={handleSendToSequenciador} disabled={isSending}
-        className="px-2.5 py-1 rounded bg-amber-600 hover:bg-amber-500 text-white text-[11px] font-bold flex items-center gap-1.5 cursor-pointer shadow-2xs transition-colors disabled:opacity-50"
+        type="button" onClick={handleSendToSequenciador} disabled={sendFeedback.isLoading}
+        className={sendFeedback.getButtonClass('px-2.5 py-1 rounded bg-amber-600 hover:bg-amber-500 text-white text-[11px] font-bold flex items-center gap-1.5 cursor-pointer shadow-2xs transition-colors disabled:opacity-50')}
         title={isBr ? `Enviar a toada para o Sequenciador (${readyCount}/${totalCount} padrões prontos)` : `Envoyer la chanson à Sequenciador (${readyCount}/${totalCount} patterns prêts)`}
       >
-        {isSending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Rocket className="w-3.5 h-3.5" />}
-        <span>{isBr ? 'Enviar ao Sequenciador' : 'Envoyer à Sequenciador'}</span>
+        {sendFeedback.isLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : sendFeedback.isSuccess ? <Check className="w-3.5 h-3.5" /> : <Rocket className="w-3.5 h-3.5" />}
+        <span>{sendFeedback.isLoading ? (isBr ? 'Em curso...' : 'En cours...') : sendFeedback.isSuccess ? sendFeedback.successLabel : (isBr ? 'Enviar ao Sequenciador' : 'Envoyer à Sequenciador')}</span>
       </button>
     </div>
   );
 };
-

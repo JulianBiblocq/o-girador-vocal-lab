@@ -1,6 +1,6 @@
 /**
  * ProjectSelectorBar.tsx
- * Barre d'actions Cloud : MIDI, Sync Organizador, Toadas Dropdown & Export (< 85 lignes).
+ * Barre d'actions Cloud : MIDI, Sync Organizador (avec ✓ Synchronisé ! + alertAsync Cordel), Toadas Dropdown & Export (< 95 lignes).
  */
 import React, { useState } from 'react';
 import { useToadaProject } from '../../context/ToadaProjectContext';
@@ -9,37 +9,48 @@ import { useOrganizadorDeepLink } from '../../hooks/useOrganizadorDeepLink';
 import { useVocalTransportStore } from '../../stores/useVocalTransportStore';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { syncProjectWithOrganizador } from '../../utils/toadaSyncService';
+import { alertAsync } from '../../stores/useCordelDialogStore';
+import { useActionFeedback } from '../common/useActionFeedback';
 import { ToadaLibraryDropdown } from './ToadaLibraryDropdown';
 import { SaveAndExportDropdown } from './SaveAndExportDropdown';
 import { MidiConnectionBadge } from './MidiConnectionBadge';
 import { OrganizadorToadaModal } from '../modals/OrganizadorToadaModal';
 import { ToadaLexiconModal } from '../lexicon/ToadaLexiconModal';
-import { BookOpen, RefreshCw } from 'lucide-react';
+import { BookOpen, RefreshCw, Check } from 'lucide-react';
 
 export const ProjectSelectorBar: React.FC = () => {
   const { project, loadProject } = useToadaProject();
   const { currentUser, groupId, isLoading, loginWithGoogle } = useOrganizadorAuth();
   const viewRoleMode = useVocalTransportStore((s) => s.viewRoleMode);
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  const isBr = language === 'br';
   const [isOrganizadorOpen, setIsOrganizadorOpen] = useState(false);
   const [isLexiconOpen, setIsLexiconOpen] = useState(false);
-  const [isSyncing, setIsSyncing] = useState(false);
+  const syncFeedback = useActionFeedback(isBr ? '✓ Sincronizado !' : '✓ Synchronisé !');
 
   useOrganizadorDeepLink(groupId, isLoading);
 
   const handleSyncOrganizador = async () => {
-    setIsSyncing(true);
-    try {
+    await syncFeedback.trigger(async () => {
       const res = await syncProjectWithOrganizador(project, groupId);
       if (res) {
         loadProject(res.updatedProject);
+        const patCount = res.updatedProject.patterns.length;
+        const syncBpm = res.updatedProject.bpm;
+        const label = isBr ? '✓ Sincronizado !' : '✓ Synchronisé !';
         window.dispatchEvent(new CustomEvent('app-toast', { detail: { type: 'success', message: res.toastMessage } }));
-      } else {
-        window.dispatchEvent(new CustomEvent('app-toast', { detail: { type: 'info', message: t('projectNotFoundInOrganizador') } }));
+        await alertAsync({
+          title: label,
+          message: isBr
+            ? `${patCount} padrões e tempo (${syncBpm} BPM) sincronizados desde o Organizador.`
+            : `${patCount} patterns et tempo (${syncBpm} BPM) synchronisés depuis Organizador.`,
+          variant: 'info',
+        });
+        return label;
       }
-    } finally {
-      setIsSyncing(false);
-    }
+      window.dispatchEvent(new CustomEvent('app-toast', { detail: { type: 'info', message: t('projectNotFoundInOrganizador') } }));
+      throw new Error('not_found');
+    }).catch(() => {});
   };
 
   const lexiconCount = project.toadaMeta?.notesLexique?.length || 0;
@@ -58,11 +69,17 @@ export const ProjectSelectorBar: React.FC = () => {
 
       {viewRoleMode !== 'eleve' && (
         <button
-          type="button" onClick={handleSyncOrganizador} disabled={isSyncing} title={t('syncOrganizadorTitle')}
-          className="h-9 px-2.5 cordel-card-sm text-xs font-mono font-bold flex items-center gap-1.5 hover:opacity-90 text-theme-ink transition-colors cursor-pointer"
+          type="button" onClick={handleSyncOrganizador} disabled={syncFeedback.isLoading} title={t('syncOrganizadorTitle')}
+          className={syncFeedback.getButtonClass('h-9 px-2.5 cordel-card-sm text-xs font-mono font-bold flex items-center gap-1.5 hover:opacity-90 text-theme-ink transition-colors cursor-pointer')}
         >
-          <RefreshCw className={`w-3.5 h-3.5 text-amber-600 dark:text-amber-400 ${isSyncing ? 'animate-spin' : ''}`} />
-          <span className="hidden md:inline">{t('syncOrganizadorLabel')}</span>
+          {syncFeedback.isSuccess ? (
+            <Check className="w-3.5 h-3.5" />
+          ) : (
+            <RefreshCw className={`w-3.5 h-3.5 text-amber-600 dark:text-amber-400 ${syncFeedback.isLoading ? 'animate-spin' : ''}`} />
+          )}
+          <span className="hidden md:inline">
+            {syncFeedback.isLoading ? (isBr ? 'Em curso...' : 'En cours...') : syncFeedback.isSuccess ? syncFeedback.successLabel : t('syncOrganizadorLabel')}
+          </span>
         </button>
       )}
 

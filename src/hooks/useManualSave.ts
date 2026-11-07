@@ -1,7 +1,7 @@
 /**
  * useManualSave.ts
  * Hook de sauvegarde manuelle forcée (IndexedDB + Cloud Firestore si connecté) (< 65 lignes).
- * Raccourci clavier universel Ctrl+S / Cmd+S et feedback 2s.
+ * Raccourci clavier universel Ctrl+S / Cmd+S et feedback ✓ Sauvegardé ! pendant 2500 ms.
  */
 import { useState, useCallback, useEffect } from 'react';
 import type { ToadaProject } from '../types/toadaProject.types';
@@ -19,14 +19,10 @@ export function useManualSave(project: ToadaProject, isUserLoggedIn: boolean) {
     if (isSaving) return;
     setIsSaving(true);
     try {
-      // 1. Sauvegarde locale immédiate (IndexedDB + Bibliothèque Mes Toadas)
       await saveProjectToIndexedDB(project);
       await saveToadaToLibrary(project);
-
-      // Notification locale pour rafraîchir le menu Mes Toadas
       window.dispatchEvent(new CustomEvent('toada-saved', { detail: { id: project.id } }));
 
-      // 2. Synchronisation Cloud Firestore en parallèle si connecté
       if (isUserLoggedIn) {
         publishToadaToSequencer(project).catch((err) => {
           console.warn('[useManualSave] Sync Cloud en arrière-plan :', err);
@@ -35,9 +31,9 @@ export function useManualSave(project: ToadaProject, isUserLoggedIn: boolean) {
 
       setIsSavedSuccess(true);
       window.dispatchEvent(new CustomEvent('app-toast', {
-        detail: { type: 'success', message: t('toadaSavedToast') },
+        detail: { type: 'success', message: `✓ ${t('toadaSavedToast')}` },
       }));
-      setTimeout(() => setIsSavedSuccess(false), 2000);
+      setTimeout(() => setIsSavedSuccess(false), 2500);
     } catch (err: any) {
       console.error('[useManualSave] Erreur lors de la sauvegarde :', err);
     } finally {
@@ -45,7 +41,6 @@ export function useManualSave(project: ToadaProject, isUserLoggedIn: boolean) {
     }
   }, [project, isUserLoggedIn, isSaving, t]);
 
-  // Support du raccourci clavier universel Ctrl+S / Cmd+S
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {

@@ -1,15 +1,16 @@
 /**
  * SlicerMultiSegmentToolbar.tsx
  * Barre d'outils Slicer : Sélection par rôle (Puxador / Coro), Métronome ON/OFF, Décalage T1 Maître,
- * Commutateur [ Avec les trous | Phrases à la suite ], Calquage Organizador (< 142 lignes).
+ * Commutateur [ Avec les trous | Phrases à la suite ], Calquage & Sync Organizador avec feedback ✓ Appliqué ! (< 142 lignes).
  */
 import React from 'react';
-import { Volume2, VolumeX, Sparkles, Plus, Trash2, RefreshCw, Magnet, LayoutGrid, Link2 } from 'lucide-react';
+import { Volume2, VolumeX, Sparkles, Plus, Trash2, RefreshCw, Magnet, LayoutGrid, Link2, Check } from 'lucide-react';
 import { useLanguage } from '../../i18n/LanguageContext';
 import type { SlicerGapMode } from '../../utils/slicerAlignmentHelper';
 import type { VocalRole } from '../../types/toadaProject.types';
 import type { RoleReadinessCounts } from '../../utils/slicerSessionStore';
 import { SlicerRoleSessionBar, type PostAssignBannerState } from './SlicerRoleSessionBar';
+import { useActionFeedback } from '../common/useActionFeedback';
 
 interface SlicerMultiSegmentToolbarProps {
   segmentCount: number; durationSec: number; bpm: number; gridOffsetSec: number;
@@ -35,7 +36,10 @@ export const SlicerMultiSegmentToolbar: React.FC<SlicerMultiSegmentToolbarProps>
   onToggleMetronome, onBpmChange, onNudgeOffset, onToggleCascade, onAlignOrganizador, onSyncOrganizador,
   onDetectSilences, onAddSegment, onAddPauseSegment, onClearSegments,
 }) => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  const isBr = language === 'br';
+  const alignFeedback = useActionFeedback(isBr ? '✓ Aplicado !' : '✓ Appliqué !');
+  const syncFeedback = useActionFeedback(isBr ? '✓ Aplicado !' : '✓ Appliqué !');
 
   return (
     <div className="flex flex-col gap-1.5 p-2 bg-theme-bg/60 border border-theme-border/60 rounded text-xs font-mono">
@@ -64,22 +68,8 @@ export const SlicerMultiSegmentToolbar: React.FC<SlicerMultiSegmentToolbarProps>
 
           {onGapModeChange && (
             <div className="flex items-center border border-[var(--cordel-border-sub)] rounded overflow-hidden text-[11px]">
-              <button
-                type="button" onClick={() => onGapModeChange('with_gaps')}
-                className={`h-7 px-2 font-bold cursor-pointer transition-colors ${
-                  gapMode === 'with_gaps' ? 'bg-amber-600 text-white' : 'bg-[var(--cordel-subcard-bg)] text-theme-ink/75 hover:opacity-100'
-                }`}
-                title="Garde les trous exacts de l'autre rôle (Chœur / Puxador) selon le Conducteur"
-              >
-                Avec les trous
-              </button>
-              <button
-                type="button" onClick={() => onGapModeChange('chained')}
-                className={`h-7 px-2 font-bold cursor-pointer transition-colors border-l border-[var(--cordel-border-sub)] flex items-center gap-1 ${
-                  gapMode === 'chained' ? 'bg-emerald-700 text-white' : 'bg-[var(--cordel-subcard-bg)] text-theme-ink/75 hover:opacity-100'
-                }`}
-                title="Phrases chantées à la suite sans attendre le Chœur / Puxador"
-              >
+              <button type="button" onClick={() => onGapModeChange('with_gaps')} className={`h-7 px-2 font-bold cursor-pointer transition-colors ${gapMode === 'with_gaps' ? 'bg-amber-600 text-white' : 'bg-[var(--cordel-subcard-bg)] text-theme-ink/75 hover:opacity-100'}`}>Avec les trous</button>
+              <button type="button" onClick={() => onGapModeChange('chained')} className={`h-7 px-2 font-bold cursor-pointer transition-colors border-l border-[var(--cordel-border-sub)] flex items-center gap-1 ${gapMode === 'chained' ? 'bg-emerald-700 text-white' : 'bg-[var(--cordel-subcard-bg)] text-theme-ink/75 hover:opacity-100'}`}>
                 <Link2 className="w-3 h-3" /><span>Phrases à la suite</span>
               </button>
             </div>
@@ -87,22 +77,29 @@ export const SlicerMultiSegmentToolbar: React.FC<SlicerMultiSegmentToolbarProps>
         </div>
 
         <div className="flex items-center gap-1.5">
-          <button
-            type="button" onClick={onToggleCascade}
-            className={`h-7 px-2 cordel-card-sm text-[11px] rounded flex items-center gap-1 cursor-pointer transition-colors ${
-              cascadeMove ? 'bg-amber-600/30 text-amber-700 dark:text-amber-400 border-amber-500/50 font-bold' : 'opacity-70 hover:opacity-100'
-            }`}
-            title={t('slicerCascadeTitle')}
-          >
+          <button type="button" onClick={onToggleCascade} className={`h-7 px-2 cordel-card-sm text-[11px] rounded flex items-center gap-1 cursor-pointer transition-colors ${cascadeMove ? 'bg-amber-600/30 text-amber-700 dark:text-amber-400 border-amber-500/50 font-bold' : 'opacity-70 hover:opacity-100'}`} title={t('slicerCascadeTitle')}>
             <Magnet className="w-3 h-3" /><span className="hidden sm:inline">{t('slicerCascadeBtn')}</span>
           </button>
 
-          <button type="button" onClick={onAlignOrganizador} className="h-7 px-2.5 cordel-btn-primary font-bold flex items-center gap-1.5 cursor-pointer bg-theme-wood text-[#f4ecd8]" title={t('slicerAlignOrganizadorTitle')}>
-            <LayoutGrid className="w-3.5 h-3.5" /><span>{t('slicerAlignOrganizadorBtn')}</span>
+          <button
+            type="button"
+            onClick={() => alignFeedback.trigger(() => onAlignOrganizador())}
+            className={alignFeedback.getButtonClass('h-7 px-2.5 cordel-btn-primary font-bold flex items-center gap-1.5 cursor-pointer bg-theme-wood text-[#f4ecd8]')}
+            title={t('slicerAlignOrganizadorTitle')}
+          >
+            {alignFeedback.isSuccess ? <Check className="w-3.5 h-3.5" /> : <LayoutGrid className="w-3.5 h-3.5" />}
+            <span>{alignFeedback.isSuccess ? alignFeedback.successLabel : t('slicerAlignOrganizadorBtn')}</span>
           </button>
 
-          <button type="button" onClick={onSyncOrganizador} disabled={isSyncing} className="h-7 px-2 cordel-card-sm text-[11px] font-bold flex items-center gap-1 cursor-pointer text-amber-600 dark:text-amber-400 hover:bg-amber-500/10 rounded" title={t('slicerSyncFirestoreTitle')}>
-            <RefreshCw className={`w-3 h-3 ${isSyncing ? 'animate-spin' : ''}`} /><span className="hidden md:inline">Sync</span>
+          <button
+            type="button"
+            onClick={() => syncFeedback.trigger(() => onSyncOrganizador())}
+            disabled={isSyncing || syncFeedback.isLoading}
+            className={syncFeedback.getButtonClass('h-7 px-2 cordel-card-sm text-[11px] font-bold flex items-center gap-1 cursor-pointer text-amber-600 dark:text-amber-400 hover:bg-amber-500/10 rounded')}
+            title={t('slicerSyncFirestoreTitle')}
+          >
+            {syncFeedback.isSuccess ? <Check className="w-3 h-3" /> : <RefreshCw className={`w-3 h-3 ${isSyncing || syncFeedback.isLoading ? 'animate-spin' : ''}`} />}
+            <span className="hidden md:inline">{syncFeedback.isSuccess ? syncFeedback.successLabel : 'Sync'}</span>
           </button>
         </div>
       </div>

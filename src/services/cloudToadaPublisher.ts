@@ -1,28 +1,27 @@
 /**
  * cloudToadaPublisher.ts
- * Téléversement des WAV découpés (rendus avec formantPreservingPitchShifter dans la Tonalité de la Troupe)
- * dans Storage et publication du pack Toada complet dans Firestore `/toada_packs` pour Sequenciador (< 140 lignes).
+ * Téléversement des WAV découpés (uniquement les patterns ayant usageCount > 0 dans project.slots),
+ * nettoyage des WAV orphelins dans Storage et publication du pack dans Firestore `/toada_packs` (< 135 lignes).
  */
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { doc, setDoc } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { storage } from './firebaseClient';
-import { type ToadaProject, DEFAULT_TOADA_BPM } from '../types/toadaProject.types';
+import { type ToadaProject, type VocalPatternItem, DEFAULT_TOADA_BPM } from '../types/toadaProject.types';
 import { getSequenciadorToadaUrl } from '../utils/ecosystemUrls';
 import { getBeatsPerMeasure } from '../utils/musicalMath';
 import { getPatternT1OffsetSec } from '../utils/anacrusisTimingHelper';
 import { resolveProjectDualScale } from '../utils/scaleTranspositionHelper';
 import { getOrComputeTroupeTransposedPCM } from '../audio/formantPreservingPitchShifter';
 import { pcmToWavBlob, slicePatternPcm, sanitizePatternForFirestore } from './toadaPublishHelpers';
+import { getPatternUsageCount, getUnusedPatternsSummary, deleteOrphanPatternWavsFromStorage } from '../utils/unusedPatternsPurger';
 
 export function removeUndefinedFields<T>(obj: T): T {
   if (obj === null || obj === undefined) return null as unknown as T;
   if (Array.isArray(obj)) return obj.map((item) => removeUndefinedFields(item)) as unknown as T;
   if (typeof obj === 'object') {
     const clean: Record<string, any> = {};
-    for (const [key, value] of Object.entries(obj)) {
-      if (value !== undefined) clean[key] = removeUndefinedFields(value);
-    }
+    for (const [key, value] of Object.entries(obj)) if (value !== undefined) clean[key] = removeUndefinedFields(value);
     return clean as T;
   }
   return obj;
@@ -32,18 +31,20 @@ export function getSequenciadorUrl(toadaId: string): string {
   return getSequenciadorToadaUrl(toadaId);
 }
 
-export function buildSequencerToadaPackDocument(
-  project: ToadaProject,
-  processedPatterns?: Record<string, any>[]
-): Record<string, any> {
+export function getActiveTimelinePatterns(project: ToadaProject): VocalPatternItem[] {
+  const used = (project.patterns || []).filter((p) => getPatternUsageCount(project, p.id) > 0);
+  return used.length > 0 ? used : (project.patterns || []);
+}
+
+export function buildSequencerToadaPackDocument(project: ToadaProject, processedPatterns?: Record<string, any>[]): Record<string, any> {
   const toadaId = project.id;
   const projectBpm = Number(project.bpm || project.toadaMeta?.bpmDefaut || DEFAULT_TOADA_BPM);
   const dualScale = resolveProjectDualScale(project, 'fr');
   const shiftSt = dualScale.transpositionSemitones;
   const sequenciadorExportMode = project.sequenciadorExportMode ?? 'rhythm_only';
   const ignoreMelodyPitch = sequenciadorExportMode === 'rhythm_only';
-
-  const patterns = (processedPatterns ?? project.patterns.map((p) =>
+  const sourcePatterns = getActiveTimelinePatterns(project);
+  const patterns = (processedPatterns ?? sourcePatterns.map((p) =>
     sanitizePatternForFirestore(p, (p as any).audioUrl, p.trimEndSec, p.t1OffsetSec, undefined, shiftSt)
   )).map((pat) => ({ ...pat, ignoreMelodyPitch }));
 
@@ -77,25 +78,28 @@ export function buildSequencerToadaPackDocument(
 export async function publishToadaToSequencer(
   project: ToadaProject,
   onProgress?: (stepText: string) => void
-): Promise<{ success: boolean; toadaId: string; sequenciadorUrl: string }> {
+): Promise<{ success: boolean; toadaId: string; sequenciadorUrl: string; exportedPatternsCount: number; savedMegabytes: string }> {
   const toadaId = project.id;
   const processedPatterns: Record<string, any>[] = [];
   const projectBpm = Number(project.bpm || project.toadaMeta?.bpmDefaut || DEFAULT_TOADA_BPM);
   const beatsPerMeasure = getBeatsPerMeasure(project.timeSignature);
-  const dualScale = resolveProjectDualScale(project, 'fr');
-  const shiftSt = dualScale.transpositionSemitones;
+  const shiftSt = resolveProjectDualScale(project, 'fr').transpositionSemitones;
+  const activePatterns = getActiveTimelinePatterns(project);
+  const unusedSummary = getUnusedPatternsSummary(project);
 
-  for (let i = 0; i < project.patterns.length; i++) {
-    const p = project.patterns[i];
-    onProgress?.(`Téléversement audio (${i + 1}/${project.patterns.length})...`);
+  if (unusedSummary.count > 0 && activePatterns.length < project.patterns.length) {
+    deleteOrphanPatternWavsFromStorage(toadaId, unusedSummary.unusedPatternIds);
+  }
+
+  for (let i = 0; i < activePatterns.length; i++) {
+    const p = activePatterns[i];
+    onProgress?.(`Téléversement audio (${i + 1}/${activePatterns.length})...`);
     let audioUrl: string | undefined;
-
     const patBpm = Number(p.baseBpm || p.bpm || projectBpm);
     const measureDurationSec = beatsPerMeasure * (60 / patBpm);
     const variant = p.variants?.[p.activeVariantKey] || Object.values(p.variants || {})[0];
     const rec = variant?.recordingResult ?? p.recordingResult;
     const sampleRate = rec?.sampleRate || p.pack?.audio?.sampleRate || 44100;
-
     const useCorr = Boolean(p.correctedAudioSamples && p.correctedAudioSamples.length > 0);
     const fullPcm = useCorr ? p.correctedAudioSamples : (rec?.pcm ?? p.rawAudioSamples);
     const explicitT1 = p.t1OffsetSec ?? variant?.t1OffsetSec ?? rec?.t1OffsetSec;
@@ -108,24 +112,19 @@ export async function publishToadaToSequencer(
     if (fullPcm && fullPcm.length > 0) {
       try {
         const sliced = slicePatternPcm(fullPcm, sampleRate, rawT1, trimStart, trimEnd);
-        slicedDurationSec = sliced.slicedDurationSec;
-        exportedT1OffsetSec = sliced.exportedT1OffsetSec;
-        startOffsetSec = sliced.startOffsetSec;
+        slicedDurationSec = sliced.slicedDurationSec; exportedT1OffsetSec = sliced.exportedT1OffsetSec; startOffsetSec = sliced.startOffsetSec;
         const troupePcm = shiftSt !== 0 ? getOrComputeTroupeTransposedPCM(sliced.slicedPcm, sampleRate, shiftSt) : sliced.slicedPcm;
-        const wavBlob = pcmToWavBlob(troupePcm, sampleRate);
         const storageRef = ref(storage, `vocalRecordings/${toadaId}_${p.id}.wav`);
-        await uploadBytes(storageRef, wavBlob, { contentType: 'audio/wav' });
+        await uploadBytes(storageRef, pcmToWavBlob(troupePcm, sampleRate), { contentType: 'audio/wav' });
         audioUrl = await getDownloadURL(storageRef);
       } catch (err) {
         console.warn(`[cloudToadaPublisher] Échec upload audio ${p.id} :`, err);
       }
     }
-
     processedPatterns.push(sanitizePatternForFirestore(p, audioUrl, slicedDurationSec, exportedT1OffsetSec, startOffsetSec, shiftSt));
   }
 
   onProgress?.('Enregistrement du pack dans Firestore...');
-  const cleanDoc = removeUndefinedFields(buildSequencerToadaPackDocument(project, processedPatterns));
-  await setDoc(doc(db, 'toada_packs', toadaId), cleanDoc);
-  return { success: true, toadaId, sequenciadorUrl: getSequenciadorUrl(toadaId) };
+  await setDoc(doc(db, 'toada_packs', toadaId), removeUndefinedFields(buildSequencerToadaPackDocument(project, processedPatterns)));
+  return { success: true, toadaId, sequenciadorUrl: getSequenciadorUrl(toadaId), exportedPatternsCount: activePatterns.length, savedMegabytes: unusedSummary.formattedMegabytes };
 }
