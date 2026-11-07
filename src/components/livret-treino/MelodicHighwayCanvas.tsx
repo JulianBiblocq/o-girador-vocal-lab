@@ -5,6 +5,7 @@
 import React, { useRef, useEffect, useCallback } from 'react';
 import type { PitchCurvePoint, VocalStepData } from '../../types/vocalPack.types';
 import { midiToNoteName } from '../../utils/noteUtils';
+import { getStepHorizontalBoundsPx, findLastTiedStepIndex } from '../../utils/tripletBeatHelper';
 import { foldStudentPitchToTargetOctave } from '../../audio/studentPitchAnalyzer';
 
 export interface MelodicHighwayCanvasProps {
@@ -59,10 +60,11 @@ export const MelodicHighwayCanvas: React.FC<MelodicHighwayCanvasProps> = ({
     // 3. Briques cibles du Mestre avec syllabes
     for (let i = 0; i < allSteps.length; i++) {
       const s = allSteps[i];
-      if (!s.active || s.note === '───' || s.midiNumber < minMidi || s.midiNumber > maxMidi) continue;
-      let ties = 0;
-      while (i + 1 + ties < allSteps.length && allSteps[i + 1 + ties].note === '───') ties++;
-      const x = leftPad + i * stepW, w = Math.max(6, (1 + ties) * stepW - 2);
+      if (s.tripletSlot === 'unused' || !s.active || s.note === '───' || s.midiNumber < minMidi || s.midiNumber > maxMidi) continue;
+      const endIdx = findLastTiedStepIndex(allSteps, i);
+      const bounds = getStepHorizontalBoundsPx(allSteps, i, plotW);
+      if (bounds.hidden || bounds.widthPx <= 0) { i = endIdx; continue; }
+      const x = leftPad + bounds.xPx, w = Math.max(6, bounds.widthPx - 2);
       const y = (maxMidi - s.midiNumber) * rowH + 2, h = Math.max(10, rowH - 4);
       ctx.fillStyle = isLight ? 'rgba(180, 83, 9, 0.25)' : 'rgba(217, 119, 6, 0.28)';
       ctx.strokeStyle = '#f59e0b'; ctx.lineWidth = 1.5;
@@ -71,7 +73,7 @@ export const MelodicHighwayCanvas: React.FC<MelodicHighwayCanvasProps> = ({
       ctx.font = 'bold 10px sans-serif';
       const label = s.syllable?.trim() ? s.syllable.trim() : s.note;
       ctx.fillText(label, x + 5, y + h * 0.68);
-      i += ties;
+      i = endIdx;
     }
 
     // 4. Courbe de référence f0(t) du Mestre (pointillés dorés)

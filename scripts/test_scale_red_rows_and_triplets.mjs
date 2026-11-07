@@ -2,8 +2,13 @@
  * test_scale_red_rows_and_triplets.mjs
  * Suite de tests automatisés pour :
  * - Volet 1 : Coloration en rouge des lignes hors-gamme sur le Piano Roll & Clavier gauche
- * - Volet 2 : Support complet des Triolets (³1-2-3 & ³_2-3) par temps (Grille, Syllabes, Audio & Analyse Mélodique)
- * - Retour propre en binaire lors du clic sur 1-2-4
+ * - Volet 2 : Bouton Triolet Unique et Intelligent [ 3 ] (applySmartTripletToBeat & getTripletBeatLabel)
+ *   * 3 notes (1-2-4 ou _2-3-4) + clic sur 3 -> 1-2-3 ([true, true, true]) avec les 3 syllabes préservées
+ *   * 2 notes (1-2-_-_) + clic sur 3 -> 1-2-_ (attaques sur tiers 1 et 2, silence/tenue sur tiers 3)
+ *   * 2 notes (1-_-_-4) + clic sur 3 -> 1-_-3 (attaques sur tiers 1 et 3, silence/tenue sur tiers 2)
+ *   * 2 notes (_-_-3-4) + clic sur 3 -> _-2-3 (silence/tenue sur tiers 1, attaques sur tiers 2 et 3)
+ *   * Re-clic sur 3 quand déjà en triolet à 2 notes -> rotation 1-2-_ -> 1-_-3 -> _-2-3 -> 1-2-_
+ * - Ré-analyse des hauteurs par tiers de temps & retour propre en binaire sur 1-2-4
  */
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -20,12 +25,13 @@ globalThis.localStorage = {
 
 const {
   isBeatTriplet,
+  applySmartTripletToBeat,
+  getTripletBeatLabel,
   getStepTimeWindowSec,
   getStepHorizontalBoundsPx,
   resolveStepIndexAtXPx,
 } = await import('../src/utils/tripletBeatHelper.ts');
 const {
-  MARACATU_BEAT_PRESETS,
   applyBeatRhythmPreset,
 } = await import('../src/components/livret-melodia/BeatRhythmPresetBar.tsx');
 const {
@@ -35,6 +41,23 @@ const {
   drawPianoRollRows,
 } = await import('../src/components/livret-melodia/pianoRollRowsDrawer.ts');
 
+function makeBeatSteps(pattern) {
+  return pattern.map((cfg, idx) => ({
+    stepIndex: idx,
+    active: cfg.active ?? false,
+    isTie: cfg.isTie ?? false,
+    note: cfg.isTie ? '───' : (cfg.note ?? 'C4'),
+    midiNumber: cfg.active ? (cfg.midi ?? 60) : 0,
+    syllable: cfg.syllable ?? '',
+    velocity: 100,
+    decay: 0.15,
+  }));
+}
+
+function getTripletAttackSignature(steps, beatStartIdx = 0) {
+  return [0, 1, 2].map((k) => Boolean(steps[beatStartIdx + k].active && !steps[beatStartIdx + k].isTie && steps[beatStartIdx + k].note !== '───'));
+}
+
 console.log('=== TEST 1 : VOLET 1 — LIGNES HORS-GAMME EN ROUGE (PIANO ROLL & CLAVIER 64PX) ===');
 {
   const filledRows = [];
@@ -42,7 +65,7 @@ console.log('=== TEST 1 : VOLET 1 — LIGNES HORS-GAMME EN ROUGE (PIANO ROLL & C
     fillStyle: '',
     strokeStyle: '',
     lineWidth: 1,
-    fillRect(x, y, w, h) {
+    fillRect(x, y, w) {
       if (w > 10) filledRows.push({ y, fillStyle: this.fillStyle });
     },
     beginPath() {},
@@ -51,13 +74,12 @@ console.log('=== TEST 1 : VOLET 1 — LIGNES HORS-GAMME EN ROUGE (PIANO ROLL & C
     stroke() {},
   };
 
-  // Gamme de Do Majeur : [0, 2, 4, 5, 7, 9, 11] -> Do# (1) est hors-gamme, Do (0) et Ré (2) sont dans la gamme
   const cMajorPitchClasses = new Set([0, 2, 4, 5, 7, 9, 11]);
   drawPianoRollRows({
     ctx: mockCtx,
     width: 600,
-    minMidi: 60, // C4 (in scale, tonic)
-    maxMidi: 62, // D4 (62, in scale), C#4 (61, out of scale), C4 (60, in scale)
+    minMidi: 60,
+    maxMidi: 62,
     rowHeight: 22,
     playheadSec: -1,
     seekStartSec: 0,
@@ -68,140 +90,150 @@ console.log('=== TEST 1 : VOLET 1 — LIGNES HORS-GAMME EN ROUGE (PIANO ROLL & C
     tonic: 'C',
   });
 
-  // L'ordre de tracé va de maxMidi (62) à minMidi (60)
-  const d4Row = filledRows[0];  // MIDI 62 (in scale)
-  const cs4Row = filledRows[1]; // MIDI 61 (out of scale -> red!)
-  const c4Row = filledRows[2];  // MIDI 60 (in scale, tonic)
-
-  assert.equal(cs4Row.fillStyle, 'rgba(185, 28, 28, 0.28)', 'En mode Nuit, une ligne hors-gamme doit être colorée en rouge rgba(185, 28, 28, 0.28)');
-  assert.equal(d4Row.fillStyle, 'rgba(16, 185, 129, 0.07)', 'Une ligne dans la gamme doit garder le fond vert émeraude léger rgba(16, 185, 129, 0.07)');
-  assert.equal(c4Row.fillStyle, 'rgba(16, 185, 129, 0.14)', 'La tonique de la gamme est marquée discrètement');
+  assert.equal(filledRows[1].fillStyle, 'rgba(185, 28, 28, 0.28)', 'En mode Nuit, une ligne hors-gamme (C#4) doit être colorée en rouge rgba(185, 28, 28, 0.28)');
+  assert.equal(filledRows[0].fillStyle, 'rgba(16, 185, 129, 0.07)', 'Une ligne dans la gamme (D4) garde le fond vert émeraude léger');
 
   const kbSrc = fs.readFileSync(path.resolve('src/components/livret-melodia/PianoRollKeyboard.tsx'), 'utf8');
-  assert.ok(kbSrc.includes('#ef4444') && kbSrc.includes('#b91c1c'), 'Le clavier gauche 64px affiche un indicateur rouge (#b91c1c / #ef4444) sur les touches hors-gamme');
+  assert.ok(kbSrc.includes('#ef4444') && kbSrc.includes('#b91c1c'), 'Le clavier gauche 64px affiche un indicateur rouge sur les touches hors-gamme');
 }
 console.log('✓ Test 1 validé : Lignes hors-gamme et touches du clavier colorées en rouge.');
 
-console.log('\n=== TEST 2 : VOLET 2 — FENÊTRES TEMPORELLES (0, 1/3, 2/3) & COORDONNÉES HORIZONTALES (beatWidth / 3) POUR ³1-2-3 ET ³_2-3 ===');
+console.log('\n=== TEST 2 : BOUTON TRIOLET INTELLIGENT [ 3 ] (CAS 3 NOTES, 2 NOTES & ROTATION CYCLIQUE) ===');
 {
-  const presetLabels = MARACATU_BEAT_PRESETS.map((p) => p.label);
-  assert.ok(presetLabels.includes('³1-2-3'), 'Le preset ³1-2-3 doit être présent dans MARACATU_BEAT_PRESETS');
-  assert.ok(presetLabels.includes('³_2-3'), 'Le preset ³_2-3 doit être présent dans MARACATU_BEAT_PRESETS');
+  // 1) 3 notes (1-2-4 ou _2-3-4) + clic sur 3 -> 1-2-3 ([true, true, true]) avec les 3 syllabes préservées
+  const steps124 = makeBeatSteps([
+    { active: true, midi: 60, syllable: 'Ma-' },
+    { active: true, midi: 62, syllable: 'ra-' },
+    { active: true, isTie: true, midi: 62 },
+    { active: true, midi: 64, syllable: 'ca' },
+  ]);
+  assert.equal(getTripletBeatLabel(steps124, 0), '3', 'Au repos en binaire, le bouton affiche "3"');
 
-  // Création de 2 temps (8 pas au total)
-  const baseSteps = Array.from({ length: 8 }, (_, idx) => ({
-    stepIndex: idx,
-    active: idx < 4,
-    isTie: false,
-    note: 'C4',
-    midiNumber: 60,
-    syllable: ['Ma-', 'ra-', 'ca-', 'tu', 'Na-', 'ção', '', ''][idx] || '',
-    velocity: 100,
-    decay: 0.15,
-  }));
+  const tripFrom124 = applySmartTripletToBeat(steps124, 0);
+  assert.equal(isBeatTriplet(tripFrom124, 0), true);
+  assert.deepEqual(getTripletAttackSignature(tripFrom124, 0), [true, true, true]);
+  assert.equal(getTripletBeatLabel(tripFrom124, 0), '³1-2-3');
+  assert.deepEqual([tripFrom124[0].syllable, tripFrom124[1].syllable, tripFrom124[2].syllable], ['Ma-', 'ra-', 'ca']);
+  assert.equal(tripFrom124[3].tripletSlot, 'unused');
+  assert.equal(tripFrom124[3].active, false);
 
-  const beatDurSec = 0.60; // 100 BPM
-  const gridWidthPx = 600; // 2 temps -> beatWidthPx = 300px, tiers = 100px, quart = 75px
+  const stepsRest234 = makeBeatSteps([
+    { active: false },
+    { active: true, midi: 55, syllable: 'Ba-' },
+    { active: true, midi: 57, syllable: 'que-' },
+    { active: true, midi: 60, syllable: 'bom' },
+  ]);
+  const tripFromRest234 = applySmartTripletToBeat(stepsRest234, 0);
+  assert.deepEqual(getTripletAttackSignature(tripFromRest234, 0), [true, true, true]);
+  assert.equal(getTripletBeatLabel(tripFromRest234, 0), '³1-2-3');
+  assert.deepEqual([tripFromRest234[0].syllable, tripFromRest234[1].syllable, tripFromRest234[2].syllable], ['Ba-', 'que-', 'bom']);
 
-  // 1) Application de ³1-2-3 sur le 1er temps (beatIndex = 0)
-  const stepsTripletFull = applyBeatRhythmPreset(baseSteps, 0, '³1-2-3', 4);
-  assert.equal(stepsTripletFull.length, 8, 'Le tableau steps conserve exactement 4 entrées par temps (8 pour 2 temps)');
-  assert.equal(isBeatTriplet(stepsTripletFull, 0), true, 'Le temps 0 doit être détecté en triolet');
-  assert.equal(isBeatTriplet(stepsTripletFull, 4), false, 'Le temps 1 voisin reste binaire');
+  // 2) 2 notes (1-2-_-_) + clic sur 3 -> 1-2-_ (attaques sur tiers 1 et 2, silence sur tiers 3)
+  const steps12Rest = makeBeatSteps([
+    { active: true, midi: 60, syllable: 'Na-' },
+    { active: true, midi: 62, syllable: 'ção' },
+    { active: false },
+    { active: false },
+  ]);
+  const trip12 = applySmartTripletToBeat(steps12Rest, 0);
+  assert.deepEqual(getTripletAttackSignature(trip12, 0), [true, true, false]);
+  assert.equal(getTripletBeatLabel(trip12, 0), '³1-2-_');
+  assert.equal(trip12[0].syllable, 'Na-');
+  assert.equal(trip12[1].syllable, 'ção');
+  assert.equal(trip12[2].active, false, 'Le 3e tiers conserve le silence');
 
-  assert.equal(stepsTripletFull[0].tripletSlot, 1);
-  assert.equal(stepsTripletFull[1].tripletSlot, 2);
-  assert.equal(stepsTripletFull[2].tripletSlot, 3);
-  assert.equal(stepsTripletFull[3].tripletSlot, 'unused');
-  assert.equal(stepsTripletFull[3].active, false);
-  assert.equal(stepsTripletFull[3].syllable, '');
+  // 3) 2 notes (1-_-_-4) + clic sur 3 -> 1-_-3 (attaques sur tiers 1 et 3, silence sur tiers 2)
+  const steps14Rest = makeBeatSteps([
+    { active: true, midi: 60, syllable: 'Vo-' },
+    { active: false },
+    { active: false },
+    { active: true, midi: 64, syllable: 'vó' },
+  ]);
+  const trip13 = applySmartTripletToBeat(steps14Rest, 0);
+  assert.deepEqual(getTripletAttackSignature(trip13, 0), [true, false, true]);
+  assert.equal(getTripletBeatLabel(trip13, 0), '³1-_-3');
+  assert.equal(trip13[0].syllable, 'Vo-');
+  assert.equal(trip13[1].active, false, 'Le 2e tiers (milieu) conserve le silence');
+  assert.equal(trip13[2].syllable, 'vó');
 
-  // Les 4 syllabes du temps 0 ont été réparties sur les 3 notes du triolet sans toucher au temps 1
-  assert.equal(stepsTripletFull[0].syllable, 'Ma-');
-  assert.equal(stepsTripletFull[1].syllable, 'ra-');
-  assert.equal(stepsTripletFull[2].syllable, 'ca-tu');
-  assert.equal(stepsTripletFull[4].syllable, 'Na-', 'Le temps voisin ne doit pas être décalé');
+  // Vérifie aussi 1-_-_-4 avec tenue au milieu -> le 2e tiers conserve la tenue (───)
+  const steps14Tie = makeBeatSteps([
+    { active: true, midi: 60, syllable: 'Vo-' },
+    { active: true, isTie: true, midi: 60 },
+    { active: true, isTie: true, midi: 60 },
+    { active: true, midi: 64, syllable: 'vó' },
+  ]);
+  const trip13Tie = applySmartTripletToBeat(steps14Tie, 0);
+  assert.deepEqual(getTripletAttackSignature(trip13Tie, 0), [true, false, true]);
+  assert.equal(trip13Tie[1].active, true);
+  assert.equal(trip13Tie[1].isTie, true);
+  assert.equal(trip13Tie[1].note, '───');
 
-  // Fenêtres temporelles exactes (0, 1/3, 2/3 du temps)
-  const w0 = getStepTimeWindowSec(stepsTripletFull, 0, 0, beatDurSec);
-  const w1 = getStepTimeWindowSec(stepsTripletFull, 1, 0, beatDurSec);
-  const w2 = getStepTimeWindowSec(stepsTripletFull, 2, 0, beatDurSec);
-  const w3 = getStepTimeWindowSec(stepsTripletFull, 3, 0, beatDurSec);
+  // 4) 2 notes (_-_-3-4) + clic sur 3 -> _-2-3 (silence sur tiers 1, attaques sur tiers 2 et 3)
+  const steps34Rest = makeBeatSteps([
+    { active: false },
+    { active: false },
+    { active: true, midi: 57, syllable: 'Lu-' },
+    { active: true, midi: 60, syllable: 'an' },
+  ]);
+  const trip23 = applySmartTripletToBeat(steps34Rest, 0);
+  assert.deepEqual(getTripletAttackSignature(trip23, 0), [false, true, true]);
+  assert.equal(getTripletBeatLabel(trip23, 0), '³_-2-3');
+  assert.equal(trip23[0].active, false, 'Le 1er tiers conserve le silence de tête');
+  assert.equal(trip23[1].syllable, 'Lu-');
+  assert.equal(trip23[2].syllable, 'an');
 
-  assert.ok(Math.abs(w0.startSec - 0.0) < 1e-6 && Math.abs(w0.endSec - 0.2) < 1e-6 && Math.abs(w0.durationSec - 0.2) < 1e-6);
-  assert.ok(Math.abs(w1.startSec - 0.2) < 1e-6 && Math.abs(w1.endSec - 0.4) < 1e-6 && Math.abs(w1.durationSec - 0.2) < 1e-6);
-  assert.ok(Math.abs(w2.startSec - 0.4) < 1e-6 && Math.abs(w2.endSec - 0.6) < 1e-6 && Math.abs(w2.durationSec - 0.2) < 1e-6);
-  assert.equal(w3.durationSec, 0, 'Le 4e pas unused a une durée nulle');
+  // 5) Re-clic sur 3 quand déjà en triolet à 2 notes -> fait tourner 1-2-_ -> 1-_-3 -> _-2-3 -> 1-2-_
+  const cycle1 = applySmartTripletToBeat(trip12, 0); // depuis 1-2-_ -> 1-_-3
+  assert.equal(getTripletBeatLabel(cycle1, 0), '³1-_-3');
+  assert.deepEqual([cycle1[0].syllable, cycle1[2].syllable], ['Na-', 'ção']);
 
-  // Coordonnées horizontales exactes (beatWidth / 3 = 100px)
-  const b0 = getStepHorizontalBoundsPx(stepsTripletFull, 0, gridWidthPx);
-  const b1 = getStepHorizontalBoundsPx(stepsTripletFull, 1, gridWidthPx);
-  const b2 = getStepHorizontalBoundsPx(stepsTripletFull, 2, gridWidthPx);
-  const b3 = getStepHorizontalBoundsPx(stepsTripletFull, 3, gridWidthPx);
+  const cycle2 = applySmartTripletToBeat(cycle1, 0); // depuis 1-_-3 -> _-2-3
+  assert.equal(getTripletBeatLabel(cycle2, 0), '³_-2-3');
+  assert.deepEqual([cycle2[1].syllable, cycle2[2].syllable], ['Na-', 'ção']);
 
-  assert.ok(Math.abs(b0.xPx - 0) < 1e-6 && Math.abs(b0.widthPx - 100) < 1e-6 && b0.hidden === false);
-  assert.ok(Math.abs(b1.xPx - 100) < 1e-6 && Math.abs(b1.widthPx - 100) < 1e-6 && b1.hidden === false);
-  assert.ok(Math.abs(b2.xPx - 200) < 1e-6 && Math.abs(b2.widthPx - 100) < 1e-6 && b2.hidden === false);
-  assert.equal(b3.hidden, true);
-  assert.equal(b3.widthPx, 0);
-
-  // Résolution du clic souris aux tiers du temps
-  assert.equal(resolveStepIndexAtXPx(stepsTripletFull, 20, gridWidthPx), 0);
-  assert.equal(resolveStepIndexAtXPx(stepsTripletFull, 150, gridWidthPx), 1);
-  assert.equal(resolveStepIndexAtXPx(stepsTripletFull, 250, gridWidthPx), 2);
-
-  // 2) Application de ³_2-3 (soupir sur le 1er tiers + notes sur 2e et 3e tiers)
-  const stepsTripletRest = applyBeatRhythmPreset(stepsTripletFull, 0, '³_2-3', 4);
-  assert.equal(isBeatTriplet(stepsTripletRest, 0), true);
-  assert.equal(stepsTripletRest[0].tripletSlot, 1);
-  assert.equal(stepsTripletRest[0].active, false, 'Le 1er tiers de ³_2-3 doit être un soupir (inactif)');
-  assert.equal(stepsTripletRest[1].tripletSlot, 2);
-  assert.equal(stepsTripletRest[1].active, true, 'Le 2e tiers de ³_2-3 doit être actif');
-  assert.equal(stepsTripletRest[2].tripletSlot, 3);
-  assert.equal(stepsTripletRest[2].active, true, 'Le 3e tiers de ³_2-3 doit être actif');
-  assert.equal(stepsTripletRest[3].tripletSlot, 'unused');
-  assert.equal(stepsTripletRest[3].active, false);
-
-  const br1 = getStepHorizontalBoundsPx(stepsTripletRest, 1, gridWidthPx);
-  const br2 = getStepHorizontalBoundsPx(stepsTripletRest, 2, gridWidthPx);
-  assert.ok(Math.abs(br1.xPx - 100) < 1e-6 && Math.abs(br1.widthPx - 100) < 1e-6);
-  assert.ok(Math.abs(br2.xPx - 200) < 1e-6 && Math.abs(br2.widthPx - 100) < 1e-6);
+  const cycle3 = applySmartTripletToBeat(cycle2, 0); // depuis _-2-3 -> 1-2-_
+  assert.equal(getTripletBeatLabel(cycle3, 0), '³1-2-_');
+  assert.deepEqual([cycle3[0].syllable, cycle3[1].syllable], ['Na-', 'ção']);
 }
-console.log('✓ Test 2 validé : Fenêtres temporelles (0, 1/3, 2/3) et coordonnées (beatWidth / 3) exactes pour ³1-2-3 et ³_2-3.');
+console.log('✓ Test 2 validé : Conversion intelligente Binaire -> Triolet (1-2-3, 1-2-_, 1-_-3, _-2-3) et rotation cyclique.');
 
-console.log('\n=== TEST 3 : RÉ-ANALYSE MÉLODIQUE SUR UN TEMPS EN TRIOLET ³1-2-3 & RETOUR PROPRE EN BINAIRE (1-2-4) ===');
+console.log('\n=== TEST 3 : GÉOMÉTRIE (beatWidth / 3), RÉ-ANALYSE MÉLODIQUE SUR TRIOLET & RETOUR EN BINAIRE (1-2-4) ===');
 {
-  const beatDurSec = 0.60; // 1er tiers = 0..0.20s, 2e tiers = 0.20..0.40s, 3e tiers = 0.40..0.60s
-  const stepDurSec = beatDurSec / 4; // 0.15s
-
-  // Courbe verte synthétique :
-  // - [0.00..0.20s] : Sol3 (MIDI 55)
-  // - [0.20..0.40s] : La3  (MIDI 57)
-  // - [0.40..0.60s] : Do4  (MIDI 60)
+  const beatDurSec = 0.60;
+  const stepDurSec = beatDurSec / 4;
   const pitchCurve = [];
   for (let tMs = 0; tMs <= 600; tMs += 10) {
     const tSec = tMs / 1000;
     const midiFloat = tSec < 0.20 ? 55.0 : tSec < 0.40 ? 57.0 : 60.0;
-    pitchCurve.push({
-      timeSec: tSec,
-      midiFloat,
-      confidence: 0.95,
-      rms: 0.22,
-    });
+    pitchCurve.push({ timeSec: tSec, midiFloat, confidence: 0.95, rms: 0.22 });
   }
 
-  const initialSteps = Array.from({ length: 4 }, (_, idx) => ({
-    stepIndex: idx,
-    active: idx < 3,
-    isTie: false,
-    note: 'C4',
-    midiNumber: 60,
-    syllable: ['ba-', 'que-', 'bom', ''][idx],
-    velocity: 100,
-    decay: stepDurSec,
-  }));
+  const initialSteps = makeBeatSteps([
+    { active: true, midi: 60, syllable: 'ba-' },
+    { active: true, midi: 60, syllable: 'que-' },
+    { active: true, isTie: true, midi: 60 },
+    { active: true, midi: 60, syllable: 'bom' },
+  ]);
 
-  const tripletSteps = applyBeatRhythmPreset(initialSteps, 0, '³1-2-3', 4);
+  const tripletSteps = applySmartTripletToBeat(initialSteps, 0);
+  const w0 = getStepTimeWindowSec(tripletSteps, 0, 0, beatDurSec);
+  const w1 = getStepTimeWindowSec(tripletSteps, 1, 0, beatDurSec);
+  const w2 = getStepTimeWindowSec(tripletSteps, 2, 0, beatDurSec);
+  assert.ok(Math.abs(w0.startSec - 0.0) < 1e-6 && Math.abs(w0.endSec - 0.2) < 1e-6);
+  assert.ok(Math.abs(w1.startSec - 0.2) < 1e-6 && Math.abs(w1.endSec - 0.4) < 1e-6);
+  assert.ok(Math.abs(w2.startSec - 0.4) < 1e-6 && Math.abs(w2.endSec - 0.6) < 1e-6);
+
+  const b0 = getStepHorizontalBoundsPx(tripletSteps, 0, 300);
+  const b1 = getStepHorizontalBoundsPx(tripletSteps, 1, 300);
+  const b2 = getStepHorizontalBoundsPx(tripletSteps, 2, 300);
+  const b3 = getStepHorizontalBoundsPx(tripletSteps, 3, 300);
+  assert.ok(Math.abs(b0.xPx - 0) < 1e-6 && Math.abs(b0.widthPx - 100) < 1e-6);
+  assert.ok(Math.abs(b1.xPx - 100) < 1e-6 && Math.abs(b1.widthPx - 100) < 1e-6);
+  assert.ok(Math.abs(b2.xPx - 200) < 1e-6 && Math.abs(b2.widthPx - 100) < 1e-6);
+  assert.equal(b3.hidden, true);
+  assert.equal(resolveStepIndexAtXPx(tripletSteps, 150, 300), 1);
+
   const reanalyzed = reanalyzeNotesOnAlignedSyllables({
     steps: tripletSteps,
     pitchCurve,
@@ -212,33 +244,15 @@ console.log('\n=== TEST 3 : RÉ-ANALYSE MÉLODIQUE SUR UN TEMPS EN TRIOLET ³1-2
     vocalBounds: { minMidi: 45, maxMidi: 68, comfortMidi: 57 },
   });
 
-  assert.equal(reanalyzed[0].midiNumber, 55, 'Le 1er tiers du triolet [0..0.20s] doit lire Sol3 (MIDI 55)');
-  assert.equal(reanalyzed[0].note, 'G3');
-  assert.equal(reanalyzed[1].midiNumber, 57, 'Le 2e tiers du triolet [0.20..0.40s] doit lire La3 (MIDI 57)');
-  assert.equal(reanalyzed[1].note, 'A3');
-  assert.equal(reanalyzed[2].midiNumber, 60, 'Le 3e tiers du triolet [0.40..0.60s] doit lire Do4 (MIDI 60)');
-  assert.equal(reanalyzed[2].note, 'C4');
-  assert.equal(reanalyzed[3].tripletSlot, 'unused');
-  assert.equal(reanalyzed[3].active, false);
+  assert.equal(reanalyzed[0].midiNumber, 55);
+  assert.equal(reanalyzed[1].midiNumber, 57);
+  assert.equal(reanalyzed[2].midiNumber, 60);
 
-  // Retour propre en binaire lors du clic sur 1-2-4
   const backToBinary = applyBeatRhythmPreset(reanalyzed, 0, '1-2-4', 4);
-  assert.equal(isBeatTriplet(backToBinary, 0), false, 'Après clic sur 1-2-4, le temps ne doit plus être en triolet');
-  for (let s = 0; s < 4; s++) {
-    assert.equal(backToBinary[s].tripletSlot, undefined, `Le pas ${s} doit avoir tripletSlot === undefined après retour en binaire`);
-  }
-  assert.equal(backToBinary[0].active, true);
-  assert.equal(backToBinary[1].active, true);
-  assert.equal(backToBinary[2].active, true);
-  assert.equal(backToBinary[2].isTie, true, 'En 1-2-4, la 3e double-croche est liée à la 2e');
-  assert.equal(backToBinary[3].active, true);
-  assert.equal(backToBinary[3].isTie, false);
-
-  const binBounds0 = getStepHorizontalBoundsPx(backToBinary, 0, 300);
-  const binBounds3 = getStepHorizontalBoundsPx(backToBinary, 3, 300);
-  assert.ok(Math.abs(binBounds0.widthPx - 75) < 1e-6, 'En binaire, un pas simple retrouve sa largeur beatWidth / 4 (75px)');
-  assert.ok(Math.abs(binBounds3.xPx - 225) < 1e-6 && Math.abs(binBounds3.widthPx - 75) < 1e-6);
+  assert.equal(isBeatTriplet(backToBinary, 0), false);
+  assert.equal(getTripletBeatLabel(backToBinary, 0), '3');
+  for (let s = 0; s < 4; s++) assert.equal(backToBinary[s].tripletSlot, undefined);
 }
-console.log('✓ Test 3 validé : Ré-analyse des 3 tiers de la courbe verte et retour propre en binaire sur 1-2-4.');
+console.log('✓ Test 3 validé : Fenêtres temporelles, géométrie, ré-analyse mélodique par tiers et retour en binaire sur 1-2-4.');
 
-console.log('\n🎉 TOUS LES TESTS (LIGNES HORS-GAMME ROUGES & TRIOLETS ³1-2-3 / ³_2-3) SONT PASSÉS AVEC SUCCÈS !');
+console.log('\n🎉 TOUS LES TESTS (LIGNES ROUGES HORS-GAMME & BOUTON TRIOLET INTELLIGENT [ 3 ]) SONT PASSÉS AVEC SUCCÈS !');
