@@ -19,13 +19,13 @@ export async function resolve(specifier, context, nextResolve) {
 }
 
 export async function load(url, context, nextLoad) {
-  if (url.endsWith('.tsx') || url.endsWith('.jsx')) {
+  if (url.endsWith('.ts') || url.endsWith('.tsx') || url.endsWith('.jsx')) {
     const raw = readFileSync(fileURLToPath(url), 'utf8');
     const transpiled = ts.transpileModule(raw, {
       compilerOptions: {
         module: ts.ModuleKind.ESNext,
         target: ts.ScriptTarget.ESNext,
-        jsx: ts.JsxEmit.React,
+        jsx: (url.endsWith('.tsx') || url.endsWith('.jsx')) ? ts.JsxEmit.React : ts.JsxEmit.None,
       },
     });
     return {

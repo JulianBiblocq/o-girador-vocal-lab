@@ -80,7 +80,10 @@ export function sanitizePatternForFirestore(
   transpositionSemitones = 0
 ): Record<string, any> {
   const sanitizedVariants: Record<string, any> = {};
+  const speedVariants: Record<string, string> = {};
   const activeKey = p.activeVariantKey || 'spd100_pit+0';
+  const patBpm = p.bpm ?? p.baseBpm ?? 88;
+  if (audioUrl) speedVariants['100'] = audioUrl;
 
   for (const [key, v] of Object.entries(p.variants || {})) {
     const isActive = key === activeKey;
@@ -90,10 +93,15 @@ export function sanitizePatternForFirestore(
     const { recordingResult: _rec, audioBuffer: _buf, audioBase64: _b64, ...vRest } = v as any;
     const varAudioUrl = isActive ? (audioUrl || (v as any).audioUrl) : (v as any).audioUrl;
     if (!varAudioUrl) continue;
+    const spdPct = String(Math.round((v.speedRatio || 1) * 100));
+    if ((v.pitchShiftSemitones ?? 0) === 0 && (spdPct === '75' || spdPct === '88' || spdPct === '100')) {
+      speedVariants[spdPct] = varAudioUrl;
+    }
 
     sanitizedVariants[key] = {
       ...vRest,
       audioUrl: varAudioUrl,
+      recordedBpm: v.recordingResult?.recordedBpm || Math.round(patBpm * (v.speedRatio || 1)),
       trimStartSec: 0,
       trimEndSec: isActive ? (slicedDurationSec ?? v.trimEndSec) : v.trimEndSec,
       t1OffsetSec: isActive ? (exportedT1OffsetSec ?? v.t1OffsetSec) : v.t1OffsetSec,
@@ -103,17 +111,10 @@ export function sanitizePatternForFirestore(
   }
 
   const {
-    pack: _pack,
-    rawAudioSamples: _raw,
-    correctedAudioSamples: _corr,
-    troupeTransposedPCM: _troupePcm,
-    recordingResult: _recRes,
-    rawPitchCurve: _rawCurve,
-    pitchCurve: _curve,
-    ...patternRest
+    pack: _pack, rawAudioSamples: _raw, correctedAudioSamples: _corr, troupeTransposedPCM: _troupePcm,
+    recordingResult: _recRes, rawPitchCurve: _rawCurve, pitchCurve: _curve, ...patternRest
   } = p as any;
 
-  const patBpm = p.bpm ?? p.baseBpm ?? 88;
   const transposedAnacrusis = transposeVocalSteps(p.anacrusisSteps || [], transpositionSemitones);
   const transposedMain = transposeVocalSteps(p.mainSteps || [], transpositionSemitones);
   const exportedRefPitch = transposePitchNote(p.referencePitch || 'A3', transpositionSemitones);
@@ -121,21 +122,15 @@ export function sanitizePatternForFirestore(
 
   return {
     ...patternRest,
-    isReady,
-    bpm: patBpm,
-    baseBpm: patBpm,
-    referencePitch: exportedRefPitch,
-    sungReferencePitch: p.referencePitch || 'A3',
-    transpositionSemitones,
-    hasAnacrusis: p.hasAnacrusis !== false,
+    isReady, bpm: patBpm, baseBpm: patBpm, recordedBpm: patBpm,
+    referencePitch: exportedRefPitch, sungReferencePitch: p.referencePitch || 'A3',
+    transpositionSemitones, hasAnacrusis: p.hasAnacrusis !== false,
     hasTailBeat: Boolean(p.hasTailBeat || p.exitBeat === 1),
-    anacrusisSteps: transposedAnacrusis,
-    mainSteps: transposedMain,
-    audioUrl,
+    anacrusisSteps: transposedAnacrusis, mainSteps: transposedMain, audioUrl,
     t1OffsetSec: exportedT1OffsetSec ?? p.t1OffsetSec ?? 0,
     startOffsetSec: startOffsetSec ?? (p as any).startOffsetSec ?? 0,
-    trimStartSec: 0,
-    trimEndSec: slicedDurationSec ?? p.trimEndSec ?? 0,
+    trimStartSec: 0, trimEndSec: slicedDurationSec ?? p.trimEndSec ?? 0,
+    speedVariants: Object.keys(speedVariants).length > 0 ? speedVariants : undefined,
     variants: sanitizedVariants,
   };
 }
