@@ -40,31 +40,13 @@ export const MelodiaNextStepFooter: React.FC = () => {
     try {
       const res = await publishToadaToOrganizador(project, project.toadaMeta?.groupId || 'samambaia');
       loadProject({
-        ...project,
-        toadaMeta: {
-          ...(project.toadaMeta || {}),
-          id: res.documentId,
-          bpmDefaut: res.bpm,
-          tonaliteDefaut: res.scaleLabel,
-        },
+        ...project, organizadorSyncedAt: Date.now(),
+        toadaMeta: { ...(project.toadaMeta || {}), id: res.documentId, bpmDefaut: res.bpm, tonaliteDefaut: res.scaleLabel },
       });
-      window.dispatchEvent(
-        new CustomEvent('app-toast', {
-          detail: {
-            type: 'success',
-            message: `Fiche Organizador mise à jour (${res.bpm} BPM • Gamme : ${res.scaleLabel} • Temps & Syllabes synchronisés)`,
-          },
-        })
-      );
+      window.dispatchEvent(new CustomEvent('app-toast', { detail: { type: 'success', message: `Fiche Organizador mise à jour (${res.bpm} BPM • Gamme : ${res.scaleLabel} • Temps & Syllabes synchronisés)` } }));
     } catch (err: any) {
-      window.dispatchEvent(
-        new CustomEvent('app-toast', {
-          detail: { type: 'error', message: t('publishOrganizadorErrorToast', { err: err?.message || 'err' }) },
-        })
-      );
-    } finally {
-      setIsPushingOrg(false);
-    }
+      window.dispatchEvent(new CustomEvent('app-toast', { detail: { type: 'error', message: t('publishOrganizadorErrorToast', { err: err?.message || 'err' }) } }));
+    } finally { setIsPushingOrg(false); }
   };
 
   const handleRecordNext = () => {

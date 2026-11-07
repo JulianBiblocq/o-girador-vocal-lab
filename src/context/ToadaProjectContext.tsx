@@ -4,7 +4,7 @@
  */
 import React, { createContext, useContext, useState, useCallback, useMemo, useEffect } from 'react';
 import {
-  type ToadaProject, type VocalPatternItem, type VocalRole, type VocalAudioVariant, type SequenciadorExportMode,
+  type ToadaProject, type VocalPatternItem, type VocalRole, type VocalAudioVariant, type SequenciadorExportMode, type PatternStepStatus,
   DEFAULT_TOADA_BPM, createDefaultToadaProject, createDefaultVocalPattern, createDefaultVariant,
 } from '../types/toadaProject.types';
 import type { TimeSignatureString } from '../types/vocalPack.types';
@@ -12,6 +12,7 @@ import type { ToadaProjectContextValue } from '../types/toadaProjectContext.type
 import { createMirroredPattern, injectSourceIntoTargetPattern, propagateSourceUpdatesToLinkedPatterns, unlinkPattern } from '../utils/patternMirrorHelper';
 import { swapProjectRoles, duplicatePatternAsVariation } from '../utils/projectRoleOps';
 import { batchUpdateProjectBpm, batchUpdateProjectMeasures, batchUpdateProjectAnacrusis, batchUpdateProjectPitch, batchUpdateProjectTimeSignature, batchUpdateProjectTessitura, applyTogglePatternFoldNotes, applySetAllPatternsFoldNotes, applySetSequenciadorExportMode } from '../utils/projectBatchOps';
+import { applyUpdatePatternStepStatus } from '../utils/projectProgressTracker';
 import { applySetActiveVariantKey, applyUpdateVariant, applyEnsureVariantExists } from '../utils/variantContextOps';
 import { usePatternSelection } from '../hooks/usePatternSelection';
 import { useProjectAutoSave } from '../hooks/useProjectAutoSave';
@@ -112,6 +113,7 @@ export const ToadaProjectProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const togglePatternFoldNotes = useCallback((patternId: string, folded?: boolean) => setProject((prev) => applyTogglePatternFoldNotes(prev, patternId, folded)), []);
   const setAllPatternsFoldNotes = useCallback((folded: boolean) => setProject((prev) => applySetAllPatternsFoldNotes(prev, folded)), []);
   const setSequenciadorExportMode = useCallback((mode: SequenciadorExportMode) => setProject((prev) => applySetSequenciadorExportMode(prev, mode)), []);
+  const updatePatternStepStatus = useCallback((patternId: string, partial: Partial<PatternStepStatus>) => setProject((prev) => applyUpdatePatternStepStatus(prev, patternId, partial)), []);
 
   const getPreviousConductorPattern = useCallback((): VocalPatternItem | null => {
     const hasAudio = (p?: VocalPatternItem) => Boolean(p?.recordingResult?.pcm?.length || p?.variants?.[p.activeVariantKey]?.recordingResult?.pcm?.length);
@@ -130,8 +132,8 @@ export const ToadaProjectProvider: React.FC<{ children: React.ReactNode }> = ({ 
     loadProject, addSlot, removeSlot, updateSlot, reorderSlots, setCueMode, getPreviousConductorPattern, swapAllRoles, duplicateVariation,
     applyScope, setApplyScope, selectedPatternIds, toggleSelectPattern, selectAllPatterns, clearSelectedPatterns,
     updateScopedBpm, updateScopedMeasuresCount, updateScopedHasAnacrusis, updateScopedReferencePitch, updateScopedTimeSignature, updateScopedTessitura, updateHarmonyConfig, updateToadaMeta,
-    togglePatternFoldNotes, setAllPatternsFoldNotes, setSequenciadorExportMode,
-  }), [project, activePattern, activeVariant, cueMode, setActivePatternId, setActiveVariantKey, updateVariant, updatePatternAndVariant, ensureVariantExists, addPattern, updatePattern, removePattern, mirrorPatternToRole, injectPatternIntoTarget, handleUnlink, loadProject, addSlot, removeSlot, updateSlot, reorderSlots, setCueMode, getPreviousConductorPattern, swapAllRoles, duplicateVariation, applyScope, setApplyScope, selectedPatternIds, toggleSelectPattern, selectAllPatterns, clearSelectedPatterns, updateScopedBpm, updateScopedMeasuresCount, updateScopedHasAnacrusis, updateScopedReferencePitch, updateScopedTimeSignature, updateScopedTessitura, updateHarmonyConfig, updateToadaMeta, togglePatternFoldNotes, setAllPatternsFoldNotes, setSequenciadorExportMode]);
+    togglePatternFoldNotes, setAllPatternsFoldNotes, setSequenciadorExportMode, updatePatternStepStatus,
+  }), [project, activePattern, activeVariant, cueMode, setActivePatternId, setActiveVariantKey, updateVariant, updatePatternAndVariant, ensureVariantExists, addPattern, updatePattern, removePattern, mirrorPatternToRole, injectPatternIntoTarget, handleUnlink, loadProject, addSlot, removeSlot, updateSlot, reorderSlots, setCueMode, getPreviousConductorPattern, swapAllRoles, duplicateVariation, applyScope, setApplyScope, selectedPatternIds, toggleSelectPattern, selectAllPatterns, clearSelectedPatterns, updateScopedBpm, updateScopedMeasuresCount, updateScopedHasAnacrusis, updateScopedReferencePitch, updateScopedTimeSignature, updateScopedTessitura, updateHarmonyConfig, updateToadaMeta, togglePatternFoldNotes, setAllPatternsFoldNotes, setSequenciadorExportMode, updatePatternStepStatus]);
 
   return <ToadaContext.Provider value={value}>{children}</ToadaContext.Provider>;
 };

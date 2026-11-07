@@ -14,6 +14,7 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { CordelDialogModal } from './components/ui/CordelDialogModal';
 import { AppUpdateBanner } from './components/common/AppUpdateBanner';
 import { MainLivretNavbar } from './components/navigation/MainLivretNavbar';
+import { SongProgressStrip } from './components/navigation/SongProgressStrip';
 import { LivretContentRenderer } from './components/navigation/LivretContentRenderer';
 import { useGlobalTransportShortcuts } from './hooks/useGlobalTransportShortcuts';
 import { useVocalLabMidi } from './hooks/useVocalLabMidi';
@@ -82,31 +83,11 @@ const AppContent: React.FC = () => {
             </button>
           )}
           <div className="h-9 cordel-card-sm inline-flex items-center p-0.5 text-xs font-mono select-none">
-            <button
-              type="button" onClick={() => setLocale('fr')}
-              className={`h-full px-2.5 font-bold transition-all flex items-center justify-center cursor-pointer rounded ${
-                locale === 'fr' ? 'bg-theme-wood text-[var(--cordel-on-primary)] font-black shadow-sm' : 'opacity-60 hover:opacity-100 text-theme-ink'
-              }`}
-              title="Francais"
-            >
-              FR
-            </button>
-            <button
-              type="button" onClick={() => setLocale('br')}
-              className={`h-full px-2.5 font-bold transition-all flex items-center justify-center cursor-pointer rounded ${
-                locale === 'br' ? 'bg-theme-wood text-[var(--cordel-on-primary)] font-black shadow-sm' : 'opacity-60 hover:opacity-100 text-theme-ink'
-              }`}
-              title="Portugues Brasileiro"
-            >
-              BR
-            </button>
+            <button type="button" onClick={() => setLocale('fr')} className={`h-full px-2.5 font-bold transition-all flex items-center justify-center cursor-pointer rounded ${locale === 'fr' ? 'bg-theme-wood text-[var(--cordel-on-primary)] font-black shadow-sm' : 'opacity-60 hover:opacity-100 text-theme-ink'}`} title="Francais">FR</button>
+            <button type="button" onClick={() => setLocale('br')} className={`h-full px-2.5 font-bold transition-all flex items-center justify-center cursor-pointer rounded ${locale === 'br' ? 'bg-theme-wood text-[var(--cordel-on-primary)] font-black shadow-sm' : 'opacity-60 hover:opacity-100 text-theme-ink'}`} title="Portugues Brasileiro">BR</button>
           </div>
 
-          <button
-            type="button" onClick={toggleTheme}
-            className="h-9 w-9 p-0 cordel-card-sm inline-flex items-center justify-center cursor-pointer transition-colors"
-            title={t('themeToggle')}
-          >
+          <button type="button" onClick={toggleTheme} className="h-9 w-9 p-0 cordel-card-sm inline-flex items-center justify-center cursor-pointer transition-colors" title={t('themeToggle')}>
             {theme === 'dark' ? <Sun className="w-4 h-4 text-theme-accent" /> : <Moon className="w-4 h-4 text-theme-accent" />}
           </button>
 
@@ -116,6 +97,7 @@ const AppContent: React.FC = () => {
 
       <main className="relative z-10 flex-1 flex flex-col items-center justify-start w-full max-w-none">
         <MainLivretNavbar />
+        <SongProgressStrip />
         <LivretContentRenderer />
       </main>
     </div>

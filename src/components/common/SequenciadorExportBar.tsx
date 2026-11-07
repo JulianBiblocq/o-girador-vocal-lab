@@ -11,7 +11,7 @@ import { publishToadaToSequencer } from '../../services/cloudToadaPublisher';
 import { isPatternReadyForSequenciador } from '../../utils/toadaPackExporter';
 
 export const SequenciadorExportBar: React.FC<{ compact?: boolean }> = ({ compact = false }) => {
-  const { project, setSequenciadorExportMode } = useToadaProject();
+  const { project, setSequenciadorExportMode, loadProject } = useToadaProject();
   const { language } = useLanguage();
   const isBr = language === 'br';
   const [isSending, setIsSending] = useState(false);
@@ -25,6 +25,11 @@ export const SequenciadorExportBar: React.FC<{ compact?: boolean }> = ({ compact
     setIsSending(true);
     try {
       const res = await publishToadaToSequencer(project);
+      loadProject({
+        ...project,
+        sequenciadorSyncedAt: Date.now(),
+        sequenciadorLastExportMode: exportMode,
+      });
       const modeLabel = exportMode === 'rhythm_only'
         ? (isBr ? 'Ritmo apenas (Sem notas)' : 'Rythme seul (Sans notes)')
         : (isBr ? 'Com as notas' : 'Avec les notes');
@@ -87,3 +92,4 @@ export const SequenciadorExportBar: React.FC<{ compact?: boolean }> = ({ compact
     </div>
   );
 };
+

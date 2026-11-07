@@ -5,8 +5,10 @@
  */
 import React from 'react';
 import type { PianoRollTool } from './pianoRollInteractions';
-import { MousePointer, Pencil, Scissors, Link2, Eraser, ZoomIn, Undo2, Redo2, RefreshCw, Target, X, Drum, Piano, Globe } from 'lucide-react';
+import { MousePointer, Pencil, Scissors, Link2, Eraser, ZoomIn, Undo2, Redo2, RefreshCw, Target, X, Drum, Piano, Globe, Check } from 'lucide-react';
 import { useLanguage } from '../../i18n/LanguageContext';
+import { useToadaProject } from '../../context/ToadaProjectContext';
+import { resolvePatternStepStatus } from '../../utils/projectProgressTracker';
 import { confirmAsync } from '../../stores/useCordelDialogStore';
 
 export interface PianoRollToolbarProps {
@@ -26,6 +28,8 @@ export const PianoRollToolbar: React.FC<PianoRollToolbarProps> = (props) => {
     onSnapToGreenLine, onReExtractNotes, globalVariAudioPct = 0, onChangeGlobalVariAudioPct, onPurgeVariAudio,
   } = props;
   const { t, language } = useLanguage(), isBr = language === 'br';
+  const { activePattern, project, updatePatternStepStatus } = useToadaProject();
+  const patStatus = resolvePatternStepStatus(activePattern, project);
   const tools: { id: PianoRollTool; label: string; icon: React.FC<{ className?: string }> }[] = [
     { id: 'pointer', label: isBr ? 'Seleção' : 'Sélection', icon: MousePointer },
     { id: 'draw_move', label: isBr ? 'Lápis' : 'Crayon', icon: Pencil },
@@ -57,6 +61,12 @@ export const PianoRollToolbar: React.FC<PianoRollToolbarProps> = (props) => {
                 {isBr ? `${alignedPatternsCount}/${totalPatternsCount} padrões alinhados` : `${alignedPatternsCount}/${totalPatternsCount} patterns calés`}
               </span>
             )}
+            <button type="button" onClick={() => updatePatternStepStatus(activePattern.id, { rhythmValidated: !patStatus.rhythmValidated })} className={`px-2 py-1 text-[11px] font-mono font-bold flex items-center gap-1 rounded border cursor-pointer transition-colors ${patStatus.rhythmValidated ? 'bg-emerald-700 text-white border-emerald-500 shadow-2xs' : 'border-emerald-500/50 bg-emerald-600/10 text-emerald-900 dark:text-emerald-300 hover:bg-emerald-600/20'}`} title={isBr ? 'Validar o ritmo e as sílabas deste bloco' : 'Valider le rythme et les syllabes de ce pattern'}>
+              <Check className="w-3 h-3" /><span>{isBr ? 'Ritmo OK' : 'Rythme OK'}</span>
+            </button>
+            <button type="button" onClick={() => updatePatternStepStatus(activePattern.id, { notesValidated: !patStatus.notesValidated })} className={`px-2 py-1 text-[11px] font-mono font-bold flex items-center gap-1 rounded border cursor-pointer transition-colors ${patStatus.notesValidated ? 'bg-emerald-700 text-white border-emerald-500 shadow-2xs' : 'border-emerald-500/50 bg-emerald-600/10 text-emerald-900 dark:text-emerald-300 hover:bg-emerald-600/20'}`} title={isBr ? 'Validar as notas (melodia) deste bloco' : 'Valider les hauteurs de notes (mélodie) de ce pattern'}>
+              <Check className="w-3 h-3" /><span>{isBr ? 'Notas OK' : 'Notes OK'}</span>
+            </button>
           </div>
         )}
 

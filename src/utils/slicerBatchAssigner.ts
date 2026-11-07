@@ -103,6 +103,7 @@ export function executeBatchAssign(options: BatchAssignOptions): {
       anacrusisSteps: res.anacrusisSteps, mainSteps: res.mainSteps,
       isMidiInitialized: true, midiLocked: true,
       hasCanonicalAlignment: true as any, correctedAudioSamples: null, melodyneRegions: [],
+      stepStatus: { ...(targetPattern.stepStatus || {}), recorded: true, trimmed: true },
     };
 
     workingProject = applyUpdateVariant(workingProject, targetId, activeVarKey, varPartial);

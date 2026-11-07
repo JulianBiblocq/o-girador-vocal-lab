@@ -28,6 +28,11 @@ const {
 const { buildOrganizadorDocumentPayload } = await import('../src/services/organizadorToadaPublisher.ts');
 const { sanitizePatternForFirestore } = await import('../src/services/toadaPublishHelpers.ts');
 const { buildSequencerToadaPackDocument } = await import('../src/services/cloudToadaPublisher.ts');
+const {
+  resolvePatternStepStatus,
+  applyUpdatePatternStepStatus,
+  computeProjectProgress,
+} = await import('../src/utils/projectProgressTracker.ts');
 const { buildToadaPack, isPatternReadyForSequenciador } = await import('../src/utils/toadaPackExporter.ts');
 const { applyTogglePatternFoldNotes, applySetAllPatternsFoldNotes, applySetSequenciadorExportMode } = await import('../src/utils/projectBatchOps.ts');
 const { applySequenciadorPackTranspositionToProject } = await import('../src/utils/toadaSyncService.ts');
@@ -354,4 +359,31 @@ assert.equal(exportedFullPack.patterns[0].isReady, true, 'Pattern 0 prêt dans /
 assert.equal(exportedFullPack.patterns[1].isReady, false, 'Pattern 1 non enregistré marqué isReady = false dans /toada_packs');
 
 console.log('✅ VOLET 4 VALIDÉ !');
+
+console.log("=== TEST VOLET 5 : TABLEAU DE BORD D'AVANCEMENT (« OÙ J'EN SUIS ») ===");
+const progBefore = computeProjectProgress(progressiveProj, 'fr');
+assert.equal(progBefore.steps.structure.status, 'done', 'Structure doit être done');
+assert.equal(progBefore.steps.recording.done, 1, '1 pattern sur 2 est enregistré');
+assert.equal(progBefore.steps.recording.total, 2, 'Total = 2 patterns');
+assert.equal(progBefore.steps.recording.status, 'partial', 'Enregistrement est en cours (partial)');
+assert.equal(progBefore.steps.recording.nextIncompletePatternId, 'pat-coro-1', 'Prochain pattern non enregistré = pat-coro-1');
+assert.equal(progBefore.puxadorDone, 1);
+assert.equal(progBefore.coroDone, 0);
+
+const withValidatedRhythm = applyUpdatePatternStepStatus(progressiveProj, 'pat-pux-1', { rhythmValidated: true, notesValidated: true });
+const st0 = resolvePatternStepStatus(withValidatedRhythm.patterns[0], withValidatedRhythm);
+assert.equal(st0.rhythmValidated, true, 'rhythmValidated doit être true après validation manuelle');
+assert.equal(st0.notesValidated, true, 'notesValidated doit être true après validation manuelle');
+
+const progSynced = computeProjectProgress({
+  ...withValidatedRhythm,
+  organizadorSyncedAt: Date.now(),
+  sequenciadorSyncedAt: Date.now(),
+  sequenciadorLastExportMode: 'rhythm_only',
+}, 'fr');
+assert.equal(progSynced.steps.sync.status, 'done', 'Partage doit être done quand Organizador et Sequenciador sont synchronisés');
+assert.ok(progSynced.steps.sync.badgeText.includes('Organizador ✓'), 'Le badge Partage doit afficher Organizador ✓');
+assert.ok(progSynced.steps.sync.badgeText.includes('Rythme'), 'Le badge Partage doit afficher Sequenciador : Rythme');
+console.log('✅ VOLET 5 VALIDÉ !');
+
 console.log('🎉 100% DES TESTS STUDIO FORMANT TRANSPOSITION, DOUBLE TONALITÉ, VERROUS ORGANIZADOR & /toada_packs SONT PASSÉS AVEC SUCCÈS !');

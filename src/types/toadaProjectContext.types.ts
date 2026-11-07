@@ -1,5 +1,5 @@
 import type {
-  ToadaProject, VocalPatternItem, VocalRole, VocalAudioVariant, SequenciadorExportMode,
+  ToadaProject, VocalPatternItem, VocalRole, VocalAudioVariant, SequenciadorExportMode, PatternStepStatus,
 } from './toadaProject.types';
 import type { TimeSignatureString } from './vocalPack.types';
 import type { MetricApplyScope } from '../utils/projectBatchOps';
@@ -51,4 +51,5 @@ export interface ToadaProjectContextValue {
   togglePatternFoldNotes: (patternId: string, folded?: boolean) => void;
   setAllPatternsFoldNotes: (folded: boolean) => void;
   setSequenciadorExportMode: (mode: SequenciadorExportMode) => void;
+  updatePatternStepStatus: (patternId: string, partial: Partial<PatternStepStatus>) => void;
 }

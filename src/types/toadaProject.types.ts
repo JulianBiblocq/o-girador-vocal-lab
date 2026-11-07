@@ -6,7 +6,9 @@ import type { TimeSignatureString, VocalStepData, PitchCurvePoint, VocalPackExpo
 import type { ToadaDocument, TimeAnchor } from './toadaDocument.types';
 import type { TessituraRange } from './tessitura.types';
 import type { PatternHarmonyGrid, HarmonyConfig } from './harmony.types';
+import type { PatternStepStatus } from './project.types';
 
+export type { PatternStepStatus };
 export * from './tessitura.types';
 export * from './harmony.types';
 export {
@@ -79,6 +81,7 @@ export interface VocalPatternItem {
   troupeTransposedPCM?: Float32Array | null;
   troupeTransposedSemitones?: number;
   foldNotesView?: boolean;
+  stepStatus?: Partial<PatternStepStatus>;
 }
 
 export interface VariantPitchesConfig {
@@ -115,4 +118,7 @@ export interface ToadaProject {
   troupeScaleRoot?: string;
   previewListenTarget?: 'sung' | 'troupe';
   sequenciadorExportMode?: SequenciadorExportMode;
+  organizadorSyncedAt?: number;
+  sequenciadorSyncedAt?: number;
+  sequenciadorLastExportMode?: SequenciadorExportMode;
 }
