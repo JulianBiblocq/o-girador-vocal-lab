@@ -1,7 +1,7 @@
 /**
  * PreTakeSetupAssistantBar.tsx
  * Bandeau guidé bilingue (FR / PT-BR) « Préparation avant de Chanter » :
- * 1. Latence matérielle, 2. Tempo (BPM + Tap), 3. Double Tonalité (Prise chantée ➔ Tonalité Troupe + Écoute) (< 140 lignes).
+ * 1. Latence, 2. Tempo (BPM + Tap), 3. Chanté en : [ Do# ▾ ] [ Majeur ▾ ] ➔ Tonalité pour Organizador / Troupe : [ Do ▾ ] (-1 demi-ton) (< 130 lignes).
  */
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useToadaProject } from '../../context/ToadaProjectContext';
@@ -10,20 +10,21 @@ import { useVocalTransportStore } from '../../stores/useVocalTransportStore';
 import { isLatencyCalibrated } from '../../utils/latencyStorage';
 import { buildDeviceSignature, getCalibratedLatency } from '../../utils/deviceSignature';
 import { useQuickScaleDetector } from '../../hooks/useQuickScaleDetector';
-import { analyzeFullProjectScale, formatProjectScaleLabel, SOLFEGE_NOTE_NAMES, SOLFEGE_NOTE_NAMES_BR } from '../../audio/projectScaleAnalyzer';
+import { analyzeFullProjectScale, SOLFEGE_NOTE_NAMES, SOLFEGE_NOTE_NAMES_BR } from '../../audio/projectScaleAnalyzer';
 import { resolveProjectDualScale, applyDualScaleToProject, clampTranspositionSemitones, computeSemitoneDistance } from '../../utils/scaleTranspositionHelper';
+import { syncTonaliteToOrganizadorFirestore } from '../../services/organizadorToadaPublisher';
 import { NOTE_NAMES, midiToNoteName } from '../../utils/noteUtils';
 import { hasSavedAmbitusProfile, getEffectiveVocalBounds } from '../../utils/ambitusStorage';
 import type { ScaleType } from '../../audio/scaleQuantizer';
 import { useLanguage } from '../../i18n/LanguageContext';
-import { Zap, Check, Drum, Hand, Mic, Target, Ear, ChevronLeft, ChevronRight, RefreshCw, HelpCircle, Unlock, Settings, Loader2, Sliders } from 'lucide-react';
+import { Zap, Check, Drum, Hand, Mic, Target, Ear, ChevronLeft, ChevronRight, HelpCircle, Unlock, Settings, Loader2, Sliders } from 'lucide-react';
 
 const MODES_FR: Array<{ key: ScaleType; label: string }> = [
-  { key: 'natural_minor', label: 'Mineur' }, { key: 'major', label: 'Majeur' },
+  { key: 'major', label: 'Majeur' }, { key: 'natural_minor', label: 'Mineur' },
   { key: 'mixolydian', label: 'Mixolydien' }, { key: 'dorian', label: 'Dorien' },
 ];
 const MODES_BR: Array<{ key: ScaleType; label: string }> = [
-  { key: 'natural_minor', label: 'Menor' }, { key: 'major', label: 'Maior' },
+  { key: 'major', label: 'Maior' }, { key: 'natural_minor', label: 'Menor' },
   { key: 'mixolydian', label: 'Mixolídio' }, { key: 'dorian', label: 'Dórico' },
 ];
 
@@ -35,15 +36,15 @@ export const PreTakeSetupAssistantBar: React.FC = () => {
   const setActiveLivret = useVocalTransportStore((s) => s.setActiveLivret);
   const sig = buildDeviceSignature(selectedDeviceId, selectedOutputDeviceId, recordedSampleRate);
   const [calibratedMs, setCalibratedMs] = useState<number | null>(() => getCalibratedLatency(sig));
-  const [isEditingScale, setIsEditingScale] = useState(false), [selTonic, setSelTonic] = useState('A'), [selMode, setSelMode] = useState<ScaleType>('natural_minor');
   const tapTimesRef = useRef<number[]>([]), [tapCount, setTapCount] = useState(0);
   const bpm = activePattern?.bpm ?? activePattern?.baseBpm ?? project.bpm ?? 88;
   const { isListeningScale, suggestion, startQuickScaleListen, clearSuggestion } = useQuickScaleDetector(project, loadProject, selectedDeviceId);
   const projectAnalysis = useMemo(() => analyzeFullProjectScale(project.patterns, language), [project.patterns, language]);
   const dualScale = useMemo(() => resolveProjectDualScale(project, language, projectAnalysis), [project, language, projectAnalysis]);
-  const activeSungTonic = suggestion?.tonic || dualScale.sungScaleRoot, activeSungMode: ScaleType = suggestion?.scaleType || dualScale.sungScaleMode;
-  const activeSungLabel = suggestion ? formatProjectScaleLabel(suggestion.tonic, suggestion.scaleType, language) : dualScale.sungScaleLabel;
-  const shiftSt = dualScale.transpositionSemitones, stBadge = shiftSt === 0 ? '0 st' : shiftSt > 0 ? `+${shiftSt} st` : `${shiftSt} st`;
+  const activeSungTonic = suggestion?.tonic || dualScale.sungScaleRoot;
+  const activeSungMode: ScaleType = suggestion?.scaleType || dualScale.sungScaleMode;
+  const shiftSt = dualScale.transpositionSemitones;
+  const stBadge = shiftSt === 0 ? (isBr ? '0 semitom' : '0 demi-ton') : `${shiftSt > 0 ? '+' : ''}${shiftSt} ${isBr ? 'semitom' : 'demi-ton'}`;
   const listenTarget: 'sung' | 'troupe' = project.previewListenTarget ?? (shiftSt !== 0 ? 'troupe' : 'sung');
 
   useEffect(() => {
@@ -64,13 +65,19 @@ export const PreTakeSetupAssistantBar: React.FC = () => {
 
   const applyDual = (sungRoot: string, mode: ScaleType, nextSt = shiftSt) => {
     const nextProj = applyDualScaleToProject(project, sungRoot, mode, nextSt, dualScale.sungReferencePitch, language);
-    loadProject(nextProj); clearSuggestion(); setIsEditingScale(false);
-    window.dispatchEvent(new CustomEvent('app-toast', { detail: { message: `${isBr ? 'Tonalidade da tropa' : 'Tonalité Troupe'} : ${nextProj.toadaMeta?.tonaliteDefaut}`, type: 'success' } }));
+    loadProject(nextProj);
+    clearSuggestion();
+    syncTonaliteToOrganizadorFirestore(nextProj);
+    window.dispatchEvent(new CustomEvent('app-toast', {
+      detail: {
+        message: `✓ ${isBr ? 'Tonalidade para Organizador / Tropa' : 'Tonalité pour Organizador / Troupe'} : ${nextProj.toadaMeta?.tonaliteDefaut}`,
+        type: 'success',
+      },
+    }));
   };
 
   const isDeviceCalibrated = calibratedMs !== null && isLatencyCalibrated(selectedDeviceId);
-  const hasAmbitus = hasSavedAmbitusProfile();
-  const ambBounds = hasAmbitus ? getEffectiveVocalBounds() : null;
+  const ambBounds = hasSavedAmbitusProfile() ? getEffectiveVocalBounds() : null;
 
   return (
     <div className="cordel-card p-2 rounded flex flex-wrap items-center justify-between gap-2 text-xs font-mono">
@@ -96,23 +103,30 @@ export const PreTakeSetupAssistantBar: React.FC = () => {
       </div>
 
       <div className="flex items-center gap-1.5 flex-wrap">
-        <span className="px-2 py-1 cordel-card-sm rounded font-bold inline-flex items-center gap-1"><Mic className="w-3.5 h-3.5 text-[#9a3412] dark:text-amber-300" /><span>3. {isBr ? 'Gravação cantada :' : 'Prise chantée :'} <strong className="text-[#9a3412] dark:text-amber-300">{activeSungLabel}</strong></span></span>
-        <button type="button" onClick={() => applyDual(activeSungTonic, activeSungMode, shiftSt)} className="px-2 py-1 rounded bg-emerald-700 hover:bg-emerald-600 text-white font-bold flex items-center gap-1 cursor-pointer"><Check className="w-3 h-3" /><span>{isBr ? 'Validar' : 'Valider'}</span></button>
-        <button type="button" onClick={() => { setSelTonic(activeSungTonic); setSelMode(activeSungMode === 'chromatic' ? 'natural_minor' : activeSungMode); setIsEditingScale((v) => !v); }} className="px-2 py-1 rounded cordel-btn font-bold flex items-center gap-1 cursor-pointer"><RefreshCw className="w-3 h-3 text-[#9a3412] dark:text-amber-300" /><span>{isBr ? 'Alterar ▾' : 'Changer ▾'}</span></button>
-        {isEditingScale && (
-          <div className="flex items-center gap-1 px-1.5 py-0.5 rounded cordel-card-sm">
-            <select value={selTonic} onChange={(e) => setSelTonic(e.target.value)} className="bg-transparent font-bold text-[#9a3412] dark:text-amber-300 cursor-pointer">{NOTE_NAMES.map((n, i) => <option key={n} value={n}>{solfegeNames[i]} ({n})</option>)}</select>
-            <select value={selMode} onChange={(e) => setSelMode(e.target.value as ScaleType)} className="bg-transparent font-bold text-[#9a3412] dark:text-amber-300 cursor-pointer">{modeList.map((m) => <option key={m.key} value={m.key}>{m.label}</option>)}</select>
-            <button type="button" onClick={() => applyDual(selTonic, selMode, shiftSt)} className="px-1.5 py-0.5 rounded bg-emerald-700 text-white font-bold cursor-pointer">OK</button>
-          </div>
-        )}
-        <div className="flex items-center gap-1 px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/40">
-          <Target className="w-3.5 h-3.5 text-[#9a3412] dark:text-amber-300" /><span className="font-bold">{isBr ? 'Tropa :' : 'Troupe :'}</span>
+        {/* Côte à côte 1 : Chanté en : [ Do# ▾ ] [ Majeur ▾ ] */}
+        <div className="flex items-center gap-1 px-2 py-0.5 rounded cordel-card-sm">
+          <Mic className="w-3.5 h-3.5 text-[#9a3412] dark:text-amber-300" />
+          <span className="font-bold">{isBr ? 'Cantado em :' : 'Chanté en :'}</span>
+          <select value={activeSungTonic} onChange={(e) => applyDual(e.target.value, activeSungMode === 'chromatic' ? 'major' : activeSungMode, shiftSt)} className="bg-[var(--cordel-surface)] border border-[var(--cordel-border-sub)] rounded px-1 py-0.5 font-bold text-[#9a3412] dark:text-amber-300 cursor-pointer">
+            {NOTE_NAMES.map((n, i) => <option key={n} value={n}>{solfegeNames[i]} ({n})</option>)}
+          </select>
+          <select value={activeSungMode === 'chromatic' ? 'major' : activeSungMode} onChange={(e) => applyDual(activeSungTonic, e.target.value as ScaleType, shiftSt)} className="bg-[var(--cordel-surface)] border border-[var(--cordel-border-sub)] rounded px-1 py-0.5 font-bold text-[#9a3412] dark:text-amber-300 cursor-pointer">
+            {modeList.map((m) => <option key={m.key} value={m.key}>{m.label}</option>)}
+          </select>
+        </div>
+
+        {/* Côte à côte 2 : Tonalité pour Organizador / Troupe : [ Do ▾ ] (-1 demi-ton) */}
+        <div className="flex items-center gap-1 px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/50">
+          <Target className="w-3.5 h-3.5 text-[#9a3412] dark:text-amber-300" />
+          <span className="font-bold">{isBr ? 'Tonalidade para Organizador / Tropa :' : 'Tonalité pour Organizador / Troupe :'}</span>
           <button type="button" onClick={() => applyDual(activeSungTonic, activeSungMode, clampTranspositionSemitones(shiftSt - 1))} className="px-1 cordel-btn rounded font-bold flex items-center cursor-pointer"><ChevronLeft className="w-3 h-3" />-1</button>
-          <select value={dualScale.troupeScaleRoot} onChange={(e) => applyDual(activeSungTonic, activeSungMode, computeSemitoneDistance(activeSungTonic, e.target.value))} className="bg-transparent font-bold text-[#9a3412] dark:text-amber-300 cursor-pointer">{NOTE_NAMES.map((n, i) => <option key={n} value={n}>{solfegeNames[i]}</option>)}</select>
+          <select value={dualScale.troupeScaleRoot} onChange={(e) => applyDual(activeSungTonic, activeSungMode, computeSemitoneDistance(activeSungTonic, e.target.value))} className="bg-[var(--cordel-surface)] border border-amber-500/60 rounded px-1.5 py-0.5 font-bold text-[#9a3412] dark:text-amber-300 cursor-pointer">
+            {NOTE_NAMES.map((n, i) => <option key={n} value={n}>{solfegeNames[i]} ({n})</option>)}
+          </select>
           <span className="font-bold text-[#9a3412] dark:text-amber-300">({stBadge})</span>
           <button type="button" onClick={() => applyDual(activeSungTonic, activeSungMode, clampTranspositionSemitones(shiftSt + 1))} className="px-1 cordel-btn rounded font-bold flex items-center cursor-pointer">+1<ChevronRight className="w-3 h-3" /></button>
         </div>
+
         <button type="button" onClick={() => { const next = listenTarget === 'sung' ? 'troupe' : 'sung'; loadProject({ ...project, previewListenTarget: next }); engine.playReferencePitchPreview(next === 'troupe' ? dualScale.troupeReferencePitch : dualScale.sungReferencePitch, 1.2, selectedOutputDeviceId); }} className="px-2 py-1 rounded cordel-card-sm font-bold flex items-center gap-1 cursor-pointer" title={isBr ? 'Alternar escuta entre Gravação e Tropa' : "Basculer l'écoute entre Prise et Troupe"}>
           <Ear className="w-3.5 h-3.5 text-theme-accent" /><span>{listenTarget === 'troupe' ? `${isBr ? 'Tropa' : 'Troupe'} (${dualScale.troupeSolfegeRoot})` : `${isBr ? 'Gravação' : 'Prise'} (${dualScale.sungSolfegeRoot})`}</span>
         </button>

@@ -263,3 +263,4 @@ function makeStep(stepIndex, note, midiNumber, active, isTie, syllable, tripletS
 }
 
 console.log('ALL MODULAR COPY & UNUSED PURGE TESTS PASSED SUCCESSFULLY!');
+

@@ -1,29 +1,31 @@
 /**
  * ScaleLockBar.tsx
- * Bandeau Double Tonalité bilingue (FR / PT-BR) : Prise chantée (aimantation Piano Roll sur l'onde brute)
- * ➔ Tonalité Troupe (-6..+6 st) + Écoute comparative directe [ Prise | Troupe ] (< 130 lignes).
+ * Bandeau Double Tonalité bilingue (FR / PT-BR) du Livret 4 :
+ * Chanté en : [ Do# ▾ ] [ Majeur ▾ ] ➔ Tonalité pour Organizador / Troupe : [ Do ▾ ] (-1 demi-ton) (< 128 lignes).
  */
 import React, { useState, useEffect } from 'react';
 import type { PitchCurvePoint } from '../../types/vocalPack.types';
 import { type ScaleType, buildAllowedPitchClasses, detectBestScaleFromPitchCurve, getTonicSemitone } from '../../audio/scaleQuantizer';
 import { SOLFEGE_NOTE_NAMES, SOLFEGE_NOTE_NAMES_BR, formatProjectScaleLabel } from '../../audio/projectScaleAnalyzer';
-import { transposePitchClass, computeSemitoneDistance, clampTranspositionSemitones } from '../../utils/scaleTranspositionHelper';
+import { transposePitchClass, computeSemitoneDistance, clampTranspositionSemitones, applyDualScaleToProject } from '../../utils/scaleTranspositionHelper';
+import { syncTonaliteToOrganizadorFirestore } from '../../services/organizadorToadaPublisher';
+import { useToadaProject } from '../../context/ToadaProjectContext';
 import { NOTE_NAMES } from '../../utils/noteUtils';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { Lock, Unlock, Target, Mic, Ear, ChevronLeft, ChevronRight } from 'lucide-react';
 
 const SCALE_MODES_FR: Array<{ key: ScaleType; label: string }> = [
-  { key: 'chromatic', label: 'Libre / Chromatique' }, { key: 'major', label: 'Majeur' },
-  { key: 'natural_minor', label: 'Mineur naturel' }, { key: 'mixolydian', label: 'Mixolydien (Nordeste)' },
-  { key: 'dorian', label: 'Dorien' }, { key: 'harmonic_minor', label: 'Mineur harm.' },
-  { key: 'pentatonic_minor', label: 'Pentatonique min.' }, { key: 'pentatonic_major', label: 'Pentatonique maj.' },
+  { key: 'major', label: 'Majeur' }, { key: 'natural_minor', label: 'Mineur naturel' },
+  { key: 'mixolydian', label: 'Mixolydien (Nordeste)' }, { key: 'dorian', label: 'Dorien' },
+  { key: 'harmonic_minor', label: 'Mineur harm.' }, { key: 'pentatonic_minor', label: 'Pentatonique min.' },
+  { key: 'pentatonic_major', label: 'Pentatonique maj.' }, { key: 'chromatic', label: 'Libre / Chromatique' },
 ];
 
 const SCALE_MODES_BR: Array<{ key: ScaleType; label: string }> = [
-  { key: 'chromatic', label: 'Livre / Cromática' }, { key: 'major', label: 'Maior' },
-  { key: 'natural_minor', label: 'Menor natural' }, { key: 'mixolydian', label: 'Mixolídio (Nordeste)' },
-  { key: 'dorian', label: 'Dórico' }, { key: 'harmonic_minor', label: 'Menor harm.' },
-  { key: 'pentatonic_minor', label: 'Pentatônica men.' }, { key: 'pentatonic_major', label: 'Pentatônica mai.' },
+  { key: 'major', label: 'Maior' }, { key: 'natural_minor', label: 'Menor natural' },
+  { key: 'mixolydian', label: 'Mixolídio (Nordeste)' }, { key: 'dorian', label: 'Dórico' },
+  { key: 'harmonic_minor', label: 'Menor harm.' }, { key: 'pentatonic_minor', label: 'Pentatônica men.' },
+  { key: 'pentatonic_major', label: 'Pentatônica mai.' }, { key: 'chromatic', label: 'Livre / Cromática' },
 ];
 
 export interface ScaleLockBarProps {
@@ -42,6 +44,7 @@ export const ScaleLockBar: React.FC<ScaleLockBarProps> = ({
   onUpdateScale, onChangeTransposition, onChangeListenTarget, onAnalyzeFullProjectScale,
 }) => {
   const { language } = useLanguage(), isBr = language === 'br';
+  const { project, loadProject } = useToadaProject();
   const solfegeLabels = isBr ? SOLFEGE_NOTE_NAMES_BR : SOLFEGE_NOTE_NAMES, scaleModes = isBr ? SCALE_MODES_BR : SCALE_MODES_FR;
   const [lastActiveMode, setLastActiveMode] = useState<ScaleType>('natural_minor');
   useEffect(() => { if (scaleType !== 'chromatic') setLastActiveMode(scaleType); }, [scaleType]);
@@ -53,7 +56,18 @@ export const ScaleLockBar: React.FC<ScaleLockBarProps> = ({
   const shiftSt = clampTranspositionSemitones(transpositionSemitones), troupeRoot = transposePitchClass(tonic, shiftSt);
   const troupeIdx = getTonicSemitone(troupeRoot), troupeSolfege = solfegeLabels[troupeIdx] || troupeRoot;
   const troupeFullLabel = formatProjectScaleLabel(troupeRoot, effectiveMode, language);
-  const stBadge = shiftSt === 0 ? '0 st' : shiftSt > 0 ? `+${shiftSt} st` : `${shiftSt} st`;
+  const stBadge = shiftSt === 0 ? (isBr ? '0 semitom' : '0 demi-ton') : `${shiftSt > 0 ? '+' : ''}${shiftSt} ${isBr ? 'semitom' : 'demi-ton'}`;
+
+  const handleTroupeShift = (nextSt: number) => {
+    const clamped = clampTranspositionSemitones(nextSt);
+    onChangeTransposition?.(clamped);
+    const nextProj = applyDualScaleToProject(project, tonic, effectiveMode, clamped, undefined, language);
+    loadProject(nextProj);
+    syncTonaliteToOrganizadorFirestore(nextProj);
+    window.dispatchEvent(new CustomEvent('app-toast', {
+      detail: { message: `✓ ${isBr ? 'Tonalidade para Organizador' : 'Tonalité pour Organizador'} : ${nextProj.toadaMeta?.tonaliteDefaut}`, type: 'success' },
+    }));
+  };
 
   return (
     <div className="cordel-card px-2.5 py-2 flex flex-col gap-1.5 rounded text-[11px] font-mono">
@@ -65,7 +79,7 @@ export const ScaleLockBar: React.FC<ScaleLockBarProps> = ({
             title={isBr ? 'Travar ou desativar a escala da gravação original' : 'Verrouiller ou débrayer la gamme de la prise chantée'}
           >
             {isLocked ? <Lock className="w-3.5 h-3.5" /> : <Unlock className="w-3.5 h-3.5" />}
-            <Mic className="w-3.5 h-3.5" /><span>{isBr ? 'Tom cantado :' : 'Prise chantée :'}</span>
+            <Mic className="w-3.5 h-3.5" /><span>{isBr ? 'Cantado em :' : 'Chanté en :'}</span>
           </button>
           <select value={NOTE_NAMES[sungIdx] || 'A'} onChange={(e) => onUpdateScale(e.target.value, effectiveMode, null)} className="cordel-card-sm px-1.5 py-1 font-bold text-theme-accent rounded cursor-pointer">
             {NOTE_NAMES.map((n, i) => <option key={n} value={n}>{solfegeLabels[i]} ({n})</option>)}
@@ -83,14 +97,14 @@ export const ScaleLockBar: React.FC<ScaleLockBarProps> = ({
 
         <div className="flex flex-wrap items-center gap-1.5 px-2 py-1 rounded bg-amber-500/10 border border-amber-500/40">
           <span className="font-bold text-[#9a3412] dark:text-amber-300 inline-flex items-center gap-1">
-            <Target className="w-3.5 h-3.5" /><span>{isBr ? 'Tom do Batuque (Tropa) :' : 'Tonalité Troupe :'}</span>
+            <Target className="w-3.5 h-3.5" /><span>{isBr ? 'Tonalidade para Organizador / Tropa :' : 'Tonalité pour Organizador / Troupe :'}</span>
           </span>
-          <button type="button" onClick={() => onChangeTransposition?.(clampTranspositionSemitones(shiftSt - 1))} className="px-1.5 py-0.5 cordel-btn rounded font-bold flex items-center cursor-pointer"><ChevronLeft className="w-3 h-3" />-1</button>
-          <select value={troupeRoot} onChange={(e) => onChangeTransposition?.(computeSemitoneDistance(tonic, e.target.value))} className="cordel-card-sm px-1.5 py-0.5 font-bold text-[#9a3412] dark:text-amber-300 rounded cursor-pointer">
+          <button type="button" onClick={() => handleTroupeShift(shiftSt - 1)} className="px-1.5 py-0.5 cordel-btn rounded font-bold flex items-center cursor-pointer"><ChevronLeft className="w-3 h-3" />-1</button>
+          <select value={troupeRoot} onChange={(e) => handleTroupeShift(computeSemitoneDistance(tonic, e.target.value))} className="cordel-card-sm px-1.5 py-0.5 font-bold text-[#9a3412] dark:text-amber-300 rounded cursor-pointer">
             {NOTE_NAMES.map((n, i) => <option key={n} value={n}>{solfegeLabels[i]} ({n})</option>)}
           </select>
           <span className="font-bold text-theme-ink">{troupeFullLabel} <strong className="text-[#9a3412] dark:text-amber-300">({stBadge})</strong></span>
-          <button type="button" onClick={() => onChangeTransposition?.(clampTranspositionSemitones(shiftSt + 1))} className="px-1.5 py-0.5 cordel-btn rounded font-bold flex items-center cursor-pointer">+1<ChevronRight className="w-3 h-3" /></button>
+          <button type="button" onClick={() => handleTroupeShift(shiftSt + 1)} className="px-1.5 py-0.5 cordel-btn rounded font-bold flex items-center cursor-pointer">+1<ChevronRight className="w-3 h-3" /></button>
         </div>
 
         <div className="flex items-center gap-1 p-0.5 rounded cordel-card-sm">

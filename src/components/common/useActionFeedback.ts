@@ -80,3 +80,4 @@ export function useActionFeedback(defaultSuccessLabel = '✓ Fait !', durationMs
     getButtonClass,
   };
 }
+

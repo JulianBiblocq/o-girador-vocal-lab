@@ -41,8 +41,7 @@ export interface ProjectProgressSummary {
 
 export function resolvePatternStepStatus(p: VocalPatternItem, project?: ToadaProject): PatternStepStatus {
   const autoRec = Boolean(
-    p.rawAudioSamples?.length ||
-    p.recordingResult?.pcm?.length ||
+    p.rawAudioSamples?.length || p.recordingResult?.pcm?.length ||
     Object.values(p.variants || {}).some((v) => Boolean(v?.recordingResult?.pcm?.length))
   );
   const recorded = typeof p.stepStatus?.recorded === 'boolean' ? p.stepStatus.recorded : autoRec;
@@ -57,8 +56,7 @@ export function resolvePatternStepStatus(p: VocalPatternItem, project?: ToadaPro
   const rhythmValidated = typeof p.stepStatus?.rhythmValidated === 'boolean' ? p.stepStatus.rhythmValidated : autoRhythm;
 
   const hasPitchedNotes = Boolean(
-    p.mainSteps?.some((s) => s.active && s.note !== '───') ||
-    p.anacrusisSteps?.some((s) => s.active && s.note !== '───')
+    p.mainSteps?.some((s) => s.active && s.note !== '───') || p.anacrusisSteps?.some((s) => s.active && s.note !== '───')
   );
   const autoNotes = Boolean(
     !p.foldNotesView && p.midiLocked && hasPitchedNotes &&
@@ -66,25 +64,20 @@ export function resolvePatternStepStatus(p: VocalPatternItem, project?: ToadaPro
   );
   const notesValidated = typeof p.stepStatus?.notesValidated === 'boolean' ? p.stepStatus.notesValidated : autoNotes;
 
-  const autoVariants = recorded && Boolean(
-    Object.keys(p.variants || {}).length > 1 || p.troupeTransposedPCM?.length ||
-    Boolean(project?.troupeScaleRoot || project?.sungScaleRoot || project?.toadaMeta?.tonaliteDefaut) || Boolean(p.variantSpeedsConfig)
-  );
+  const recordedVars = Object.values(p.variants || {}).filter((v) => Boolean(v?.recordingResult?.pcm?.length));
+  const hasExtraVariantTake = recordedVars.length > 1 || recordedVars.some((v) => (v.speedRatio !== undefined && Math.abs(v.speedRatio - 1) > 0.01) || (v.pitchShiftSemitones !== undefined && v.pitchShiftSemitones !== 0));
+  const shiftSt = project?.transpositionSemitones ?? project?.toadaMeta?.transpositionSemitones ?? 0;
+  const hasTargetTransposition = shiftSt !== 0 || Boolean(project?.troupeScaleRoot && project?.sungScaleRoot && project.troupeScaleRoot !== project.sungScaleRoot);
+  const autoVariants = recorded && Boolean(hasExtraVariantTake || p.troupeTransposedPCM?.length || p.variantSpeedsConfig || hasTargetTransposition);
   const variantsReady = typeof p.stepStatus?.variantsReady === 'boolean' ? p.stepStatus.variantsReady : autoVariants;
 
   return { recorded, trimmed, rhythmValidated, notesValidated, variantsReady };
 }
 
-export function applyUpdatePatternStepStatus(
-  project: ToadaProject, patternId: string, partial: Partial<PatternStepStatus>
-): ToadaProject {
+export function applyUpdatePatternStepStatus(project: ToadaProject, patternId: string, partial: Partial<PatternStepStatus>): ToadaProject {
   return {
     ...project,
-    patterns: project.patterns.map((p) => {
-      if (p.id !== patternId) return p;
-      const base = resolvePatternStepStatus(p, project);
-      return { ...p, stepStatus: { ...base, ...(p.stepStatus || {}), ...partial } };
-    }),
+    patterns: project.patterns.map((p) => (p.id === patternId ? { ...p, stepStatus: { ...resolvePatternStepStatus(p, project), ...(p.stepStatus || {}), ...partial } } : p)),
   };
 }
 
@@ -121,18 +114,19 @@ export function computeProjectProgress(project: ToadaProject, language: 'fr' | '
     calage: { id: 'calage', done: trimDone, total, status: toState(trimDone, total), nextIncompletePatternId: (patternRows.find((r) => r.status.recorded && !r.status.trimmed) ?? patternRows.find((r) => !r.status.trimmed))?.pattern.id ?? firstId, badgeText: `${trimDone}/${total}`, tooltip: isBr ? 'Corte e alinhamento do Tempo 1' : 'Découpe et calage du Temps 1' },
     rhythm: { id: 'rhythm', done: rhyDone, total, status: toState(rhyDone, total), nextIncompletePatternId: (patternRows.find((r) => r.status.trimmed && !r.status.rhythmValidated) ?? patternRows.find((r) => !r.status.rhythmValidated))?.pattern.id ?? firstId, badgeText: `${rhyDone}/${total}`, tooltip: isBr ? 'Ritmo e sílabas validados no Livreto 4' : 'Rythme et syllabes validés au Livret 4' },
     notes: { id: 'notes', done: notesDone, total, status: toState(notesDone, total), nextIncompletePatternId: (patternRows.find((r) => r.status.rhythmValidated && !r.status.notesValidated) ?? patternRows.find((r) => !r.status.notesValidated))?.pattern.id ?? firstId, badgeText: `${notesDone}/${total}`, tooltip: isBr ? 'Alturas de notas validadas (Melodia)' : 'Hauteurs de notes validées (Mélodie)' },
-    variants: { id: 'variants', done: varDone, total, status: toState(varDone, total), nextIncompletePatternId: (patternRows.find((r) => r.status.recorded && !r.status.variantsReady) ?? patternRows.find((r) => !r.status.variantsReady))?.pattern.id ?? firstId, badgeText: `${troupeKeyBadge} • 75•88•100%`, tooltip: `${troupeKeyBadge} • ${varDone}/${total} (75% / 88% / 100%)` },
+    variants: { id: 'variants', done: varDone, total, status: toState(varDone, total), nextIncompletePatternId: (patternRows.find((r) => r.status.recorded && !r.status.variantsReady) ?? patternRows.find((r) => !r.status.variantsReady))?.pattern.id ?? firstId, badgeText: varDone > 0 ? `${troupeKeyBadge} • ${varDone}/${total}` : `1x • ${isBr ? 'Origem' : 'Origine'}`, tooltip: `${troupeKeyBadge} • ${varDone}/${total}` },
     sync: { id: 'sync', done: syncDone, total: 2, status: toState(syncDone, 2), nextIncompletePatternId: project.activePatternId || firstId, badgeText: `Organizador ${organizadorSynced ? '✓' : '•'} • Sequenciador : ${sequenciadorSynced ? (sequenciadorMode === 'full_notes' ? (isBr ? 'Completo' : 'Complet') : (isBr ? 'Ritmo' : 'Rythme')) : (isBr ? 'A enviar' : 'À envoyer')}`, tooltip: isBr ? 'Sincronização Organizador e Sequenciador' : 'Synchronisation Organizador & Sequenciador' },
   };
 
   const orderedSteps = [steps.structure, steps.recording, steps.calage, steps.rhythm, steps.notes, steps.variants, steps.sync];
-  const totalChecks = Math.max(1, total * 5 + 3), doneChecks = (total > 0 ? 1 : 0) + recDone + trimDone + rhyDone + notesDone + varDone + syncDone;
+  const includeVarsInPct = varDone > 0;
+  const totalChecks = Math.max(1, total * (includeVarsInPct ? 5 : 4) + 3);
+  const doneChecks = (total > 0 ? 1 : 0) + recDone + trimDone + rhyDone + notesDone + (includeVarsInPct ? varDone : 0) + syncDone;
   const overallCompletionPct = Math.min(100, Math.round((doneChecks / totalChecks) * 100));
-  const nextStep = orderedSteps.find((s) => s.status !== 'done') ?? steps.sync;
+  const nextStep = orderedSteps.find((s) => s.id !== 'variants' && s.status !== 'done') ?? steps.sync;
   const livretMap: Record<ProgressStepId, LivretType> = { structure: 'structure', recording: 'prise', calage: 'calage', rhythm: 'melodia', notes: 'melodia', variants: 'melodia', sync: 'melodia' };
   return {
     steps, orderedSteps, patternRows, overallCompletionPct, puxadorDone, puxadorTotal, coroDone, coroTotal, troupeKeyBadge, organizadorSynced, sequenciadorSynced, sequenciadorMode,
     nextAction: { stepId: nextStep.id, livret: livretMap[nextStep.id], patternId: nextStep.nextIncompletePatternId, foldNotes: nextStep.id === 'rhythm' ? true : nextStep.id === 'notes' ? false : undefined, label: nextStep.tooltip },
   };
 }
-
