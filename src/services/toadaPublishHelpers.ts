@@ -111,7 +111,7 @@ export function sanitizePatternForFirestore(
   transpositionSemitones = 0,
   meta?: SanitizePatternMeta
 ): Record<string, any> {
-  const recBpm = Number(meta?.recordedBpm || p.recordingResult?.recordedBpm || p.baseBpm || p.bpm || 88);
+  const recBpm = Number((p as any).recordedBpm || p.recordingResult?.recordedBpm || meta?.recordedBpm || p.baseBpm || p.bpm || 88);
   const resolvedAudioUrl = audioUrl || (p as any).audioUrl;
   const resolvedTrimStart = slicedDurationSec !== undefined ? 0 : (p.trimStartSec ?? 0);
   const resolvedTrimEnd = slicedDurationSec ?? p.trimEndSec ?? 0;

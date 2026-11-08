@@ -1,16 +1,16 @@
 /**
  * SaveAndExportDropdown.tsx
- * Menu déroulant Cordel 'Sauvegarder & Exporter' avec retour visuel ✓ (useActionFeedback + alertAsync) (< 120 lignes).
+ * Menu déroulant Cordel 'Sauvegarder & Exporter' avec retour visuel ✓ et modale d'intégration Répertoire Samambaia (< 115 lignes).
  */
 import React, { useState, useRef, useEffect } from 'react';
 import type { ToadaProject } from '../../types/toadaProject.types';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { useManualSave } from '../../hooks/useManualSave';
-import { publishToadaToSequencer } from '../../services/cloudToadaPublisher';
 import { publishToadaToOrganizador } from '../../services/organizadorToadaPublisher';
 import { exportFullSongWav } from '../../utils/fullSongWavExporter';
-import { confirmAsync, alertAsync } from '../../stores/useCordelDialogStore';
+import { alertAsync } from '../../stores/useCordelDialogStore';
 import { useActionFeedback, CORDEL_SUCCESS_BTN_CLASS } from '../common/useActionFeedback';
+import { SamambaiaRepertoireTargetModal } from '../modals/SamambaiaRepertoireTargetModal';
 import { Save, CloudUpload, FileText, Music, ChevronDown, Check, Loader2 } from 'lucide-react';
 
 interface Props {
@@ -24,6 +24,7 @@ export const SaveAndExportDropdown: React.FC<Props> = ({ project, isUserLoggedIn
   const isBr = language === 'br';
   const dropdownRef = useRef<HTMLDivElement>(null);
   const [isOpen, setIsOpen] = useState(false);
+  const [isSamambaiaModalOpen, setIsSamambaiaModalOpen] = useState(false);
   const { isSaving, isSavedSuccess, handleSave } = useManualSave(project, isUserLoggedIn);
   const actionFeedback = useActionFeedback(isBr ? '✓ Salvo !' : '✓ Sauvegardé !');
 
@@ -35,25 +36,9 @@ export const SaveAndExportDropdown: React.FC<Props> = ({ project, isUserLoggedIn
     return () => document.removeEventListener('mousedown', onClickOutside);
   }, []);
 
-  const handlePublishSequencer = async () => {
+  const handlePublishSequencer = () => {
     setIsOpen(false);
-    try {
-      await actionFeedback.trigger(async () => {
-        const res = await publishToadaToSequencer(project);
-        const label = isBr ? '✓ Enviado ao Sequenciador !' : '✓ Envoyé à Sequenciador !';
-        const openNow = await confirmAsync({
-          title: label,
-          message: isBr
-            ? `Toada "${project.title}" exportada com sucesso (${res.exportedPatternsCount} padrões ativos exportados • ${res.savedMegabytes} Mo economizados).`
-            : `Toada "${project.title}" exportée avec succès (${res.exportedPatternsCount} patterns actifs exportés • ${res.savedMegabytes} Mo économisés).`,
-          confirmLabel: t('openInSequencer'), cancelLabel: t('dialogCancel'), variant: 'info',
-        });
-        if (openNow) window.open(res.sequenciadorUrl, '_blank');
-        return label;
-      });
-    } catch (err: any) {
-      window.dispatchEvent(new CustomEvent('app-toast', { detail: { type: 'error', message: t('publishGenericErrorToast', { err: err?.message || 'err' }) } }));
-    }
+    setIsSamambaiaModalOpen(true);
   };
 
   const handlePublishOrganizador = async () => {
@@ -118,6 +103,8 @@ export const SaveAndExportDropdown: React.FC<Props> = ({ project, isUserLoggedIn
           </button>
         </div>
       )}
+
+      <SamambaiaRepertoireTargetModal isOpen={isSamambaiaModalOpen} onClose={() => setIsSamambaiaModalOpen(false)} />
     </div>
   );
 };

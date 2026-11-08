@@ -1,7 +1,7 @@
 /**
  * cloudToadaPublisher.ts
  * Téléversement d'un unique fichier .wav maître 16-bit Mono par pattern actif (usageCount > 0),
- * zéro speedVariants (75%/88%), zéro double-trim, et publication dans Firestore `/toada_packs` (< 138 lignes).
+ * zéro speedVariants (75%/88%), zéro double-trim, et publication dans Firestore `/toada_packs` (< 130 lignes).
  */
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { doc, setDoc } from 'firebase/firestore';
@@ -36,48 +36,35 @@ export function getActiveTimelinePatterns(project: ToadaProject): VocalPatternIt
   return used.length > 0 ? used : (project.patterns || []);
 }
 
-export function buildSequencerToadaPackDocument(project: ToadaProject, processedPatterns?: Record<string, any>[]): Record<string, any> {
+export function buildSequencerToadaPackDocument(
+  project: ToadaProject, processedPatterns?: Record<string, any>[], targetSequenciadorBpm?: number
+): Record<string, any> {
   const toadaId = project.id;
-  const projectBpm = Number(project.bpm || project.toadaMeta?.bpmDefaut || DEFAULT_TOADA_BPM);
-  const dualScale = resolveProjectDualScale(project, 'fr');
-  const shiftSt = dualScale.transpositionSemitones;
-  const sequenciadorExportMode = project.sequenciadorExportMode ?? 'rhythm_only';
-  const ignoreMelodyPitch = sequenciadorExportMode === 'rhythm_only';
+  const projectBpm = Number(targetSequenciadorBpm || project.bpm || project.toadaMeta?.bpmDefaut || DEFAULT_TOADA_BPM);
+  const dualScale = resolveProjectDualScale(project, 'fr'), shiftSt = dualScale.transpositionSemitones;
+  const sequenciadorExportMode = project.sequenciadorExportMode ?? 'rhythm_only', ignoreMelodyPitch = sequenciadorExportMode === 'rhythm_only';
   const sourcePatterns = getActiveTimelinePatterns(project);
   const patterns = (processedPatterns ?? sourcePatterns.map((p) => {
-    const recBpm = Number(p.recordingResult?.recordedBpm || p.baseBpm || p.bpm || projectBpm);
+    const recBpm = Number((p as any).recordedBpm || p.recordingResult?.recordedBpm || p.baseBpm || p.bpm || projectBpm);
     return sanitizePatternForFirestore(p, (p as any).audioUrl, undefined, p.t1OffsetSec, undefined, shiftSt, {
       sungKey: dualScale.sungScaleLabel, troupeKey: dualScale.troupeScaleLabel, ignoreMelodyPitch, recordedBpm: recBpm,
     });
-  })).map((pat) => ({
-    ...pat,
-    sungKey: pat.sungKey ?? dualScale.sungScaleLabel,
-    troupeKey: pat.troupeKey ?? dualScale.troupeScaleLabel,
-    transpositionSemitones: pat.transpositionSemitones ?? shiftSt,
-    ignoreMelodyPitch,
-  }));
+  })).map((pat) => ({ ...pat, sungKey: pat.sungKey ?? dualScale.sungScaleLabel, troupeKey: pat.troupeKey ?? dualScale.troupeScaleLabel, transpositionSemitones: pat.transpositionSemitones ?? shiftSt, ignoreMelodyPitch }));
 
   return {
-    id: toadaId, title: project.title, bpm: projectBpm, timeSignature: project.timeSignature,
-    sequenciadorExportMode, ignoreMelodyPitch,
+    id: toadaId, title: project.title, bpm: projectBpm, timeSignature: project.timeSignature, sequenciadorExportMode, ignoreMelodyPitch,
     sungKey: dualScale.sungScaleLabel, troupeKey: dualScale.troupeScaleLabel,
-    sungScaleRoot: dualScale.sungScaleRoot, sungScaleMode: dualScale.sungScaleMode,
-    troupeScaleRoot: dualScale.troupeScaleRoot, transpositionSemitones: shiftSt,
+    sungScaleRoot: dualScale.sungScaleRoot, sungScaleMode: dualScale.sungScaleMode, troupeScaleRoot: dualScale.troupeScaleRoot, transpositionSemitones: shiftSt,
     project: {
-      id: project.id, title: project.title, bpm: projectBpm, timeSignature: project.timeSignature,
-      sequenciadorExportMode, ignoreMelodyPitch,
+      id: project.id, title: project.title, bpm: projectBpm, timeSignature: project.timeSignature, sequenciadorExportMode, ignoreMelodyPitch,
       sungKey: dualScale.sungScaleLabel, troupeKey: dualScale.troupeScaleLabel, transpositionSemitones: shiftSt,
       measuresCount: (project as any).measuresCount || 2, harmonyConfig: project.harmonyConfig ?? null, updatedAt: Date.now(),
     },
     metadata: {
-      title: project.title, toada: project.title, bpm: projectBpm, timeSignature: project.timeSignature,
-      sequenciadorExportMode, ignoreMelodyPitch,
+      title: project.title, toada: project.title, bpm: projectBpm, timeSignature: project.timeSignature, sequenciadorExportMode, ignoreMelodyPitch,
       sungKey: dualScale.sungScaleLabel, troupeKey: dualScale.troupeScaleLabel, transpositionSemitones: shiftSt, publishedAt: Date.now(),
     },
-    toadaMeta: {
-      ...(project.toadaMeta || {}), tonaliteDefaut: dualScale.troupeScaleLabel,
-      tonaliteChanteeOrigine: dualScale.sungScaleLabel, transpositionSemitones: shiftSt,
-    },
+    toadaMeta: { ...(project.toadaMeta || {}), bpmDefaut: projectBpm, tonaliteDefaut: dualScale.troupeScaleLabel, tonaliteChanteeOrigine: dualScale.sungScaleLabel, transpositionSemitones: shiftSt },
     patterns, arrangementSlots: project.slots || [], slots: project.slots || [],
     harmonyConfig: project.harmonyConfig ?? null, globalHarmonyGrid: project.globalHarmonyGrid ?? null,
     createdAt: (project as any).createdAt || Date.now(), updatedAt: Date.now(),
@@ -85,18 +72,14 @@ export function buildSequencerToadaPackDocument(project: ToadaProject, processed
 }
 
 export async function publishToadaToSequencer(
-  project: ToadaProject,
-  onProgress?: (stepText: string) => void
-): Promise<{ success: boolean; toadaId: string; sequenciadorUrl: string; exportedPatternsCount: number; savedMegabytes: string }> {
-  const toadaId = project.id;
-  const processedPatterns: Record<string, any>[] = [];
+  project: ToadaProject, onProgress?: (stepText: string) => void, targetSequenciadorBpm?: number
+): Promise<{ success: boolean; toadaId: string; sequenciadorUrl: string; exportedPatternsCount: number; savedMegabytes: string; publishedPack: Record<string, any> }> {
+  const toadaId = project.id, processedPatterns: Record<string, any>[] = [];
   const projectBpm = Number(project.bpm || project.toadaMeta?.bpmDefaut || DEFAULT_TOADA_BPM);
   const beatsPerMeasure = getBeatsPerMeasure(project.timeSignature);
-  const dualScale = resolveProjectDualScale(project, 'fr');
-  const shiftSt = dualScale.transpositionSemitones;
+  const dualScale = resolveProjectDualScale(project, 'fr'), shiftSt = dualScale.transpositionSemitones;
   const ignoreMelodyPitch = (project.sequenciadorExportMode ?? 'rhythm_only') === 'rhythm_only';
-  const activePatterns = getActiveTimelinePatterns(project);
-  const unusedSummary = getUnusedPatternsSummary(project);
+  const activePatterns = getActiveTimelinePatterns(project), unusedSummary = getUnusedPatternsSummary(project);
 
   if (unusedSummary.count > 0 && activePatterns.length < project.patterns.length) {
     deleteOrphanPatternWavsFromStorage(toadaId, unusedSummary.unusedPatternIds);
@@ -105,21 +88,17 @@ export async function publishToadaToSequencer(
   for (let i = 0; i < activePatterns.length; i++) {
     const p = activePatterns[i];
     onProgress?.(`Téléversement audio maître (${i + 1}/${activePatterns.length})...`);
-    let audioUrl: string | undefined;
-    const masterVar = p.variants?.norm_norm || p.variants?.[p.activeVariantKey];
-    const rec = p.recordingResult ?? masterVar?.recordingResult;
-    const recordedBpm = Number(rec?.recordedBpm || p.baseBpm || p.bpm || projectBpm);
-    const measureDurationSec = beatsPerMeasure * (60 / recordedBpm);
-    const sampleRate = rec?.sampleRate || p.pack?.audio?.sampleRate || 44100;
-    const useCorr = Boolean(p.correctedAudioSamples && p.correctedAudioSamples.length > 0);
-    const fullPcm = useCorr ? p.correctedAudioSamples : (rec?.pcm ?? p.rawAudioSamples);
+    let audioUrl: string | undefined, slicedDurationSec: number | undefined, exportedT1OffsetSec: number | undefined, startOffsetSec: number | undefined;
+    const masterVar = p.variants?.norm_norm || p.variants?.[p.activeVariantKey], rec = p.recordingResult ?? masterVar?.recordingResult;
+    const recordedBpm = Number((p as any).recordedBpm || rec?.recordedBpm || p.baseBpm || p.bpm || projectBpm);
+    const measureDurationSec = beatsPerMeasure * (60 / recordedBpm), sampleRate = rec?.sampleRate || p.pack?.audio?.sampleRate || 44100;
+    const useCorr = Boolean(p.correctedAudioSamples && p.correctedAudioSamples.length > 0), fullPcm = useCorr ? p.correctedAudioSamples : (rec?.pcm ?? p.rawAudioSamples);
     const explicitT1 = p.t1OffsetSec ?? masterVar?.t1OffsetSec ?? rec?.t1OffsetSec;
     const rawT1 = useCorr ? getPatternT1OffsetSec(p.hasAnacrusis, measureDurationSec) : getPatternT1OffsetSec(p.hasAnacrusis, measureDurationSec, explicitT1);
     const rawTrimStart = useCorr ? (p.pack?.audio?.trim?.startSec ?? 0) : (p.trimStartSec ?? masterVar?.trimStartSec ?? 0);
     const rawEnd = useCorr ? (p.pack?.audio?.trim?.endSec ?? 0) : (p.trimEndSec || masterVar?.trimEndSec || 0);
     const rawTrimEnd = rawEnd > 0 ? rawEnd : (fullPcm ? fullPcm.length / sampleRate : 0);
 
-    let slicedDurationSec: number | undefined, exportedT1OffsetSec: number | undefined, startOffsetSec: number | undefined;
     if (fullPcm && fullPcm.length > 0) {
       try {
         const sliced = slicePatternPcm(fullPcm, sampleRate, rawT1, rawTrimStart, rawTrimEnd);
@@ -138,6 +117,7 @@ export async function publishToadaToSequencer(
   }
 
   onProgress?.('Enregistrement du pack dans Firestore...');
-  await setDoc(doc(db, 'toada_packs', toadaId), removeUndefinedFields(buildSequencerToadaPackDocument(project, processedPatterns)));
-  return { success: true, toadaId, sequenciadorUrl: getSequenciadorUrl(toadaId), exportedPatternsCount: activePatterns.length, savedMegabytes: unusedSummary.formattedMegabytes };
+  const publishedPack = removeUndefinedFields(buildSequencerToadaPackDocument(project, processedPatterns, targetSequenciadorBpm));
+  await setDoc(doc(db, 'toada_packs', toadaId), publishedPack);
+  return { success: true, toadaId, sequenciadorUrl: getSequenciadorUrl(toadaId), exportedPatternsCount: activePatterns.length, savedMegabytes: unusedSummary.formattedMegabytes, publishedPack };
 }
