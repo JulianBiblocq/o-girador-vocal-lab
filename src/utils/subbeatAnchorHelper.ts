@@ -20,7 +20,10 @@ export function computeBeatSyllableSubdivs(
 ): number[] {
   const k = syllables.length;
   if (k === 0) return [];
-  const cleaned = (rawBeatChunk || '').replace(/\[[^\]]+\]/g, '').replace(/\*/g, '').trim();
+  let cleaned = (rawBeatChunk || '').replace(/\[[^\]]+\]/g, '').replace(/\*/g, '').trim();
+  if (syllables.some((s) => s.includes("'")) && !cleaned.includes("'")) {
+    cleaned = cleaned.replace(/\b([aáàâãeéêèëiíïoóôõuúü]+)\s+([aáàâãeéêèëiíïoóôõuúü]+)\b/gi, "$1'$2");
+  }
   const rawTokens = cleaned.split(/\s+|(?=[_𝄽])|(?<=[_𝄽])/g).map((t) => t.trim()).filter(Boolean);
   const tokens: Array<'rest' | 'syl'> = [];
   for (const tk of rawTokens) {

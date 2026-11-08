@@ -89,9 +89,7 @@ export function extractPatternMelodicData(params: ExtractMelodicParams): Extract
   const recalibratedSteps = recalibrateBricksToLocalPitchCurve(
     alignedSteps, pitchCurve, hasAnacrusis ? 0 : cleanT1OffsetSec, beatDuration / stepsPerBeat, referencePitch.replace(/\d+$/, '') || 'C', 'chromatic'
   );
-  const allSteps = (assignedLyricsText || (effectiveAnchors && effectiveAnchors.length > 0))
-    ? applyLyricsSyllablesToSteps(recalibratedSteps, assignedLyricsText, effectiveAnchors, beatsPerMeasure, stepsPerBeat)
-    : recalibratedSteps;
+  const allSteps = recalibratedSteps;
   const anacCount = hasAnacrusis ? q.anacrusisSteps.length : 0;
   const anacrusisSteps = hasAnacrusis ? allSteps.slice(0, anacCount) : [];
   const mainSteps = (hasAnacrusis ? allSteps.slice(anacCount) : allSteps).map((s, idx) => ({ ...s, stepIndex: idx }));

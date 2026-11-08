@@ -91,9 +91,13 @@ export const LivretMelodiaWorkspace: React.FC<LivretMelodiaWorkspaceProps> = ({
   const handleUpdateSteps = useCallback((newSteps: VocalStepData[], commit = true) => {
     const norm = newSteps.map((s, idx) => ({ ...s, stepIndex: idx }));
     setAllSteps(norm, commit);
+    let nextLyrics = activePattern.assignedLyricsText;
+    if (commit && nextLyrics) {
+      for (const st of norm) { const syl = (st.syllable || '').trim(); if (syl.includes("'")) nextLyrics = nextLyrics.replace(new RegExp(`\\b${syl.replace(/'/g, '\\s+')}\\b`, 'gi'), syl); }
+    }
     const updatedPack = buildUpdatedVocalPackExport(initialPack, norm, hasAnac, beatsPerMeasure, displayedCurve);
-    updatePattern(activePattern.id, { pack: updatedPack, anacrusisSteps: hasAnac ? norm.slice(0, anacLen) : [], mainSteps: (hasAnac ? norm.slice(anacLen) : norm).map((s, idx) => ({ ...s, stepIndex: idx })), isMidiInitialized: true, ...(commit ? { midiLocked: true } : {}) });
-  }, [setAllSteps, initialPack, hasAnac, beatsPerMeasure, displayedCurve, anacLen, activePattern.id, updatePattern]);
+    updatePattern(activePattern.id, { pack: updatedPack, anacrusisSteps: hasAnac ? norm.slice(0, anacLen) : [], mainSteps: (hasAnac ? norm.slice(anacLen) : norm).map((s, idx) => ({ ...s, stepIndex: idx })), isMidiInitialized: true, ...(commit ? { midiLocked: true, ...(nextLyrics !== activePattern.assignedLyricsText ? { assignedLyricsText: nextLyrics } : {}) } : {}) });
+  }, [setAllSteps, initialPack, hasAnac, beatsPerMeasure, displayedCurve, anacLen, activePattern.id, activePattern.assignedLyricsText, updatePattern]);
 
   const { handleSnapToGreenLine, handleAnalyzeFullSongMelody, handleReset, handleDeleteSelected } = useMelodiaActions({
     project, loadProject, rawPCM, sampleRate, totalDurationSec, activePattern, initialPack, beatsPerMeasure, measuresCount, hasAnac, t1OffsetSec, smoothingLevel, tonic, scaleType, customPitchClasses, rawPitchCurve, allSteps, selectedRegion, selectedRegionId, selectedStepIdx, regions, clearAllRegions, deleteSelected, commitCurrentSnapshot, setAllSteps, updatePattern, handleUpdateSteps, t, rawTxtCode,

@@ -4,10 +4,9 @@
 import type { TimeAnchor } from '../types/toadaDocument.types';
 import { splitTextIntoLetraSyllables } from './syllableSplitter';
 import { isIntraWordBadgeBoundary, computeBeatSyllableSubdivs } from './subbeatAnchorHelper';
+import { mergeSyllablesToImpulseCount } from './syllableImpulseMerger';
 export const TIME_ANCHOR_REGEX = /\[(?:M(\d+)[•·\.:])?([1-9]|1[0-2])\]/gi;
-export function isAnchorOnlyLine(line: string): boolean {
-  return Boolean(line.trim() && /^[\d\s_M•·\.:\[\]]+$/.test(line) && /\b([1-9]|1[0-2])\b/.test(line));
-}
+export function isAnchorOnlyLine(line: string): boolean { return Boolean(line.trim() && /^[\d\s_M•·\.:\[\]]+$/.test(line) && /\b([1-9]|1[0-2])\b/.test(line)); }
 export function convertTwoLineNotationToBrackets(anchorLine: string, lyricsLine: string): string {
   const regex = /\b([1-9]|1[0-2])\b/g, matches: Array<{ beat: number; col: number }> = [];
   let m: RegExpExecArray | null;
@@ -33,8 +32,7 @@ export function preprocessTwoLineLyrics(text: string): string {
 }
 export function computeMeasuresCountFromAnchors(timeAnchors: TimeAnchor[] | undefined, hasAnacrusis = false, fallbackMeasures: 1 | 2 | 3 | 4 = 1): 1 | 2 | 3 | 4 {
   if (!timeAnchors || timeAnchors.length === 0) return fallbackMeasures;
-  const lastA = timeAnchors[timeAnchors.length - 1], prevA = timeAnchors[timeAnchors.length - 2];
-  const rawCount1 = timeAnchors.filter((x) => x.beat === 1 && (!hasAnacrusis || x.measureOffset > 0)).length;
+  const lastA = timeAnchors[timeAnchors.length - 1], prevA = timeAnchors[timeAnchors.length - 2], rawCount1 = timeAnchors.filter((x) => x.beat === 1 && (!hasAnacrusis || x.measureOffset > 0)).length;
   if (rawCount1 === 0) return fallbackMeasures;
   const isTailExitBeat1 = Boolean(rawCount1 >= 2 && lastA?.beat === 1 && prevA && prevA.beat > 1 && !lastA.isSustainedHold);
   return Math.min(4, Math.max(1, isTailExitBeat1 ? rawCount1 - 1 : rawCount1)) as 1 | 2 | 3 | 4;
@@ -74,8 +72,10 @@ export function extractTimeAnchors(rawText: string, beatsPerMeasure = 4, forceTh
     const isGluedToSyl = /^[\p{L}\p{M}]/u.test(chunk.replace(/\*/g, '').replace(/<\/?u\b[^>]*>/gi, ''));
     const isDownbeatLocked = !hasLeadingRest && !isRestSymbol && (isIntraWordBadgeBoundary(rawText, cur.index, cur.fullLength) || Boolean(prevAnchor?.hasLeadingRest) || isGluedToSyl);
     const hasTrailingPickup = k + 1 < matches.length && isIntraWordBadgeBoundary(rawText, matches[k + 1].index, matches[k + 1].fullLength);
+    const restCount = (trimmedChunk.match(/[_𝄽]/g) || []).length, maxSlots = Math.max(1, 4 - restCount);
     const rawSlice = isRestSymbol ? '' : trimmedChunk.replace(/[_𝄽]/g, ' ').replace(/\s+/g, ' ').trim();
-    const syllables = rawSlice ? splitTextIntoLetraSyllables(rawSlice) : [];
+    const rawSylls = rawSlice ? splitTextIntoLetraSyllables(rawSlice) : [];
+    const syllables = rawSylls.length > maxSlots ? mergeSyllablesToImpulseCount(rawSylls, maxSlots) : rawSylls;
     const textSlice = rawSlice.replace(/<\/?u\b[^>]*>/gi, '');
     const syllableSubdivs = computeBeatSyllableSubdivs(trimmedChunk, syllables, hasLeadingRest, hasTrailingPickup);
     if (syllables.length > 0) hasEncounteredSyllables = true;
@@ -83,7 +83,6 @@ export function extractTimeAnchors(rawText: string, beatsPerMeasure = 4, forceTh
     if (isSameBeatAfterRest) timeAnchors.pop();
     timeAnchors.push({ beat: cur.beat, measureOffset, isRest: isInitialRest, isInitialRest, isSustainedHold, hasLeadingRest, isDownbeatLocked, hasTrailingPickup, syllableSubdivs, charOffset: cur.index, textSlice, syllables });
   }
-
   if (!hasAnacrusis) {
     const firstSung = timeAnchors.find((a) => !a.isInitialRest && !a.isRest && (a.syllables?.length || a.textSlice));
     if (firstSung && firstSung.measureOffset === 0 && firstSung.beat > 1) {
@@ -118,7 +117,9 @@ export function resolveFreshTimeAnchors(rawLineCode?: string, existing?: TimeAnc
   if (!candidate && fallbackText && /\[(?:M\d+[•·\.:])?([1-9]|1[0-2])\]/i.test(fallbackText)) candidate = fallbackText;
   if (candidate) {
     const parsed = extractTimeAnchors(candidate.replace(/^\s*(?:puxador|solo|coro|choeur|refrao|refrão)\s*[:\-]\s*/i, ''), beatsPerMeasure, forceThetic).timeAnchors;
-    if (parsed.length > 0) return parsed;
+    if (parsed.length > 0) {
+      return (existing && existing.length === parsed.length) ? parsed.map((p, i) => (existing[i]?.syllables?.some((s) => s.includes("'")) && normLetters(existing[i].syllables!.join('')) === normLetters((p.syllables || []).join(''))) ? { ...p, syllables: existing[i].syllables, syllableSubdivs: existing[i].syllableSubdivs ?? p.syllableSubdivs } : p) : parsed;
+    }
   }
   const fb = fallbackText?.replace(/\[[^\]]+\]/g, '').replace(/[𝄽\*_]/g, ' ').replace(/\s+/g, ' ').trim();
   if (existing?.length && fb && normLetters(existing.map((a) => a.textSlice || (a.syllables || []).join('')).join('')) !== normLetters(fb)) {

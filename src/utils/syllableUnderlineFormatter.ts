@@ -55,12 +55,7 @@ export function formatWordsWithUnderlinedSyllables(
   for (const rawSyl of syllables) {
     const s = (rawSyl || '').trim().replace(/-+$/, '').trim();
     if (!s || s === '───' || s === '_') continue;
-    if (s.includes("'") && !cleanWords.includes("'")) {
-      const parts = s.split("'").map((p) => p.trim()).filter(Boolean);
-      expandedSyls.push(...parts);
-    } else {
-      expandedSyls.push(s);
-    }
+    expandedSyls.push(s);
   }
 
   if (expandedSyls.length === 0) {
@@ -83,8 +78,11 @@ export function formatWordsWithUnderlinedSyllables(
     let matchedFirstLetter = false;
     for (let k = 0; k < sylLetters.length && cursor < cleanWords.length; k++) {
       while (cursor < cleanWords.length && !/[\p{L}\p{N}]/u.test(cleanWords[cursor])) {
-        if (cleanWords[cursor] === "'" || cleanWords[cursor] === '-') {
+        if (cleanWords[cursor] === "'" || cleanWords[cursor] === '’' || cleanWords[cursor] === '-') {
           out += cleanWords[cursor++];
+        } else if (k > 0 && cleanWords[cursor] === ' ' && syl.includes("'")) {
+          while (cursor < cleanWords.length && cleanWords[cursor] === ' ') cursor++;
+          out += "'";
         } else {
           break;
         }

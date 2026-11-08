@@ -83,7 +83,7 @@ export function alignAudioStepsWithTimeAnchors(
 
     const detectedHeads: number[] = [];
     for (let i = beatStart + (anchor.hasLeadingRest ? 1 : 0); i < beatEnd; i++) if (origAttacks[i]) detectedHeads.push(i);
-    const forceExplicitSubdivs = Boolean((anchor.hasLeadingRest || anchor.isDownbeatLocked) && anchor.syllableSubdivs?.length === syls.length);
+    const forceExplicitSubdivs = Boolean((anchor.hasLeadingRest || anchor.isDownbeatLocked || (anchor.textSlice && anchor.textSlice.includes('_'))) && anchor.syllableSubdivs?.length === syls.length);
     const useDetected = !forceExplicitSubdivs && detectedHeads.length >= 1 && detectedHeads.length <= syls.length;
 
     const subdivs = useDetected ? detectedHeads.map((h) => h - beatStart) : (anchor.syllableSubdivs?.length === syls.length ? anchor.syllableSubdivs : computeBeatSyllableSubdivs(anchor.textSlice || '', syls, Boolean(anchor.hasLeadingRest), Boolean(anchor.hasTrailingPickup)));
@@ -127,17 +127,12 @@ export function alignAudioStepsWithTimeAnchors(
   return result;
 }
 
-export function applyLyricsSyllablesToSteps(
-  steps: VocalStepData[], lyricsText?: string, timeAnchors?: TimeAnchor[], beatsPerMeasure = 4, stepsPerBeat = 4
-): VocalStepData[] {
+export function applyLyricsSyllablesToSteps(steps: VocalStepData[], lyricsText?: string, timeAnchors?: TimeAnchor[], beatsPerMeasure = 4, stepsPerBeat = 4): VocalStepData[] {
   if (timeAnchors && timeAnchors.length > 0) {
-    const hasAudioBricks = steps.some((s) => s.active && s.midiNumber > 0 && s.decay < 10);
-    return hasAudioBricks ? alignAudioStepsWithTimeAnchors(steps, timeAnchors, beatsPerMeasure, stepsPerBeat) : alignSyllablesWithTimeAnchors(steps, timeAnchors, beatsPerMeasure, stepsPerBeat);
+    return steps.some((s) => s.active && s.midiNumber > 0 && s.decay < 10) ? alignAudioStepsWithTimeAnchors(steps, timeAnchors, beatsPerMeasure, stepsPerBeat) : alignSyllablesWithTimeAnchors(steps, timeAnchors, beatsPerMeasure, stepsPerBeat);
   }
-  if (!lyricsText || !lyricsText.trim()) return steps;
-  return assignSyllablesStrictlyToExistingBricks(steps, lyricsText);
+  return (!lyricsText || !lyricsText.trim()) ? steps : assignSyllablesStrictlyToExistingBricks(steps, lyricsText);
 }
-
 export function reconstructWordsFromSteps(steps: VocalStepData[]): string {
-  return steps.filter((st) => st.active && st.note !== '───' && st.syllable).map((st) => (st.syllable === '~' || st.syllable === '-' ? '' : st.syllable)).join('');
+  return steps.filter((st) => st.active && st.note !== '───' && st.syllable).map((st) => { const s = st.syllable || ''; return (s === '~' || s === '-') ? '' : (!s.endsWith(' ') && !s.endsWith('-') && /[aáàâãeéêèëiíïoóôõuúü]'[aáàâãeéêèëiíïoóôõuúü]/i.test(s) ? `${s} ` : s); }).join('').replace(/\s+/g, ' ').trim();
 }

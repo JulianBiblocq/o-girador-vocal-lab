@@ -36,12 +36,13 @@ function computeWordJoinFlags(attacks: StepSyllableAttack[], refText: string): v
     const letters = Array.from(att.cleanSyl).filter((c) => /[\p{L}\p{N}]/u.test(c));
     while (cursor < cleanRef.length && !/[\p{L}\p{N}]/u.test(cleanRef[cursor])) cursor++;
     for (let k = 0; k < letters.length && cursor < cleanRef.length; k++) {
-      while (cursor < cleanRef.length && (cleanRef[cursor] === "'" || cleanRef[cursor] === '-')) cursor++;
-      if (cursor < cleanRef.length && /[\p{L}\p{N}]/u.test(cleanRef[cursor])) cursor++;
+      while (cursor < cleanRef.length && !/[\p{L}\p{N}]/u.test(cleanRef[cursor])) cursor++;
+      if (cursor < cleanRef.length) cursor++;
     }
     while (cursor < cleanRef.length && (cleanRef[cursor] === "'" || cleanRef[cursor] === '-')) cursor++;
     if (!att.rawSyl.endsWith('-')) {
-      att.joinsNextWord = cursor < cleanRef.length && /[\p{L}\p{N}]/u.test(cleanRef[cursor]);
+      const isVowelElision = /[aáàâãeéêèëiíïoóôõuúü]'[aáàâãeéêèëiíïoóôõuúü]/i.test(att.cleanSyl);
+      att.joinsNextWord = !isVowelElision && cursor < cleanRef.length && /[\p{L}\p{N}]/u.test(cleanRef[cursor]);
     }
   }
   if (attacks.length > 0) attacks[attacks.length - 1].joinsNextWord = false;
@@ -111,7 +112,9 @@ export function buildOrganizadorLineFromSteps(
       const att = bg.attacks[i], nextInBeat = bg.attacks[i + 1];
       out += withUnderline ? underlineSingleSyllableFirstLetter(att.cleanSyl) : att.cleanSyl;
       if (nextInBeat) {
-        if (!att.joinsNextWord) out += (att.subdiv === 0 && nextInBeat.subdiv === 3) ? ' _ ' : ' ';
+        const needsRest = (att.subdiv === 0 && nextInBeat.subdiv === 3) || (bg.attacks.length === 3 && nextInBeat.subdiv - att.subdiv >= 2);
+        if (needsRest) out += ' _ ';
+        else if (!att.joinsNextWord) out += ' ';
       } else {
         const weldsToNextBeat = att.joinsNextWord && Boolean(nextBg && nextBg.attacks.length > 0 && nextBg.attacks[0].subdiv === 0);
         if (!weldsToNextBeat && g < beatGroups.length - 1) out += ' ';

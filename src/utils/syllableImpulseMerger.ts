@@ -7,14 +7,18 @@ import type { VocalStepData } from '../types/vocalPack.types';
 import { midiToNoteName } from './noteUtils';
 import { syllabifySingleWord } from './syllableSplitter';
 
+const VOWEL_ONLY_SYL = /^[aáàâãeéêèëiíïoóôõuúü]+$/i;
+
 export function mergeTwoSyllables(left: string, right: string): string {
   const l = left || '', r = right || '';
   if (!l) return r;
   if (!r) return l;
   const rightHasSpace = r.endsWith(' ');
   const lClean = l.trimEnd(), rClean = r.trim();
+  if (VOWEL_ONLY_SYL.test(lClean) && VOWEL_ONLY_SYL.test(rClean)) {
+    return `${lClean}'${rClean}${rightHasSpace ? ' ' : ''}`;
+  }
   if (!l.endsWith(' ')) return `${lClean}${rClean}${rightHasSpace ? ' ' : ''}`;
-  // Deux mots courts fusionnés par élision chantée (ex: "e " + "o " -> "e o ")
   return `${lClean} ${rClean}${rightHasSpace ? ' ' : ''}`;
 }
 
@@ -24,12 +28,22 @@ export function mergeSyllablesToImpulseCount(syllables: string[], targetImpulses
   const list = [...syllables];
 
   while (list.length > k) {
-    // Priorité 1 : fusionner la fin d'un mot multi-syllabique mangée au chant (ex: ["ba", "que "] -> ["baque "], ["Trou", "xe ", "a "] -> ["Trouxe ", "a "])
     let mergeIdx = -1;
-    for (let i = list.length - 1; i >= 1; i--) {
-      if (!list[i - 1].endsWith(' ')) { mergeIdx = i - 1; break; }
+    // Priorité 0 : synalèphe entre deux voyelles isolées consécutives (ex: ["lou", "e", "o", "ba"] -> ["lou", "e'o", "ba"])
+    for (let i = 1; i < list.length; i++) {
+      if (VOWEL_ONLY_SYL.test(list[i - 1].trim()) && VOWEL_ONLY_SYL.test(list[i].trim())) {
+        mergeIdx = i - 1;
+        break;
+      }
     }
-    // Priorité 2 : fusionner les deux dernières syllabes du temps (élision vocalique en fin de temps)
+    // Priorité 1 : fusionner la fin d'un mot multi-syllabique mangée au chant
+    const hasWordSpaces = list.some((s) => s.endsWith(' '));
+    if (mergeIdx === -1 && hasWordSpaces) {
+      for (let i = list.length - 1; i >= 1; i--) {
+        if (!list[i - 1].endsWith(' ')) { mergeIdx = i - 1; break; }
+      }
+    }
+    // Priorité 2 : fusionner les deux dernières syllabes du temps
     if (mergeIdx === -1) mergeIdx = list.length - 2;
     list.splice(mergeIdx, 2, mergeTwoSyllables(list[mergeIdx], list[mergeIdx + 1]));
   }
@@ -50,20 +64,13 @@ export function countVocalImpulsesInBeatSteps(stepsInBeat: VocalStepData[], writ
   return Math.max(1, Math.min(writtenSylCount, impulses || writtenSylCount));
 }
 
-export function joinSyllableWithPrevious(
-  steps: VocalStepData[],
-  targetStepIdx: number,
-  stepsPerBeat = 4
-): VocalStepData[] {
+export function joinSyllableWithPrevious(steps: VocalStepData[], targetStepIdx: number, stepsPerBeat = 4): VocalStepData[] {
   const roots = steps.map((s, idx) => (s.active && s.note !== '───' && !s.isTie ? idx : -1)).filter((idx) => idx !== -1);
   const pos = roots.indexOf(targetStepIdx);
   if (pos <= 0) return steps;
-  const prevRootIdx = roots[pos - 1];
-  const next = steps.map((s) => ({ ...s }));
-
+  const prevRootIdx = roots[pos - 1], next = steps.map((s) => ({ ...s }));
   next[prevRootIdx].syllable = mergeTwoSyllables(next[prevRootIdx].syllable || '', next[targetStepIdx].syllable || '');
-  const prevMidi = next[prevRootIdx].midiNumber;
-  const curMidi = next[targetStepIdx].midiNumber;
+  const prevMidi = next[prevRootIdx].midiNumber, curMidi = next[targetStepIdx].midiNumber;
   const sameBeat = Math.floor(prevRootIdx / stepsPerBeat) === Math.floor(targetStepIdx / stepsPerBeat);
 
   if (prevMidi === curMidi || sameBeat) {
@@ -74,20 +81,13 @@ export function joinSyllableWithPrevious(
       next[i] = { ...next[i], active: true, midiNumber: prevMidi, note: '───', isTie: true, syllable: '', syllableAttack: false };
     }
   } else {
-    // Hauteur différente : décale les syllabes suivantes d'un cran vers la gauche sans toucher aux notes
-    for (let k = pos; k < roots.length - 1; k++) {
-      next[roots[k]].syllable = next[roots[k + 1]].syllable || '';
-    }
+    for (let k = pos; k < roots.length - 1; k++) next[roots[k]].syllable = next[roots[k + 1]].syllable || '';
     next[roots[roots.length - 1]].syllable = '';
   }
   return next;
 }
 
-export function splitBrickAndSyllableAt(
-  steps: VocalStepData[],
-  rootStepIdx: number,
-  customInputText?: string
-): VocalStepData[] {
+export function splitBrickAndSyllableAt(steps: VocalStepData[], rootStepIdx: number, customInputText?: string): VocalStepData[] {
   const root = steps[rootStepIdx];
   if (!root || !root.active || root.note === '───') return steps;
   let endIdx = rootStepIdx;
@@ -119,15 +119,6 @@ export function splitBrickAndSyllableAt(
 
   const next = steps.map((s) => ({ ...s }));
   next[rootStepIdx] = { ...next[rootStepIdx], syllable: leftSyl };
-  next[splitIdx] = {
-    ...next[splitIdx],
-    active: true,
-    midiNumber: root.midiNumber,
-    note: midiToNoteName(root.midiNumber),
-    isTie: false,
-    syllableAttack: true,
-    syllable: rightSyl,
-    velocity: 100,
-  };
+  next[splitIdx] = { ...next[splitIdx], active: true, midiNumber: root.midiNumber, note: midiToNoteName(root.midiNumber), isTie: false, syllableAttack: true, syllable: rightSyl, velocity: 100 };
   return next;
 }
