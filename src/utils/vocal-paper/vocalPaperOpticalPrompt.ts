@@ -1,15 +1,26 @@
 /**
  * vocalPaperOpticalPrompt.ts
  * Construction des instructions de lecture optique multi-feuilles (Séquence Pux/Cor, Patterns & Notes, Rythme seul) (< 120 lignes).
+ * Injecte le dictionnaire des phrases et mots de la fiche Organizador existante pour verrouiller l'orthographe.
  */
+import { extractOfficialWordsAndPhrases } from './vocalPaperLyricsAligner';
 
 export function buildVocalPaperOpticalSystemPrompt(options?: {
   referenceLyrics?: string;
+  organizadorDoc?: any;
   defaultBpm?: number;
   defaultTimeSignature?: string;
 }): string {
-  const refBlock = options?.referenceLyrics?.trim()
-    ? `\nTEXTE DE RÉFÉRENCE DES PAROLES (pour orthographe portugaise exacte) :\n"""\n${options.referenceLyrics.trim()}\n"""`
+  const docSource = options?.organizadorDoc || options?.referenceLyrics || '';
+  const { cleanLines, uniqueWords } = extractOfficialWordsAndPhrases(docSource);
+
+  const refBlock = cleanLines.length > 0
+    ? `\nTEXTE OFFICIEL ET DICTIONNAIRE DE RÉFÉRENCE (FICHE ORGANIZADOR) :
+- Phrases officielles de la Toada :
+${cleanLines.map((l, i) => `  ${i + 1}. "${l}"`).join('\n')}
+- Dictionnaire officiel des mots : ${uniqueWords.join(', ')}
+CONSIGNE IMPÉRATIVE DE VERROUILLAGE ORTHOGRAPHIQUE :
+« Les paroles officielles de ce chant sont déjà connues ci-dessus. L'écriture manuscrite sur la grille peut être rapide, abrégée ou sans accents. Utilise obligatoirement les mots et syllabes du texte officiel fourni pour identifier chaque syllabe manuscrite, tout en respectant à 100 % les cases de temps/subdivisions où elles sont inscrites sur la grille. »`
     : '';
 
   return `TU ES LE MOTEUR DE LECTURE OPTIQUE DE PARTITIONS VOCALES MANUSCRITES DE L'ÉCOSYSTÈME O GIRADOR (CANTADOR, ORGANIZADOR, SEQUENCIADOR).
@@ -31,7 +42,7 @@ RÈGLES STRICTES D'EXTRACTION :
    - La ligne "OCT / ±" au-dessus indique un décalage d'octave entier (-1, 0, +1).
 4. SYLLABES, TIRETS, ÉLISIONS & TENUES :
    - Conserver le tiret final "-" lorsqu'il est écrit (ex: "VO-", "FA-", "CA-", "I-") car il soude les syllabes d'un même mot.
-   - Conserver intactes les élisions avec apostrophe dans une même case (ex: "E'O", "D'Á-", "QU'EU").
+   - Conserver intactes les élisions avec apostrophe dans une même case (ex: "E'O", "D'Á-", "QU'EU", "XE'O").
    - Une flèche "───►" ou "--->" ou un trait continu dans la case syllabe correspond à une tenue : renvoyer "isTie": true, "syllable": "───".
 
 FORMAT JSON STRICT ATTENDU (sans balise markdown autour) :

@@ -54,6 +54,7 @@ export interface ScannedVocalStepCell {
 export interface ScannedVocalPatternBlock {
   code: string;
   name?: string;
+  officialLyricsText?: string;
   sheetCode: VocalSheetOpticalCode;
   measuresCount: 1 | 2 | 3 | 4;
   hasAnacrusis: boolean;
@@ -107,3 +108,4 @@ export interface VocalPaperImportTargetConfig {
   syncToOrganizador: boolean;
   syncToSequenciador: boolean;
 }
+

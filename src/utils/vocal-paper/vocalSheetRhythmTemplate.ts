@@ -100,3 +100,4 @@ export function renderVocalSheetRhythmHTML(options: VocalPaperPrintOptions): str
     </div>
   `;
 }
+

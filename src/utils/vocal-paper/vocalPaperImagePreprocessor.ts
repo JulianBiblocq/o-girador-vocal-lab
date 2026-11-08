@@ -126,3 +126,4 @@ export async function preprocessVocalPaperPhoto(fileOrDataUrl: File | string): P
     detectedOrientation: w > h ? 'landscape' : 'portrait',
   };
 }
+

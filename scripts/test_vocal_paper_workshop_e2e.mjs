@@ -19,6 +19,8 @@ import {
   buildStepsAndLyricsFromScannedBlock,
   convertVocalPaperScanToProject,
 } from '../src/utils/vocal-paper/vocalPaperToProjectConverter.ts';
+import { alignScannedPatternsWithOrganizadorLyrics } from '../src/utils/vocal-paper/vocalPaperLyricsAligner.ts';
+import { buildVocalPaperOpticalSystemPrompt } from '../src/utils/vocal-paper/vocalPaperOpticalPrompt.ts';
 import { createDefaultToadaProject } from '../src/utils/toadaProjectDefaults.ts';
 import { reconstituteToadaTxt } from '../src/utils/toadaTxtReconstitutor.ts';
 import {
@@ -202,6 +204,101 @@ console.log('=== TEST E2E : ATELIER PAPIER DU CHANT (CANTADOR • ORGANIZADOR �
 }
 
 // ---------------------------------------------------------------------------
+// 4bis. Guidage et Verrouillage Orthographique par la Fiche existante d'Organizador
+//       ("VO- | VO | FA- | LOU | E'O | BA- | RAO" ➔ "Vovó falou e o barão")
+//       ("TROU- | XE | A | CAI- | XA | TROU- | XE'O | GON- | GUE" ➔ "Trouxe a caixa, trouxe o gonguê")
+// ---------------------------------------------------------------------------
+{
+  const vovoOrgDoc = {
+    id: 'doc-vovo-falou',
+    titre: 'Vovó falou',
+    bpmDefaut: 85,
+    parolesOriginales: '<p><u>V</u>o<u>v</u>ó <u>f</u>a<u>l</u>ou <u>e</u> <u>o</u> <u>b</u>a<u>r</u>ão <u>a</u>s<u>s</u>i<u>n</u>ou</p>',
+    rawTxtCode: "*[1]_ [2]Vovó _ fa[3]lou _ e'o ba[4]rão _ assi[1]nou*",
+  };
+
+  const promptWithRef = buildVocalPaperOpticalSystemPrompt({ organizadorDoc: vovoOrgDoc, defaultBpm: 85 });
+  assert.ok(
+    promptWithRef.includes("Les paroles officielles de ce chant sont déjà connues ci-dessus. L'écriture manuscrite sur la grille peut être rapide, abrégée ou sans accents. Utilise obligatoirement les mots et syllabes du texte officiel fourni pour identifier chaque syllabe manuscrite, tout en respectant à 100 % les cases de temps/subdivisions où elles sont inscrites sur la grille."),
+    'Le prompt optique doit contenir la consigne impérative de verrouillage orthographique'
+  );
+
+  // Cas 1 : Saisie manuscrite rapide sans accents ("VO- | VO | FA- | LOU | E'O | BA- | RAO") sur Vovó falou
+  const unaccentedVovoPatterns = [
+    {
+      code: 'P1',
+      sheetCode: 'CHANT-NOTES-1M',
+      measuresCount: 1,
+      hasAnacrusis: false,
+      hasTailBeat: false,
+      rhythmOnlyMode: false,
+      mainCells: [
+        { stepIndex: 4, syllable: 'VO-', pitchKey: 'C', octaveShift: 0 },
+        { stepIndex: 5, syllable: 'VO', pitchKey: 'D', octaveShift: 0 },
+        { stepIndex: 7, syllable: 'FA-', pitchKey: 'E', octaveShift: 0 },
+        { stepIndex: 8, syllable: 'LOU', pitchKey: 'G', octaveShift: 0 },
+        { stepIndex: 10, syllable: "E'O", pitchKey: 'E', octaveShift: 0 },
+        { stepIndex: 11, syllable: 'BA-', pitchKey: 'D', octaveShift: 0 },
+        { stepIndex: 12, syllable: 'RAO', pitchKey: 'C', octaveShift: 0 },
+      ],
+    },
+  ];
+  const alignedVovo = alignScannedPatternsWithOrganizadorLyrics(unaccentedVovoPatterns, vovoOrgDoc);
+  assert.equal(alignedVovo[0].officialLyricsText, 'Vovó falou e o barão', 'Restitution à 100 % de "Vovó falou e o barão"');
+  const vovoStepsRes = buildStepsAndLyricsFromScannedBlock(alignedVovo[0]);
+  assert.equal(vovoStepsRes.assignedLyricsText, 'Vovó falou e o barão');
+  const vovoActive = vovoStepsRes.mainSteps.filter((s) => s.active && !s.isTie);
+  assert.deepEqual(vovoActive.map((s) => s.stepIndex), [4, 5, 7, 8, 10, 11, 12], 'Positions rythmiques stepIndex 100 % préservées');
+  assert.deepEqual(vovoActive.map((s) => s.midiNumber), [60, 62, 64, 67, 64, 62, 60], 'Hauteurs MIDI 100 % préservées');
+  assert.deepEqual(vovoActive.map((s) => s.syllable), ['Vo', 'vó', 'fa', 'lou', "e'o", 'ba', 'rão'], 'Syllabes accentuées exactes sur les pas');
+
+  // Cas 2 : Saisie manuscrite rapide sans accents ni ponctuation ("TROU- | XE | A | CAI- | XA | TROU- | XE'O | GON- | GUE") sur De Norte a Sul
+  const norteSulOrgDoc = {
+    id: 'doc-norte-a-sul',
+    titre: 'De Norte a Sul',
+    bpmDefaut: 92,
+    parolesOriginales: 'De Norte a Sul\nTrouxe a caixa, trouxe o gonguê\nMaracatu chegou',
+  };
+  const unaccentedNortePatterns = [
+    {
+      code: 'P2',
+      sheetCode: 'CHANT-NOTES-1M',
+      measuresCount: 1,
+      hasAnacrusis: true,
+      hasTailBeat: false,
+      rhythmOnlyMode: false,
+      anacrusisCells: [
+        { stepIndex: 4, syllable: 'TROU-', pitchKey: 'E', octaveShift: 0 },
+        { stepIndex: 6, syllable: 'XE', pitchKey: 'G', octaveShift: 0 },
+        { stepIndex: 7, syllable: 'A', pitchKey: 'A', octaveShift: 0 },
+      ],
+      mainCells: [
+        { stepIndex: 0, syllable: 'CAI-', pitchKey: 'C', octaveShift: 0 },
+        { stepIndex: 2, syllable: 'XA', pitchKey: 'D', octaveShift: 0 },
+        { stepIndex: 4, syllable: 'TROU-', pitchKey: 'E', octaveShift: 0 },
+        { stepIndex: 6, syllable: "XE'O", pitchKey: 'D', octaveShift: 0 },
+        { stepIndex: 8, syllable: 'GON-', pitchKey: 'C', octaveShift: 0 },
+        { stepIndex: 12, syllable: 'GUE', pitchKey: 'A', octaveShift: 0 },
+      ],
+    },
+  ];
+  const alignedNorte = alignScannedPatternsWithOrganizadorLyrics(unaccentedNortePatterns, norteSulOrgDoc);
+  assert.equal(alignedNorte[0].officialLyricsText, 'Trouxe a caixa, trouxe o gonguê', 'Restitution à 100 % de "Trouxe a caixa, trouxe o gonguê"');
+  const norteStepsRes = buildStepsAndLyricsFromScannedBlock(alignedNorte[0]);
+  assert.equal(norteStepsRes.assignedLyricsText, 'Trouxe a caixa, trouxe o gonguê');
+  const norteAnaActive = norteStepsRes.anacrusisSteps.filter((s) => s.active && !s.isTie);
+  const norteMainActive = norteStepsRes.mainSteps.filter((s) => s.active && !s.isTie);
+  assert.deepEqual(norteAnaActive.map((s) => s.stepIndex), [4, 6, 7], 'Pas anacrouse 100 % préservés');
+  assert.deepEqual(norteMainActive.map((s) => s.stepIndex), [0, 2, 4, 6, 8, 12], 'Pas mesure principale 100 % préservés');
+  assert.deepEqual(
+    [...norteAnaActive, ...norteMainActive].map((s) => s.syllable),
+    ['Trou', 'xe', 'a', 'cai', 'xa', 'trou', "xe'o", 'gon', 'guê'],
+    'Syllabes accentuées exactes ("Trou", "xe", "a", "cai", "xa", "trou", "xe\'o", "gon", "guê") sur les pas exacts de la grille'
+  );
+  console.log('✓ 4bis. Verrouillage orthographique Organizador ("Vovó falou e o barão" & "Trouxe a caixa, trouxe o gonguê") validé à 100 %.');
+}
+
+// ---------------------------------------------------------------------------
 // 5 & 6. Zéro occurrence de "IA" / "Intelligence Artificielle" & < 145 lignes sur tous les fichiers créés/modifiés
 // ---------------------------------------------------------------------------
 {
@@ -215,6 +312,7 @@ console.log('=== TEST E2E : ATELIER PAPIER DU CHANT (CANTADOR • ORGANIZADOR �
     path.join(cantadorRoot, 'src/utils/vocal-paper/vocalPaperImagePreprocessor.ts'),
     path.join(cantadorRoot, 'src/utils/vocal-paper/vocalPaperOpticalPrompt.ts'),
     path.join(cantadorRoot, 'src/utils/vocal-paper/vocalPaperOpticalService.ts'),
+    path.join(cantadorRoot, 'src/utils/vocal-paper/vocalPaperLyricsAligner.ts'),
     path.join(cantadorRoot, 'src/utils/vocal-paper/vocalPaperToProjectConverter.ts'),
     path.join(cantadorRoot, 'src/components/modals/vocal-paper/VocalPaperWorkshopModal.tsx'),
     path.join(cantadorRoot, 'src/components/modals/vocal-paper/VocalPaperPrintTab.tsx'),
@@ -246,3 +344,4 @@ console.log('=== TEST E2E : ATELIER PAPIER DU CHANT (CANTADOR • ORGANIZADOR �
 }
 
 console.log('\n🎉 TOUS LES TESTS E2E DE L’ATELIER PAPIER DU CHANT SONT PASSÉS AVEC SUCCÈS !');
+

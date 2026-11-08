@@ -1,7 +1,7 @@
 /**
  * vocalPaperToProjectConverter.ts
- * Conversion d'un résultat de lecture optique multi-photos (VocalPaperBatchScanResult) en ToadaProject (< 135 lignes).
- * Gère le clavier 1 octave (La -> Sol#), l'anacrouse T3-T4, le débordement +T1, les soudures '-' et l'Unisson Pux/Cor.
+ * Conversion d'un résultat de lecture optique multi-photos (VocalPaperBatchScanResult) en ToadaProject (< 138 lignes).
+ * Gère le clavier 1 octave (La -> Sol#), l'anacrouse T3-T4, le débordement +T1, l'alignement Organizador et l'Unisson Pux/Cor.
  */
 import type {
   VocalPaperBatchScanResult, ScannedVocalPatternBlock, ScannedVocalStepCell, VocalPaperImportTargetConfig,
@@ -14,6 +14,7 @@ import { buildOrganizadorLineFromSteps } from '../stepsToOrganizadorLineBuilder'
 import { extractTimeAnchors } from '../timeAnchorParser';
 import { applyDualScaleToProject, computeSemitoneDistance } from '../scaleTranspositionHelper';
 import { parseStoredScaleString } from '../../audio/projectScaleAnalyzer';
+import { alignScannedPatternsWithOrganizadorLyrics } from './vocalPaperLyricsAligner';
 
 const SEMITONE_FROM_A3: Record<string, number> = {
   A: 0, LA: 0, BB: 1, 'A#': 1, SIB: 1, 'SI♭': 1, 'LA#': 1, B: 2, SI: 2,
@@ -52,12 +53,8 @@ export function buildStepsAndLyricsFromScannedBlock(
     return Array.from({ length: totalSteps }, (_, idx) => {
       const cell = map.get(idx), rawSyl = (cell?.syllable || '').trim();
       const isTie = Boolean(cell?.isTie || rawSyl === '───' || rawSyl === '---' || rawSyl === '───►');
-      if (!isTie && !rawSyl && !cell?.pitchKey) {
-        return { stepIndex: idx, active: false, note: 'C4', midiNumber: 60, velocity: 0, decay: 0 };
-      }
-      if (isTie) {
-        return { stepIndex: idx, active: true, isTie: true, note: '───', midiNumber: lastMidi, syllable: '───', velocity: 82, decay: 100 };
-      }
+      if (!isTie && !rawSyl && !cell?.pitchKey) return { stepIndex: idx, active: false, note: 'C4', midiNumber: 60, velocity: 0, decay: 0 };
+      if (isTie) return { stepIndex: idx, active: true, isTie: true, note: '───', midiNumber: lastMidi, syllable: '───', velocity: 82, decay: 100 };
       const midi = block.rhythmOnlyMode ? 60 : keyboardNoteToMidi(cell?.pitchKey, cell?.octaveShift || 0, baseA3Midi);
       lastMidi = midi;
       const joinsNext = rawSyl.endsWith('-'), cleanSyl = formatSylCase(rawSyl, isFirstSyl);
@@ -71,17 +68,20 @@ export function buildStepsAndLyricsFromScannedBlock(
   const anacrusisSteps = block.hasAnacrusis ? buildArray(block.anacrusisCells, 8) : [];
   const mainCount = Math.max(1, block.measuresCount) * 16, baseMain = buildArray(block.mainCells, mainCount);
   const tailSteps = block.hasTailBeat ? buildArray(block.tailCells, 4).map((s, i) => ({ ...s, stepIndex: mainCount + i })) : [];
-  return { anacrusisSteps, mainSteps: [...baseMain, ...tailSteps], assignedLyricsText: lyricsAcc.trim().replace(/\s{2,}/g, ' ') };
+  const resolvedLyrics = block.officialLyricsText?.trim() || lyricsAcc.trim().replace(/\s{2,}/g, ' ');
+  return { anacrusisSteps, mainSteps: [...baseMain, ...tailSteps], assignedLyricsText: resolvedLyrics };
 }
 
 export function convertVocalPaperScanToProject(
-  currentProject: ToadaProject, scanResult: VocalPaperBatchScanResult, targetConfig?: Partial<VocalPaperImportTargetConfig>
+  currentProject: ToadaProject, scanResult: VocalPaperBatchScanResult, targetConfig?: Partial<VocalPaperImportTargetConfig>, organizadorDoc?: any
 ): ToadaProject {
   const bpm = Number(targetConfig?.bpm || scanResult.bpm || currentProject.bpm || 88);
   const timeSignature = targetConfig?.timeSignature || scanResult.timeSignature || currentProject.timeSignature || '4/4';
   const title = (targetConfig?.title || scanResult.title || currentProject.title || 'Toada Manuscrit').trim();
+  const refDoc = organizadorDoc || currentProject.toadaMeta;
+  const alignedPatterns = refDoc ? alignScannedPatternsWithOrganizadorLyrics(scanResult.patterns, refDoc) : scanResult.patterns;
   const blockMap = new Map<string, { block: ScannedVocalPatternBlock; cardIdx: number }>();
-  scanResult.patterns.forEach((b, idx) => blockMap.set(b.code.trim().toUpperCase(), { block: b, cardIdx: idx }));
+  alignedPatterns.forEach((b, idx) => blockMap.set(b.code.trim().toUpperCase(), { block: b, cardIdx: idx }));
 
   const createdPatterns: VocalPatternItem[] = [], roleInstanceMap = new Map<string, VocalPatternItem>();
   const getOrCreatePattern = (code: string, role: VocalRole, isTutti = false): VocalPatternItem | null => {
@@ -115,24 +115,20 @@ export function convertVocalPaperScanToProject(
         return;
       }
       const isUnison = Boolean(pCode && cCode && pCode === cCode);
-      const puxPat = pCode ? getOrCreatePattern(pCode, 'puxador', isUnison) : null;
-      const corPat = cCode ? getOrCreatePattern(cCode, 'coro', isUnison) : null;
+      const puxPat = pCode ? getOrCreatePattern(pCode, 'puxador', isUnison) : null, corPat = cCode ? getOrCreatePattern(cCode, 'coro', isUnison) : null;
       if (isUnison && puxPat && corPat) corPat.linkedSourcePatternId = puxPat.id;
       slots.push({ slotId: `slot-seq-${i + 1}`, puxadorPatternId: puxPat?.id || null, coroPatternId: corPat?.id || null, advanceMeasures: Math.max(puxPat?.measuresCount || 1, corPat?.measuresCount || 1) });
     });
   } else {
-    scanResult.patterns.forEach((b, idx) => {
-      const pat = getOrCreatePattern(b.code, 'puxador', false);
-      if (pat) slots.push({ slotId: `slot-auto-${idx + 1}`, puxadorPatternId: pat.id, coroPatternId: null, advanceMeasures: pat.measuresCount });
-    });
+    alignedPatterns.forEach((b, idx) => { const pat = getOrCreatePattern(b.code, 'puxador', false); if (pat) slots.push({ slotId: `slot-auto-${idx + 1}`, puxadorPatternId: pat.id, coroPatternId: null, advanceMeasures: pat.measuresCount }); });
   }
 
-  let nextProj: ToadaProject = {
+  const nextProj: ToadaProject = {
     ...currentProject, title, bpm, timeSignature,
     patterns: createdPatterns.length > 0 ? createdPatterns : currentProject.patterns,
     slots: slots.length > 0 ? slots : currentProject.slots,
     activePatternId: createdPatterns[0]?.id || currentProject.activePatternId,
-    sequenciadorExportMode: scanResult.patterns.some((p) => !p.rhythmOnlyMode) ? 'full_notes' : 'rhythm_only',
+    sequenciadorExportMode: alignedPatterns.some((p) => !p.rhythmOnlyMode) ? 'full_notes' : 'rhythm_only',
   };
   const parsedSung = parseStoredScaleString(targetConfig?.sungKey || scanResult.sungKey) || { tonic: currentProject.sungScaleRoot || 'C', scaleType: (targetConfig?.scaleMode || scanResult.scaleMode || 'major') as any };
   const parsedTroupe = parseStoredScaleString(targetConfig?.troupeKey || scanResult.troupeKey);
