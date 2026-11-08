@@ -159,3 +159,4 @@ assert.equal(updatedProject.patterns[0].recordedBpm, 82, 'p.recordedBpm doit res
 assert.equal(updatedProject.patterns[0].recordingResult.recordedBpm, 82, 'recordingResult.recordedBpm doit rester à 82 BPM');
 console.log('✓ 2. Maintien du BPM maître Sequenciador (98 BPM), bouclage du Baque (4M -> 8M) et préservation de recordedBpm (82 BPM) validés');
 console.log('ALL SAMAMBAIA MORCEAU INTEGRATION TESTS PASSED SUCCESSFULLY!');
+

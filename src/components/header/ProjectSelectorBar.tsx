@@ -16,7 +16,8 @@ import { SaveAndExportDropdown } from './SaveAndExportDropdown';
 import { MidiConnectionBadge } from './MidiConnectionBadge';
 import { OrganizadorToadaModal } from '../modals/OrganizadorToadaModal';
 import { ToadaLexiconModal } from '../lexicon/ToadaLexiconModal';
-import { BookOpen, RefreshCw, Check } from 'lucide-react';
+import { VocalPaperWorkshopModal } from '../modals/vocal-paper/VocalPaperWorkshopModal';
+import { BookOpen, RefreshCw, Check, Printer } from 'lucide-react';
 
 export const ProjectSelectorBar: React.FC = () => {
   const { project, loadProject } = useToadaProject();
@@ -26,6 +27,7 @@ export const ProjectSelectorBar: React.FC = () => {
   const isBr = language === 'br';
   const [isOrganizadorOpen, setIsOrganizadorOpen] = useState(false);
   const [isLexiconOpen, setIsLexiconOpen] = useState(false);
+  const [isPaperWorkshopOpen, setIsPaperWorkshopOpen] = useState(false);
   const syncFeedback = useActionFeedback(isBr ? '✓ Sincronizado !' : '✓ Synchronisé !');
 
   useOrganizadorDeepLink(groupId, isLoading);
@@ -84,12 +86,25 @@ export const ProjectSelectorBar: React.FC = () => {
       )}
 
       <ToadaLibraryDropdown onOpenOrganizador={() => setIsOrganizadorOpen(true)} groupName={groupId || undefined} />
+      {viewRoleMode !== 'eleve' && (
+        <button
+          type="button" onClick={() => setIsPaperWorkshopOpen(true)}
+          title={isBr ? 'Oficina em Papel do Canto (Imprimir A4 P&B / Fotografar)' : 'Atelier Papier du Chant (Imprimer A4 N&B / Photographier)'}
+          className="h-9 px-2.5 cordel-card-sm text-xs font-mono font-bold flex items-center gap-1.5 hover:opacity-90 text-theme-ink transition-colors cursor-pointer"
+        >
+          <Printer className="w-3.5 h-3.5 text-[#9a3412] dark:text-amber-300" />
+          <span className="hidden sm:inline">{isBr ? 'Oficina Papel' : 'Atelier Papier'}</span>
+        </button>
+      )}
       {viewRoleMode !== 'eleve' && <SaveAndExportDropdown project={project} isUserLoggedIn={Boolean(currentUser)} onProjectUpdate={loadProject} />}
 
       {isOrganizadorOpen && (
         <OrganizadorToadaModal isOpen={isOrganizadorOpen} onClose={() => setIsOrganizadorOpen(false)} groupId={groupId} isUserLoggedIn={Boolean(currentUser)} onLogin={loginWithGoogle} />
       )}
       {isLexiconOpen && <ToadaLexiconModal isOpen={isLexiconOpen} onClose={() => setIsLexiconOpen(false)} />}
+      {isPaperWorkshopOpen && (
+        <VocalPaperWorkshopModal isOpen={isPaperWorkshopOpen} onClose={() => setIsPaperWorkshopOpen(false)} project={project} groupId={groupId} isBr={isBr} onProjectUpdate={loadProject} />
+      )}
     </div>
   );
 };

@@ -5,13 +5,10 @@
  * et bouton interrupteur [ Structure Organizador ] ⟷ [ Modifier la structure ] (< 138 lignes).
  */
 import React, { useRef, useState, useCallback, useEffect, useMemo } from 'react';
-import { Drum, Volume2, Search, Lock, Edit3, Minus, Plus, Hand, Mic, Target, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Drum, Volume2, Search, Lock, Edit3, Minus, Plus, Hand, Mic, Target, ChevronLeft, ChevronRight, Printer } from 'lucide-react';
 import { NumericDraftInput } from '../ui/NumericDraftInput';
 import { decodeAudioFile } from '../../utils/directAudioImporter';
-import {
-  getActiveBackingTrack, setActiveBackingTrack, subscribeBackingTrack,
-  extractBpmFromFileName, type BackingTrackData,
-} from '../../utils/backingTrackStorage';
+import { getActiveBackingTrack, setActiveBackingTrack, subscribeBackingTrack, extractBpmFromFileName, type BackingTrackData } from '../../utils/backingTrackStorage';
 import { formatReferencePitchSolfege, SOLFEGE_NOTE_NAMES, SOLFEGE_NOTE_NAMES_BR } from '../../audio/projectScaleAnalyzer';
 import { resolveProjectDualScale, applyDualScaleToProject, clampTranspositionSemitones, computeSemitoneDistance } from '../../utils/scaleTranspositionHelper';
 import { syncTonaliteToOrganizadorFirestore } from '../../services/organizadorToadaPublisher';
@@ -20,32 +17,22 @@ import type { ScaleType } from '../../audio/scaleQuantizer';
 import { useToadaProject } from '../../context/ToadaProjectContext';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { SequenciadorExportBar } from '../common/SequenciadorExportBar';
+import { VocalPaperWorkshopModal } from '../modals/vocal-paper/VocalPaperWorkshopModal';
 
 export interface StructureTopControlsProps {
-  projectId: string; bpm: number; onBpmChange: (bpm: number) => void;
-  activeScaleLabel: string; referencePitch: string;
-  onPlayTonicPreview: () => void; onAnalyzeProjectScale: () => void;
-  isManualStructureEdit: boolean; onToggleManualStructureEdit: () => void;
+  projectId: string; bpm: number; onBpmChange: (bpm: number) => void; activeScaleLabel: string; referencePitch: string;
+  onPlayTonicPreview: () => void; onAnalyzeProjectScale: () => void; isManualStructureEdit: boolean; onToggleManualStructureEdit: () => void;
 }
-
-const MODES_FR: Array<{ key: ScaleType; label: string }> = [
-  { key: 'major', label: 'Majeur' }, { key: 'natural_minor', label: 'Mineur' },
-  { key: 'mixolydian', label: 'Mixolydien' }, { key: 'dorian', label: 'Dorien' },
-];
-const MODES_BR: Array<{ key: ScaleType; label: string }> = [
-  { key: 'major', label: 'Maior' }, { key: 'natural_minor', label: 'Menor' },
-  { key: 'mixolydian', label: 'Mixolídio' }, { key: 'dorian', label: 'Dórico' },
-];
+const MODES_FR: Array<{ key: ScaleType; label: string }> = [{ key: 'major', label: 'Majeur' }, { key: 'natural_minor', label: 'Mineur' }, { key: 'mixolydian', label: 'Mixolydien' }, { key: 'dorian', label: 'Dorien' }];
+const MODES_BR: Array<{ key: ScaleType; label: string }> = [{ key: 'major', label: 'Maior' }, { key: 'natural_minor', label: 'Menor' }, { key: 'mixolydian', label: 'Mixolídio' }, { key: 'dorian', label: 'Dórico' }];
 
 export const StructureTopControls: React.FC<StructureTopControlsProps> = ({
-  projectId, bpm, onBpmChange, referencePitch,
-  onPlayTonicPreview, onAnalyzeProjectScale, isManualStructureEdit, onToggleManualStructureEdit,
+  projectId, bpm, onBpmChange, referencePitch, onPlayTonicPreview, onAnalyzeProjectScale, isManualStructureEdit, onToggleManualStructureEdit,
 }) => {
-  const { language } = useLanguage(), isBr = language === 'br';
-  const { project, loadProject } = useToadaProject();
+  const { language } = useLanguage(), isBr = language === 'br', { project, loadProject } = useToadaProject();
   const solfegeNames = isBr ? SOLFEGE_NOTE_NAMES_BR : SOLFEGE_NOTE_NAMES, modeList = isBr ? MODES_BR : MODES_FR;
   const fileRef = useRef<HTMLInputElement>(null), tapTimesRef = useRef<number[]>([]);
-  const [tapCount, setTapCount] = useState(0);
+  const [tapCount, setTapCount] = useState(0), [isPaperModalOpen, setIsPaperModalOpen] = useState(false);
   const [backingTrack, setBackingTrack] = useState<BackingTrackData | null>(() => getActiveBackingTrack(projectId));
 
   useEffect(() => {
@@ -130,11 +117,16 @@ export const StructureTopControls: React.FC<StructureTopControlsProps> = ({
 
       <div className="flex flex-wrap items-center gap-2">
         <SequenciadorExportBar compact />
+        <button type="button" onClick={() => setIsPaperModalOpen(true)} className="px-2.5 py-1 rounded cordel-card-sm font-bold flex items-center gap-1.5 cursor-pointer hover:border-amber-500 text-theme-ink">
+          <Printer className="w-3.5 h-3.5 text-[#9a3412] dark:text-amber-300" />
+          <span>{isBr ? 'Oficina Papel' : 'Atelier Papier'}</span>
+        </button>
         <button type="button" onClick={onToggleManualStructureEdit} className={`px-2.5 py-1 rounded font-bold flex items-center gap-1.5 cursor-pointer border transition-colors ${isManualStructureEdit ? 'bg-[#9a3412] text-white border-[#9a3412] shadow-2xs' : 'cordel-card-sm text-[var(--cordel-secondary-text)] hover:text-theme-ink'}`}>
           {isManualStructureEdit ? <Edit3 className="w-3.5 h-3.5" /> : <Lock className="w-3.5 h-3.5 text-emerald-700 dark:text-emerald-400" />}
           <span>{isManualStructureEdit ? (isBr ? 'Editar estrutura' : 'Modifier la structure') : (isBr ? 'Estrutura Organizador' : 'Structure Organizador')}</span>
         </button>
       </div>
+      {isPaperModalOpen && <VocalPaperWorkshopModal isOpen={isPaperModalOpen} onClose={() => setIsPaperModalOpen(false)} project={project} isBr={isBr} onProjectUpdate={loadProject} />}
     </div>
   );
 };
