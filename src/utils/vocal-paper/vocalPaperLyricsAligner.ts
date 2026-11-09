@@ -5,6 +5,7 @@
  */
 import type { ScannedVocalPatternBlock, ScannedVocalStepCell } from '../../types/vocalPaperWorkshop.types';
 import { syllabifySingleWord } from '../syllableSplitter';
+import { mergeMultiLineScannedBlocks } from './vocalPaperBeatDecoder';
 
 interface OfficialSylToken { syl: string; norm: string; joinsNext: boolean; punctAfter: string; }
 
@@ -63,11 +64,12 @@ function tokenizeOfficialSyllables(fullText: string): OfficialSylToken[] {
 export function alignScannedPatternsWithOrganizadorLyrics(
   scannedPatterns: ScannedVocalPatternBlock[], organizadorDoc: any
 ): ScannedVocalPatternBlock[] {
+  const canonicalPatterns = mergeMultiLineScannedBlocks(scannedPatterns);
   const { fullText } = extractOfficialWordsAndPhrases(organizadorDoc);
   const officialTokens = tokenizeOfficialSyllables(fullText);
-  if (officialTokens.length === 0) return scannedPatterns;
+  if (officialTokens.length === 0) return canonicalPatterns;
 
-  return scannedPatterns.map((block) => {
+  return canonicalPatterns.map((block) => {
     const clone = (cells: ScannedVocalStepCell[] = []) => cells.map((c) => ({ ...c }));
     const ana = clone(block.anacrusisCells), main = clone(block.mainCells), tail = clone(block.tailCells);
     const activeCells = [...ana, ...main, ...tail].filter((c) => {

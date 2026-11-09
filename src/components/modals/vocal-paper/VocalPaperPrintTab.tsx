@@ -1,7 +1,7 @@
 /**
  * VocalPaperPrintTab.tsx
- * Onglet « Imprimer Feuilles Vierges (100 % N&B) » de l'Atelier Papier du Chant (< 120 lignes).
- * Permet d'imprimer les 4 modèles A4 avec repères optiques ■ sans pop-up bloquée (iframe invisible).
+ * Onglet « Imprimer Feuilles Vierges (100 % N&B) » de l'Atelier Papier du Chant (< 130 lignes).
+ * Permet d'imprimer les modèles A4 (Grille universelle Paysage 8 temps libres sur Feuilles 2 & 3) sans pop-up bloquée.
  */
 import React, { useState } from 'react';
 import { Printer, FileText, Music, ListOrdered, BookOpen, Check } from 'lucide-react';
@@ -27,38 +27,35 @@ const SHEET_CARDS: Array<{ type: VocalSheetType; code: string; titleFr: string; 
     descBr: 'Grade M1..M32 com 2 linhas (Pux / Cor) para alocar P1..Pn, X (Pausa) e Uníssono + Letra.',
   },
   {
-    type: 'notes_1m', code: 'CHANT-NOTES-1M', orientation: 'portrait',
-    titleFr: 'Feuille 2A — Patterns & Clavier 1 Octave (1 Mesure)', titleBr: 'Folha 2A — Padrões e Teclado 1 Oitava (1 Compasso)',
-    descFr: '5 blocs neutres [Pattern : P__] par page A4 Portrait • Clavier La ➔ Sol#, OCTAVE (3/4/5) et bande SYLLABES ouverte.',
-    descBr: '5 blocos neutros [Pattern : P__] por página A4 Retrato • Teclado Lá ➔ Sol#, OITAVA (3/4/5) e faixa SÍLABAS aberta.',
-  },
-  {
-    type: 'notes_2m', code: 'CHANT-NOTES-2M', orientation: 'landscape',
-    titleFr: 'Feuille 2B — Patterns & Clavier 1 Octave (2 Mesures)', titleBr: 'Folha 2B — Padrões e Teclado 1 Oitava (2 Compassos)',
-    descFr: '4 blocs neutres [Pattern : P__] de 2 mesures complètes par page A4 Paysage • Clavier La ➔ Sol# & SYLLABES ouverte.',
-    descBr: '4 blocos neutros [Pattern : P__] de 2 compassos por página A4 Paisagem • Teclado Lá ➔ Sol# e SÍLABAS aberta.',
+    type: 'notes_1m', code: 'CHANT-NOTES-1M', orientation: 'landscape',
+    titleFr: 'Feuille 2 — Patterns & Clavier 1 Octave (Paysage • 8 Temps Libres)', titleBr: 'Folha 2 — Padrões e Teclado 1 Oitava (Paisagem • 8 Tempos Livres)',
+    descFr: '4 systèmes [ P__ ] par page A4 Paysage (32 subdivisions de 8.4mm) : TEMPS libre (1M+Ana ou 2M), OCTAVE (3/4/5), Clavier La➔Sol# & SYLLABES ouverte.',
+    descBr: '4 sistemas [ P__ ] por página A4 Paisagem (32 subdivisões de 8.4mm) : TEMPOS livres (1M+Ana ou 2M), OITAVA (3/4/5), Teclado Lá➔Sol# e SÍLABAS aberta.',
   },
   {
     type: 'rhythm_only', code: 'CHANT-RYTHME', orientation: 'landscape',
-    titleFr: 'Feuille 3 — Paroles & Rythme Seul (Paysage Grand Confort)', titleBr: 'Folha 3 — Letra e Ritmo (Paisagem Grande Conforto)',
-    descFr: '7 lignes P1..P7 par page A4 Paysage (13mm à gauche, ~38mm/temps) : bande RYTHME (5.5mm, 4 sous-cases) + bande SYLLABES ouverte (11mm).',
-    descBr: '7 linhas P1..P7 por página A4 Paisagem (13mm à esq., ~38mm/tempo) : faixa RITMO (5.5mm, 4 sub-casas) + faixa SÍLABAS aberta (11mm).',
+    titleFr: 'Feuille 3 — Paroles & Rythme Seul (Paysage • 8 Temps Libres)', titleBr: 'Folha 3 — Letra e Ritmo (Paisagem • 8 Tempos Livres)',
+    descFr: '6 systèmes [ P__ ] par page A4 Paysage (32 subdivisions de 8.4mm) : bande TEMPS libre, bande RYTHME (5.5mm) + bande SYLLABES ouverte (11mm).',
+    descBr: '6 sistemas [ P__ ] por página A4 Paisagem (32 subdivisões de 8.4mm) : faixa TEMPOS livres, faixa RITMO (5.5mm) + faixa SÍLABAS aberta (11mm).',
   },
   {
     type: 'instructions', code: 'CHANT-GUIDE', orientation: 'portrait',
     titleFr: "Feuille 4 — Guide & Conventions d'écriture manuscrite", titleBr: 'Folha 4 — Guia e Convenções de Escrita Manuscrita',
-    descFr: 'Mémo illustré : traits horizontaux (───), bande SYLLABES ouverte, tirets "-", élisions "E\'O" et clavier La..Sol#.',
-    descBr: 'Resumo ilustrado : traços horizontais (───), faixa SÍLABAS aberta, hífens "-", elisões "E\'O" e teclado Lá..Sol#.',
+    descFr: 'Mémo illustré : grille 8 temps libres (2|3|4|1|2|3|4|1 ou 2M), traits horizontaux (───), SYLLABES ouverte, tirets "-" et élisions.',
+    descBr: 'Resumo ilustrado : grade 8 tempos livres (2|3|4|1|2|3|4|1 ou 2M), traços horizontais (───), SÍLABAS aberta, hífens "-" e elisões.',
   },
 ];
 
 export function triggerVocalSheetPrint(options: VocalPaperPrintOptions): void {
   let innerHtml = '', orientation: 'portrait' | 'landscape' = 'portrait';
   if (options.sheetType === 'sequence') innerHtml = renderVocalSheetSequenceHTML(options);
-  else if (options.sheetType === 'notes_1m') innerHtml = renderVocalSheetNotesHTML(options);
-  else if (options.sheetType === 'notes_2m') { innerHtml = renderVocalSheetNotesHTML(options); orientation = 'landscape'; }
-  else if (options.sheetType === 'rhythm_only') { innerHtml = renderVocalSheetRhythmHTML({ ...options, patternsCount: 7 }); orientation = 'landscape'; }
-  else innerHtml = renderVocalSheetInstructionsHTML();
+  else if (options.sheetType === 'notes_1m' || options.sheetType === 'notes_2m') {
+    innerHtml = renderVocalSheetNotesHTML({ ...options, patternsCount: options.patternsCount ?? 4 });
+    orientation = 'landscape';
+  } else if (options.sheetType === 'rhythm_only') {
+    innerHtml = renderVocalSheetRhythmHTML({ ...options, patternsCount: options.patternsCount ?? 6 });
+    orientation = 'landscape';
+  } else innerHtml = renderVocalSheetInstructionsHTML();
   printViaInvisibleIframe(wrapVocalSheetA4Document(innerHtml, orientation, `Atelier Papier — ${options.sheetType}`), `Atelier Papier — ${options.sheetType}`);
 }
 
@@ -67,12 +64,11 @@ export const VocalPaperPrintTab: React.FC<VocalPaperPrintTabProps> = ({ project,
   const [selectedSheet, setSelectedSheet] = useState<VocalSheetType>('sequence');
   const [prefillHeader, setPrefillHeader] = useState(true);
   const [startPatternNumber, setStartPatternNumber] = useState(1);
-  const [rhythmMeasuresPerLine, setRhythmMeasuresPerLine] = useState<1 | 2>(1);
 
   const handlePrint = (sheetType: VocalSheetType) => triggerVocalSheetPrint({
     sheetType, title: prefillHeader ? project.title : '', bpm: prefillHeader ? project.bpm : undefined,
     timeSignature: project.timeSignature || '4/4', sungKey: prefillHeader ? dual.sungScaleLabel : '',
-    troupeKey: prefillHeader ? dual.troupeScaleLabel : '', startPatternNumber, rhythmMeasuresPerLine,
+    troupeKey: prefillHeader ? dual.troupeScaleLabel : '', startPatternNumber,
   });
 
   return (
@@ -82,20 +78,11 @@ export const VocalPaperPrintTab: React.FC<VocalPaperPrintTabProps> = ({ project,
           <input type="checkbox" checked={prefillHeader} onChange={(e) => setPrefillHeader(e.target.checked)} className="accent-[#9a3412]" />
           <span>{isBr ? `Pré-preencher cabeçalho (${project.title} • ${project.bpm} BPM)` : `Pré-remplir l'en-tête (${project.title} • ${project.bpm} BPM)`}</span>
         </label>
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="inline-flex items-center gap-1.5">
-            <span className="font-bold">{isBr ? 'Feuille 3 (Rythme) :' : 'Feuille 3 (Rythme) :'}</span>
-            <select value={rhythmMeasuresPerLine} onChange={(e) => setRhythmMeasuresPerLine(Number(e.target.value) as 1 | 2)} className="bg-[var(--cordel-surface)] border border-[var(--cordel-border-sub)] rounded px-2 py-0.5 font-bold">
-              <option value={1}>{isBr ? '1 Compasso / linha (Casas largas)' : '1 Mesure / ligne (Cases très larges)'}</option>
-              <option value={2}>{isBr ? '2 Compassos / linha (Paisagem)' : '2 Mesures / ligne (Paysage)'}</option>
-            </select>
-          </div>
-          <div className="inline-flex items-center gap-1.5">
-            <span className="font-bold">{isBr ? 'Numeração inicial :' : 'Numérotation départ :'}</span>
-            <select value={startPatternNumber} onChange={(e) => setStartPatternNumber(Number(e.target.value))} className="bg-[var(--cordel-surface)] border border-[var(--cordel-border-sub)] rounded px-2 py-0.5 font-bold">
-              {[1, 6, 8, 11, 15].map((n) => <option key={n} value={n}>P{n} ➔ P{n + 6}</option>)}
-            </select>
-          </div>
+        <div className="inline-flex items-center gap-1.5">
+          <span className="font-bold">{isBr ? 'Numeração inicial :' : 'Numérotation départ :'}</span>
+          <select value={startPatternNumber} onChange={(e) => setStartPatternNumber(Number(e.target.value))} className="bg-[var(--cordel-surface)] border border-[var(--cordel-border-sub)] rounded px-2 py-0.5 font-bold">
+            {[1, 5, 7, 9, 13].map((n) => <option key={n} value={n}>P{n} ➔ P{n + 5}</option>)}
+          </select>
         </div>
       </div>
 

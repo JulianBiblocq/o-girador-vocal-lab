@@ -1,22 +1,22 @@
 /**
  * vocalPaperPrintHelper.ts
  * Moteur d'impression A4 100 % Noir & Blanc sans pop-up (iframe invisible),
- * repères d'angle optiques ■ (fiducials) et cartouche de code de feuille (< 125 lignes).
+ * repères d'angle optiques ■ (fiducials) et cartouche de code de feuille (< 120 lignes).
  */
 import type { VocalSheetOpticalCode } from '../../types/vocalPaperWorkshop.types';
 
 export function renderFiducialCornersHTML(): string {
-  const base = 'position:absolute;width:6.5mm;height:6.5mm;background:#000;color:#fff;font-size:7pt;display:flex;align-items:center;justify-content:center;font-weight:900;z-index:20;';
+  const base = 'position:absolute;width:6mm;height:6mm;background:#000;color:#fff;font-size:6.5pt;display:flex;align-items:center;justify-content:center;font-weight:900;z-index:20;';
   return `
-    <div class="fiducial-tl" style="${base}top:1.5mm;left:1.5mm;">■</div>
-    <div class="fiducial-tr" style="${base}top:1.5mm;right:1.5mm;">■</div>
-    <div class="fiducial-bl" style="${base}bottom:1.5mm;left:1.5mm;">■</div>
-    <div class="fiducial-br" style="${base}bottom:1.5mm;right:1.5mm;">■</div>
+    <div class="fiducial-tl" style="${base}top:1.2mm;left:1.2mm;">■</div>
+    <div class="fiducial-tr" style="${base}top:1.2mm;right:1.2mm;">■</div>
+    <div class="fiducial-bl" style="${base}bottom:1.2mm;left:1.2mm;">■</div>
+    <div class="fiducial-br" style="${base}bottom:1.2mm;right:1.2mm;">■</div>
   `;
 }
 
 export function renderOpticalSheetCodeBadge(code: VocalSheetOpticalCode): string {
-  return `<span class="optical-sheet-code" style="display:inline-block;border:2px solid #000;padding:1px 6px;font-family:monospace;font-size:8.5pt;font-weight:900;letter-spacing:0.5px;background:#fff;color:#000;">[CODE: ${code}]</span>`;
+  return `<span class="optical-sheet-code" style="display:inline-block;border:2px solid #000;padding:1px 6px;font-family:monospace;font-size:8.2pt;font-weight:900;letter-spacing:0.5px;background:#fff;color:#000;">[CODE: ${code}]</span>`;
 }
 
 export function renderBwCheckbox(checked: boolean, label: string): string {
@@ -31,7 +31,7 @@ export function wrapVocalSheetA4Document(
   orientation: 'portrait' | 'landscape',
   title = 'Atelier Papier du Chant — O Girador'
 ): string {
-  const maxW = orientation === 'landscape' ? '281mm' : '194mm';
+  const maxW = orientation === 'landscape' ? '283mm' : '196mm';
   const pageH = orientation === 'landscape' ? 'calc(210mm - 14mm)' : 'calc(297mm - 14mm)';
   return `<!DOCTYPE html>
 <html>
@@ -49,14 +49,14 @@ export function wrapVocalSheetA4Document(
       height: ${pageH};
       max-height: ${pageH};
       margin: 0 auto;
-      padding: 6.5mm 8mm;
+      padding: 4mm 6.5mm;
       border: 2px solid #000;
       background: #fff;
       color: #000;
       display: flex;
       flex-direction: column;
       justify-content: flex-start;
-      gap: 2mm;
+      gap: 2.5mm;
       overflow: hidden;
       page-break-inside: avoid;
       break-inside: avoid;
@@ -64,11 +64,12 @@ export function wrapVocalSheetA4Document(
     .hatch-bw {
       background-image: repeating-linear-gradient(45deg, #000 0, #000 1px, #fff 1px, #fff 3.5px) !important;
     }
-    table { border-collapse: collapse; width: 100%; }
+    table { border-collapse: collapse; width: 100%; table-layout: fixed; }
     th, td { border: 1px solid #000; padding: 0; text-align: center; vertical-align: middle; color: #000; }
-    .beat-sep-right { border-right: 2.2px solid #000 !important; }
-    .measure-sep-right { border-right: 3px double #000 !important; }
-    .strong-row-top { border-top: 2px solid #000 !important; }
+    .sub-sep-right { border-right: 1px dotted #000 !important; }
+    .beat-sep-right { border-right: 1.5px solid #000 !important; }
+    .measure-sep-right { border-right: 2.5px double #000 !important; }
+    .strong-row-top { border-top: 1.8px solid #000 !important; }
     @media print {
       html, body { width: 100% !important; height: 100% !important; overflow: hidden !important; }
       .no-print { display: none !important; }

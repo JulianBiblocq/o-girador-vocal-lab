@@ -1,7 +1,7 @@
 /**
  * vocalSheetNotesTemplate.ts
- * Feuille 2 : Patterns & Notes A4 100 % Noir & Blanc ([CODE: CHANT-NOTES-1M] 5 blocs Portrait / [CODE: CHANT-NOTES-2M] 4 blocs Paysage) (< 115 lignes).
- * Clavier ultra-compact 1 octave (La..Sol#, 2.2mm/ligne, étiquette 12mm), bande OCTAVE (6mm, colspan=4) et bande SYLLABES ouverte (9.5mm, colspan=4).
+ * Feuille 2 : Patterns & Notes A4 Paysage Universel à 8 Temps Libres (32 subdivisions de ~8.4mm, 4 systèmes/page) (< 95 lignes).
+ * Cartouche [ P__ ] (14mm), TEMPS vierge (4.5mm, colspan=4), OCTAVE (5.5mm, colspan=4), Clavier La..Sol# (12×2.2mm) et SYLLABES ouverte (9.5mm, colspan=4).
  */
 import type { VocalPaperPrintOptions, KeyboardOctaveNote } from '../../types/vocalPaperWorkshop.types';
 import { renderFiducialCornersHTML, renderOpticalSheetCodeBadge } from './vocalPaperPrintHelper';
@@ -21,63 +21,61 @@ export const VOCAL_PAPER_KEYBOARD_ROWS: Array<{ key: KeyboardOctaveNote; label: 
   { key: 'G#', label: 'Sol#', isBlack: true },
 ];
 
-function buildPatternColumnsMeta(measuresPerBlock: 1 | 2) {
-  const cols: Array<{ group: 'ana' | 'main' | 'tail'; beatLabel: string; sub: number; sepClass: string }> = [];
-  for (let b = 3; b <= 4; b++) {
-    for (let s = 1; s <= 4; s++) {
-      cols.push({ group: 'ana', beatLabel: `Ana T${b}`, sub: s, sepClass: b === 4 && s === 4 ? 'measure-sep-right' : s === 4 ? 'beat-sep-right' : '' });
-    }
-  }
-  const totalMainBeats = measuresPerBlock * 4;
-  for (let b = 1; b <= totalMainBeats; b++) {
-    const mNum = Math.floor((b - 1) / 4) + 1, bInM = ((b - 1) % 4) + 1;
-    for (let s = 1; s <= 4; s++) {
-      cols.push({
-        group: 'main', beatLabel: measuresPerBlock > 1 ? `M${mNum}•T${bInM}` : `T${bInM}`, sub: s,
-        sepClass: bInM === 4 && s === 4 ? 'measure-sep-right' : s === 4 ? 'beat-sep-right' : '',
-      });
-    }
-  }
-  for (let s = 1; s <= 4; s++) cols.push({ group: 'tail', beatLabel: '+T1', sub: s, sepClass: s === 4 ? 'beat-sep-right' : '' });
-  return cols;
-}
-
 export function renderVocalSheetNotesHTML(options: VocalPaperPrintOptions): string {
-  const is2M = options.sheetType === 'notes_2m', code = is2M ? 'CHANT-NOTES-2M' : 'CHANT-NOTES-1M';
-  const measuresPerBlock: 1 | 2 = is2M ? 2 : 1, blocksCount = options.patternsCount ?? (is2M ? 4 : 5);
-  const startP = options.startPatternNumber ?? 1, cols = buildPatternColumnsMeta(measuresPerBlock), rowH = '2.2mm';
+  const code = options.sheetType === 'notes_2m' ? 'CHANT-NOTES-2M' : 'CHANT-NOTES-1M';
+  const blocksCount = options.patternsCount ?? 4;
+  const startP = options.startPatternNumber ?? 1;
+  const titleText = options.title?.trim() ? options.title.trim().toUpperCase() : '______________________';
+  const rowH = '2.2mm';
+
+  const blankTempsCells = Array.from({ length: 8 }, () =>
+    `<th colspan="4" class="beat-sep-right open-temps-cell" style="height:4.5mm;border-right:1.5px solid #000;font-size:8pt;font-weight:900;"></th>`
+  ).join('');
+
+  const octBeatCells = Array.from({ length: 8 }, () =>
+    `<td colspan="4" class="beat-sep-right open-beat-cell" style="height:5.5mm;border-right:1.5px solid #000;font-size:7.5pt;font-weight:900;"></td>`
+  ).join('');
+
+  const openSylBeatCells = Array.from({ length: 8 }, () =>
+    `<td colspan="4" class="beat-sep-right open-beat-cell" style="height:9.5mm;border-right:1.5px solid #000;font-size:8.2pt;font-weight:900;"></td>`
+  ).join('');
+
+  const subGridCells = Array.from({ length: 32 }, (_, idx) => {
+    const isBeatEnd = (idx + 1) % 4 === 0;
+    const cls = isBeatEnd ? 'beat-sep-right' : 'sub-sep-right';
+    const bdr = isBeatEnd ? 'border-right:1.5px solid #000;' : 'border-right:1px dotted #000;';
+    return `<td class="${cls}" style="height:${rowH};${bdr}"></td>`;
+  }).join('');
 
   const renderSinglePatternBlock = (idx: number) => {
     const patNum = startP + idx;
-    const subGridCells = cols.map((c) => `<td class="${c.sepClass}" style="height:${rowH};"></td>`).join('');
-    const beatHeaders: string[] = [], octBeatCells: string[] = [], openSylBeatCells: string[] = [];
-    for (let i = 0; i < cols.length; i += 4) {
-      const c = cols[i], sep = cols[i + 3]?.sepClass || 'beat-sep-right';
-      beatHeaders.push(`<th colspan="4" class="${sep}" style="font-size:6.2pt;font-weight:900;height:2.8mm;">${c.beatLabel}</th>`);
-      octBeatCells.push(`<td colspan="4" class="${sep} open-beat-cell" style="height:6mm;font-size:7.5pt;font-weight:900;"></td>`);
-      openSylBeatCells.push(`<td colspan="4" class="${sep} open-beat-cell" style="height:9.5mm;font-size:8pt;font-weight:900;"></td>`);
-    }
-    const subHeaders = cols.map((c) => `<td class="${c.sepClass}" style="font-size:5.2pt;height:2.2mm;font-weight:700;">${c.sub}</td>`).join('');
     const keyboardRowsHtml = VOCAL_PAPER_KEYBOARD_ROWS.map((k) => {
       const topBorder = k.strongBorder ? 'border-top:1.8px solid #000;' : '', keyCellClass = k.isBlack ? 'hatch-bw' : '';
       const labelSpan = k.isBlack
-        ? `<span style="background:#fff;padding:0 1.5px;border:1px solid #000;font-size:5.6pt;font-weight:900;">${k.label}</span>`
-        : `<span style="font-size:5.8pt;font-weight:900;">${k.label}</span>`;
-      return `<tr style="${topBorder}"><td class="${keyCellClass}" style="width:12mm;height:${rowH};text-align:left;padding-left:1.5px;border-right:2px solid #000;line-height:1;">${labelSpan}</td>${subGridCells}</tr>`;
+        ? `<span style="background:#fff;padding:0 1.5px;border:1px solid #000;font-size:5.5pt;font-weight:900;">${k.label}</span>`
+        : `<span style="font-size:5.7pt;font-weight:900;">${k.label}</span>`;
+      return `<tr style="${topBorder}"><td class="${keyCellClass}" style="width:14mm;height:${rowH};text-align:left;padding-left:2px;border-right:2px solid #000;line-height:1;">${labelSpan}</td>${subGridCells}</tr>`;
     }).join('');
 
     return `
       <div class="vocal-pattern-block" style="border:2px solid #000;page-break-inside:avoid;break-inside:avoid;">
-        <div style="padding:0.6mm 4px;border-bottom:1.5px solid #000;display:flex;justify-content:space-between;align-items:center;font-size:7pt;font-weight:900;line-height:1.1;">
-          <span>[ PATTERN : P${patNum} ]</span>
-          <span style="font-size:6pt;font-weight:700;">Trait horizontal (───) = attaque & durée • Ana T3-T4 & +T1 détectés automatiquement</span>
-        </div>
         <table><tbody>
-          <tr><th rowspan="2" style="width:12mm;font-size:5.8pt;font-weight:900;border-right:2px solid #000;">TEMPS</th>${beatHeaders.join('')}</tr>
-          <tr style="border-bottom:1.5px solid #000;">${subHeaders}</tr>
-          <tr style="border-bottom:1.8px solid #000;"><td style="width:12mm;height:6mm;font-size:5.6pt;font-weight:900;border-right:2px solid #000;line-height:1.05;">OCT / ±<br/>(3/4/5)</td>${octBeatCells.join('')}</tr>
+          <tr style="border-bottom:1.5px solid #000;">
+            <th style="width:14mm;height:4.5mm;border-right:2px solid #000;padding:0 1px;line-height:1;">
+              <span style="font-size:7pt;font-weight:900;">[ P${patNum} ]</span>
+              <span style="font-size:4.8pt;font-weight:800;display:block;">TEMPS</span>
+            </th>
+            ${blankTempsCells}
+          </tr>
+          <tr style="border-bottom:1.8px solid #000;">
+            <td style="width:14mm;height:5.5mm;font-size:5.4pt;font-weight:900;border-right:2px solid #000;line-height:1.05;">OCT / ±<br/>(3/4/5)</td>
+            ${octBeatCells}
+          </tr>
           ${keyboardRowsHtml}
-          <tr style="border-top:2px solid #000;"><td style="width:12mm;height:9.5mm;font-size:5.8pt;font-weight:900;border-right:2px solid #000;">SYLLABES</td>${openSylBeatCells.join('')}</tr>
+          <tr style="border-top:2px solid #000;">
+            <td style="width:14mm;height:9.5mm;font-size:5.6pt;font-weight:900;border-right:2px solid #000;">SYLLABES</td>
+            ${openSylBeatCells}
+          </tr>
         </tbody></table>
       </div>`;
   };
@@ -85,13 +83,13 @@ export function renderVocalSheetNotesHTML(options: VocalPaperPrintOptions): stri
   return `
     <div class="vocal-sheet-page">
       ${renderFiducialCornersHTML()}
-      <div style="height:6.5mm;max-height:7mm;border-bottom:2px solid #000;padding-bottom:1mm;display:flex;justify-content:space-between;align-items:center;">
+      <div style="height:6mm;max-height:6.5mm;border-bottom:2px solid #000;padding-bottom:0.8mm;display:flex;justify-content:space-between;align-items:center;">
         <div style="display:flex;align-items:baseline;gap:6px;overflow:hidden;white-space:nowrap;">
-          <span style="font-size:9.2pt;font-weight:900;text-transform:uppercase;">FEUILLE 2 — PATTERNS & NOTES (${is2M ? 'PAYSAGE • 4 BLOCS DE 2 MESURES' : 'PORTRAIT • 5 BLOCS DE 1 MESURE'})</span>
-          <span style="font-size:6.3pt;font-weight:700;">• Clavier La➔Sol# • Trait horizontal (───) = note • SYLLABES sous le début du trait</span>
+          <span style="font-size:9pt;font-weight:900;text-transform:uppercase;">FEUILLE 2 — PATTERNS & NOTES (A4 PAYSAGE • 8 TEMPS LIBRES / 32 SUBDIVISIONS)</span>
+          <span style="font-size:6.2pt;font-weight:700;">• TITRE : ${titleText} • Numéroter TEMPS (1..4) • Trait (───) = note • SYLLABES sous le trait</span>
         </div>
         ${renderOpticalSheetCodeBadge(code)}
       </div>
-      <div style="flex:1;display:flex;flex-direction:column;justify-content:flex-start;gap:2mm;">${Array.from({ length: blocksCount }, (_, i) => renderSinglePatternBlock(i)).join('')}</div>
+      <div style="flex:1;display:flex;flex-direction:column;justify-content:flex-start;gap:2.5mm;">${Array.from({ length: blocksCount }, (_, i) => renderSinglePatternBlock(i)).join('')}</div>
     </div>`;
 }

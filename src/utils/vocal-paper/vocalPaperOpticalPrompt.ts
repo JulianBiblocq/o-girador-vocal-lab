@@ -1,7 +1,7 @@
 /**
  * vocalPaperOpticalPrompt.ts
- * Construction des instructions de lecture optique multi-feuilles (Séquence Pux/Cor, Patterns & Notes, Rythme seul) (< 105 lignes).
- * Gère les traits horizontaux de notes (───), la bande OCTAVE (3/4/5 ou ±1), la bande SYLLABES ouverte et l'auto-détection Ana T3-T4 / +T1.
+ * Construction des instructions de lecture optique multi-feuilles (Séquence Pux/Cor, Grille Universelle A4 Paysage 8 Temps Libres) (< 105 lignes).
+ * Gère le décodage des numéros de TEMPS manuscrits (1..4 ou "1" seuls), traits horizontaux (───), bande OCTAVE (3/4/5) et SYLLABES ouverte.
  */
 import { extractOfficialWordsAndPhrases } from './vocalPaperLyricsAligner';
 
@@ -26,25 +26,22 @@ CONSIGNE IMPÉRATIVE DE VERROUILLAGE ORTHOGRAPHIQUE :
   return `TU ES LE MOTEUR DE LECTURE OPTIQUE DE PARTITIONS VOCALES MANUSCRITES DE L'ÉCOSYSTÈME O GIRADOR (CANTADOR, ORGANIZADOR, SEQUENCIADOR).
 Analyse l'ensemble des photos de feuilles A4 Noir & Blanc fournies (repérées par 4 carrés noirs d'angle ■ et un cartouche [CODE: ...]) :
 - [CODE: CHANT-SEQ] : Feuille 1 (Séquence à 2 lignes superposées PUX et COR sur les mesures M1..M32).
-- [CODE: CHANT-NOTES-1M] (5 blocs/page Portrait) ou [CODE: CHANT-NOTES-2M] (4 blocs/page Paysage) : Feuille 2 (Patterns neutres [ PATTERN : P1..Pn ] avec clavier compact 1 octave La..Sol#, bande OCTAVE (3/4/5 • OCT / ±), Ana T3-T4, Temps 1..4, +T1 et bande SYLLABES ouverte).
-- [CODE: CHANT-RYTHME] (7 lignes/page A4 Paysage, cartouche vertical P1..Pn de 13mm à gauche) : Feuille 3 (Patterns neutres P1..Pn en 2 bandes superposées : bande supérieure RYTHME de 5.5mm divisée en 4 subdivisions 1..4 par temps où chaque trait horizontal continu tracé au crayon indique la subdivision exacte d'attaque et sa durée en doubles-croches, et bande inférieure SYLLABES ouverte de 11mm sans sous-cases où chaque syllabe manuscrite est associée au trait de rythme situé juste au-dessus d'elle).${refBlock}
+- [CODE: CHANT-NOTES-1M] / [CODE: CHANT-NOTES-2M] (4 systèmes/page A4 Paysage) : Feuille 2 (Grille universelle à 8 colonnes de temps libres [ P1..Pn ] = 32 subdivisions de 8.4mm, avec bande supérieure TEMPS vierge, bande OCTAVE (3/4/5 • OCT / ±), clavier compact 1 octave La..Sol# et bande SYLLABES ouverte).
+- [CODE: CHANT-RYTHME] (6 systèmes/page A4 Paysage) : Feuille 3 (Grille universelle à 8 colonnes de temps libres [ P1..Pn ] : bande supérieure TEMPS vierge, bande centrale RYTHME divisée en 32 subdivisions 1..4 pour les traits horizontaux ───, et bande inférieure SYLLABES ouverte sans sous-cases).${refBlock}
 
 RÈGLES STRICTES D'EXTRACTION :
 1. SÉQUENCE (PUX / COR) :
    - Pour chaque mesure renseignée (M1, M2...), extraire "measureNumber", "puxCode" (ex: "P1", "P2", "X", ou null) et "corCode" (ex: "P3", "P4", "X", ou null).
    - Même code sur PUX et COR (ex: P5/P5) = Unisson. "X" sur PUX et COR = Pause vocale.
-2. PATTERNS NEUTRES (P1, P2...) & DÉTECTION AUTOMATIQUE ANACROUSE / CHUTE (+T1) :
-   - Il n'y a aucune case à cocher pour l'anacrouse ni la chute : détecte-les 100 % automatiquement !
-   - Si les colonnes Ana T3 ou Ana T4 contiennent au moins un trait de note/rythme ou une syllabe, "hasAnacrusis": true et remplis "anacrusisCells" (sinon "hasAnacrusis": false, "anacrusisCells": []).
-   - Si la colonne +T1 contient un trait de note/rythme, une prolongation de tenue ("───") ou une syllabe, "hasTailBeat": true et remplis "tailCells" (sinon "hasTailBeat": false, "tailCells": []).
-   - "rhythmOnlyMode": true si la feuille est [CODE: CHANT-RYTHME] ou si aucun trait n'est présent dans le clavier La..Sol#.
-3. TRAITS HORIZONTAUX DE NOTES / RYTHME (───), CLAVIER 1 OCTAVE (LA ➔ SOL#) & BANDE OCTAVE (3 / 4 / 5) :
-   - Sur CHANT-NOTES-1M/2M, les notes sont tracées sous forme de traits horizontaux ("───") dans les 12 lignes du clavier ("A", "Bb", "B", "C", "C#", "D", "Eb", "E", "F", "F#", "G", "G#").
-   - Sur CHANT-RYTHME, dans la bande supérieure "RYTHME" (divisée en 4 subdivisions par temps), chaque trait horizontal continu tracé au crayon indique la subdivision exacte d'attaque ("stepIndex", active: true, isTie: false) et sa durée en doubles-croches ("durationSteps", ou subdivisions suivantes traversées par le trait en "isTie": true, "syllable": "───").
-   - La bande ouverte "OCT / ± (3/4/5)" au-dessus du clavier contient le numéro d'octave (3 -> octaveShift:-1, 4 -> octaveShift:0, 5 -> octaveShift:+1, ou directement -1, 0, +1).
-4. BANDE « SYLLABES » OUVERTE (SANS SOUS-CASES), TIRETS & ÉLISIONS :
-   - La bande inférieure "SYLLABES" est ouverte (sans cloisons de doubles-croches) : chaque syllabe manuscrite écrite en majuscules est associée à l'attaque ("stepIndex") du trait de note ou de rythme situé juste au-dessus d'elle.
-   - Conserver le tiret final "-" lorsqu'il soude les syllabes d'un même mot (ex: "VO-", "FA-") et les élisions avec apostrophe (ex: "E'O", "D'Á-", "XE'O").
+2. GRILLE UNIVERSELLE À 8 COLONNES DE TEMPS LIBRES (BANDE « TEMPS » c = 0..7 & 32 SUBDIVISIONS stepIndex = 0..31) :
+   - Lire dans la bande supérieure "TEMPS" les chiffres manuscrits inscrits dans les 8 colonnes (c = 0..7) et les restituer dans "beatNumbers" (ex: [2, 3, 4, 1, 2, 3, 4, 1] ou [1, 2, 3, 4, 1, 2, 3, 4] ou [null, null, null, 1, null, null, null, 1]).
+   - Si seuls les "1" sont inscrits (ex: "1" en 4e colonne c=3 et "1" en 8e colonne c=7), déduire tous les numéros de temps par continuité modulo 4 (c=0➔T2, c=1➔T3, c=2➔T4, c=3➔T1, c=4➔T2, c=5➔T3, c=6➔T4, c=7➔T1 ; si aucun numéro n'est inscrit, c=0 vaut T1 par défaut).
+   - Tu peux fournir directement "beatNumbers" (8 éléments) et "cells" (avec "stepIndex" de 0 à 31 sur toute la ligne), OU découper en "anacrusisCells" (temps actifs à gauche du premier T1 alignés sur T2=4..7, T3=8..11, T4=12..15), "mainCells" (cycles complets 1,2,3,4 -> 1M ou 2M) et "tailCells" (+T1 isolé après T4).
+   - Si 2 lignes consécutives portent le même code de pattern (ex: "P3" puis "P3"), restitue-les dans l'ordre avec le même "code": elles seront concaténées en un seul pattern multi-mesures (3M ou 4M).
+3. TRAITS HORIZONTAUX DE NOTES / RYTHME (───), CLAVIER 1 OCTAVE (LA ➔ SOL#), OCTAVE (3/4/5) & SYLLABES OUVERTE :
+   - Chaque trait horizontal ("───") dans le clavier ("A", "Bb", "B", "C", "C#", "D", "Eb", "E", "F", "F#", "G", "G#") ou dans la bande "RYTHME" indique la double-croche d'attaque ("stepIndex") et sa durée ("durationSteps").
+   - La bande "OCT / ± (3/4/5)" indique l'octave (3 -> octaveShift:-1, 4 -> octaveShift:0, 5 -> octaveShift:+1).
+   - La bande inférieure "SYLLABES" est ouverte : associer chaque syllabe manuscrite en majuscules au début du trait situé juste au-dessus d'elle, en conservant les tirets "-" (ex: "VO-", "FA-") et apostrophes d'élision (ex: "E'O").
 
 FORMAT JSON STRICT ATTENDU (sans balise markdown autour) :
 {
@@ -60,16 +57,16 @@ FORMAT JSON STRICT ATTENDU (sans balise markdown autour) :
     {
       "code": "P1",
       "sheetCode": "CHANT-NOTES-1M",
+      "beatNumbers": [2, 3, 4, 1, 2, 3, 4, 1],
       "measuresCount": 1,
       "hasAnacrusis": false,
       "hasTailBeat": true,
       "rhythmOnlyMode": false,
-      "anacrusisCells": [],
-      "mainCells": [
-        { "stepIndex": 4, "durationSteps": 1, "syllable": "VO-", "pitchKey": "C", "octaveShift": 0, "isTie": false },
-        { "stepIndex": 5, "durationSteps": 2, "syllable": "VÓ", "pitchKey": "D", "octaveShift": 0, "isTie": false }
-      ],
-      "tailCells": [{ "stepIndex": 0, "durationSteps": 1, "syllable": "NOU", "pitchKey": "C", "octaveShift": 0, "isTie": false }]
+      "cells": [
+        { "stepIndex": 16, "durationSteps": 1, "syllable": "VO-", "pitchKey": "C", "octaveShift": 0, "isTie": false },
+        { "stepIndex": 17, "durationSteps": 2, "syllable": "VÓ", "pitchKey": "D", "octaveShift": 0, "isTie": false },
+        { "stepIndex": 28, "durationSteps": 1, "syllable": "NOU", "pitchKey": "C", "octaveShift": 0, "isTie": false }
+      ]
     }
   ]
 }`;

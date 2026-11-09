@@ -1,7 +1,7 @@
 /**
  * vocalPaperToProjectConverter.ts
  * Conversion d'un résultat de lecture optique multi-photos (VocalPaperBatchScanResult) en ToadaProject (< 135 lignes).
- * Gère le clavier 1 octave (La -> Sol#), les traits horizontaux (durationSteps), l'auto-détection Ana T3-T4 / +T1 et l'Unisson Pux/Cor.
+ * Gère la grille universelle 8 temps libres (1..3T d'anacrouse, 1M/2M, +T1, concaténation multi-lignes), le clavier La->Sol# et l'Unisson.
  */
 import type {
   VocalPaperBatchScanResult, ScannedVocalPatternBlock, ScannedVocalStepCell, VocalPaperImportTargetConfig,
@@ -15,6 +15,7 @@ import { extractTimeAnchors } from '../timeAnchorParser';
 import { applyDualScaleToProject, computeSemitoneDistance } from '../scaleTranspositionHelper';
 import { parseStoredScaleString } from '../../audio/projectScaleAnalyzer';
 import { alignScannedPatternsWithOrganizadorLyrics } from './vocalPaperLyricsAligner';
+import { normalizeScannedBlockToCanonical, mergeMultiLineScannedBlocks, isCellActive } from './vocalPaperBeatDecoder';
 
 const SEMITONE_FROM_A3: Record<string, number> = {
   A: 0, LA: 0, BB: 1, 'A#': 1, SIB: 1, 'SI♭': 1, 'LA#': 1, B: 2, SI: 2,
@@ -36,10 +37,7 @@ export function midiToScientificNote(midi: number): string {
 }
 
 export function hasActiveScannedCells(cells?: ScannedVocalStepCell[]): boolean {
-  return Array.isArray(cells) && cells.some((c) => {
-    const s = (c?.syllable || '').trim();
-    return Boolean(c && (c.isTie || (c.pitchKey && String(c.pitchKey).trim()) || (c.durationSteps && c.durationSteps > 0) || (s && s !== '_')));
-  });
+  return Array.isArray(cells) && cells.some(isCellActive);
 }
 
 function formatSylCase(raw: string, isFirst: boolean): string {
@@ -50,10 +48,11 @@ function formatSylCase(raw: string, isFirst: boolean): string {
 }
 
 export function buildStepsAndLyricsFromScannedBlock(
-  block: ScannedVocalPatternBlock, baseA3Midi = 57
-): { anacrusisSteps: VocalStepData[]; mainSteps: VocalStepData[]; assignedLyricsText: string; hasAnacrusis: boolean; hasTailBeat: boolean } {
+  rawBlock: ScannedVocalPatternBlock, baseA3Midi = 57
+): { anacrusisSteps: VocalStepData[]; mainSteps: VocalStepData[]; assignedLyricsText: string; hasAnacrusis: boolean; hasTailBeat: boolean; measuresCount: 1 | 2 | 3 | 4; anacrusisBeats: number } {
+  const block = normalizeScannedBlockToCanonical(rawBlock);
   let isFirstSyl = true, lastMidi = 60, lyricsAcc = '';
-  const hasAnacrusis = hasActiveScannedCells(block.anacrusisCells), hasTailBeat = hasActiveScannedCells(block.tailCells);
+  const hasAnacrusis = Boolean(block.hasAnacrusis), hasTailBeat = Boolean(block.hasTailBeat);
   const buildArray = (cells: ScannedVocalStepCell[] = [], totalSteps: number): VocalStepData[] => {
     const map = new Map<number, ScannedVocalStepCell>();
     for (const c of cells) if (c && typeof c.stepIndex === 'number') map.set(c.stepIndex, c);
@@ -71,9 +70,15 @@ export function buildStepsAndLyricsFromScannedBlock(
       return { stepIndex: idx, active: true, isTie: false, note: midiToScientificNote(midi), midiNumber: midi, syllable: cleanSyl || 'la', syllableAttack: true, tripletSlot: cell?.isTriplet ? 1 : undefined, velocity: 92, decay: 100 };
     });
   };
-  const anacrusisSteps = hasAnacrusis ? buildArray(block.anacrusisCells, 8) : [], mainCount = Math.max(1, block.measuresCount) * 16;
+  const anaTotal = block.anacrusisTotalSteps ?? 8;
+  const anacrusisSteps = hasAnacrusis ? buildArray(block.anacrusisCells, anaTotal) : [];
+  const measuresCount = Math.max(1, block.measuresCount || 1) as 1 | 2 | 3 | 4, mainCount = measuresCount * 16;
   const baseMain = buildArray(block.mainCells, mainCount), tailSteps = hasTailBeat ? buildArray(block.tailCells, 4).map((s, i) => ({ ...s, stepIndex: mainCount + i })) : [];
-  return { anacrusisSteps, mainSteps: [...baseMain, ...tailSteps], assignedLyricsText: block.officialLyricsText?.trim() || lyricsAcc.trim().replace(/\s{2,}/g, ' '), hasAnacrusis, hasTailBeat };
+  return {
+    anacrusisSteps, mainSteps: [...baseMain, ...tailSteps],
+    assignedLyricsText: block.officialLyricsText?.trim() || lyricsAcc.trim().replace(/\s{2,}/g, ' '),
+    hasAnacrusis, hasTailBeat, measuresCount, anacrusisBeats: hasAnacrusis ? (block.anacrusisBeatsCount ?? 2) : 0,
+  };
 }
 
 export function convertVocalPaperScanToProject(
@@ -82,7 +87,8 @@ export function convertVocalPaperScanToProject(
   const bpm = Number(targetConfig?.bpm || scanResult.bpm || currentProject.bpm || 88);
   const timeSignature = targetConfig?.timeSignature || scanResult.timeSignature || currentProject.timeSignature || '4/4';
   const title = (targetConfig?.title || scanResult.title || currentProject.title || 'Toada Manuscrit').trim(), refDoc = organizadorDoc || currentProject.toadaMeta;
-  const alignedPatterns = refDoc ? alignScannedPatternsWithOrganizadorLyrics(scanResult.patterns, refDoc) : scanResult.patterns;
+  const mergedPatterns = mergeMultiLineScannedBlocks(scanResult.patterns || []);
+  const alignedPatterns = refDoc ? alignScannedPatternsWithOrganizadorLyrics(mergedPatterns, refDoc) : mergedPatterns;
   const blockMap = new Map<string, { block: ScannedVocalPatternBlock; cardIdx: number }>();
   alignedPatterns.forEach((b, idx) => blockMap.set(b.code.trim().toUpperCase(), { block: b, cardIdx: idx }));
 
@@ -91,10 +97,11 @@ export function convertVocalPaperScanToProject(
     const normCode = code.trim().toUpperCase(), key = `${normCode}_${role}`;
     if (roleInstanceMap.has(key)) return roleInstanceMap.get(key)!;
     const entry = blockMap.get(normCode); if (!entry) return null;
-    const { block, cardIdx } = entry, { anacrusisSteps, mainSteps, assignedLyricsText, hasAnacrusis, hasTailBeat } = buildStepsAndLyricsFromScannedBlock(block);
-    const pat = createDefaultVocalPattern(role, block.name || `${normCode} (${role === 'puxador' ? 'Pux' : 'Cor'})`, block.measuresCount, bpm, 'C4');
+    const { block, cardIdx } = entry;
+    const { anacrusisSteps, mainSteps, assignedLyricsText, hasAnacrusis, hasTailBeat, measuresCount, anacrusisBeats } = buildStepsAndLyricsFromScannedBlock(block);
+    const pat = createDefaultVocalPattern(role, block.name || `${normCode} (${role === 'puxador' ? 'Pux' : 'Cor'})`, measuresCount, bpm, 'C4');
     Object.assign(pat, {
-      cardIndex: cardIdx, hasAnacrusis, anacrusisBeats: hasAnacrusis ? 2 : 0, hasTailBeat, exitBeat: hasTailBeat ? 1 : undefined,
+      cardIndex: cardIdx, measuresCount, hasAnacrusis, anacrusisBeats, hasTailBeat, exitBeat: hasTailBeat ? 1 : undefined,
       foldNotesView: block.rhythmOnlyMode, anacrusisSteps, mainSteps, assignedLyricsText: assignedLyricsText || block.name || normCode,
       isMidiInitialized: true, midiLocked: true, stepStatus: { recorded: false, trimmed: false, rhythmValidated: true, notesValidated: !block.rhythmOnlyMode, variantsReady: false },
     });

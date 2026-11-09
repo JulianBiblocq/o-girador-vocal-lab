@@ -10,6 +10,7 @@ export type VocalSheetType = 'sequence' | 'notes_1m' | 'notes_2m' | 'rhythm_only
 
 export type VocalSheetOpticalCode =
   | 'CHANT-SEQ'
+  | 'CHANT-NOTES'
   | 'CHANT-NOTES-1M'
   | 'CHANT-NOTES-2M'
   | 'CHANT-RYTHME'
@@ -59,10 +60,12 @@ export interface ScannedVocalPatternBlock {
   name?: string;
   officialLyricsText?: string;
   sheetCode: VocalSheetOpticalCode;
-  measuresCount: 1 | 2 | 3 | 4;
+  measuresCount?: 1 | 2 | 3 | 4;
   hasAnacrusis?: boolean;
   hasTailBeat?: boolean;
   rhythmOnlyMode: boolean;
+  beatNumbers?: Array<number | string | null>;
+  cells?: ScannedVocalStepCell[];
   anacrusisCells?: ScannedVocalStepCell[];
   mainCells: ScannedVocalStepCell[];
   tailCells?: ScannedVocalStepCell[];
