@@ -1,7 +1,7 @@
 /**
  * vocalPaperOpticalPrompt.ts
  * Construction des instructions de lecture optique multi-feuilles (Séquence Pux/Cor, Grille Universelle A4 Paysage 8 Temps Libres) (< 105 lignes).
- * Gère le décodage des numéros de TEMPS manuscrits (1..4 ou "1" seuls), traits horizontaux (───), bande OCTAVE (3/4/5) et SYLLABES ouverte.
+ * Précise le sens vertical Piano Roll du clavier : A (grave) en bas juste au-dessus de SYLLABES ➔ G# (aigu) en haut juste sous OCT.
  */
 import { extractOfficialWordsAndPhrases } from './vocalPaperLyricsAligner';
 
@@ -26,8 +26,8 @@ CONSIGNE IMPÉRATIVE DE VERROUILLAGE ORTHOGRAPHIQUE :
   return `TU ES LE MOTEUR DE LECTURE OPTIQUE DE PARTITIONS VOCALES MANUSCRITES DE L'ÉCOSYSTÈME O GIRADOR (CANTADOR, ORGANIZADOR, SEQUENCIADOR).
 Analyse l'ensemble des photos de feuilles A4 Noir & Blanc fournies (repérées par 4 carrés noirs d'angle ■ et un cartouche [CODE: ...]) :
 - [CODE: CHANT-SEQ] : Feuille 1 (Séquence à 2 lignes superposées PUX et COR sur les mesures M1..M32).
-- [CODE: CHANT-NOTES-1M] / [CODE: CHANT-NOTES-2M] (4 systèmes/page A4 Paysage) : Feuille 2 (Grille universelle à 8 colonnes de temps libres [ P1..Pn ] = 32 subdivisions de 8.4mm, avec bande supérieure TEMPS vierge, bande OCTAVE (3/4/5 • OCT / ±), clavier compact 1 octave La..Sol# et bande SYLLABES ouverte).
-- [CODE: CHANT-RYTHME] (6 systèmes/page A4 Paysage) : Feuille 3 (Grille universelle à 8 colonnes de temps libres [ P1..Pn ] : bande supérieure TEMPS vierge, bande centrale RYTHME divisée en 32 subdivisions 1..4 pour les traits horizontaux ───, et bande inférieure SYLLABES ouverte sans sous-cases).${refBlock}
+- [CODE: CHANT-NOTES-1M] / [CODE: CHANT-NOTES-2M] (3 systèmes complets [P1]..[P3] par page A4 Paysage) : Feuille 2 (Grille universelle à 8 colonnes de temps libres = 32 subdivisions, colonne gauche compacte 8.5mm avec lettres A..G seules, bande TEMPS de 5.5mm, bande OCT 3/4/5 de 5.5mm, clavier Piano Roll 12 demi-tons de 21.6mm où les notes MONTENT DU BAS (A, juste au-dessus de SYLLABES) VERS LE HAUT (G#, juste sous OCT), et bande SYLLABES ouverte de 11.5mm).
+- [CODE: CHANT-RYTHME] (6 systèmes par page A4 Paysage) : Feuille 3 (Grille universelle à 8 colonnes de temps libres [ P1..Pn ] : bande supérieure TEMPS vierge, bande centrale RYTHME divisée en 32 subdivisions 1..4 pour les traits horizontaux ───, et bande inférieure SYLLABES ouverte sans sous-cases).${refBlock}
 
 RÈGLES STRICTES D'EXTRACTION :
 1. SÉQUENCE (PUX / COR) :
@@ -38,9 +38,10 @@ RÈGLES STRICTES D'EXTRACTION :
    - Si seuls les "1" sont inscrits (ex: "1" en 4e colonne c=3 et "1" en 8e colonne c=7), déduire tous les numéros de temps par continuité modulo 4 (c=0➔T2, c=1➔T3, c=2➔T4, c=3➔T1, c=4➔T2, c=5➔T3, c=6➔T4, c=7➔T1 ; si aucun numéro n'est inscrit, c=0 vaut T1 par défaut).
    - Tu peux fournir directement "beatNumbers" (8 éléments) et "cells" (avec "stepIndex" de 0 à 31 sur toute la ligne), OU découper en "anacrusisCells" (temps actifs à gauche du premier T1 alignés sur T2=4..7, T3=8..11, T4=12..15), "mainCells" (cycles complets 1,2,3,4 -> 1M ou 2M) et "tailCells" (+T1 isolé après T4).
    - Si 2 lignes consécutives portent le même code de pattern (ex: "P3" puis "P3"), restitue-les dans l'ordre avec le même "code": elles seront concaténées en un seul pattern multi-mesures (3M ou 4M).
-3. TRAITS HORIZONTAUX DE NOTES / RYTHME (───), CLAVIER 1 OCTAVE (LA ➔ SOL#), OCTAVE (3/4/5) & SYLLABES OUVERTE :
-   - Chaque trait horizontal ("───") dans le clavier ("A", "Bb", "B", "C", "C#", "D", "Eb", "E", "F", "F#", "G", "G#") ou dans la bande "RYTHME" indique la double-croche d'attaque ("stepIndex") et sa durée ("durationSteps").
-   - La bande "OCT / ± (3/4/5)" indique l'octave (3 -> octaveShift:-1, 4 -> octaveShift:0, 5 -> octaveShift:+1).
+3. SENS VERTICAL DU CLAVIER PIANO ROLL (A EN BAS ➔ G# EN HAUT), TRAITS HORIZONTAUX (───), OCT (3/4/5) & SYLLABES :
+   - ATTENTION AU SENS VERTICAL DU CLAVIER : Les notes montent du bas ("A", 12e ligne juste au-dessus de "SYLLABES") vers le haut ("G#", 1re ligne juste sous "OCT"). De haut en bas, l'ordre exact des 12 lignes est : ["G#", "G", "F#", "F", "E", "D#", "D", "C#", "C", "B", "A#", "A"] (avec filets renforcés sous C et sous A).
+   - Chaque trait horizontal ("───") indique la double-croche d'attaque ("stepIndex") et sa durée ("durationSteps").
+   - La bande "OCT (3/4/5)" indique l'octave (3 -> octaveShift:-1, 4 -> octaveShift:0, 5 -> octaveShift:+1).
    - La bande inférieure "SYLLABES" est ouverte : associer chaque syllabe manuscrite en majuscules au début du trait situé juste au-dessus d'elle, en conservant les tirets "-" (ex: "VO-", "FA-") et apostrophes d'élision (ex: "E'O").
 
 FORMAT JSON STRICT ATTENDU (sans balise markdown autour) :

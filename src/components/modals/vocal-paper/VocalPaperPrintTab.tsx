@@ -1,7 +1,7 @@
 /**
  * VocalPaperPrintTab.tsx
  * Onglet « Imprimer Feuilles Vierges (100 % N&B) » de l'Atelier Papier du Chant (< 130 lignes).
- * Permet d'imprimer les modèles A4 (Grille universelle Paysage 8 temps libres sur Feuilles 2 & 3) sans pop-up bloquée.
+ * Permet d'imprimer les modèles A4 (Grille universelle Paysage 8 temps libres : 3 systèmes [P1]..[P3] sur Feuille 2, 6 systèmes sur Feuille 3).
  */
 import React, { useState } from 'react';
 import { Printer, FileText, Music, ListOrdered, BookOpen, Check } from 'lucide-react';
@@ -28,21 +28,21 @@ const SHEET_CARDS: Array<{ type: VocalSheetType; code: string; titleFr: string; 
   },
   {
     type: 'notes_1m', code: 'CHANT-NOTES-1M', orientation: 'landscape',
-    titleFr: 'Feuille 2 — Patterns & Clavier 1 Octave (Paysage • 8 Temps Libres)', titleBr: 'Folha 2 — Padrões e Teclado 1 Oitava (Paisagem • 8 Tempos Livres)',
-    descFr: '4 systèmes [ P__ ] par page A4 Paysage (32 subdivisions de 8.4mm) : TEMPS libre (1M+Ana ou 2M), OCTAVE (3/4/5), Clavier La➔Sol# & SYLLABES ouverte.',
-    descBr: '4 sistemas [ P__ ] por página A4 Paisagem (32 subdivisões de 8.4mm) : TEMPOS livres (1M+Ana ou 2M), OITAVA (3/4/5), Teclado Lá➔Sol# e SÍLABAS aberta.',
+    titleFr: 'Feuille 2 — Patterns & Piano Roll 1 Octave (Paysage • 3 Lignes)', titleBr: 'Folha 2 — Padrões e Piano Roll 1 Oitava (Paisagem • 3 Linhas)',
+    descFr: '3 systèmes complets [P1]..[P3] par page A4 Paysage (~274mm utiles) : Piano Roll A (en bas) ➔ G# (en haut), TEMPS (5.5mm), OCT (5.5mm) & SYLLABES (11.5mm).',
+    descBr: '3 sistemas completos [P1]..[P3] por página A4 Paisagem (~274mm úteis) : Piano Roll A (embaixo) ➔ G# (em cima), TEMPOS (5.5mm), OCT (5.5mm) e SÍLABAS (11.5mm).',
   },
   {
     type: 'rhythm_only', code: 'CHANT-RYTHME', orientation: 'landscape',
     titleFr: 'Feuille 3 — Paroles & Rythme Seul (Paysage • 8 Temps Libres)', titleBr: 'Folha 3 — Letra e Ritmo (Paisagem • 8 Tempos Livres)',
-    descFr: '6 systèmes [ P__ ] par page A4 Paysage (32 subdivisions de 8.4mm) : bande TEMPS libre, bande RYTHME (5.5mm) + bande SYLLABES ouverte (11mm).',
-    descBr: '6 sistemas [ P__ ] por página A4 Paisagem (32 subdivisões de 8.4mm) : faixa TEMPOS livres, faixa RITMO (5.5mm) + faixa SÍLABAS aberta (11mm).',
+    descFr: '6 systèmes [ P__ ] par page A4 Paysage (32 subdivisions) : bande TEMPS libre, bande RYTHME (5.5mm) + bande SYLLABES ouverte (11mm).',
+    descBr: '6 sistemas [ P__ ] por página A4 Paisagem (32 subdivisões) : faixa TEMPOS livres, faixa RITMO (5.5mm) + faixa SÍLABAS aberta (11mm).',
   },
   {
     type: 'instructions', code: 'CHANT-GUIDE', orientation: 'portrait',
     titleFr: "Feuille 4 — Guide & Conventions d'écriture manuscrite", titleBr: 'Folha 4 — Guia e Convenções de Escrita Manuscrita',
-    descFr: 'Mémo illustré : grille 8 temps libres (2|3|4|1|2|3|4|1 ou 2M), traits horizontaux (───), SYLLABES ouverte, tirets "-" et élisions.',
-    descBr: 'Resumo ilustrado : grade 8 tempos livres (2|3|4|1|2|3|4|1 ou 2M), traços horizontais (───), SÍLABAS aberta, hífens "-" e elisões.',
+    descFr: 'Mémo illustré : Piano Roll A (bas) ➔ G# (haut), grille 8 temps libres (2|3|4|1|2|3|4|1 ou 2M), traits (───), SYLLABES ouverte et tirets "-".',
+    descBr: 'Resumo ilustrado : Piano Roll A (baixo) ➔ G# (alto), grade 8 tempos livres (2|3|4|1|2|3|4|1 ou 2M), traços (───), SÍLABAS aberta e hífens "-".',
   },
 ];
 
@@ -50,7 +50,7 @@ export function triggerVocalSheetPrint(options: VocalPaperPrintOptions): void {
   let innerHtml = '', orientation: 'portrait' | 'landscape' = 'portrait';
   if (options.sheetType === 'sequence') innerHtml = renderVocalSheetSequenceHTML(options);
   else if (options.sheetType === 'notes_1m' || options.sheetType === 'notes_2m') {
-    innerHtml = renderVocalSheetNotesHTML({ ...options, patternsCount: options.patternsCount ?? 4 });
+    innerHtml = renderVocalSheetNotesHTML({ ...options, patternsCount: options.patternsCount ?? 3 });
     orientation = 'landscape';
   } else if (options.sheetType === 'rhythm_only') {
     innerHtml = renderVocalSheetRhythmHTML({ ...options, patternsCount: options.patternsCount ?? 6 });
@@ -81,7 +81,7 @@ export const VocalPaperPrintTab: React.FC<VocalPaperPrintTabProps> = ({ project,
         <div className="inline-flex items-center gap-1.5">
           <span className="font-bold">{isBr ? 'Numeração inicial :' : 'Numérotation départ :'}</span>
           <select value={startPatternNumber} onChange={(e) => setStartPatternNumber(Number(e.target.value))} className="bg-[var(--cordel-surface)] border border-[var(--cordel-border-sub)] rounded px-2 py-0.5 font-bold">
-            {[1, 5, 7, 9, 13].map((n) => <option key={n} value={n}>P{n} ➔ P{n + 5}</option>)}
+            {[1, 4, 7, 10, 13].map((n) => <option key={n} value={n}>P{n} ➔ P{n + 2}</option>)}
           </select>
         </div>
       </div>

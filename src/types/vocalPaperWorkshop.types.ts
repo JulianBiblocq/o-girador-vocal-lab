@@ -17,18 +17,7 @@ export type VocalSheetOpticalCode =
   | 'CHANT-GUIDE';
 
 export type KeyboardOctaveNote =
-  | 'A'
-  | 'Bb'
-  | 'B'
-  | 'C'
-  | 'C#'
-  | 'D'
-  | 'Eb'
-  | 'E'
-  | 'F'
-  | 'F#'
-  | 'G'
-  | 'G#';
+  | 'G#' | 'G' | 'F#' | 'F' | 'E' | 'D#' | 'Eb' | 'D' | 'C#' | 'C' | 'B' | 'A#' | 'Bb' | 'A';
 
 export interface VocalPaperPrintOptions {
   sheetType: VocalSheetType;

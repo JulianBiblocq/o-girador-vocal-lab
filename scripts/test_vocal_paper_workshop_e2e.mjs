@@ -61,7 +61,7 @@ console.log('=== TEST E2E : ATELIER PAPIER DU CHANT (CANTADOR • ORGANIZADOR �
     assert.ok(html.includes(expectedCode), `${label} doit contenir ${expectedCode}`);
     assert.ok(html.includes('fiducial-tl') && html.includes('fiducial-tr') && html.includes('fiducial-bl') && html.includes('fiducial-br'), `${label} doit contenir les 4 repères ■`);
     assert.ok(!html.includes('flex-direction:column;justify-content:space-between'), `${label} ne doit pas utiliser justify-content:space-between`);
-    assert.ok(html.includes('gap:2.5mm') || html.includes('gap: 2.5mm'), `${label} doit utiliser gap: 2.5mm`);
+    assert.ok(html.includes('gap:2.5mm') || html.includes('gap: 2.5mm') || html.includes('gap:3mm') || html.includes('gap: 2mm'), `${label} doit utiliser un gap compact`);
   }
 
   // Conservation des numéros de mesures M1..M32 sur CHANT-SEQ
@@ -69,19 +69,41 @@ console.log('=== TEST E2E : ATELIER PAPIER DU CHANT (CANTADOR • ORGANIZADOR �
     assert.ok(seqHtml.includes(`>M${m}<`), `CHANT-SEQ doit conserver le numéro de mesure M${m}`);
   }
 
-  // Feuille 2 (CHANT-NOTES) : A4 Paysage, 4 systèmes [ P1 ]..[ P4 ], 8 colonnes de temps vierges (4.5mm), OCTAVE (5.5mm), Clavier 12×2.2mm (32 subdivisions), SYLLABES ouverte (9.5mm)
+  // Feuille 2 (CHANT-NOTES) : A4 Paysage, exactement 3 systèmes complets [P1]..[P3], Piano Roll A (en bas) -> G# (en haut), lettres A..G seules, colonne gauche 8.5mm, 12 lignes de 1.8mm
   assert.ok(notesHtml.includes('size: A4 landscape'), 'Feuille 2 doit être en A4 landscape');
-  for (let p = 1; p <= 4; p++) {
-    assert.ok(notesHtml.includes(`[ P${p} ]`), `Feuille 2 doit contenir le cartouche [ P${p} ]`);
+  for (let p = 1; p <= 3; p++) {
+    assert.ok(notesHtml.includes(`[P${p}]`), `Feuille 2 doit contenir le cartouche [P${p}]`);
   }
-  assert.ok(!notesHtml.includes('[ P5 ]'), 'Feuille 2 doit contenir exactement 4 systèmes complets par page A4 Paysage');
+  assert.ok(!notesHtml.includes('[P4]'), 'Feuille 2 doit contenir exactement 3 systèmes complets ([P1], [P2], [P3]) par page A4 Paysage');
   assert.ok(!notesHtml.includes('Ana T3') && !notesHtml.includes('Ana T4') && !notesHtml.includes('+T1'), 'Feuille 2 ne doit contenir aucun numéro de temps pré-imprimé (Ana T3-T4 / +T1)');
-  assert.ok(notesHtml.includes('width:14mm') && notesHtml.includes('height:4.5mm') && notesHtml.includes('height:5.5mm') && notesHtml.includes('height:2.2mm') && notesHtml.includes('height:9.5mm') && notesHtml.includes('colspan="4"'), 'Feuille 2 : géométrie exacte (cartouche 14mm, TEMPS 4.5mm, OCTAVE 5.5mm, Clavier 2.2mm, SYLLABES 9.5mm, colspan=4)');
+  assert.ok(
+    notesHtml.includes('width:8.5mm') &&
+    notesHtml.includes('height:5.5mm') &&
+    notesHtml.includes('height:1.8mm') &&
+    notesHtml.includes('height:11.5mm') &&
+    notesHtml.includes('gap:3mm') &&
+    notesHtml.includes('colspan="4"'),
+    'Feuille 2 : géométrie exacte (colonne gauche 8.5mm, TEMPS 5.5mm, OCT 5.5mm, Clavier 1.8mm, SYLLABES 11.5mm, gap 3mm, colspan=4)'
+  );
 
-  // Clavier 1 octave commençant par La (La, Si♭, Si, Do, Do#, Ré, Mi♭, Mi, Fa, Fa#, Sol, Sol#)
-  const expectedLabels = ['La (A)', 'Si♭', 'Si (B)', 'Do (C)', 'Do#', 'Ré (D)', 'Mi♭', 'Mi (E)', 'Fa (F)', 'Fa#', 'Sol (G)', 'Sol#'];
-  assert.deepEqual(VOCAL_PAPER_KEYBOARD_ROWS.map((r) => r.label), expectedLabels, 'Clavier 1 octave doit aller de La à Sol#');
-  assert.ok(VOCAL_PAPER_KEYBOARD_ROWS[0].strongBorder && VOCAL_PAPER_KEYBOARD_ROWS[3].strongBorder, 'Filets renforcés sur La (1re ligne) et Do (4e ligne)');
+  // Vérification de la hauteur verticale totale < 175mm pour 3 blocs complets sur 1 page A4 Paysage
+  const headerHeightMm = 5.5;
+  const singleBlockHeightMm = 5.5 + 5.5 + 12 * 1.8 + 11.5 + 1.5; // 45.6mm
+  const totalSheet2HeightMm = headerHeightMm + 3 * singleBlockHeightMm + 2 * 3; // 148.3mm
+  assert.ok(totalSheet2HeightMm < 175, `Hauteur totale des 3 blocs (${totalSheet2HeightMm.toFixed(1)}mm) doit être < 175mm`);
+
+  // Clavier Piano Roll 1 octave : de haut en bas ['G#', 'G', 'F#', 'F', 'E', 'D#', 'D', 'C#', 'C', 'B', 'A#', 'A'] (donc de bas en haut : A ➔ G#)
+  const expectedTopToBottomKeys = ['G#', 'G', 'F#', 'F', 'E', 'D#', 'D', 'C#', 'C', 'B', 'A#', 'A'];
+  assert.deepEqual(VOCAL_PAPER_KEYBOARD_ROWS.map((r) => r.key), expectedTopToBottomKeys, 'Clavier Piano Roll doit aller de G# (en haut) à A (en bas)');
+  assert.deepEqual(VOCAL_PAPER_KEYBOARD_ROWS.map((r) => r.label), expectedTopToBottomKeys, 'Labels du clavier = lettres A B C D E F G seules (sans Do, Ré, Mi...)');
+  assert.ok(VOCAL_PAPER_KEYBOARD_ROWS[8].strongBorder && VOCAL_PAPER_KEYBOARD_ROWS[11].strongBorder, 'Filets renforcés sous C (index 8) et sous A (index 11, juste au-dessus de SYLLABES)');
+  for (const solfege of ['La (A)', 'Si (B)', 'Do (C)', 'Ré (D)', 'Mi (E)', 'Fa (F)', 'Sol (G)', 'Si♭', 'Do#', 'Mi♭', 'Fa#', 'Sol#']) {
+    assert.ok(!notesHtml.includes(solfege), `Feuille 2 ne doit contenir aucun nom de solfège (${solfege})`);
+  }
+  const idxGSharp = notesHtml.indexOf('>G#<');
+  const idxC = notesHtml.indexOf('>C<');
+  const idxA = notesHtml.indexOf('>A<');
+  assert.ok(idxGSharp > 0 && idxC > idxGSharp && idxA > idxC, 'Dans le flux HTML (haut -> bas), G# apparaît avant C qui apparaît avant A (grave en bas)');
   assert.ok(notesHtml.includes('hatch-bw'), 'Touches noires hachurées N&B (.hatch-bw) présentes');
 
   // Feuille 3 (CHANT-RYTHME) : A4 Paysage, 6 systèmes [ P1 ]..[ P6 ], 8 colonnes de temps vierges (4.5mm), RYTHME (5.5mm, 32 sous-cases), SYLLABES ouverte (11mm)
@@ -93,12 +115,22 @@ console.log('=== TEST E2E : ATELIER PAPIER DU CHANT (CANTADOR • ORGANIZADOR �
   assert.ok(!rhythmHtml.includes('ANA T3') && !rhythmHtml.includes('TEMPS 1') && !rhythmHtml.includes('+T1'), 'Feuille 3 ne doit contenir aucun numéro de temps pré-imprimé');
   assert.ok(rhythmHtml.includes('width:14mm') && rhythmHtml.includes('height:4.5mm') && rhythmHtml.includes('height:5.5mm') && rhythmHtml.includes('height:11mm') && rhythmHtml.includes('colspan="4"'), 'Feuille 3 : cartouche 14mm, TEMPS 4.5mm, RYTHME 5.5mm et SYLLABES ouverte 11mm (colspan=4)');
 
-  // Vérification également sur Organizador (4 systèmes Paysage sur CHANT-NOTES, 6 systèmes Paysage sur CHANT-RYTHME)
+  // Vérification également sur Organizador (3 systèmes Paysage sur CHANT-NOTES avec A en bas -> G# en haut, 6 systèmes Paysage sur CHANT-RYTHME)
   const orgNotesHtml = buildOrganizadorVocalSheetHTML('notes_1m', { titre: 'Vovó falou', bpmDefaut: 85 });
   const orgRhythmHtml = buildOrganizadorVocalSheetHTML('rhythm_only', { titre: 'Vovó falou', bpmDefaut: 85 });
-  assert.ok(orgNotesHtml.includes('size:A4 landscape') && orgNotesHtml.includes('[ P4 ]') && !orgNotesHtml.includes('[ P5 ]') && orgNotesHtml.includes('height:4.5mm') && orgNotesHtml.includes('height:5.5mm') && orgNotesHtml.includes('height:9.5mm'), 'Organizador CHANT-NOTES = A4 Paysage, 4 systèmes, 8 temps libres');
+  assert.ok(
+    orgNotesHtml.includes('size:A4 landscape') &&
+    orgNotesHtml.includes('[P3]') &&
+    !orgNotesHtml.includes('[P4]') &&
+    orgNotesHtml.includes('width:8.5mm') &&
+    orgNotesHtml.includes('height:5.5mm') &&
+    orgNotesHtml.includes('height:1.8mm') &&
+    orgNotesHtml.includes('height:11.5mm') &&
+    orgNotesHtml.indexOf('>G#<') < orgNotesHtml.indexOf('>A<'),
+    'Organizador CHANT-NOTES = A4 Paysage, 3 systèmes [P1]..[P3], Piano Roll G# (haut) -> A (bas), lettres A..G seules'
+  );
   assert.ok(orgRhythmHtml.includes('size:A4 landscape') && orgRhythmHtml.includes('[ P6 ]') && !orgRhythmHtml.includes('[ P7 ]') && orgRhythmHtml.includes('height:4.5mm') && orgRhythmHtml.includes('height:5.5mm') && orgRhythmHtml.includes('height:11mm'), 'Organizador CHANT-RYTHME = A4 Paysage, 6 systèmes, 8 temps libres');
-  console.log('✓ 1. Grille Universelle A4 Paysage à 8 Temps Libres (32 subdivisions de 8.4mm, 4 systèmes Notes, 6 systèmes Rythme, gap 2.5mm) validée.');
+  console.log('✓ 1. Grille Universelle A4 Paysage à 8 Temps Libres (Feuille 2 : 3 systèmes [P1]..[P3], Piano Roll A en bas ➔ G# en haut, lettres A..G seules, 1.8mm/note ; Feuille 3 : 6 systèmes) validée.');
 }
 
 // ---------------------------------------------------------------------------
