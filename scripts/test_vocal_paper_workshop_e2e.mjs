@@ -9,7 +9,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import './resolve-ts.mjs';
 
-const { wrapVocalSheetA4Document } = await import('../src/utils/vocal-paper/vocalPaperPrintHelper.ts');
+const { wrapVocalSheetA4Document, buildVocalPaperBatchDocumentHTML } = await import('../src/utils/vocal-paper/vocalPaperPrintHelper.ts');
 const { renderVocalSheetSequenceHTML } = await import('../src/utils/vocal-paper/vocalSheetSequenceTemplate.ts');
 const { renderVocalSheetNotesHTML, VOCAL_PAPER_KEYBOARD_ROWS } = await import('../src/utils/vocal-paper/vocalSheetNotesTemplate.ts');
 const { renderVocalSheetRhythmHTML } = await import('../src/utils/vocal-paper/vocalSheetRhythmTemplate.ts');
@@ -32,7 +32,7 @@ const { reconstituteToadaTxt } = await import('../src/utils/toadaTxtReconstituto
 const {
   convertScannedVocalBatchToOrganizador,
 } = await import('../../o-girador-organizador/src/utils/vocalPaperToOrganizadorConverter.js');
-const { buildOrganizadorVocalSheetHTML } = await import('../../o-girador-organizador/src/utils/vocalPaperSheetPrinter.js');
+const { buildOrganizadorVocalSheetHTML, buildOrganizadorVocalCartBatchHTML } = await import('../../o-girador-organizador/src/utils/vocalPaperSheetPrinter.js');
 const { buildSequencerToadaPackFromVocalScan } = await import('../../o-girador-sequenciador/src/utils/paper/vocalPaperSequenciadorHelper.ts');
 
 const __filename = fileURLToPath(import.meta.url);
@@ -47,10 +47,10 @@ console.log('=== TEST E2E : ATELIER PAPIER DU CHANT (CANTADOR • ORGANIZADOR �
 // 1. Rendu HTML A4 100 % N&B — Grille Universelle A4 Paysage à 8 Temps Libres (32 subdivisions de 8.4mm)
 // ---------------------------------------------------------------------------
 {
-  const seqHtml = wrapVocalSheetA4Document(renderVocalSheetSequenceHTML({ sheetType: 'sequence', title: 'Vovó falou', bpm: 85 }), 'portrait');
-  const notesHtml = wrapVocalSheetA4Document(renderVocalSheetNotesHTML({ sheetType: 'notes_1m', title: 'Vovó falou', bpm: 85 }), 'landscape');
-  const rhythmHtml = wrapVocalSheetA4Document(renderVocalSheetRhythmHTML({ sheetType: 'rhythm_only', title: 'Vovó falou', bpm: 85 }), 'landscape');
-  const guideHtml = wrapVocalSheetA4Document(renderVocalSheetInstructionsHTML(), 'portrait');
+  const seqHtml = wrapVocalSheetA4Document(renderVocalSheetSequenceHTML({ sheetType: 'sequence', title: 'Vovó falou', bpm: 85 }));
+  const notesHtml = wrapVocalSheetA4Document(renderVocalSheetNotesHTML({ sheetType: 'notes_1m', title: 'Vovó falou', bpm: 85 }));
+  const rhythmHtml = wrapVocalSheetA4Document(renderVocalSheetRhythmHTML({ sheetType: 'rhythm_only', title: 'Vovó falou', bpm: 85 }));
+  const guideHtml = wrapVocalSheetA4Document(renderVocalSheetInstructionsHTML());
 
   for (const [label, html, expectedCode] of [
     ['CHANT-SEQ', seqHtml, '[CODE: CHANT-SEQ]'],
@@ -62,7 +62,45 @@ console.log('=== TEST E2E : ATELIER PAPIER DU CHANT (CANTADOR • ORGANIZADOR �
     assert.ok(html.includes('fiducial-tl') && html.includes('fiducial-tr') && html.includes('fiducial-bl') && html.includes('fiducial-br'), `${label} doit contenir les 4 repères ■`);
     assert.ok(!html.includes('flex-direction:column;justify-content:space-between'), `${label} ne doit pas utiliser justify-content:space-between`);
     assert.ok(html.includes('gap:2.5mm') || html.includes('gap: 2.5mm') || html.includes('gap:3mm') || html.includes('gap: 2mm'), `${label} doit utiliser un gap compact`);
+    assert.ok(html.includes('@page { size: A4 landscape; margin: 7mm; }'), `${label} doit déclarer @page { size: A4 landscape; margin: 7mm; }`);
+    assert.ok(!/portrait/i.test(html), `${label} ne doit contenir aucune occurrence du mot "portrait"`);
+    assert.ok(html.includes('grayscale(100%)'), `${label} doit forcer le rendu monochrome N&B via grayscale(100%)`);
   }
+
+  // Test du Panier / Lot d'Impression Multi-Feuilles (3 × sequence + 6 × notes + 1 × rhythm = 10 pages .vocal-print-page)
+  const batchContinuousHtml = buildVocalPaperBatchDocumentHTML(
+    { sequence: 3, notes: 6, rhythm: 1, instructions: 0 },
+    { sheetType: 'sequence', title: 'Vovó falou', bpm: 85, patternNumberingMode: 'continuous' }
+  );
+  const printPageMatches = batchContinuousHtml.match(/class="vocal-sheet-page vocal-print-page"/g) || [];
+  assert.equal(printPageMatches.length, 10, 'Le lot (3×sequence + 6×notes + 1×rhythm) doit générer exactement 10 conteneurs .vocal-print-page dans un seul document HTML');
+  const pageDirectiveMatches = batchContinuousHtml.match(/@page\s*\{[^}]*\}/g) || [];
+  assert.equal(pageDirectiveMatches.length, 1, 'Le document multi-pages doit contenir une unique directive @page');
+  assert.equal(pageDirectiveMatches[0], '@page { size: A4 landscape; margin: 7mm; }', 'La directive @page unique doit être exactement "@page { size: A4 landscape; margin: 7mm; }"');
+  assert.ok(!/portrait/i.test(batchContinuousHtml), 'Absence totale du mot "portrait" dans le CSS et le HTML du lot');
+  for (let p = 1; p <= 18; p++) {
+    assert.ok(batchContinuousHtml.includes(`[P${p}]`), `Mode continu : les 6 feuilles de notes doivent numéroter de [P1] à [P18] (manquant: [P${p}])`);
+  }
+  assert.ok(batchContinuousHtml.includes('[ P19 ]') && batchContinuousHtml.includes('[ P24 ]'), 'Mode continu : la feuille rythme qui suit continue à [ P19 ]..[ P24 ]');
+
+  // Test de l'option vierge [ P__ ] sur le lot
+  const batchBlankHtml = buildVocalPaperBatchDocumentHTML(
+    { sequence: 3, notes: 6, rhythm: 1, instructions: 0 },
+    { sheetType: 'sequence', title: 'Vovó falou', bpm: 85, patternNumberingMode: 'blank' }
+  );
+  assert.ok(batchBlankHtml.includes('[P__]'), 'Mode vierge : les cartouches doivent afficher [P__]');
+  assert.ok(!batchBlankHtml.includes('[P1]') && !batchBlankHtml.includes('[P18]'), 'Mode vierge : aucun numéro [P1]..[P18] pré-imprimé sur les feuilles de patterns');
+
+  // Test du lot équivalent côté Organizador
+  const orgBatchContinuous = buildOrganizadorVocalCartBatchHTML(
+    { sequence: 3, notes: 6, rhythm: 1, instructions: 0 },
+    { titre: 'Vovó falou', bpmDefaut: 85 },
+    'continuous'
+  );
+  const orgPageMatches = orgBatchContinuous.match(/class="page vocal-print-page"/g) || [];
+  assert.equal(orgPageMatches.length, 10, 'Lot Organizador : 10 pages .vocal-print-page');
+  assert.ok(!/portrait/i.test(orgBatchContinuous), 'Lot Organizador : zéro occurrence de "portrait"');
+  assert.ok(orgBatchContinuous.includes('[P1]') && orgBatchContinuous.includes('[P18]'), 'Lot Organizador continu : [P1] à [P18]');
 
   // Conservation des numéros de mesures M1..M32 sur CHANT-SEQ
   for (const m of [1, 8, 9, 16, 17, 24, 25, 32]) {

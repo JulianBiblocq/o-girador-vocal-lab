@@ -1,13 +1,13 @@
 /**
  * VocalPaperPrintTab.tsx
- * Onglet « Imprimer Feuilles Vierges (100 % N&B) » de l'Atelier Papier du Chant (< 130 lignes).
- * Permet d'imprimer les modèles A4 (Grille universelle Paysage 8 temps libres : 3 systèmes [P1]..[P3] sur Feuille 2, 6 systèmes sur Feuille 3).
+ * Onglet « Panier d'Impression Multi-Feuilles (A4 Paysage 100 % N&B) » de l'Atelier Papier du Chant (< 142 lignes).
+ * Permet de choisir la quantité (0..20) de chaque modèle, le mode de numérotation ([P__], continu, par feuille), d'afficher un aperçu et d'imprimer tout le lot.
  */
 import React, { useState } from 'react';
-import { Printer, FileText, Music, ListOrdered, BookOpen, Check } from 'lucide-react';
-import type { VocalSheetType, VocalPaperPrintOptions } from '../../../types/vocalPaperWorkshop.types';
+import { Printer, Eye, X, Check } from 'lucide-react';
+import type { VocalSheetType, VocalPaperPrintOptions, VocalPaperCartQuantities, VocalPatternNumberingMode } from '../../../types/vocalPaperWorkshop.types';
 import type { ToadaProject } from '../../../types/toadaProject.types';
-import { wrapVocalSheetA4Document, printViaInvisibleIframe } from '../../../utils/vocal-paper/vocalPaperPrintHelper';
+import { wrapVocalSheetA4Document, buildVocalPaperBatchDocumentHTML, printViaInvisibleIframe } from '../../../utils/vocal-paper/vocalPaperPrintHelper';
 import { renderVocalSheetSequenceHTML } from '../../../utils/vocal-paper/vocalSheetSequenceTemplate';
 import { renderVocalSheetNotesHTML } from '../../../utils/vocal-paper/vocalSheetNotesTemplate';
 import { renderVocalSheetRhythmHTML } from '../../../utils/vocal-paper/vocalSheetRhythmTemplate';
@@ -19,90 +19,94 @@ export interface VocalPaperPrintTabProps {
   isBr?: boolean;
 }
 
-const SHEET_CARDS: Array<{ type: VocalSheetType; code: string; titleFr: string; titleBr: string; descFr: string; descBr: string; orientation: 'portrait' | 'landscape' }> = [
-  {
-    type: 'sequence', code: 'CHANT-SEQ', orientation: 'portrait',
-    titleFr: 'Feuille 1 — Séquence & Paroles (Conducteur)', titleBr: 'Folha 1 — Sequência e Letra (Condutor)',
-    descFr: 'Grille M1..M32 à 2 lignes superposées (Pux / Cor) pour placer P1..Pn, X (Pause) et Unisson + Paroles.',
-    descBr: 'Grade M1..M32 com 2 linhas (Pux / Cor) para alocar P1..Pn, X (Pausa) e Uníssono + Letra.',
-  },
-  {
-    type: 'notes_1m', code: 'CHANT-NOTES-1M', orientation: 'landscape',
-    titleFr: 'Feuille 2 — Patterns & Piano Roll 1 Octave (Paysage • 3 Lignes)', titleBr: 'Folha 2 — Padrões e Piano Roll 1 Oitava (Paisagem • 3 Linhas)',
-    descFr: '3 systèmes complets [P1]..[P3] par page A4 Paysage (~274mm utiles) : Piano Roll A (en bas) ➔ G# (en haut), TEMPS (5.5mm), OCT (5.5mm) & SYLLABES (11.5mm).',
-    descBr: '3 sistemas completos [P1]..[P3] por página A4 Paisagem (~274mm úteis) : Piano Roll A (embaixo) ➔ G# (em cima), TEMPOS (5.5mm), OCT (5.5mm) e SÍLABAS (11.5mm).',
-  },
-  {
-    type: 'rhythm_only', code: 'CHANT-RYTHME', orientation: 'landscape',
-    titleFr: 'Feuille 3 — Paroles & Rythme Seul (Paysage • 8 Temps Libres)', titleBr: 'Folha 3 — Letra e Ritmo (Paisagem • 8 Tempos Livres)',
-    descFr: '6 systèmes [ P__ ] par page A4 Paysage (32 subdivisions) : bande TEMPS libre, bande RYTHME (5.5mm) + bande SYLLABES ouverte (11mm).',
-    descBr: '6 sistemas [ P__ ] por página A4 Paisagem (32 subdivisões) : faixa TEMPOS livres, faixa RITMO (5.5mm) + faixa SÍLABAS aberta (11mm).',
-  },
-  {
-    type: 'instructions', code: 'CHANT-GUIDE', orientation: 'portrait',
-    titleFr: "Feuille 4 — Guide & Conventions d'écriture manuscrite", titleBr: 'Folha 4 — Guia e Convenções de Escrita Manuscrita',
-    descFr: 'Mémo illustré : Piano Roll A (bas) ➔ G# (haut), grille 8 temps libres (2|3|4|1|2|3|4|1 ou 2M), traits (───), SYLLABES ouverte et tirets "-".',
-    descBr: 'Resumo ilustrado : Piano Roll A (baixo) ➔ G# (alto), grade 8 tempos livres (2|3|4|1|2|3|4|1 ou 2M), traços (───), SÍLABAS aberta e hífens "-".',
-  },
+const CART_ITEMS: Array<{
+  key: keyof VocalPaperCartQuantities; sheetType: VocalSheetType; code: string;
+  titleFr: string; titleBr: string; descFr: string; descBr: string;
+}> = [
+  { key: 'sequence', sheetType: 'sequence', code: 'CHANT-SEQ', titleFr: 'Feuille 1 — Séquence (Pux / Cor)', titleBr: 'Folha 1 — Sequência (Pux / Cor)', descFr: 'Grille large M1..M32 A4 Paysage (Pux / Cor) + Aide-mémoire P1..P10.', descBr: 'Grade larga M1..M32 A4 Paisagem (Pux / Cor) + Resumo P1..P10.' },
+  { key: 'notes', sheetType: 'notes_1m', code: 'CHANT-NOTES-1M', titleFr: 'Feuille 2 — Patterns & Notes (Clavier + Syllabes)', titleBr: 'Folha 2 — Padrões e Notas (Teclado + Sílabas)', descFr: '3 systèmes A4 Paysage (8 temps libres) : Piano Roll A (bas) ➔ G# (haut), TEMPS, OCT & SYLLABES.', descBr: '3 sistemas A4 Paisagem (8 tempos livres) : Piano Roll A (baixo) ➔ G# (alto), TEMPOS, OCT e SÍLABAS.' },
+  { key: 'rhythm', sheetType: 'rhythm_only', code: 'CHANT-RYTHME', titleFr: 'Feuille 3 — Paroles & Rythme seul', titleBr: 'Folha 3 — Letra e Ritmo', descFr: '6 systèmes A4 Paysage (32 subdivisions) : bande TEMPS libre, RYTHME (5.5mm) + SYLLABES ouverte.', descBr: '6 sistemas A4 Paisagem (32 subdivisões) : faixa TEMPOS livre, RITMO (5.5mm) + SÍLABAS aberta.' },
+  { key: 'instructions', sheetType: 'instructions', code: 'CHANT-GUIDE', titleFr: 'Feuille 4 — Guide & Instructions', titleBr: 'Folha 4 — Guia e Instruções', descFr: 'Mémo illustré A4 Paysage : grille 8 temps libres, traits (───), tirets "-" et élisions.', descBr: 'Resumo ilustrado A4 Paisagem : grade 8 tempos livres, traços (───), hífens "-" e elisões.' },
 ];
 
+export function renderSingleSheetPreviewHTML(options: VocalPaperPrintOptions): string {
+  const isBlank = Boolean(options.blankPatternLabels || options.patternNumberingMode === 'blank');
+  let inner = '';
+  if (options.sheetType === 'sequence') inner = renderVocalSheetSequenceHTML(options);
+  else if (options.sheetType === 'notes_1m' || options.sheetType === 'notes_2m') inner = renderVocalSheetNotesHTML({ ...options, patternsCount: 3, blankPatternLabels: isBlank });
+  else if (options.sheetType === 'rhythm_only') inner = renderVocalSheetRhythmHTML({ ...options, patternsCount: 6, blankPatternLabels: isBlank });
+  else inner = renderVocalSheetInstructionsHTML();
+  return wrapVocalSheetA4Document(inner, 'landscape', `Aperçu — ${options.sheetType}`);
+}
+
 export function triggerVocalSheetPrint(options: VocalPaperPrintOptions): void {
-  let innerHtml = '', orientation: 'portrait' | 'landscape' = 'portrait';
-  if (options.sheetType === 'sequence') innerHtml = renderVocalSheetSequenceHTML(options);
-  else if (options.sheetType === 'notes_1m' || options.sheetType === 'notes_2m') {
-    innerHtml = renderVocalSheetNotesHTML({ ...options, patternsCount: options.patternsCount ?? 3 });
-    orientation = 'landscape';
-  } else if (options.sheetType === 'rhythm_only') {
-    innerHtml = renderVocalSheetRhythmHTML({ ...options, patternsCount: options.patternsCount ?? 6 });
-    orientation = 'landscape';
-  } else innerHtml = renderVocalSheetInstructionsHTML();
-  printViaInvisibleIframe(wrapVocalSheetA4Document(innerHtml, orientation, `Atelier Papier — ${options.sheetType}`), `Atelier Papier — ${options.sheetType}`);
+  printViaInvisibleIframe(renderSingleSheetPreviewHTML(options), `Atelier Papier — ${options.sheetType}`);
 }
 
 export const VocalPaperPrintTab: React.FC<VocalPaperPrintTabProps> = ({ project, isBr = false }) => {
   const dual = resolveProjectDualScale(project, isBr ? 'br' : 'fr');
-  const [selectedSheet, setSelectedSheet] = useState<VocalSheetType>('sequence');
+  const [cart, setCart] = useState<VocalPaperCartQuantities>({ sequence: 1, notes: 3, rhythm: 1, instructions: 0 });
+  const [numberingMode, setNumberingMode] = useState<VocalPatternNumberingMode>('blank');
   const [prefillHeader, setPrefillHeader] = useState(true);
-  const [startPatternNumber, setStartPatternNumber] = useState(1);
+  const [previewSheet, setPreviewSheet] = useState<VocalSheetType | null>(null);
 
-  const handlePrint = (sheetType: VocalSheetType) => triggerVocalSheetPrint({
-    sheetType, title: prefillHeader ? project.title : '', bpm: prefillHeader ? project.bpm : undefined,
+  const setQty = (key: keyof VocalPaperCartQuantities, val: number) => setCart((prev) => ({ ...prev, [key]: Math.max(0, Math.min(20, val)) }));
+  const totalPages = cart.sequence + cart.notes + cart.rhythm + cart.instructions;
+  const baseOpts = {
+    title: prefillHeader ? project.title : '', bpm: prefillHeader ? project.bpm : undefined,
     timeSignature: project.timeSignature || '4/4', sungKey: prefillHeader ? dual.sungScaleLabel : '',
-    troupeKey: prefillHeader ? dual.troupeScaleLabel : '', startPatternNumber,
-  });
+    troupeKey: prefillHeader ? dual.troupeScaleLabel : '', patternNumberingMode: numberingMode, blankPatternLabels: numberingMode === 'blank',
+  };
+  const handlePrintBatch = () => {
+    if (totalPages > 0) printViaInvisibleIframe(buildVocalPaperBatchDocumentHTML(cart, baseOpts), `Lot Atelier Papier (${totalPages} feuilles A4 Paysage)`);
+  };
 
   return (
-    <div className="space-y-3 text-xs font-mono">
+    <div className="space-y-2.5 text-xs font-mono">
       <div className="cordel-card-sm p-2.5 rounded flex flex-wrap items-center justify-between gap-2">
         <label className="inline-flex items-center gap-2 font-bold cursor-pointer">
           <input type="checkbox" checked={prefillHeader} onChange={(e) => setPrefillHeader(e.target.checked)} className="accent-[#9a3412]" />
           <span>{isBr ? `Pré-preencher cabeçalho (${project.title} • ${project.bpm} BPM)` : `Pré-remplir l'en-tête (${project.title} • ${project.bpm} BPM)`}</span>
         </label>
-        <div className="inline-flex items-center gap-1.5">
-          <span className="font-bold">{isBr ? 'Numeração inicial :' : 'Numérotation départ :'}</span>
-          <select value={startPatternNumber} onChange={(e) => setStartPatternNumber(Number(e.target.value))} className="bg-[var(--cordel-surface)] border border-[var(--cordel-border-sub)] rounded px-2 py-0.5 font-bold">
-            {[1, 4, 7, 10, 13].map((n) => <option key={n} value={n}>P{n} ➔ P{n + 2}</option>)}
-          </select>
+        <div className="flex flex-wrap items-center gap-2">
+          {([
+            ['blank', isBr ? 'Deixar [ P__ ] vazio' : 'Laisser [ P__ ] vierge (numérotation libre à la main)'],
+            ['continuous', isBr ? 'Numerar em contínuo (P1..Pn)' : 'Numéroter en continu sur tout le lot (P1, P2, P3... Pn)'],
+            ['per_sheet', isBr ? 'Numerar P1..P3 por folha' : 'Numéroter P1..P3 par feuille'],
+          ] as const).map(([mode, label]) => (
+            <label key={mode} className="inline-flex items-center gap-1 font-bold cursor-pointer">
+              <input type="radio" name="patNumMode" checked={numberingMode === mode} onChange={() => setNumberingMode(mode)} className="accent-[#9a3412]" />
+              <span className="text-[11px]">{label}</span>
+            </label>
+          ))}
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
-        {SHEET_CARDS.map((card) => {
-          const active = selectedSheet === card.type;
-          const Icon = card.type === 'sequence' ? ListOrdered : card.type === 'instructions' ? BookOpen : card.type === 'rhythm_only' ? FileText : Music;
+      <div className="space-y-2">
+        {CART_ITEMS.map((item) => {
+          const qty = cart[item.key];
           return (
-            <div key={card.type} onClick={() => setSelectedSheet(card.type)} className={`p-3 rounded border-2 cursor-pointer transition-all flex flex-col justify-between gap-2 ${active ? 'border-[#9a3412] bg-amber-500/10' : 'border-[var(--cordel-border-sub)] bg-[var(--cordel-surface)] hover:border-amber-600/60'}`}>
-              <div>
-                <div className="flex items-center justify-between gap-2 mb-1">
-                  <span className="font-bold text-theme-ink flex items-center gap-1.5"><Icon className="w-4 h-4 text-[#9a3412] dark:text-amber-300 shrink-0" /><span>{isBr ? card.titleBr : card.titleFr}</span></span>
-                  <span className="px-1.5 py-0.5 text-[10px] font-bold border border-current rounded">[{card.code}]</span>
+            <div key={item.key} className={`p-2.5 rounded border-2 flex flex-wrap items-center justify-between gap-2 transition-all ${qty > 0 ? 'border-[#9a3412] bg-amber-500/10' : 'border-[var(--cordel-border-sub)] bg-[var(--cordel-surface)] opacity-80'}`}>
+              <div className="min-w-[220px] flex-1">
+                <div className="flex items-center gap-2 font-bold">
+                  <span>{isBr ? item.titleBr : item.titleFr}</span>
+                  <span className="px-1.5 py-0.2 text-[10px] border border-current rounded">[{item.code}]</span>
                 </div>
-                <p className="text-[11px] opacity-85 leading-snug">{isBr ? card.descBr : card.descFr}</p>
+                <p className="text-[10.5px] opacity-80 mt-0.5">{isBr ? item.descBr : item.descFr}</p>
               </div>
-              <div className="flex items-center justify-between pt-1.5 border-t border-[var(--cordel-border-sub)]">
-                <span className="text-[10px] font-bold uppercase opacity-75">A4 {card.orientation === 'landscape' ? (isBr ? 'Paisagem' : 'Paysage') : (isBr ? 'Retrato' : 'Portrait')} • 100 % N&B</span>
-                <button type="button" onClick={(e) => { e.stopPropagation(); handlePrint(card.type); }} className="px-2.5 py-1 rounded bg-[#9a3412] hover:bg-[#7c2d12] text-white font-bold flex items-center gap-1 cursor-pointer">
-                  <Printer className="w-3.5 h-3.5" /><span>{isBr ? 'Imprimir A4' : 'Imprimer A4'}</span>
+              <div className="flex flex-wrap items-center gap-1.5">
+                <div className="inline-flex items-center border border-[var(--cordel-border-sub)] rounded overflow-hidden bg-[var(--cordel-surface)]">
+                  <button type="button" onClick={() => setQty(item.key, qty - 1)} className="px-2 py-1 font-black hover:bg-black/10 cursor-pointer">-</button>
+                  <span className="w-8 text-center font-black">{qty}</span>
+                  <button type="button" onClick={() => setQty(item.key, qty + 1)} className="px-2 py-1 font-black hover:bg-black/10 cursor-pointer">+</button>
+                </div>
+                <div className="inline-flex items-center gap-1">
+                  {[0, 1, 3, 6].map((preset) => (
+                    <button key={preset} type="button" onClick={() => setQty(item.key, preset)} className={`px-1.5 py-0.5 rounded text-[10px] font-bold border cursor-pointer ${qty === preset ? 'bg-[#9a3412] text-white border-[#9a3412]' : 'border-[var(--cordel-border-sub)] bg-[var(--cordel-surface)]'}`}>{preset}</button>
+                  ))}
+                </div>
+                <button type="button" onClick={() => setPreviewSheet(previewSheet === item.sheetType ? null : item.sheetType)} className="px-2 py-1 rounded cordel-btn font-bold flex items-center gap-1 cursor-pointer">
+                  <Eye className="w-3.5 h-3.5" /><span>{isBr ? 'Prévia' : 'Aperçu'}</span>
                 </button>
               </div>
             </div>
@@ -110,13 +114,24 @@ export const VocalPaperPrintTab: React.FC<VocalPaperPrintTabProps> = ({ project,
         })}
       </div>
 
-      <div className="flex items-center justify-between p-2.5 rounded bg-amber-500/10 border border-amber-500/40">
+      {previewSheet && (
+        <div className="p-2 rounded border-2 border-[#9a3412] bg-white text-black space-y-1.5">
+          <div className="flex items-center justify-between font-bold text-[11px]">
+            <span>{isBr ? 'Pré-visualização A4 Paisagem (100 % P&B)' : 'Aperçu A4 Paysage (100 % Noir & Blanc)'} — {previewSheet}</span>
+            <button type="button" onClick={() => setPreviewSheet(null)} className="px-1.5 py-0.5 rounded border border-black font-bold flex items-center gap-1 cursor-pointer"><X className="w-3 h-3" /><span>Fermer</span></button>
+          </div>
+          <iframe title="Aperçu feuille A4 Paysage" srcDoc={renderSingleSheetPreviewHTML({ ...baseOpts, sheetType: previewSheet })} className="w-full h-64 border border-black rounded bg-white" />
+        </div>
+      )}
+
+      <div className="flex flex-wrap items-center justify-between gap-2 p-2.5 rounded bg-amber-500/10 border border-amber-500/40">
         <div className="flex items-center gap-2 text-[11px] font-bold">
           <Check className="w-4 h-4 text-emerald-700 dark:text-emerald-400 shrink-0" />
-          <span>{isBr ? 'Zero cor / Zero cinza : hachuras P&B puras e 4 marcos ópticos ■ nos cantos.' : 'Zéro couleur / Zéro aplat gris : hachures N&B pures et 4 repères optiques ■ aux coins.'}</span>
+          <span>{isBr ? 'Abertura direta em A4 Paisagem • 100 % P&B monocromático.' : 'Ouverture directe en A4 Paysage • 100 % N&B monochrome strict.'}</span>
         </div>
-        <button type="button" onClick={() => handlePrint(selectedSheet)} className="px-3 py-1.5 rounded bg-[#9a3412] text-white font-bold flex items-center gap-1.5 cursor-pointer">
-          <Printer className="w-4 h-4" /><span>{isBr ? 'Imprimir folha selecionada' : 'Imprimer la feuille sélectionnée'}</span>
+        <button type="button" disabled={totalPages <= 0} onClick={handlePrintBatch} className="px-3.5 py-1.5 rounded bg-[#9a3412] hover:bg-[#7c2d12] disabled:opacity-40 text-white font-bold flex items-center gap-1.5 cursor-pointer">
+          <Printer className="w-4 h-4" />
+          <span>{isBr ? `Imprimir lote selecionado (${totalPages} folha(s) A4 Paisagem)` : `Imprimer le lot sélectionné (${totalPages} feuille${totalPages > 1 ? 's' : ''} A4 Paysage)`}</span>
         </button>
       </div>
     </div>

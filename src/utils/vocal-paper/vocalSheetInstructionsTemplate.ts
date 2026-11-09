@@ -1,7 +1,7 @@
 /**
  * vocalSheetInstructionsTemplate.ts
- * Feuille 4 : Guide & Conventions d'écriture Manuscrite A4 100 % Noir & Blanc ([CODE: CHANT-GUIDE]) (< 95 lignes).
- * Consultable directement dans l'onglet ou imprimable à la demande.
+ * Feuille 4 : Guide & Conventions d'écriture Manuscrite A4 Paysage 100 % Noir & Blanc ([CODE: CHANT-GUIDE]) (< 85 lignes).
+ * Consultable directement dans l'onglet ou imprimable dans le panier multi-feuilles.
  */
 import {
   renderFiducialCornersHTML,
@@ -10,23 +10,23 @@ import {
 
 export function renderVocalSheetInstructionsHTML(): string {
   return `
-    <div class="vocal-sheet-page">
+    <div class="vocal-sheet-page vocal-print-page">
       ${renderFiducialCornersHTML()}
-      <div style="border-bottom:2.5px solid #000;padding-bottom:4px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;">
+      <div style="border-bottom:2.5px solid #000000;padding-bottom:3px;margin-bottom:4px;display:flex;justify-content:space-between;align-items:center;">
         <div>
-          <div style="font-size:13pt;font-weight:900;text-transform:uppercase;">
-            FEUILLE 4 — GUIDE & CONVENTIONS D'ÉCRITURE MANUSCRITE DU CHANT
+          <div style="font-size:11.5pt;font-weight:900;text-transform:uppercase;">
+            FEUILLE 4 — GUIDE & CONVENTIONS D'ÉCRITURE MANUSCRITE DU CHANT (A4 PAYSAGE)
           </div>
-          <div style="font-size:8pt;font-weight:700;">
+          <div style="font-size:7.6pt;font-weight:700;">
             Mémo officiel O Girador (Cantador • Organizador • Sequenciador) — Impression 100 % Noir & Blanc
           </div>
         </div>
         ${renderOpticalSheetCodeBadge('CHANT-GUIDE')}
       </div>
 
-      <div style="display:flex;flex-direction:column;justify-content:flex-start;gap:2.5mm;flex:1;font-size:8.6pt;line-height:1.38;">
-        <div style="border:2px solid #000;padding:6px 8px;">
-          <div style="font-size:9.3pt;font-weight:900;text-transform:uppercase;border-bottom:1.5px solid #000;padding-bottom:2px;margin-bottom:4px;">
+      <div style="display:flex;flex-direction:column;justify-content:flex-start;gap:2.5mm;flex:1;font-size:8.2pt;line-height:1.34;">
+        <div style="border:2px solid #000000;padding:5px 8px;">
+          <div style="font-size:8.8pt;font-weight:900;text-transform:uppercase;border-bottom:1.5px solid #000000;padding-bottom:2px;margin-bottom:3px;">
             1. GRILLE UNIVERSELLE A4 PAYSAGE À « 8 TEMPS LIBRES (32 SUBDIVISIONS) »
           </div>
           <div>
@@ -38,8 +38,8 @@ export function renderVocalSheetInstructionsHTML(): string {
           </div>
         </div>
 
-        <div style="border:2px solid #000;padding:6px 8px;">
-          <div style="font-size:9.3pt;font-weight:900;text-transform:uppercase;border-bottom:1.5px solid #000;padding-bottom:2px;margin-bottom:4px;">
+        <div style="border:2px solid #000000;padding:5px 8px;">
+          <div style="font-size:8.8pt;font-weight:900;text-transform:uppercase;border-bottom:1.5px solid #000000;padding-bottom:2px;margin-bottom:3px;">
             2. TRAITS HORIZONTAUX DE NOTES / RYTHME (───) & BANDE « SYLLABES » OUVERTE (11.5MM)
           </div>
           <div>
@@ -49,22 +49,22 @@ export function renderVocalSheetInstructionsHTML(): string {
           </div>
         </div>
 
-        <div style="border:2px solid #000;padding:6px 8px;">
-          <div style="font-size:9.3pt;font-weight:900;text-transform:uppercase;border-bottom:1.5px solid #000;padding-bottom:2px;margin-bottom:4px;">
+        <div style="border:2px solid #000000;padding:5px 8px;">
+          <div style="font-size:8.8pt;font-weight:900;text-transform:uppercase;border-bottom:1.5px solid #000000;padding-bottom:2px;margin-bottom:3px;">
             3. PIANO ROLL 1 OCTAVE (GRAVE « A » EN BAS ➔ AIGU « G# » EN HAUT) & SÉQUENCE PUX / COR
           </div>
           <div>
             • <b>Clavier Piano Roll (12 demi-tons × 1.8mm = 21.6mm) :</b> les notes <b>montent de bas en haut</b> : <b>A</b> (en bas, juste au-dessus de SYLLABES) ➔ <b>A#</b> ➔ <b>B</b> ➔ <b>C</b> ➔ <b>C#</b> ➔ <b>D</b> ➔ <b>D#</b> ➔ <b>E</b> ➔ <b>F</b> ➔ <b>F#</b> ➔ <b>G</b> ➔ <b>G#</b> (en haut, sous OCT 3/4/5).<br/>
-            • Sur la <b>Feuille 1 (Séquence M1..M32)</b>, répartissez les codes <b>P1..Pn</b> sur les 2 lignes <b>Pux</b> et <b>Cor</b> (même code <b>P5/P5</b> = Unisson • <b>X/X</b> = Pause vocale).
+            • Sur la <b>Feuille 1 (Séquence M1..M32 A4 Paysage)</b>, répartissez les codes <b>P1..Pn</b> sur les 2 lignes <b>Pux</b> et <b>Cor</b> (même code <b>P5/P5</b> = Unisson • <b>X/X</b> = Pause vocale).
           </div>
         </div>
 
-        <div style="border:2px solid #000;padding:6px 8px;">
-          <div style="font-size:9.3pt;font-weight:900;text-transform:uppercase;border-bottom:1.5px solid #000;padding-bottom:2px;margin-bottom:4px;">
+        <div style="border:2px solid #000000;padding:5px 8px;">
+          <div style="font-size:8.8pt;font-weight:900;text-transform:uppercase;border-bottom:1.5px solid #000000;padding-bottom:2px;margin-bottom:3px;">
             4. PRISE DE PHOTO & IMPORT MULTI-PAGES
           </div>
           <div>
-            • Garder les <b>4 carrés noirs d'angle (■)</b> bien visibles dans le cadre de chaque photo (Feuille 1 Portrait, Feuille 2 Paysage 3 systèmes [P1]..[P3], Feuille 3 Paysage 6 systèmes).
+            • Garder les <b>4 carrés noirs d'angle (■)</b> bien visibles dans le cadre de chaque photo (Feuille 1 Paysage, Feuille 2 Paysage 3 systèmes [P1]..[P3], Feuille 3 Paysage 6 systèmes).
           </div>
         </div>
       </div>

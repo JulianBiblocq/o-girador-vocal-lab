@@ -1,12 +1,14 @@
 /**
  * vocalPaperWorkshop.types.ts
- * Contrat de données de l'Atelier Papier du Chant (Impression A4 100 % N&B & Lecture Optique Multi-Photos) (< 115 lignes).
+ * Contrat de données de l'Atelier Papier du Chant (Impression A4 Paysage 100 % N&B & Lecture Optique Multi-Photos) (< 120 lignes).
  * Séparation stricte : Patterns neutres (P1..Pn) sur les feuilles de motifs, attribution Pux/Cor sur la Feuille Séquence.
  */
 import type { TimeSignatureString } from './vocalPack.types';
 import type { ScaleType } from '../audio/scaleQuantizer';
 
 export type VocalSheetType = 'sequence' | 'notes_1m' | 'notes_2m' | 'rhythm_only' | 'instructions';
+
+export type VocalPatternNumberingMode = 'blank' | 'continuous' | 'per_sheet';
 
 export type VocalSheetOpticalCode =
   | 'CHANT-SEQ'
@@ -29,8 +31,17 @@ export interface VocalPaperPrintOptions {
   scaleMode?: ScaleType;
   patternsCount?: number;
   startPatternNumber?: number;
+  patternNumberingMode?: VocalPatternNumberingMode;
+  blankPatternLabels?: boolean;
   rhythmMeasuresPerLine?: 1 | 2;
   prefillFromProject?: boolean;
+}
+
+export interface VocalPaperCartQuantities {
+  sequence: number;
+  notes: number;
+  rhythm: number;
+  instructions: number;
 }
 
 export interface ScannedVocalStepCell {
@@ -103,4 +114,3 @@ export interface VocalPaperImportTargetConfig {
   syncToOrganizador: boolean;
   syncToSequenciador: boolean;
 }
-
