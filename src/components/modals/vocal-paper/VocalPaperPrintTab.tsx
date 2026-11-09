@@ -39,10 +39,10 @@ const SHEET_CARDS: Array<{ type: VocalSheetType; code: string; titleFr: string; 
     descBr: '4 blocos neutros [Pattern : P__] de 2 compassos por página A4 Paisagem • Teclado Lá ➔ Sol# e SÍLABAS aberta.',
   },
   {
-    type: 'rhythm_only', code: 'CHANT-RYTHME', orientation: 'portrait',
-    titleFr: 'Feuille 3 — Paroles & Rythme Seul (Sans Notes)', titleBr: 'Folha 3 — Letra e Ritmo (Sem Notas)',
-    descFr: '6 blocs neutres [Pattern : P__] : piste RYTHME / DURÉE (4 sous-cases/temps) + grande bande SYLLABES ouverte.',
-    descBr: '6 blocos neutros [Pattern : P__] : pista RITMO / DURAÇÃO (4 sub-casas/tempo) + faixa SÍLABAS aberta.',
+    type: 'rhythm_only', code: 'CHANT-RYTHME', orientation: 'landscape',
+    titleFr: 'Feuille 3 — Paroles & Rythme Seul (Paysage Grand Confort)', titleBr: 'Folha 3 — Letra e Ritmo (Paisagem Grande Conforto)',
+    descFr: '7 lignes P1..P7 par page A4 Paysage (13mm à gauche, ~38mm/temps) : bande RYTHME (5.5mm, 4 sous-cases) + bande SYLLABES ouverte (11mm).',
+    descBr: '7 linhas P1..P7 por página A4 Paisagem (13mm à esq., ~38mm/tempo) : faixa RITMO (5.5mm, 4 sub-casas) + faixa SÍLABAS aberta (11mm).',
   },
   {
     type: 'instructions', code: 'CHANT-GUIDE', orientation: 'portrait',
@@ -57,7 +57,7 @@ export function triggerVocalSheetPrint(options: VocalPaperPrintOptions): void {
   if (options.sheetType === 'sequence') innerHtml = renderVocalSheetSequenceHTML(options);
   else if (options.sheetType === 'notes_1m') innerHtml = renderVocalSheetNotesHTML(options);
   else if (options.sheetType === 'notes_2m') { innerHtml = renderVocalSheetNotesHTML(options); orientation = 'landscape'; }
-  else if (options.sheetType === 'rhythm_only') innerHtml = renderVocalSheetRhythmHTML({ ...options, patternsCount: 6 });
+  else if (options.sheetType === 'rhythm_only') { innerHtml = renderVocalSheetRhythmHTML({ ...options, patternsCount: 7 }); orientation = 'landscape'; }
   else innerHtml = renderVocalSheetInstructionsHTML();
   printViaInvisibleIframe(wrapVocalSheetA4Document(innerHtml, orientation, `Atelier Papier — ${options.sheetType}`), `Atelier Papier — ${options.sheetType}`);
 }
@@ -67,11 +67,12 @@ export const VocalPaperPrintTab: React.FC<VocalPaperPrintTabProps> = ({ project,
   const [selectedSheet, setSelectedSheet] = useState<VocalSheetType>('sequence');
   const [prefillHeader, setPrefillHeader] = useState(true);
   const [startPatternNumber, setStartPatternNumber] = useState(1);
+  const [rhythmMeasuresPerLine, setRhythmMeasuresPerLine] = useState<1 | 2>(1);
 
   const handlePrint = (sheetType: VocalSheetType) => triggerVocalSheetPrint({
     sheetType, title: prefillHeader ? project.title : '', bpm: prefillHeader ? project.bpm : undefined,
     timeSignature: project.timeSignature || '4/4', sungKey: prefillHeader ? dual.sungScaleLabel : '',
-    troupeKey: prefillHeader ? dual.troupeScaleLabel : '', startPatternNumber,
+    troupeKey: prefillHeader ? dual.troupeScaleLabel : '', startPatternNumber, rhythmMeasuresPerLine,
   });
 
   return (
@@ -81,11 +82,20 @@ export const VocalPaperPrintTab: React.FC<VocalPaperPrintTabProps> = ({ project,
           <input type="checkbox" checked={prefillHeader} onChange={(e) => setPrefillHeader(e.target.checked)} className="accent-[#9a3412]" />
           <span>{isBr ? `Pré-preencher cabeçalho (${project.title} • ${project.bpm} BPM)` : `Pré-remplir l'en-tête (${project.title} • ${project.bpm} BPM)`}</span>
         </label>
-        <div className="inline-flex items-center gap-1.5">
-          <span className="font-bold">{isBr ? 'Numeração inicial :' : 'Numérotation départ :'}</span>
-          <select value={startPatternNumber} onChange={(e) => setStartPatternNumber(Number(e.target.value))} className="bg-[var(--cordel-surface)] border border-[var(--cordel-border-sub)] rounded px-2 py-0.5 font-bold">
-            {[1, 4, 6, 7, 9, 11].map((n) => <option key={n} value={n}>P{n} ➔ P{n + 4}</option>)}
-          </select>
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="inline-flex items-center gap-1.5">
+            <span className="font-bold">{isBr ? 'Feuille 3 (Rythme) :' : 'Feuille 3 (Rythme) :'}</span>
+            <select value={rhythmMeasuresPerLine} onChange={(e) => setRhythmMeasuresPerLine(Number(e.target.value) as 1 | 2)} className="bg-[var(--cordel-surface)] border border-[var(--cordel-border-sub)] rounded px-2 py-0.5 font-bold">
+              <option value={1}>{isBr ? '1 Compasso / linha (Casas largas)' : '1 Mesure / ligne (Cases très larges)'}</option>
+              <option value={2}>{isBr ? '2 Compassos / linha (Paisagem)' : '2 Mesures / ligne (Paysage)'}</option>
+            </select>
+          </div>
+          <div className="inline-flex items-center gap-1.5">
+            <span className="font-bold">{isBr ? 'Numeração inicial :' : 'Numérotation départ :'}</span>
+            <select value={startPatternNumber} onChange={(e) => setStartPatternNumber(Number(e.target.value))} className="bg-[var(--cordel-surface)] border border-[var(--cordel-border-sub)] rounded px-2 py-0.5 font-bold">
+              {[1, 6, 8, 11, 15].map((n) => <option key={n} value={n}>P{n} ➔ P{n + 6}</option>)}
+            </select>
+          </div>
         </div>
       </div>
 

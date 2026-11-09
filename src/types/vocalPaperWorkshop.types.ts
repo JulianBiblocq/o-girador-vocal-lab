@@ -39,6 +39,7 @@ export interface VocalPaperPrintOptions {
   scaleMode?: ScaleType;
   patternsCount?: number;
   startPatternNumber?: number;
+  rhythmMeasuresPerLine?: 1 | 2;
   prefillFromProject?: boolean;
 }
 

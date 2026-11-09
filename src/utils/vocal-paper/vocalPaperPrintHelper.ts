@@ -55,7 +55,8 @@ export function wrapVocalSheetA4Document(
       color: #000;
       display: flex;
       flex-direction: column;
-      justify-content: space-between;
+      justify-content: flex-start;
+      gap: 2mm;
       overflow: hidden;
       page-break-inside: avoid;
       break-inside: avoid;

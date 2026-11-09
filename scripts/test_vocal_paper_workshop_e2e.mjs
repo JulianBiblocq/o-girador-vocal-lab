@@ -46,7 +46,8 @@ console.log('=== TEST E2E : ATELIER PAPIER DU CHANT (CANTADOR • ORGANIZADOR �
   const seqHtml = wrapVocalSheetA4Document(renderVocalSheetSequenceHTML({ sheetType: 'sequence', title: 'Vovó falou', bpm: 85 }), 'portrait');
   const notes1mHtml = wrapVocalSheetA4Document(renderVocalSheetNotesHTML({ sheetType: 'notes_1m', title: 'Vovó falou', bpm: 85 }), 'portrait');
   const notes2mHtml = wrapVocalSheetA4Document(renderVocalSheetNotesHTML({ sheetType: 'notes_2m', title: 'Vovó falou', bpm: 85 }), 'landscape');
-  const rhythmHtml = wrapVocalSheetA4Document(renderVocalSheetRhythmHTML({ sheetType: 'rhythm_only', title: 'Vovó falou', bpm: 85 }), 'portrait');
+  const rhythmHtml = wrapVocalSheetA4Document(renderVocalSheetRhythmHTML({ sheetType: 'rhythm_only', title: 'Vovó falou', bpm: 85 }), 'landscape');
+  const rhythm2mHtml = wrapVocalSheetA4Document(renderVocalSheetRhythmHTML({ sheetType: 'rhythm_only', title: 'Vovó falou', bpm: 85, rhythmMeasuresPerLine: 2 }), 'landscape');
   const guideHtml = wrapVocalSheetA4Document(renderVocalSheetInstructionsHTML(), 'portrait');
 
   for (const [label, html, expectedCode] of [
@@ -58,6 +59,13 @@ console.log('=== TEST E2E : ATELIER PAPIER DU CHANT (CANTADOR • ORGANIZADOR �
   ]) {
     assert.ok(html.includes(expectedCode), `${label} doit contenir ${expectedCode}`);
     assert.ok(html.includes('fiducial-tl') && html.includes('fiducial-tr') && html.includes('fiducial-bl') && html.includes('fiducial-br'), `${label} doit contenir les 4 repères ■`);
+    assert.ok(!html.includes('flex-direction:column;justify-content:space-between'), `${label} ne doit pas utiliser justify-content:space-between entre les blocs`);
+    assert.ok(html.includes('gap:2mm') || html.includes('gap: 2mm'), `${label} doit utiliser gap: 2mm`);
+  }
+
+  // Conservation des numéros de mesures M1..M32 sur CHANT-SEQ
+  for (const m of [1, 8, 9, 16, 17, 24, 25, 32]) {
+    assert.ok(seqHtml.includes(`>M${m}<`), `CHANT-SEQ doit conserver le numéro de mesure M${m}`);
   }
 
   // Clavier 1 octave commençant par La (La, Si♭, Si, Do, Do#, Ré, Mi♭, Mi, Fa, Fa#, Sol, Sol#)
@@ -77,22 +85,32 @@ console.log('=== TEST E2E : ATELIER PAPIER DU CHANT (CANTADOR • ORGANIZADOR �
   }
   assert.ok(!notes2mHtml.includes('[ PATTERN : P5 ]'), 'CHANT-NOTES-2M doit contenir exactement 4 blocs par défaut');
 
+  // Vérification de la Feuille 3 (CHANT-RYTHME) en A4 Paysage Grand Confort : 7 lignes (P1..P7), cartouche 13mm, RYTHME 5.5mm + SYLLABES ouverte 11mm (colspan="4")
+  assert.ok(rhythmHtml.includes('size: A4 landscape'), 'CHANT-RYTHME doit être en A4 landscape');
+  for (let p = 1; p <= 7; p++) {
+    assert.ok(rhythmHtml.includes(`>P${p}<`), `CHANT-RYTHME doit contenir le cartouche P${p}`);
+  }
+  assert.ok(!rhythmHtml.includes('>P8<'), 'CHANT-RYTHME doit empiler exactement 7 lignes par page A4 Paysage');
+  assert.ok(rhythmHtml.includes('width:13mm') && rhythmHtml.includes('height:5.5mm') && rhythmHtml.includes('height:11mm') && rhythmHtml.includes('colspan="4"'), 'CHANT-RYTHME : cartouche gauche 13mm, bande RYTHME 5.5mm et bande SYLLABES ouverte 11mm (colspan="4")');
+  assert.ok(rhythm2mHtml.includes('M1•T1') && rhythm2mHtml.includes('M2•T4'), 'CHANT-RYTHME supporte l’option 2 Mesures par ligne en Paysage');
+
   // Vérification du clavier ultra-compact (2.2mm, 12mm), bande OCTAVE (6mm, colspan="4") et bande SYLLABES ouverte (9.5mm, colspan="4")
   assert.ok(notes1mHtml.includes('width:12mm') && notes1mHtml.includes('height:2.2mm'), 'Clavier ultra-compact (12mm x 2.2mm)');
   assert.ok(notes1mHtml.includes('colspan="4"') && notes1mHtml.includes('height:6mm') && notes1mHtml.includes('height:9.5mm'), 'Bandes OCTAVE (6mm) et SYLLABES (9.5mm) ouvertes avec colspan="4"');
-  assert.ok(rhythmHtml.includes('RYTHME') && rhythmHtml.includes('height:4.5mm') && rhythmHtml.includes('height:9.5mm'), 'CHANT-RYTHME doit avoir la piste RYTHME / DURÉE (4.5mm) et la bande SYLLABES ouverte (9.5mm)');
 
   // Absence de cases à cocher manuelles Anacrouse / Chute dans les blocs
   assert.ok(!notes1mHtml.includes('Anacrouse (Ana T3-T4)') && !notes1mHtml.includes('Chute (+T1)'), 'Aucune case à cocher manuelle Anacrouse/Chute sur CHANT-NOTES-1M');
   assert.ok(!rhythmHtml.includes('Chute +T1'), 'Aucune case à cocher manuelle Anacrouse/Chute sur CHANT-RYTHME');
 
-  // Vérification également sur Organizador (5 blocs en 1M, 4 blocs en 2M)
+  // Vérification également sur Organizador (5 blocs en 1M, 4 blocs en 2M, 7 lignes en Paysage sur CHANT-RYTHME)
   const orgNotesHtml = buildOrganizadorVocalSheetHTML('notes_1m', { titre: 'Vovó falou', bpmDefaut: 85 });
   const orgNotes2mHtml = buildOrganizadorVocalSheetHTML('notes_2m', { titre: 'Vovó falou', bpmDefaut: 85 });
+  const orgRhythmHtml = buildOrganizadorVocalSheetHTML('rhythm_only', { titre: 'Vovó falou', bpmDefaut: 85 });
   assert.ok(orgNotesHtml.includes('[CODE: CHANT-NOTES-1M]') && orgNotesHtml.includes('hatch-bw') && orgNotesHtml.includes('OCT / ±'));
   assert.ok(orgNotesHtml.includes('[ PATTERN : P5 ]') && !orgNotesHtml.includes('[ PATTERN : P6 ]'), 'Organizador CHANT-NOTES-1M = 5 blocs');
   assert.ok(orgNotes2mHtml.includes('[ PATTERN : P4 ]') && !orgNotes2mHtml.includes('[ PATTERN : P5 ]'), 'Organizador CHANT-NOTES-2M = 4 blocs');
-  console.log('✓ 1. Rendu HTML A4 100 % N&B (5 blocs 1M Portrait, 4 blocs 2M Paysage, clavier 2.2mm, OCTAVE 6mm, SYLLABES ouverte 9.5mm, zéro case à cocher) validé.');
+  assert.ok(orgRhythmHtml.includes('size:A4 landscape') && orgRhythmHtml.includes('>P7<') && orgRhythmHtml.includes('height:5.5mm') && orgRhythmHtml.includes('height:11mm'), 'Organizador CHANT-RYTHME = A4 Paysage, 7 lignes, RYTHME 5.5mm + SYLLABES 11mm');
+  console.log('✓ 1. Rendu HTML A4 100 % N&B (CHANT-RYTHME Paysage 7 lignes 5.5mm/11mm, 5 blocs 1M, 4 blocs 2M, gap: 2mm sans space-between) validé.');
 }
 
 // ---------------------------------------------------------------------------

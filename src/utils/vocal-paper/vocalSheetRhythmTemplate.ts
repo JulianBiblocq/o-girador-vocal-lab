@@ -1,7 +1,7 @@
 /**
  * vocalSheetRhythmTemplate.ts
- * Feuille 3 : Paroles & Rythme Seul A4 Portrait 100 % Noir & Blanc ([CODE: CHANT-RYTHME]) (< 105 lignes).
- * Piste RYTHME / DURÉE (4.5mm, 4 sous-cases/temps pour traits ───) + Bande SYLLABES ouverte (9.5mm, colspan=4 sans sous-cases).
+ * Feuille 3 : Paroles & Rythme Seul A4 Paysage Grand Confort ([CODE: CHANT-RYTHME], 7 lignes/page) (< 95 lignes).
+ * Cartouche vertical gauche P__ (13mm), bande RYTHME (5.5mm, 4 sous-cases/temps) + bande SYLLABES ouverte (11mm, colspan=4).
  */
 import type { VocalPaperPrintOptions } from '../../types/vocalPaperWorkshop.types';
 import {
@@ -10,67 +10,56 @@ import {
 } from './vocalPaperPrintHelper';
 
 export function renderVocalSheetRhythmHTML(options: VocalPaperPrintOptions): string {
-  const blocksCount = options.patternsCount ?? 6;
+  const blocksCount = options.patternsCount ?? 7;
   const startP = options.startPatternNumber ?? 1;
+  const measuresPerLine: 1 | 2 = options.rhythmMeasuresPerLine ?? 1;
   const titleText = options.title?.trim() ? options.title.trim().toUpperCase() : '______________________';
 
-  const beatGroups = [
+  const beatGroups: Array<{ label: string; sep: string }> = [
     { label: 'ANA T3', sep: 'beat-sep-right' },
     { label: 'ANA T4', sep: 'measure-sep-right' },
-    { label: 'TEMPS 1', sep: 'beat-sep-right' },
-    { label: 'TEMPS 2', sep: 'beat-sep-right' },
-    { label: 'TEMPS 3', sep: 'beat-sep-right' },
-    { label: 'TEMPS 4', sep: 'measure-sep-right' },
-    { label: '+T1 (CHUTE)', sep: '' },
   ];
+  const totalMainBeats = measuresPerLine * 4;
+  for (let b = 1; b <= totalMainBeats; b++) {
+    const mNum = Math.floor((b - 1) / 4) + 1, bInM = ((b - 1) % 4) + 1;
+    beatGroups.push({
+      label: measuresPerLine > 1 ? `M${mNum}•T${bInM}` : `TEMPS ${bInM}`,
+      sep: bInM === 4 ? 'measure-sep-right' : 'beat-sep-right',
+    });
+  }
+  beatGroups.push({ label: '+T1 (CHUTE)', sep: '' });
 
   const renderBlock = (idx: number) => {
     const patNum = startP + idx;
     const headers = beatGroups
-      .map((bg) => `<th colspan="4" class="${bg.sep}" style="height:3.2mm;font-size:6.8pt;font-weight:900;">${bg.label}</th>`)
-      .join('');
-    const subNums = beatGroups
-      .map((bg) =>
-        [1, 2, 3, 4]
-          .map((s) => `<td class="${s === 4 ? bg.sep : ''}" style="height:2.4mm;font-size:5.6pt;font-weight:700;">${s}</td>`)
-          .join('')
-      )
+      .map((bg) => `<th colspan="4" class="${bg.sep}" style="height:3.2mm;font-size:6.4pt;font-weight:900;">${bg.label}</th>`)
       .join('');
     const rhythmCells = beatGroups
       .map((bg) =>
         [1, 2, 3, 4]
-          .map((s) => `<td class="${s === 4 ? bg.sep : ''}" style="height:4.5mm;font-size:7pt;font-weight:900;"></td>`)
+          .map((s) => `<td class="${s === 4 ? bg.sep : ''}" style="height:5.5mm;vertical-align:top;text-align:left;padding:0.2mm 0.6mm;font-size:4.8pt;font-weight:700;line-height:1;">${s}</td>`)
           .join('')
       )
       .join('');
     const openSylBands = beatGroups
-      .map((bg) => `<td colspan="4" class="${bg.sep} open-beat-cell" style="height:9.5mm;font-size:8.2pt;font-weight:900;"></td>`)
+      .map((bg) => `<td colspan="4" class="${bg.sep} open-beat-cell" style="height:11mm;font-size:8.5pt;font-weight:900;"></td>`)
       .join('');
 
     return `
-      <div class="vocal-pattern-block" style="border:2px solid #000;margin-bottom:2mm;page-break-inside:avoid;break-inside:avoid;">
-        <div style="padding:0.8mm 5px;border-bottom:1.5px solid #000;display:flex;justify-content:space-between;align-items:center;font-size:7.4pt;font-weight:900;">
-          <span>[ PATTERN : P${patNum} ]</span>
-          <span style="font-size:6.2pt;font-weight:700;">Trait horizontal (───) dans RYTHME / DURÉE • Syllabes dessous • Ana T3-T4 & +T1 auto</span>
-        </div>
+      <div class="vocal-pattern-block" style="border:2px solid #000;page-break-inside:avoid;break-inside:avoid;">
         <table>
-          <thead>
+          <tbody>
             <tr>
-              <th style="width:12mm;font-size:6pt;font-weight:900;border-right:2px solid #000;">TEMPS</th>
+              <th rowspan="3" style="width:13mm;border-right:2px solid #000;padding:0 1px;line-height:1.05;">
+                <div style="font-size:8.5pt;font-weight:900;">P${patNum}</div>
+                <div style="font-size:4.6pt;font-weight:800;margin-top:0.5mm;">RYTHME (───)<br/>▼<br/>SYLLABES</div>
+              </th>
               ${headers}
             </tr>
-            <tr>
-              <td style="width:12mm;font-size:5.5pt;font-weight:800;border-right:2px solid #000;">1e..4e</td>
-              ${subNums}
-            </tr>
-          </thead>
-          <tbody>
-            <tr style="border-top:1.8px solid #000;">
-              <td style="width:12mm;height:4.5mm;font-size:5.5pt;font-weight:900;border-right:2px solid #000;line-height:1.05;">RYTHME<br/>/ DURÉE</td>
+            <tr style="border-top:1.5px solid #000;">
               ${rhythmCells}
             </tr>
             <tr style="border-top:2px solid #000;">
-              <td style="width:12mm;height:9.5mm;font-size:6pt;font-weight:900;border-right:2px solid #000;">SYLLABES</td>
               ${openSylBands}
             </tr>
           </tbody>
@@ -84,18 +73,14 @@ export function renderVocalSheetRhythmHTML(options: VocalPaperPrintOptions): str
   return `
     <div class="vocal-sheet-page">
       ${renderFiducialCornersHTML()}
-      <div style="border-bottom:2px solid #000;padding-bottom:2px;margin-bottom:3px;display:flex;justify-content:space-between;align-items:center;">
-        <div>
-          <div style="font-size:10.5pt;font-weight:900;text-transform:uppercase;">
-            FEUILLE 3 — PAROLES & RYTHME SEUL (SANS CLAVIER DE NOTES)
-          </div>
-          <div style="font-size:6.8pt;font-weight:700;">
-            TITRE : ${titleText} • Tracer un trait (───) dans RYTHME / DURÉE • Écrire la SYLLABE dessous • Tiret "-" = même mot • "E'O" = élision
-          </div>
+      <div style="height:6.5mm;max-height:7mm;border-bottom:2px solid #000;padding-bottom:1mm;display:flex;justify-content:space-between;align-items:center;">
+        <div style="display:flex;align-items:baseline;gap:6px;overflow:hidden;white-space:nowrap;">
+          <span style="font-size:9.5pt;font-weight:900;text-transform:uppercase;">FEUILLE 3 — PAROLES & RYTHME (${measuresPerLine}M / LIGNE • PAYSAGE)</span>
+          <span style="font-size:6.5pt;font-weight:700;">• TITRE : ${titleText} • Haut = Trait RYTHME (───) • Bas = SYLLABES (sans sous-cases) • "-" = même mot</span>
         </div>
         ${renderOpticalSheetCodeBadge('CHANT-RYTHME')}
       </div>
-      <div style="flex:1;display:flex;flex-direction:column;justify-content:space-between;">
+      <div style="flex:1;display:flex;flex-direction:column;justify-content:flex-start;gap:2mm;">
         ${blocksHtml}
       </div>
     </div>

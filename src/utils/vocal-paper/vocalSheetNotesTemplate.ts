@@ -67,7 +67,7 @@ export function renderVocalSheetNotesHTML(options: VocalPaperPrintOptions): stri
     }).join('');
 
     return `
-      <div class="vocal-pattern-block" style="border:2px solid #000;margin-bottom:1.2mm;page-break-inside:avoid;break-inside:avoid;">
+      <div class="vocal-pattern-block" style="border:2px solid #000;page-break-inside:avoid;break-inside:avoid;">
         <div style="padding:0.6mm 4px;border-bottom:1.5px solid #000;display:flex;justify-content:space-between;align-items:center;font-size:7pt;font-weight:900;line-height:1.1;">
           <span>[ PATTERN : P${patNum} ]</span>
           <span style="font-size:6pt;font-weight:700;">Trait horizontal (───) = attaque & durée • Ana T3-T4 & +T1 détectés automatiquement</span>
@@ -85,13 +85,13 @@ export function renderVocalSheetNotesHTML(options: VocalPaperPrintOptions): stri
   return `
     <div class="vocal-sheet-page">
       ${renderFiducialCornersHTML()}
-      <div style="border-bottom:2px solid #000;padding-bottom:1.5px;margin-bottom:2px;display:flex;justify-content:space-between;align-items:center;">
-        <div>
-          <div style="font-size:9.8pt;font-weight:900;text-transform:uppercase;">FEUILLE 2 — PATTERNS & NOTES (${is2M ? 'PAYSAGE • 4 BLOCS DE 2 MESURES' : 'PORTRAIT • 5 BLOCS DE 1 MESURE'})</div>
-          <div style="font-size:6.6pt;font-weight:700;">Clavier 1 octave (La ➔ Sol#) • Tracer un trait horizontal (───) pour la note • Écrire les SYLLABES sous le début du trait</div>
+      <div style="height:6.5mm;max-height:7mm;border-bottom:2px solid #000;padding-bottom:1mm;display:flex;justify-content:space-between;align-items:center;">
+        <div style="display:flex;align-items:baseline;gap:6px;overflow:hidden;white-space:nowrap;">
+          <span style="font-size:9.2pt;font-weight:900;text-transform:uppercase;">FEUILLE 2 — PATTERNS & NOTES (${is2M ? 'PAYSAGE • 4 BLOCS DE 2 MESURES' : 'PORTRAIT • 5 BLOCS DE 1 MESURE'})</span>
+          <span style="font-size:6.3pt;font-weight:700;">• Clavier La➔Sol# • Trait horizontal (───) = note • SYLLABES sous le début du trait</span>
         </div>
         ${renderOpticalSheetCodeBadge(code)}
       </div>
-      <div style="flex:1;display:flex;flex-direction:column;justify-content:space-between;">${Array.from({ length: blocksCount }, (_, i) => renderSinglePatternBlock(i)).join('')}</div>
+      <div style="flex:1;display:flex;flex-direction:column;justify-content:flex-start;gap:2mm;">${Array.from({ length: blocksCount }, (_, i) => renderSinglePatternBlock(i)).join('')}</div>
     </div>`;
 }

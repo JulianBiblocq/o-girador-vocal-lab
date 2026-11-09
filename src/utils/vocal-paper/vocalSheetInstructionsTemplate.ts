@@ -24,7 +24,7 @@ export function renderVocalSheetInstructionsHTML(): string {
         ${renderOpticalSheetCodeBadge('CHANT-GUIDE')}
       </div>
 
-      <div style="display:flex;flex-direction:column;gap:8px;flex:1;font-size:8.8pt;line-height:1.4;">
+      <div style="display:flex;flex-direction:column;justify-content:flex-start;gap:2mm;flex:1;font-size:8.8pt;line-height:1.4;">
         <div style="border:2px solid #000;padding:6px 8px;">
           <div style="font-size:9.5pt;font-weight:900;text-transform:uppercase;border-bottom:1.5px solid #000;padding-bottom:2px;margin-bottom:4px;">
             1. SÉPARATION STRICTE PATTERNS NEUTRES (P1..Pn) / RÔLES (FEUILLE SÉQUENCE)
@@ -46,8 +46,8 @@ export function renderVocalSheetInstructionsHTML(): string {
             2. TRAITS HORIZONTAUX DE NOTES (───) & BANDE « SYLLABES » OUVERTE (SANS SOUS-CASES)
           </div>
           <div>
-            • <b>Trait horizontal (───) :</b> Tracer un trait horizontal dans la ligne de la note (ou dans la piste <i>RYTHME / DURÉE</i> sur la Feuille 3) en partant de la double-croche d'attaque (1, 2, 3 ou 4) jusqu'à la fin de sa durée.<br/>
-            • <b>Bande SYLLABES ouverte (9.5mm) :</b> Sans cloisons de doubles-croches pour écrire confortablement en <b>MAJUSCULES BÂTONS</b> juste sous le début de chaque trait de note.<br/>
+            • <b>Trait horizontal (───) :</b> Tracer un trait horizontal dans la ligne de la note (ou dans la bande supérieure <i>RYTHME</i> de 5.5mm sur la Feuille 3 Paysage) en partant de la double-croche d'attaque (1, 2, 3 ou 4) jusqu'à la fin de sa durée.<br/>
+            • <b>Bande SYLLABES ouverte (9.5mm / 11mm) :</b> Sans cloisons de doubles-croches pour écrire confortablement en <b>MAJUSCULES BÂTONS</b> juste sous le début de chaque trait.<br/>
             • <b>Tiret "-" :</b> Soude les syllabes d'un même mot (ex: <b>VO-</b> &nbsp; <b>VÓ</b> &nbsp; <b>FA-</b> &nbsp; <b>LOU</b>) • <b>Apostrophe :</b> Élision sur une même attaque (ex: <b>E'O</b>, <b>D'Á-</b>).
           </div>
         </div>
