@@ -1,7 +1,7 @@
 /**
  * vocalPaperToProjectConverter.ts
- * Conversion d'un résultat de lecture optique multi-photos (VocalPaperBatchScanResult) en ToadaProject (< 138 lignes).
- * Gère le clavier 1 octave (La -> Sol#), l'anacrouse T3-T4, le débordement +T1, l'alignement Organizador et l'Unisson Pux/Cor.
+ * Conversion d'un résultat de lecture optique multi-photos (VocalPaperBatchScanResult) en ToadaProject (< 135 lignes).
+ * Gère le clavier 1 octave (La -> Sol#), les traits horizontaux (durationSteps), l'auto-détection Ana T3-T4 / +T1 et l'Unisson Pux/Cor.
  */
 import type {
   VocalPaperBatchScanResult, ScannedVocalPatternBlock, ScannedVocalStepCell, VocalPaperImportTargetConfig,
@@ -35,41 +35,45 @@ export function midiToScientificNote(midi: number): string {
   return `${MIDI_NOTE_NAMES[safe % 12]}${Math.floor(safe / 12) - 1}`;
 }
 
+export function hasActiveScannedCells(cells?: ScannedVocalStepCell[]): boolean {
+  return Array.isArray(cells) && cells.some((c) => {
+    const s = (c?.syllable || '').trim();
+    return Boolean(c && (c.isTie || (c.pitchKey && String(c.pitchKey).trim()) || (c.durationSteps && c.durationSteps > 0) || (s && s !== '_')));
+  });
+}
+
 function formatSylCase(raw: string, isFirst: boolean): string {
   const trimmed = raw.trim().replace(/-+$/, '').replace(/[’‘]/g, "'");
   if (!trimmed) return '';
-  const isAllUpper = trimmed === trimmed.toUpperCase() && trimmed !== trimmed.toLowerCase();
-  const base = isAllUpper ? trimmed.toLowerCase() : trimmed;
+  const base = trimmed === trimmed.toUpperCase() && trimmed !== trimmed.toLowerCase() ? trimmed.toLowerCase() : trimmed;
   return isFirst ? base.charAt(0).toUpperCase() + base.slice(1) : base;
 }
 
 export function buildStepsAndLyricsFromScannedBlock(
   block: ScannedVocalPatternBlock, baseA3Midi = 57
-): { anacrusisSteps: VocalStepData[]; mainSteps: VocalStepData[]; assignedLyricsText: string } {
+): { anacrusisSteps: VocalStepData[]; mainSteps: VocalStepData[]; assignedLyricsText: string; hasAnacrusis: boolean; hasTailBeat: boolean } {
   let isFirstSyl = true, lastMidi = 60, lyricsAcc = '';
+  const hasAnacrusis = hasActiveScannedCells(block.anacrusisCells), hasTailBeat = hasActiveScannedCells(block.tailCells);
   const buildArray = (cells: ScannedVocalStepCell[] = [], totalSteps: number): VocalStepData[] => {
     const map = new Map<number, ScannedVocalStepCell>();
     for (const c of cells) if (c && typeof c.stepIndex === 'number') map.set(c.stepIndex, c);
+    for (const c of cells) if (c && typeof c.stepIndex === 'number' && c.durationSteps && c.durationSteps > 1) {
+      for (let k = 1; k < c.durationSteps; k++) if (c.stepIndex + k < totalSteps && !map.has(c.stepIndex + k)) map.set(c.stepIndex + k, { stepIndex: c.stepIndex + k, isTie: true, syllable: '───' });
+    }
     return Array.from({ length: totalSteps }, (_, idx) => {
-      const cell = map.get(idx), rawSyl = (cell?.syllable || '').trim();
-      const isTie = Boolean(cell?.isTie || rawSyl === '───' || rawSyl === '---' || rawSyl === '───►');
+      const cell = map.get(idx), rawSyl = (cell?.syllable || '').trim(), isTie = Boolean(cell?.isTie || rawSyl === '───' || rawSyl === '---' || rawSyl === '───►');
       if (!isTie && !rawSyl && !cell?.pitchKey) return { stepIndex: idx, active: false, note: 'C4', midiNumber: 60, velocity: 0, decay: 0 };
       if (isTie) return { stepIndex: idx, active: true, isTie: true, note: '───', midiNumber: lastMidi, syllable: '───', velocity: 82, decay: 100 };
-      const midi = block.rhythmOnlyMode ? 60 : keyboardNoteToMidi(cell?.pitchKey, cell?.octaveShift || 0, baseA3Midi);
-      lastMidi = midi;
+      const octShift = typeof cell?.octaveShift === 'number' ? cell.octaveShift : typeof cell?.octave === 'number' ? cell.octave - 4 : 0;
+      const midi = block.rhythmOnlyMode ? 60 : keyboardNoteToMidi(cell?.pitchKey, octShift, baseA3Midi); lastMidi = midi;
       const joinsNext = rawSyl.endsWith('-'), cleanSyl = formatSylCase(rawSyl, isFirstSyl);
       if (cleanSyl) { isFirstSyl = false; lyricsAcc += joinsNext ? cleanSyl : `${cleanSyl} `; }
-      return {
-        stepIndex: idx, active: true, isTie: false, note: midiToScientificNote(midi), midiNumber: midi,
-        syllable: cleanSyl || 'la', syllableAttack: true, tripletSlot: cell?.isTriplet ? 1 : undefined, velocity: 92, decay: 100,
-      };
+      return { stepIndex: idx, active: true, isTie: false, note: midiToScientificNote(midi), midiNumber: midi, syllable: cleanSyl || 'la', syllableAttack: true, tripletSlot: cell?.isTriplet ? 1 : undefined, velocity: 92, decay: 100 };
     });
   };
-  const anacrusisSteps = block.hasAnacrusis ? buildArray(block.anacrusisCells, 8) : [];
-  const mainCount = Math.max(1, block.measuresCount) * 16, baseMain = buildArray(block.mainCells, mainCount);
-  const tailSteps = block.hasTailBeat ? buildArray(block.tailCells, 4).map((s, i) => ({ ...s, stepIndex: mainCount + i })) : [];
-  const resolvedLyrics = block.officialLyricsText?.trim() || lyricsAcc.trim().replace(/\s{2,}/g, ' ');
-  return { anacrusisSteps, mainSteps: [...baseMain, ...tailSteps], assignedLyricsText: resolvedLyrics };
+  const anacrusisSteps = hasAnacrusis ? buildArray(block.anacrusisCells, 8) : [], mainCount = Math.max(1, block.measuresCount) * 16;
+  const baseMain = buildArray(block.mainCells, mainCount), tailSteps = hasTailBeat ? buildArray(block.tailCells, 4).map((s, i) => ({ ...s, stepIndex: mainCount + i })) : [];
+  return { anacrusisSteps, mainSteps: [...baseMain, ...tailSteps], assignedLyricsText: block.officialLyricsText?.trim() || lyricsAcc.trim().replace(/\s{2,}/g, ' '), hasAnacrusis, hasTailBeat };
 }
 
 export function convertVocalPaperScanToProject(
@@ -77,8 +81,7 @@ export function convertVocalPaperScanToProject(
 ): ToadaProject {
   const bpm = Number(targetConfig?.bpm || scanResult.bpm || currentProject.bpm || 88);
   const timeSignature = targetConfig?.timeSignature || scanResult.timeSignature || currentProject.timeSignature || '4/4';
-  const title = (targetConfig?.title || scanResult.title || currentProject.title || 'Toada Manuscrit').trim();
-  const refDoc = organizadorDoc || currentProject.toadaMeta;
+  const title = (targetConfig?.title || scanResult.title || currentProject.title || 'Toada Manuscrit').trim(), refDoc = organizadorDoc || currentProject.toadaMeta;
   const alignedPatterns = refDoc ? alignScannedPatternsWithOrganizadorLyrics(scanResult.patterns, refDoc) : scanResult.patterns;
   const blockMap = new Map<string, { block: ScannedVocalPatternBlock; cardIdx: number }>();
   alignedPatterns.forEach((b, idx) => blockMap.set(b.code.trim().toUpperCase(), { block: b, cardIdx: idx }));
@@ -87,24 +90,20 @@ export function convertVocalPaperScanToProject(
   const getOrCreatePattern = (code: string, role: VocalRole, isTutti = false): VocalPatternItem | null => {
     const normCode = code.trim().toUpperCase(), key = `${normCode}_${role}`;
     if (roleInstanceMap.has(key)) return roleInstanceMap.get(key)!;
-    const entry = blockMap.get(normCode);
-    if (!entry) return null;
-    const { block, cardIdx } = entry, { anacrusisSteps, mainSteps, assignedLyricsText } = buildStepsAndLyricsFromScannedBlock(block);
+    const entry = blockMap.get(normCode); if (!entry) return null;
+    const { block, cardIdx } = entry, { anacrusisSteps, mainSteps, assignedLyricsText, hasAnacrusis, hasTailBeat } = buildStepsAndLyricsFromScannedBlock(block);
     const pat = createDefaultVocalPattern(role, block.name || `${normCode} (${role === 'puxador' ? 'Pux' : 'Cor'})`, block.measuresCount, bpm, 'C4');
     Object.assign(pat, {
-      cardIndex: cardIdx, hasAnacrusis: block.hasAnacrusis, anacrusisBeats: block.hasAnacrusis ? 2 : 0,
-      hasTailBeat: block.hasTailBeat, foldNotesView: block.rhythmOnlyMode, anacrusisSteps, mainSteps,
-      assignedLyricsText: assignedLyricsText || block.name || normCode, isMidiInitialized: true, midiLocked: true,
-      stepStatus: { recorded: false, trimmed: false, rhythmValidated: true, notesValidated: !block.rhythmOnlyMode, variantsReady: false },
+      cardIndex: cardIdx, hasAnacrusis, anacrusisBeats: hasAnacrusis ? 2 : 0, hasTailBeat, exitBeat: hasTailBeat ? 1 : undefined,
+      foldNotesView: block.rhythmOnlyMode, anacrusisSteps, mainSteps, assignedLyricsText: assignedLyricsText || block.name || normCode,
+      isMidiInitialized: true, midiLocked: true, stepStatus: { recorded: false, trimmed: false, rhythmValidated: true, notesValidated: !block.rhythmOnlyMode, variantsReady: false },
     });
     pat.rawLineCode = buildOrganizadorLineFromSteps(pat, { isTutti });
-    pat.timeAnchors = extractTimeAnchors(pat.rawLineCode.replace(/^\*+|\*+$/g, ''), 4, !block.hasAnacrusis).timeAnchors;
-    createdPatterns.push(pat); roleInstanceMap.set(key, pat);
-    return pat;
+    pat.timeAnchors = extractTimeAnchors(pat.rawLineCode.replace(/^\*+|\*+$/g, ''), 4, !hasAnacrusis).timeAnchors;
+    createdPatterns.push(pat); roleInstanceMap.set(key, pat); return pat;
   };
 
-  const slots: ToadaArrangementSlot[] = [];
-  const normSeq = (c?: string | null) => (!c || ['X', '-', '—', '_'].includes(c.trim().toUpperCase()) ? null : c.trim().toUpperCase());
+  const slots: ToadaArrangementSlot[] = [], normSeq = (c?: string | null) => (!c || ['X', '-', '—', '_'].includes(c.trim().toUpperCase()) ? null : c.trim().toUpperCase());
   if (scanResult.sequenceColumns.length > 0) {
     scanResult.sequenceColumns.forEach((col, i) => {
       const pCode = normSeq(col.puxCode), cCode = normSeq(col.corCode);
@@ -114,24 +113,17 @@ export function convertVocalPaperScanToProject(
         else slots.push({ slotId: `slot-pause-${i + 1}`, puxadorPatternId: null, coroPatternId: null, advanceMeasures: 1 });
         return;
       }
-      const isUnison = Boolean(pCode && cCode && pCode === cCode);
-      const puxPat = pCode ? getOrCreatePattern(pCode, 'puxador', isUnison) : null, corPat = cCode ? getOrCreatePattern(cCode, 'coro', isUnison) : null;
+      const isUnison = Boolean(pCode && cCode && pCode === cCode), puxPat = pCode ? getOrCreatePattern(pCode, 'puxador', isUnison) : null, corPat = cCode ? getOrCreatePattern(cCode, 'coro', isUnison) : null;
       if (isUnison && puxPat && corPat) corPat.linkedSourcePatternId = puxPat.id;
       slots.push({ slotId: `slot-seq-${i + 1}`, puxadorPatternId: puxPat?.id || null, coroPatternId: corPat?.id || null, advanceMeasures: Math.max(puxPat?.measuresCount || 1, corPat?.measuresCount || 1) });
     });
-  } else {
-    alignedPatterns.forEach((b, idx) => { const pat = getOrCreatePattern(b.code, 'puxador', false); if (pat) slots.push({ slotId: `slot-auto-${idx + 1}`, puxadorPatternId: pat.id, coroPatternId: null, advanceMeasures: pat.measuresCount }); });
-  }
-
+  } else alignedPatterns.forEach((b, idx) => { const pat = getOrCreatePattern(b.code, 'puxador', false); if (pat) slots.push({ slotId: `slot-auto-${idx + 1}`, puxadorPatternId: pat.id, coroPatternId: null, advanceMeasures: pat.measuresCount }); });
   const nextProj: ToadaProject = {
-    ...currentProject, title, bpm, timeSignature,
-    patterns: createdPatterns.length > 0 ? createdPatterns : currentProject.patterns,
-    slots: slots.length > 0 ? slots : currentProject.slots,
-    activePatternId: createdPatterns[0]?.id || currentProject.activePatternId,
+    ...currentProject, title, bpm, timeSignature, patterns: createdPatterns.length > 0 ? createdPatterns : currentProject.patterns,
+    slots: slots.length > 0 ? slots : currentProject.slots, activePatternId: createdPatterns[0]?.id || currentProject.activePatternId,
     sequenciadorExportMode: alignedPatterns.some((p) => !p.rhythmOnlyMode) ? 'full_notes' : 'rhythm_only',
   };
   const parsedSung = parseStoredScaleString(targetConfig?.sungKey || scanResult.sungKey) || { tonic: currentProject.sungScaleRoot || 'C', scaleType: (targetConfig?.scaleMode || scanResult.scaleMode || 'major') as any };
-  const parsedTroupe = parseStoredScaleString(targetConfig?.troupeKey || scanResult.troupeKey);
-  const shiftSt = parsedTroupe ? computeSemitoneDistance(parsedSung.tonic, parsedTroupe.tonic) : (currentProject.transpositionSemitones || 0);
+  const parsedTroupe = parseStoredScaleString(targetConfig?.troupeKey || scanResult.troupeKey), shiftSt = parsedTroupe ? computeSemitoneDistance(parsedSung.tonic, parsedTroupe.tonic) : (currentProject.transpositionSemitones || 0);
   return applyDualScaleToProject(nextProj, parsedSung.tonic, parsedSung.scaleType, shiftSt, 'C4', 'fr');
 }

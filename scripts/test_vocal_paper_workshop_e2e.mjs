@@ -7,28 +7,29 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import './resolve-ts.mjs';
 
-import { wrapVocalSheetA4Document } from '../src/utils/vocal-paper/vocalPaperPrintHelper.ts';
-import { renderVocalSheetSequenceHTML } from '../src/utils/vocal-paper/vocalSheetSequenceTemplate.ts';
-import { renderVocalSheetNotesHTML, VOCAL_PAPER_KEYBOARD_ROWS } from '../src/utils/vocal-paper/vocalSheetNotesTemplate.ts';
-import { renderVocalSheetRhythmHTML } from '../src/utils/vocal-paper/vocalSheetRhythmTemplate.ts';
-import { renderVocalSheetInstructionsHTML } from '../src/utils/vocal-paper/vocalSheetInstructionsTemplate.ts';
-import {
+const { wrapVocalSheetA4Document } = await import('../src/utils/vocal-paper/vocalPaperPrintHelper.ts');
+const { renderVocalSheetSequenceHTML } = await import('../src/utils/vocal-paper/vocalSheetSequenceTemplate.ts');
+const { renderVocalSheetNotesHTML, VOCAL_PAPER_KEYBOARD_ROWS } = await import('../src/utils/vocal-paper/vocalSheetNotesTemplate.ts');
+const { renderVocalSheetRhythmHTML } = await import('../src/utils/vocal-paper/vocalSheetRhythmTemplate.ts');
+const { renderVocalSheetInstructionsHTML } = await import('../src/utils/vocal-paper/vocalSheetInstructionsTemplate.ts');
+const {
   keyboardNoteToMidi,
   midiToScientificNote,
   buildStepsAndLyricsFromScannedBlock,
   convertVocalPaperScanToProject,
-} from '../src/utils/vocal-paper/vocalPaperToProjectConverter.ts';
-import { alignScannedPatternsWithOrganizadorLyrics } from '../src/utils/vocal-paper/vocalPaperLyricsAligner.ts';
-import { buildVocalPaperOpticalSystemPrompt } from '../src/utils/vocal-paper/vocalPaperOpticalPrompt.ts';
-import { createDefaultToadaProject } from '../src/utils/toadaProjectDefaults.ts';
-import { reconstituteToadaTxt } from '../src/utils/toadaTxtReconstitutor.ts';
-import {
+} = await import('../src/utils/vocal-paper/vocalPaperToProjectConverter.ts');
+const { alignScannedPatternsWithOrganizadorLyrics } = await import('../src/utils/vocal-paper/vocalPaperLyricsAligner.ts');
+const { buildVocalPaperOpticalSystemPrompt } = await import('../src/utils/vocal-paper/vocalPaperOpticalPrompt.ts');
+const { createDefaultToadaProject } = await import('../src/utils/toadaProjectDefaults.ts');
+const { reconstituteToadaTxt } = await import('../src/utils/toadaTxtReconstitutor.ts');
+const {
   convertScannedVocalBatchToOrganizador,
   underlineFirstSyllableLetter,
-} from '../../o-girador-organizador/src/utils/vocalPaperToOrganizadorConverter.js';
-import { buildOrganizadorVocalSheetHTML } from '../../o-girador-organizador/src/utils/vocalPaperSheetPrinter.js';
-import { buildSequencerToadaPackFromVocalScan } from '../../o-girador-sequenciador/src/utils/paper/vocalPaperSequenciadorHelper.ts';
+} = await import('../../o-girador-organizador/src/utils/vocalPaperToOrganizadorConverter.js');
+const { buildOrganizadorVocalSheetHTML } = await import('../../o-girador-organizador/src/utils/vocalPaperSheetPrinter.js');
+const { buildSequencerToadaPackFromVocalScan } = await import('../../o-girador-sequenciador/src/utils/paper/vocalPaperSequenciadorHelper.ts');
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -64,12 +65,93 @@ console.log('=== TEST E2E : ATELIER PAPIER DU CHANT (CANTADOR • ORGANIZADOR �
   assert.deepEqual(VOCAL_PAPER_KEYBOARD_ROWS.map((r) => r.label), expectedLabels, 'Clavier 1 octave doit aller de La à Sol#');
   assert.ok(VOCAL_PAPER_KEYBOARD_ROWS[0].strongBorder && VOCAL_PAPER_KEYBOARD_ROWS[3].strongBorder, 'Filets renforcés sur La (1re ligne) et Do (4e ligne)');
   assert.ok(notes1mHtml.includes('hatch-bw'), 'Touches noires hachurées N&B (.hatch-bw) présentes');
-  assert.ok(notes1mHtml.includes('OCT / ±'), 'Ligne OCT / ± présente au-dessus du clavier');
+  assert.ok(notes1mHtml.includes('OCT / ±') && notes1mHtml.includes('(3/4/5)'), 'Ligne OCT / ± (3/4/5) présente au-dessus du clavier');
 
-  // Vérification également sur Organizador
+  // Vérification des 5 blocs en Portrait 1M (P1..P5) et 4 blocs en Paysage 2M (P1..P4)
+  for (let p = 1; p <= 5; p++) {
+    assert.ok(notes1mHtml.includes(`[ PATTERN : P${p} ]`), `CHANT-NOTES-1M doit contenir [ PATTERN : P${p} ]`);
+  }
+  assert.ok(!notes1mHtml.includes('[ PATTERN : P6 ]'), 'CHANT-NOTES-1M doit contenir exactement 5 blocs par défaut');
+  for (let p = 1; p <= 4; p++) {
+    assert.ok(notes2mHtml.includes(`[ PATTERN : P${p} ]`), `CHANT-NOTES-2M doit contenir [ PATTERN : P${p} ]`);
+  }
+  assert.ok(!notes2mHtml.includes('[ PATTERN : P5 ]'), 'CHANT-NOTES-2M doit contenir exactement 4 blocs par défaut');
+
+  // Vérification du clavier ultra-compact (2.2mm, 12mm), bande OCTAVE (6mm, colspan="4") et bande SYLLABES ouverte (9.5mm, colspan="4")
+  assert.ok(notes1mHtml.includes('width:12mm') && notes1mHtml.includes('height:2.2mm'), 'Clavier ultra-compact (12mm x 2.2mm)');
+  assert.ok(notes1mHtml.includes('colspan="4"') && notes1mHtml.includes('height:6mm') && notes1mHtml.includes('height:9.5mm'), 'Bandes OCTAVE (6mm) et SYLLABES (9.5mm) ouvertes avec colspan="4"');
+  assert.ok(rhythmHtml.includes('RYTHME') && rhythmHtml.includes('height:4.5mm') && rhythmHtml.includes('height:9.5mm'), 'CHANT-RYTHME doit avoir la piste RYTHME / DURÉE (4.5mm) et la bande SYLLABES ouverte (9.5mm)');
+
+  // Absence de cases à cocher manuelles Anacrouse / Chute dans les blocs
+  assert.ok(!notes1mHtml.includes('Anacrouse (Ana T3-T4)') && !notes1mHtml.includes('Chute (+T1)'), 'Aucune case à cocher manuelle Anacrouse/Chute sur CHANT-NOTES-1M');
+  assert.ok(!rhythmHtml.includes('Chute +T1'), 'Aucune case à cocher manuelle Anacrouse/Chute sur CHANT-RYTHME');
+
+  // Vérification également sur Organizador (5 blocs en 1M, 4 blocs en 2M)
   const orgNotesHtml = buildOrganizadorVocalSheetHTML('notes_1m', { titre: 'Vovó falou', bpmDefaut: 85 });
+  const orgNotes2mHtml = buildOrganizadorVocalSheetHTML('notes_2m', { titre: 'Vovó falou', bpmDefaut: 85 });
   assert.ok(orgNotesHtml.includes('[CODE: CHANT-NOTES-1M]') && orgNotesHtml.includes('hatch-bw') && orgNotesHtml.includes('OCT / ±'));
-  console.log('✓ 1. Rendu HTML A4 100 % N&B des 4 modèles (repères ■, clavier La..Sol#, hachures .hatch-bw, OCT / ±) validé.');
+  assert.ok(orgNotesHtml.includes('[ PATTERN : P5 ]') && !orgNotesHtml.includes('[ PATTERN : P6 ]'), 'Organizador CHANT-NOTES-1M = 5 blocs');
+  assert.ok(orgNotes2mHtml.includes('[ PATTERN : P4 ]') && !orgNotes2mHtml.includes('[ PATTERN : P5 ]'), 'Organizador CHANT-NOTES-2M = 4 blocs');
+  console.log('✓ 1. Rendu HTML A4 100 % N&B (5 blocs 1M Portrait, 4 blocs 2M Paysage, clavier 2.2mm, OCTAVE 6mm, SYLLABES ouverte 9.5mm, zéro case à cocher) validé.');
+}
+
+// ---------------------------------------------------------------------------
+// 1bis. Auto-détection 100 % automatique Anacrouse (Ana T3-T4) & Chute (+T1)
+//       + Traits horizontaux de notes (durationSteps) + Bande OCTAVE (3 / 4 / 5)
+// ---------------------------------------------------------------------------
+{
+  const autoBlockWithStrokes = {
+    code: 'P1',
+    sheetCode: 'CHANT-NOTES-1M',
+    measuresCount: 1,
+    hasAnacrusis: false, // Même si false dans le JSON, la présence d'une cellule dans anacrusisCells doit activer hasAnacrusis = true !
+    hasTailBeat: false,  // Même si false dans le JSON, la présence d'une cellule dans tailCells doit activer hasTailBeat = true !
+    rhythmOnlyMode: false,
+    anacrusisCells: [
+      { stepIndex: 4, durationSteps: 2, syllable: 'Ô', pitchKey: 'E', octave: 4 },
+    ],
+    mainCells: [
+      { stepIndex: 0, durationSteps: 3, syllable: 'NA-', pitchKey: 'G', octave: 4 },
+      { stepIndex: 4, durationSteps: 2, syllable: 'ÇÃO', pitchKey: 'A', octave: 5 },
+    ],
+    tailCells: [
+      { stepIndex: 0, durationSteps: 2, syllable: 'NAGÔ', pitchKey: 'C', octave: 4 },
+    ],
+  };
+
+  const resAuto = buildStepsAndLyricsFromScannedBlock(autoBlockWithStrokes);
+  assert.equal(resAuto.hasAnacrusis, true, 'Auto-détection hasAnacrusis = true dès que Ana T3-T4 contient un trait/syllabe');
+  assert.equal(resAuto.hasTailBeat, true, 'Auto-détection hasTailBeat = true dès que +T1 contient un trait/syllabe');
+  assert.equal(resAuto.anacrusisSteps.length, 8, '8 pas d’anacrouse générés automatiquement');
+  assert.equal(resAuto.mainSteps.length, 20, '16 pas principaux + 4 pas de chute (+T1) générés automatiquement');
+
+  // Vérification du trait horizontal (durationSteps) et du rattachement de la syllabe au début du trait
+  assert.equal(resAuto.anacrusisSteps[4].active && !resAuto.anacrusisSteps[4].isTie, true);
+  assert.equal(resAuto.anacrusisSteps[4].syllable, 'Ô');
+  assert.equal(resAuto.anacrusisSteps[5].active && resAuto.anacrusisSteps[5].isTie, true, 'Le 2e pas du trait horizontal (durationSteps=2) est en tenue ───');
+
+  assert.equal(resAuto.mainSteps[0].syllable, 'na', 'Syllabe rattachée sous le début du trait (stepIndex 0)');
+  assert.equal(resAuto.mainSteps[1].isTie && resAuto.mainSteps[2].isTie, true, 'Les pas 1 et 2 du trait horizontal (durationSteps=3) sont en tenue ───');
+  assert.equal(resAuto.mainSteps[4].syllable, 'ção', 'Syllabe rattachée sous le début du trait (stepIndex 4)');
+  assert.equal(resAuto.mainSteps[4].midiNumber, 69, 'Octave 5 sur La (A) = MIDI 69 (A4)');
+  assert.equal(resAuto.mainSteps[16].syllable, 'nagô', 'Syllabe sur +T1 (stepIndex 16)');
+  assert.equal(resAuto.mainSteps[17].isTie, true, 'Tenue sur +T1 (stepIndex 17)');
+
+  // Vérification sur Organizador et Sequenciador (auto-détection Ana + Chute sans case cochée)
+  const orgAuto = convertScannedVocalBatchToOrganizador({
+    sequenceColumns: [{ measureNumber: 1, puxCode: 'P1', corCode: 'X' }],
+    patterns: [autoBlockWithStrokes],
+  });
+  assert.ok(orgAuto.rawTxtCode.includes('[4]Ô') && orgAuto.rawTxtCode.includes('[1]nagô'), 'Organizador détecte automatiquement Ana T4 et +T1');
+
+  const seqAuto = buildSequencerToadaPackFromVocalScan({
+    sequenceColumns: [{ measureNumber: 1, puxCode: 'P1', corCode: 'X' }],
+    patterns: [autoBlockWithStrokes],
+  }, 88, 'Test Auto');
+  assert.equal(seqAuto.patterns[0].hasAnacrusis, true, 'Sequenciador auto-détecte hasAnacrusis = true');
+  assert.equal(seqAuto.patterns[0].hasTailBeat, true, 'Sequenciador auto-détecte hasTailBeat = true');
+  assert.equal(seqAuto.patterns[0].exitBeat, 1, 'Sequenciador configure exitBeat = 1');
+  console.log('✓ 1bis. Auto-détection Anacrouse/Chute (+T1), traits horizontaux (durationSteps) et bande OCTAVE (3/4/5) validés.');
 }
 
 // ---------------------------------------------------------------------------

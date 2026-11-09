@@ -49,7 +49,7 @@ export function wrapVocalSheetA4Document(
       height: ${pageH};
       max-height: ${pageH};
       margin: 0 auto;
-      padding: 8.5mm 9mm;
+      padding: 6.5mm 8mm;
       border: 2px solid #000;
       background: #fff;
       color: #000;

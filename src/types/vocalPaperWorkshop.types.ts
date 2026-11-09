@@ -44,9 +44,11 @@ export interface VocalPaperPrintOptions {
 
 export interface ScannedVocalStepCell {
   stepIndex: number;
+  durationSteps?: number;
   syllable?: string;
   isTie?: boolean;
   pitchKey?: KeyboardOctaveNote | string;
+  octave?: number;
   octaveShift?: number;
   isTriplet?: boolean;
 }
@@ -57,8 +59,8 @@ export interface ScannedVocalPatternBlock {
   officialLyricsText?: string;
   sheetCode: VocalSheetOpticalCode;
   measuresCount: 1 | 2 | 3 | 4;
-  hasAnacrusis: boolean;
-  hasTailBeat: boolean;
+  hasAnacrusis?: boolean;
+  hasTailBeat?: boolean;
   rhythmOnlyMode: boolean;
   anacrusisCells?: ScannedVocalStepCell[];
   mainCells: ScannedVocalStepCell[];

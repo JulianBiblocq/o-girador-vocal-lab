@@ -1,7 +1,7 @@
 /**
  * vocalPaperOpticalPrompt.ts
- * Construction des instructions de lecture optique multi-feuilles (Séquence Pux/Cor, Patterns & Notes, Rythme seul) (< 120 lignes).
- * Injecte le dictionnaire des phrases et mots de la fiche Organizador existante pour verrouiller l'orthographe.
+ * Construction des instructions de lecture optique multi-feuilles (Séquence Pux/Cor, Patterns & Notes, Rythme seul) (< 105 lignes).
+ * Gère les traits horizontaux de notes (───), la bande OCTAVE (3/4/5 ou ±1), la bande SYLLABES ouverte et l'auto-détection Ana T3-T4 / +T1.
  */
 import { extractOfficialWordsAndPhrases } from './vocalPaperLyricsAligner';
 
@@ -26,24 +26,25 @@ CONSIGNE IMPÉRATIVE DE VERROUILLAGE ORTHOGRAPHIQUE :
   return `TU ES LE MOTEUR DE LECTURE OPTIQUE DE PARTITIONS VOCALES MANUSCRITES DE L'ÉCOSYSTÈME O GIRADOR (CANTADOR, ORGANIZADOR, SEQUENCIADOR).
 Analyse l'ensemble des photos de feuilles A4 Noir & Blanc fournies (repérées par 4 carrés noirs d'angle ■ et un cartouche [CODE: ...]) :
 - [CODE: CHANT-SEQ] : Feuille 1 (Séquence à 2 lignes superposées PUX et COR sur les mesures M1..M32).
-- [CODE: CHANT-NOTES-1M] ou [CODE: CHANT-NOTES-2M] : Feuille 2 (Patterns neutres [ Pattern : P1..Pn ] avec clavier vertical 1 octave La..Sol#, ligne OCT / ±, Ana T3-T4, Temps 1..4, +T1 et Syllabes).
-- [CODE: CHANT-RYTHME] : Feuille 3 (Patterns neutres [ Pattern : P1..Pn ] sans clavier de notes, uniquement Ana T3-T4, Temps 1..4, +T1 et Syllabes).${refBlock}
+- [CODE: CHANT-NOTES-1M] (5 blocs/page Portrait) ou [CODE: CHANT-NOTES-2M] (4 blocs/page Paysage) : Feuille 2 (Patterns neutres [ PATTERN : P1..Pn ] avec clavier compact 1 octave La..Sol#, bande OCTAVE (3/4/5 • OCT / ±), Ana T3-T4, Temps 1..4, +T1 et bande SYLLABES ouverte).
+- [CODE: CHANT-RYTHME] : Feuille 3 (Patterns neutres [ PATTERN : P1..Pn ] avec piste RYTHME / DURÉE à 4 sous-cases par temps + bande SYLLABES ouverte).${refBlock}
 
 RÈGLES STRICTES D'EXTRACTION :
 1. SÉQUENCE (PUX / COR) :
    - Pour chaque mesure renseignée (M1, M2...), extraire "measureNumber", "puxCode" (ex: "P1", "P2", "X", ou null) et "corCode" (ex: "P3", "P4", "X", ou null).
-   - Si P5 est écrit sur PUX et sur COR à la même mesure, renvoyer puxCode: "P5" et corCode: "P5" (Unisson).
-   - Si X est écrit sur PUX et sur COR, renvoyer puxCode: "X" et corCode: "X" (Pause vocale).
-2. PATTERNS NEUTRES (P1, P2, P3...) :
-   - Extraire le code exact ("P1", "P2"...), le type de feuille ("CHANT-NOTES-1M", "CHANT-NOTES-2M" ou "CHANT-RYTHME"), "measuresCount" (1 ou 2), "hasAnacrusis" (true si des syllabes/notes sont présentes dans Ana T3-T4) et "hasTailBeat" (true si une syllabe/note est présente dans +T1).
-   - "rhythmOnlyMode": true si la feuille est [CODE: CHANT-RYTHME] ou si aucune case du clavier La..Sol# n'est cochée.
-3. CLAVIER 1 OCTAVE (LA ➔ SOL#) & OCT / ± :
-   - Les 12 lignes du clavier de haut en bas sont : "A" (La), "Bb" (Si♭), "B" (Si), "C" (Do), "C#" (Do#), "D" (Ré), "Eb" (Mi♭), "E" (Mi), "F" (Fa), "F#" (Fa#), "G" (Sol), "G#" (Sol#).
-   - La ligne "OCT / ±" au-dessus indique un décalage d'octave entier (-1, 0, +1).
-4. SYLLABES, TIRETS, ÉLISIONS & TENUES :
-   - Conserver le tiret final "-" lorsqu'il est écrit (ex: "VO-", "FA-", "CA-", "I-") car il soude les syllabes d'un même mot.
-   - Conserver intactes les élisions avec apostrophe dans une même case (ex: "E'O", "D'Á-", "QU'EU", "XE'O").
-   - Une flèche "───►" ou "--->" ou un trait continu dans la case syllabe correspond à une tenue : renvoyer "isTie": true, "syllable": "───".
+   - Même code sur PUX et COR (ex: P5/P5) = Unisson. "X" sur PUX et COR = Pause vocale.
+2. PATTERNS NEUTRES (P1, P2...) & DÉTECTION AUTOMATIQUE ANACROUSE / CHUTE (+T1) :
+   - Il n'y a aucune case à cocher pour l'anacrouse ni la chute : détecte-les 100 % automatiquement !
+   - Si les colonnes Ana T3 ou Ana T4 contiennent au moins un trait de note ou une syllabe, "hasAnacrusis": true et remplis "anacrusisCells" (sinon "hasAnacrusis": false, "anacrusisCells": []).
+   - Si la colonne +T1 contient un trait de note, une prolongation de tenue ("───") ou une syllabe, "hasTailBeat": true et remplis "tailCells" (sinon "hasTailBeat": false, "tailCells": []).
+   - "rhythmOnlyMode": true si la feuille est [CODE: CHANT-RYTHME] ou si aucun trait n'est présent dans le clavier La..Sol#.
+3. TRAITS HORIZONTAUX DE NOTES (───), CLAVIER 1 OCTAVE (LA ➔ SOL#) & BANDE OCTAVE (3 / 4 / 5) :
+   - Les notes sont tracées sous forme de traits horizontaux ("───") dans les 12 lignes du clavier ("A", "Bb", "B", "C", "C#", "D", "Eb", "E", "F", "F#", "G", "G#") ou dans la piste "RYTHME / DURÉE" sur CHANT-RYTHME.
+   - Le bord gauche du trait horizontal indique la double-croche d'attaque ("stepIndex"), et sa longueur indique la durée ("durationSteps", ou cases suivantes en tenue "isTie": true, "syllable": "───").
+   - La bande ouverte "OCT / ± (3/4/5)" au-dessus du clavier contient le numéro d'octave (3 -> octaveShift:-1, 4 -> octaveShift:0, 5 -> octaveShift:+1, ou directement -1, 0, +1).
+4. BANDE « SYLLABES » OUVERTE (SANS SOUS-CASES), TIRETS & ÉLISIONS :
+   - La bande "SYLLABES" en dessous est ouverte (sans cloisons de doubles-croches) : chaque syllabe écrite en majuscules se rattache à l'attaque ("stepIndex") du trait de note situé juste au-dessus d'elle.
+   - Conserver le tiret final "-" lorsqu'il soude les syllabes d'un même mot (ex: "VO-", "FA-") et les élisions avec apostrophe (ex: "E'O", "D'Á-", "XE'O").
 
 FORMAT JSON STRICT ATTENDU (sans balise markdown autour) :
 {
@@ -54,9 +55,7 @@ FORMAT JSON STRICT ATTENDU (sans balise markdown autour) :
   "troupeKey": "C",
   "scaleMode": "major",
   "detectedSheetCodes": ["CHANT-SEQ", "CHANT-NOTES-1M"],
-  "sequenceColumns": [
-    { "measureNumber": 1, "puxCode": "P1", "corCode": "X" }
-  ],
+  "sequenceColumns": [{ "measureNumber": 1, "puxCode": "P1", "corCode": "X" }],
   "patterns": [
     {
       "code": "P1",
@@ -67,12 +66,10 @@ FORMAT JSON STRICT ATTENDU (sans balise markdown autour) :
       "rhythmOnlyMode": false,
       "anacrusisCells": [],
       "mainCells": [
-        { "stepIndex": 4, "syllable": "VO-", "pitchKey": "C", "octaveShift": 0, "isTie": false },
-        { "stepIndex": 5, "syllable": "VÓ", "pitchKey": "D", "octaveShift": 0, "isTie": false }
+        { "stepIndex": 4, "durationSteps": 1, "syllable": "VO-", "pitchKey": "C", "octaveShift": 0, "isTie": false },
+        { "stepIndex": 5, "durationSteps": 2, "syllable": "VÓ", "pitchKey": "D", "octaveShift": 0, "isTie": false }
       ],
-      "tailCells": [
-        { "stepIndex": 0, "syllable": "NOU", "pitchKey": "C", "octaveShift": 0, "isTie": false }
-      ]
+      "tailCells": [{ "stepIndex": 0, "durationSteps": 1, "syllable": "NOU", "pitchKey": "C", "octaveShift": 0, "isTie": false }]
     }
   ]
 }`;

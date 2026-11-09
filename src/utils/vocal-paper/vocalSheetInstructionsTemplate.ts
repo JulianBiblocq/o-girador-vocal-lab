@@ -1,6 +1,6 @@
 /**
  * vocalSheetInstructionsTemplate.ts
- * Feuille 4 : Guide & Conventions d'écriture Manuscrite A4 100 % Noir & Blanc ([CODE: CHANT-GUIDE]) (< 120 lignes).
+ * Feuille 4 : Guide & Conventions d'écriture Manuscrite A4 100 % Noir & Blanc ([CODE: CHANT-GUIDE]) (< 95 lignes).
  * Consultable directement dans l'onglet ou imprimable à la demande.
  */
 import {
@@ -30,40 +30,35 @@ export function renderVocalSheetInstructionsHTML(): string {
             1. SÉPARATION STRICTE PATTERNS NEUTRES (P1..Pn) / RÔLES (FEUILLE SÉQUENCE)
           </div>
           <div>
-            • Sur les <b>Feuilles 2 et 3 (Patterns)</b>, chaque bloc porte uniquement un numéro neutre : <b>[ Pattern : P1 ]</b>, <b>[ Pattern : P2 ]</b>... sans mentionner Puxador ni Coro.<br/>
+            • Sur les <b>Feuilles 2 et 3 (Patterns)</b>, chaque bloc porte uniquement un en-tête compact : <b>[ PATTERN : P1 ]</b>, <b>[ PATTERN : P2 ]</b>... sans case à cocher.<br/>
+            • L'<b>Anacrouse (Ana T3-T4)</b> et la <b>Chute (+T1)</b> sont détectées <b>100 % automatiquement</b> dès qu'un trait de note ou une syllabe y figure.<br/>
             • C'est sur la <b>Feuille 1 (Séquence)</b> que l'on inscrit qui chante quoi à chaque mesure sur les 2 lignes superposées :<br/>
             <span style="font-family:monospace;font-weight:900;display:inline-block;margin-top:3px;padding:2px 6px;border:1px solid #000;">
               Pux : P1 - P2 - X &nbsp;- X &nbsp;- P5<br/>
               Cor : X &nbsp;- X &nbsp;- P3 - P4 - P5
             </span><br/>
-            • <b>Même code sur Pux et Cor (ex: P5 / P5)</b> = Chant simultané à l'Unisson (Tutti).<br/>
-            • <b>Deux codes différents (ex: P5 sur Pux et P6 sur Cor)</b> = Chant simultané à 2 voix.<br/>
-            • <b>X sur Pux ET X sur Cor</b> = Mesure de Pause vocale (<b>[PAUSE 1M]</b>, le Batuque joue seul).
+            • <b>Même code sur Pux et Cor (ex: P5 / P5)</b> = Chant simultané à l'Unisson (Tutti) • <b>X / X</b> = Mesure de Pause vocale (<b>[PAUSE 1M]</b>).
           </div>
         </div>
 
         <div style="border:2px solid #000;padding:6px 8px;">
           <div style="font-size:9.5pt;font-weight:900;text-transform:uppercase;border-bottom:1.5px solid #000;padding-bottom:2px;margin-bottom:4px;">
-            2. ÉCRITURE DES SYLLABES, MOTS, ÉLISIONS & TENUES (SOUS-CASES 1..4)
+            2. TRAITS HORIZONTAUX DE NOTES (───) & BANDE « SYLLABES » OUVERTE (SANS SOUS-CASES)
           </div>
           <div>
-            • <b>Majuscules bâtons :</b> Écrire chaque syllabe en lettres capitales bien détachées (ex: <b>VO-</b> | <b>VÓ</b> | <b>FA-</b> | <b>LOU</b>).<br/>
-            • <b>Tiret "-" en fin de case :</b> Indique que la syllabe se soude à la suivante pour former un même mot (ex: <b>CA-</b> + <b>I-</b> + <b>XA</b> ➔ <i>caixa</i>).<br/>
-            • <b>Absence de tiret :</b> Indique la fin du mot (un espace sera inséré avant la syllabe suivante).<br/>
-            • <b>Élision sur une même double-croche :</b> Unir par une apostrophe dans la même case (ex: <b>E'O</b> dans <i>falou e'o barão</i>, ou <b>D'Á-</b> | <b>GUA</b>).<br/>
-            • <b>Tenue de note / syllabe prolongée :</b> Tracer une flèche horizontale <b>───►</b> dans les cases suivantes tant que la voix tient la note.<br/>
-            • <b>Silence explicite :</b> Laisser la case vide ou inscrire <b>_</b>. Pour un triolet sur un temps, coiffer les 3 cases par <b>┌ 3 ┐</b>.
+            • <b>Trait horizontal (───) :</b> Tracer un trait horizontal dans la ligne de la note (ou dans la piste <i>RYTHME / DURÉE</i> sur la Feuille 3) en partant de la double-croche d'attaque (1, 2, 3 ou 4) jusqu'à la fin de sa durée.<br/>
+            • <b>Bande SYLLABES ouverte (9.5mm) :</b> Sans cloisons de doubles-croches pour écrire confortablement en <b>MAJUSCULES BÂTONS</b> juste sous le début de chaque trait de note.<br/>
+            • <b>Tiret "-" :</b> Soude les syllabes d'un même mot (ex: <b>VO-</b> &nbsp; <b>VÓ</b> &nbsp; <b>FA-</b> &nbsp; <b>LOU</b>) • <b>Apostrophe :</b> Élision sur une même attaque (ex: <b>E'O</b>, <b>D'Á-</b>).
           </div>
         </div>
 
         <div style="border:2px solid #000;padding:6px 8px;">
           <div style="font-size:9.5pt;font-weight:900;text-transform:uppercase;border-bottom:1.5px solid #000;padding-bottom:2px;margin-bottom:4px;">
-            3. CLAVIER 1 OCTAVE (LA ➔ SOL#) & LIGNE D'OCTAVE (OCT / ±)
+            3. CLAVIER COMPACT 1 OCTAVE (LA ➔ SOL#) & BANDE « OCTAVE (3 / 4 / 5) »
           </div>
           <div>
-            • Le clavier vertical comporte <b>12 lignes (de La à Sol#)</b> : les touches noires (<b>Si♭, Do#, Mi♭, Fa#, Sol#</b>) sont hachurées en N&B.<br/>
-            • Les lignes <b>La (1re ligne)</b> et <b>Do (4e ligne)</b> ont un filet horizontal renforcé pour repérer immédiatement sa tonique.<br/>
-            • <b>Ligne OCT / ± :</b> Si une note franchit le Sol# vers le haut, inscrire <b>+1</b> dans la ligne <i>OCT / ±</i> au-dessus de la colonne ; si elle descend sous le La, inscrire <b>-1</b>.
+            • Le clavier vertical comporte <b>12 lignes compactes (de La à Sol#, 2.2mm/ligne)</b> : touches noires (<b>Si♭, Do#, Mi♭, Fa#, Sol#</b>) hachurées en N&B, filets renforcés sur <b>La</b> et <b>Do</b>.<br/>
+            • <b>Bande OCTAVE (OCT / ± • 3/4/5) :</b> Bande ouverte de 6mm au-dessus du clavier pour inscrire lisiblement l'octave (<b>3</b>, <b>4</b>, <b>5</b> ou <b>+1</b> / <b>-1</b>).
           </div>
         </div>
 
@@ -72,8 +67,7 @@ export function renderVocalSheetInstructionsHTML(): string {
             4. PRISE DE PHOTO & IMPORT MULTI-PAGES
           </div>
           <div>
-            • Garder les <b>4 carrés noirs d'angle (■)</b> bien visibles dans le cadre de chaque photo.<br/>
-            • Prendre chaque feuille en photo une par une (ex: 1 photo de la Feuille Séquence + 2 photos de Feuilles Patterns) et les ajouter ensemble dans la fenêtre d'import.
+            • Garder les <b>4 carrés noirs d'angle (■)</b> bien visibles dans le cadre de chaque photo (5 blocs/page en Portrait 1M, 4 blocs/page en Paysage 2M).
           </div>
         </div>
       </div>
