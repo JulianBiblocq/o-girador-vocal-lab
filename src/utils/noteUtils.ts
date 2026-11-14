@@ -3,6 +3,9 @@
  * Utilitaires purs de conversion MIDI, nom de note, fréquence et tessiture.
  */
 
+import { sanitizePitchHz } from './pitchHzContract';
+
+export { sanitizePitchHz };
 export const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'] as const;
 
 const NOTE_NAME_MAP: Record<string, number> = {
@@ -27,13 +30,13 @@ export function noteNameToMidi(note: string): number {
   return (octave + 1) * 12 + semitone;
 }
 
-export function midiToFrequency(midi: number): number {
-  return 440 * Math.pow(2, (midi - 69) / 12);
+export function midiToFrequency(midi: number, referencePitchHz?: unknown): number {
+  return sanitizePitchHz(referencePitchHz) * Math.pow(2, (midi - 69) / 12);
 }
 
-export function frequencyToMidiFloat(freq: number): number {
+export function frequencyToMidiFloat(freq: number, referencePitchHz?: unknown): number {
   if (freq <= 0) return 0;
-  return 69 + 12 * (Math.log(freq / 440) / Math.LN2);
+  return 69 + 12 * (Math.log(freq / sanitizePitchHz(referencePitchHz)) / Math.LN2);
 }
 
 export function centsDiff(midiFloat: number, targetMidi: number): number {

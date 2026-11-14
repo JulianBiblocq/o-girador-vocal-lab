@@ -29,7 +29,7 @@ export function applySmartTripletToBeat(steps: MelodicStep[], beatStartIdx: numb
   if (!steps || beatStartIdx < 0 || beatStartIdx >= steps.length) return steps;
   const next = steps.map((s) => ({ ...s })), alreadyTriplet = isBeatTriplet(steps, beatStartIdx);
   const scanLen = Math.min(alreadyTriplet ? 3 : 4, steps.length - beatStartIdx);
-  const fallbackMidi = steps.find((s) => s.active && s.midiNumber > 0)?.midiNumber ?? 60;
+  const fallbackMidi = steps.find((s) => s.active && (s.midiNumber ?? 0) > 0)?.midiNumber ?? 60;
   const attackIndices: number[] = [], attacks: MelodicStep[] = [];
   for (let i = 0; i < scanLen; i++) {
     const st = steps[beatStartIdx + i];
@@ -63,8 +63,8 @@ export function applySmartTripletToBeat(steps: MelodicStep[], beatStartIdx: numb
   for (let t = 0; t < 3 && beatStartIdx + t < next.length; t++) {
     const idx = beatStartIdx + t, base = next[idx], slot = (t + 1) as 1 | 2 | 3;
     if (onsetMap.has(t)) {
-      const k = onsetMap.get(t)!, src = attacks[Math.min(k, Math.max(0, attacks.length - 1))];
-      curMidi = src?.midiNumber > 0 ? src.midiNumber : curMidi; seenOnset = true;
+      const k = onsetMap.get(t)!, src = attacks[Math.min(k, Math.max(0, attacks.length - 1))], srcMidi = src?.midiNumber ?? 0;
+      curMidi = srcMidi > 0 ? srcMidi : curMidi; seenOnset = true;
       next[idx] = { ...base, tripletSlot: slot, active: true, isTie: false, midiNumber: curMidi, note: midiToNoteName(curMidi), syllable: assignedSyls[k] || '' };
     } else if ((!seenOnset && leadingTie) || (seenOnset && hadNonAttackTie)) {
       const tieMidi = !seenOnset ? (steps[beatStartIdx]?.midiNumber || curMidi) : curMidi;

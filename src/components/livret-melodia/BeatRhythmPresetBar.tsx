@@ -36,13 +36,13 @@ export function applyBeatRhythmPreset(
   if (bStart < 0 || bStart >= allSteps.length || presetSubdivs.length === 0) return allSteps;
 
   const next = allSteps.map((s) => ({ ...s })), syls: string[] = [], midis: number[] = [];
-  let fallbackMidi = allSteps.find((s) => s.active && s.midiNumber > 0)?.midiNumber ?? 60;
+  let fallbackMidi = allSteps.find((s) => s.active && (s.midiNumber ?? 0) > 0)?.midiNumber ?? 60;
   for (let i = bStart; i < bEnd; i++) {
-    const st = allSteps[i];
-    if (st.active && st.midiNumber > 0) fallbackMidi = st.midiNumber;
+    const st = allSteps[i], stMidi = st.midiNumber ?? 0;
+    if (st.active && stMidi > 0) fallbackMidi = stMidi;
     if (st.active && st.note !== '───' && st.tripletSlot !== 'unused') {
       if (st.syllable?.trim()) syls.push(st.syllable.trim());
-      if (st.midiNumber > 0) midis.push(st.midiNumber);
+      if (stMidi > 0) midis.push(stMidi);
     }
   }
 

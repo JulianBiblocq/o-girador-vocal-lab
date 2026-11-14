@@ -52,18 +52,18 @@ export function alignPitchCurveOctaveToBricks(
     let targetMidi = 0;
 
     // 1. Recherche du pas exact
-    if (steps[centerIdx]?.active && steps[centerIdx].midiNumber > 0) {
-      targetMidi = steps[centerIdx].midiNumber;
+    if (steps[centerIdx]?.active && (steps[centerIdx].midiNumber ?? 0) > 0) {
+      targetMidi = steps[centerIdx].midiNumber ?? 0;
     } else {
       // 2. Recherche de la brique active la plus proche à ±80 ms
       for (let dist = 1; dist <= searchWindowSteps; dist++) {
         const left = centerIdx - dist, right = centerIdx + dist;
-        if (left >= 0 && steps[left]?.active && steps[left].midiNumber > 0) {
-          targetMidi = steps[left].midiNumber;
+        if (left >= 0 && steps[left]?.active && (steps[left].midiNumber ?? 0) > 0) {
+          targetMidi = steps[left].midiNumber ?? 0;
           break;
         }
-        if (right < steps.length && steps[right]?.active && steps[right].midiNumber > 0) {
-          targetMidi = steps[right].midiNumber;
+        if (right < steps.length && steps[right]?.active && (steps[right].midiNumber ?? 0) > 0) {
+          targetMidi = steps[right].midiNumber ?? 0;
           break;
         }
       }

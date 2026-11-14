@@ -1,12 +1,13 @@
 /**
  * toadaCardParser.ts
- * Découpage unifié des cartes et directives Toada 100% conforme à Organizador (< 140 lignes).
+ * Découpage unifié des cartes et directives Toada 100% conforme à Organizador (< 145 lignes).
  * Source de vérité SSOT pour le découpage des blocs (#1..#N), rôles, mesures, accords, sections et anacrouses.
  */
 import type { VocalRole } from '../types/toadaProject.types';
 import type { ParsedLyricsSegment, TimeAnchor } from '../types/toadaDocument.types';
 import { extractTimeAnchors, isAnchorOnlyLine, convertTwoLineNotationToBrackets } from './timeAnchorParser';
 import { extractChordsFromTextLine, INLINE_CHORD_REGEX } from './chordParser';
+import { parseVocalSlashTokens } from './vocalGrammarV2';
 
 export interface InlineDirectives {
   cleanText: string; measuresCount?: 1 | 2 | 3 | 4; hasAnacrusis?: boolean; anacrusisBeats?: number;
@@ -14,15 +15,19 @@ export interface InlineDirectives {
   lineSignature?: string; timeAnchors?: TimeAnchor[]; exitBeat?: number;
 }
 
+const STANDALONE_TECH_RE = /(?<![\p{L}\d])0(?![\p{L}\d])|𝄽|───|[\*_]/gu;
+
 export function isOrganizadorStructureText(text: string): boolean {
   if (!text) return false;
   return /\[(?:M\d+[•·\.:])?([1-9]|1[0-2])\]/.test(text) || text.split(/\r?\n/).some((l) => isAnchorOnlyLine(l));
 }
 
 export function extractInlineLineDirectives(rawSegmentText: string, beatsPerMeasure = 4): InlineDirectives {
-  let text = rawSegmentText.trim();
-  let measuresCount: 1 | 2 | 3 | 4 | undefined, hasAnacrusis: boolean | undefined, isLinkedMeasure: boolean | undefined;
-  let sectionName: string | undefined, sectionBpm: number | undefined, lineSignature: string | undefined;
+  const slashInfo = parseVocalSlashTokens(rawSegmentText.trim(), { grammarVersion: 1 });
+  let text = slashInfo.normalizedLine.trim();
+  let measuresCount: 1 | 2 | 3 | 4 | undefined, hasAnacrusis: boolean | undefined;
+  let isLinkedMeasure: boolean | undefined = slashInfo.isLinkedMeasureLine || undefined;
+  let sectionName: string | undefined, sectionBpm: number | undefined, lineSignature = slashInfo.signatures[0] ?? undefined;
 
   const sigMatch = text.match(/^\[sig:(2\/4|3\/4|4\/4|6\/8|12\/8)\]\s*/i);
   if (sigMatch) { lineSignature = sigMatch[1]; text = text.slice(sigMatch[0].length).trim(); }
@@ -35,8 +40,13 @@ export function extractInlineLineDirectives(rawSegmentText: string, beatsPerMeas
     text = text.slice(secMatch[0].length).trim();
   }
 
-  if (text.startsWith('+')) { hasAnacrusis = true; text = text.replace(/^\+\s*/, ''); }
-  else if (text.startsWith('/')) { isLinkedMeasure = true; text = text.replace(/^\/\s*/, ''); }
+  if (/^(?:\*{1,3}\s*\/|\/\s*)/.test(text)) {
+    isLinkedMeasure = true;
+    text = text.replace(/^(\*{1,3})\s*\/\s*/, '$1').replace(/^\/\s*/, '');
+  } else if (/^(?:\*{1,3}\s*\+|\+\s*)/.test(text)) {
+    hasAnacrusis = true;
+    text = text.replace(/^(\*{1,3})\s*\+\s*/, '$1').replace(/^\+\s*/, '');
+  }
 
   const mMatch = text.match(/\(([1-4])\s*m(?:esures?)?\)/i);
   if (mMatch) { measuresCount = parseInt(mMatch[1], 10) as 1 | 2 | 3 | 4; text = text.replace(mMatch[0], ''); }
@@ -56,7 +66,7 @@ export function extractInlineLineDirectives(rawSegmentText: string, beatsPerMeas
   if (measuresCount === undefined && anchorRes.measuresCount !== undefined) measuresCount = anchorRes.measuresCount;
   if (hasAnacrusis === undefined && anchorRes.hasAnacrusis !== undefined) hasAnacrusis = anchorRes.hasAnacrusis;
 
-  const cleanText = text.replace(/<(?!(\/?u\b))[^>]*>/gi, '').replace(/\[[^\]]+\]/g, '').replace(/[\*_]/g, ' ').replace(/\s{2,}/g, ' ').trim();
+  const cleanText = text.replace(/<[^>]*>/g, '').replace(/\[[^\]]+\]/g, '').replace(STANDALONE_TECH_RE, ' ').replace(/\s{2,}/g, ' ').trim();
   return {
     cleanText, measuresCount, hasAnacrusis, anacrusisBeats: anchorRes.anacrusisBeats, isLinkedMeasure, chords,
     sectionName, sectionBpm, lineSignature,
@@ -88,14 +98,9 @@ export function parseOrganizadorCardLine(lineText: string, boldRole: VocalRole =
   const pauseMatch = rawLineCode.match(/^\[\s*(?:PAUSE|SILENCE)(?:\s+(?:BAQUE|[A-Z]+))?\s+(\d+)\s*M(?:ESURES?)?\s*\]$/i);
   if (pauseMatch) {
     const mCount = Math.max(1, Math.min(8, parseInt(pauseMatch[1], 10) || 1));
-    return {
-      cardIndex, rawLineCode, role: boldRole, text: '',
-      measuresCount: Math.min(4, mCount) as 1 | 2 | 3 | 4,
-      hasAnacrusis: false, isSilenceSlot: true, silenceMeasures: mCount,
-    };
+    return { cardIndex, rawLineCode, role: boldRole, text: '', measuresCount: Math.min(4, mCount) as 1 | 2 | 3 | 4, hasAnacrusis: false, isSilenceSlot: true, silenceMeasures: mCount };
   }
-  let cleanLine = rawLineCode;
-  let forcedRole: VocalRole | null = null;
+  let cleanLine = rawLineCode, forcedRole: VocalRole | null = null;
   const puxMatch = cleanLine.match(/^(?:puxador|solo)\s*[:\-]\s*/i);
   const coroMatch = cleanLine.match(/^(?:coro|choeur|refrao|refrão)\s*[:\-]\s*/i);
   if (puxMatch) { forcedRole = 'puxador'; cleanLine = cleanLine.slice(puxMatch[0].length); }
@@ -108,17 +113,11 @@ export function parseOrganizadorCardLine(lineText: string, boldRole: VocalRole =
 
   return {
     cardIndex, rawLineCode, lineSignature: dir.lineSignature, role,
-    text: dir.cleanText || cleanLine,
-    measuresCount: dir.measuresCount ?? 1,
-    hasAnacrusis: dir.hasAnacrusis ?? false,
-    anacrusisBeats: dir.anacrusisBeats,
-    timeAnchors: dir.timeAnchors,
-    exitBeat: dir.exitBeat,
-    chords: dir.chords,
-    sectionName: dir.sectionName,
-    sectionBpm: dir.sectionBpm,
-    isLinkedMeasure: dir.isLinkedMeasure ?? false,
-    isSimultaneousTutti: isSimultaneousTutti || undefined,
+    text: dir.cleanText || (dir.timeAnchors?.length ? '' : cleanLine),
+    measuresCount: dir.measuresCount ?? 1, hasAnacrusis: dir.hasAnacrusis ?? false,
+    anacrusisBeats: dir.anacrusisBeats, timeAnchors: dir.timeAnchors, exitBeat: dir.exitBeat,
+    chords: dir.chords, sectionName: dir.sectionName, sectionBpm: dir.sectionBpm,
+    isLinkedMeasure: dir.isLinkedMeasure ?? false, isSimultaneousTutti: isSimultaneousTutti || undefined,
   };
 }
 
@@ -132,12 +131,9 @@ export function parseOrganizadorToadaSegments(rawStructureText: string, rawPhone
     const seg = parseOrganizadorCardLine(line, boldRole, cardIdx, beatsPerMeasure);
     if (seg.sectionName) { currentSectionName = seg.sectionName; currentSectionBpm = seg.sectionBpm; }
     if (!seg.text && !seg.timeAnchors?.length && !seg.isSilenceSlot) continue;
-    seg.cardIndex = cardIdx;
-    seg.sectionName = currentSectionName;
-    seg.sectionBpm = currentSectionBpm;
-    if (phonLines[cardIdx]) seg.phoneticText = phonLines[cardIdx].replace(/[\*_]/g, ' ').replace(/\s{2,}/g, ' ').trim();
-    segments.push(seg);
-    cardIdx++;
+    seg.cardIndex = cardIdx; seg.sectionName = currentSectionName; seg.sectionBpm = currentSectionBpm;
+    if (phonLines[cardIdx]) seg.phoneticText = phonLines[cardIdx].replace(STANDALONE_TECH_RE, ' ').replace(/\s{2,}/g, ' ').trim();
+    segments.push(seg); cardIdx++;
   }
   return segments;
 }

@@ -3,7 +3,18 @@
  * Modèle de données pour la Grille Harmonique et l'Accompagnement MIDI Multi-Univers (< 80 lignes).
  */
 
-export type HarmonyProfileId = 'maracatu' | 'capoeira' | 'samba' | 'forro';
+export type CanonicalUniverseId = 'maracatu' | 'batucada' | 'sambareggae' | 'samba' | 'capoeira';
+export type HarmonyProfileId = CanonicalUniverseId | 'forro';
+
+export function normalizeHarmonyUniverseId(raw?: string | null): HarmonyProfileId {
+  const key = String(raw || '').trim().toLowerCase().replace(/[\s-]+/g, '_');
+  if (key === 'samba_reggae' || key === 'sambareggae') return 'sambareggae';
+  if (key === 'batucada') return 'batucada';
+  if (key === 'samba') return 'samba';
+  if (key === 'capoeira') return 'capoeira';
+  if (key === 'forro') return 'forro';
+  return 'maracatu';
+}
 
 export interface ChordDefinition {
   symbol: string;

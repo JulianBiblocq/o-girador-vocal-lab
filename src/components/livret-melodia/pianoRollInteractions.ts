@@ -95,7 +95,7 @@ export function splitTieAtStep(steps: VocalStepData[], stepIndex: number): Vocal
   const step = steps[stepIndex];
   if (!step || !step.active || step.note !== '───') return steps;
   const next = [...steps];
-  next[stepIndex] = { ...step, note: midiToNoteName(step.midiNumber), isTie: false, syllableAttack: true, velocity: 100 };
+  next[stepIndex] = { ...step, note: midiToNoteName(step.midiNumber ?? 60), isTie: false, syllableAttack: true, velocity: 100 };
   return next;
 }
 

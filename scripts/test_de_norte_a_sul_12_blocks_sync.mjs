@@ -89,7 +89,7 @@ const generatedProject = generateToadaFromSheet(baseProject, parsed, { bpm: norm
 
 assert.strictEqual(generatedProject.bpm, 88, 'Le tempo du projet généré doit être 88 BPM');
 assert.strictEqual(generatedProject.patterns.length, 12, 'Doit générer exactement 12 patterns (1 par carte)');
-assert.strictEqual(generatedProject.slots.length, 12, 'Doit générer exactement 12 slots Conducteur');
+assert.strictEqual(generatedProject.slots.length, 8, 'Doit générer exactement 8 slots Conducteur (strophes #5..#8 et #9..#12 superposées Puxador+Coro)');
 generatedProject.patterns.forEach((p, idx) => {
   assert.strictEqual(p.cardIndex, idx, `Le pattern #${idx + 1} doit avoir cardIndex: ${idx}`);
   assert.strictEqual(p.bpm, 88, `Le pattern ${p.name} doit avoir bpm: 88`);
@@ -99,7 +99,7 @@ generatedProject.patterns.forEach((p, idx) => {
 // 5. Test Round-Trip (Cantador ➔ Organizador) : 100% fidèle à POSER LES TEMPS, zéro "/ (suite ...)"
 const reconstituted = reconstituteToadaTxt(generatedProject);
 assert(!reconstituted.rawTxtCode.includes('/ (suite'), 'Ne doit jamais générer de "/ (suite ...)"');
-assert.strictEqual(reconstituted.rawTxtCode, mockOrganizadorDeNorteASul.rawTxtCode, 'Le rawTxtCode reconstitué doit être 100% identique aux 12 cartes d Organizador');
+assert.strictEqual(reconstituted.rawTxtCode, normalizedDoc.rawTxtCode, 'Le rawTxtCode reconstitué (v2) doit être 100% identique aux 12 cartes normalisées d Organizador');
 
 // 6. Test [ 🔄 Sync ] non destructif : modification du 1er mot dans Organizador + conservation audio + ré-alignement syllabique
 const fakeSinePcm = new Float32Array(44100 * 4);

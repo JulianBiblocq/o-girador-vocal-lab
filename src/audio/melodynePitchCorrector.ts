@@ -36,7 +36,7 @@ export function buildBrickVariAudioRegions(
       out.push({
         id: `variaudio_brk_${i}`, startSec: bStart, endSec: Math.max(bStart + 0.04, bEnd),
         pitchCenterPct: pull, driftCorrectionPct: Math.round(pull * 0.85), flattenPct: Math.round(pull * 0.35),
-        targetMidiOverride: st.midiNumber,
+        targetMidiOverride: st.midiNumber ?? undefined,
       });
     }
     i += ties;

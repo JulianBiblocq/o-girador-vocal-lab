@@ -17,10 +17,11 @@ export interface VocalStepData {
   stepIndex: number;
   active: boolean;
   note: string; // Ex: 'C4', 'A3', '───' pour une note tenue
-  midiNumber: number; // Ex: 60 pour C4
-  syllable?: string; // Syllabe de la Letra chantée
+  midiNumber: number | null; // Ex: 60 pour C4, null sur un silence explicite (0 / 𝄽)
+  syllable?: string; // Syllabe de la Letra chantée ou '_' sur un mélisme legato
   syllableAttack?: boolean; // Attaque franche ou plosive détectée
-  isTie?: boolean; // Note tenue liée au pas précédent
+  isTie?: boolean; // Note tenue liée au pas précédent (même hauteur)
+  isMelisma?: boolean; // Transition de hauteur legato sans ré-attaque syllabique ('_')
   tripletSlot?: TripletSlot; // 1 | 2 | 3 | 'unused' lorsque le temps est en triolet
   velocity: number; // 0..127 ou 0..1
   decay: number; // Durée relative ou millisecondes
@@ -78,7 +79,27 @@ export interface VocalPackMetadata {
   beatResolutions: number[]; // Ex: [4, 4, 4, 4] pour binaire 4/4, [3, 3] pour 6/8
   suggestedRole?: VocalRoleTarget; // Optionnel : universel par défaut
   referencePitch: string; // Ex: 'C4', 'A3'
+  referencePitchHz?: number; // Diapason acoustique en Hz (415..466, défaut 440)
+  recordedAtPitchHz?: number; // Diapason lors de la prise vocale (traçabilité Afinador)
+  grammarVersion?: number; // Version de grammaire vocale (2 = unifiée)
   createdAt: string; // ISO 8601
+}
+
+export interface CloudToadaPackContract {
+  id: string;
+  title: string;
+  groupId?: string;
+  bpm: number;
+  timeSignature: TimeSignatureString;
+  grammarVersion?: number;
+  referencePitchHz?: number;
+  recordedAtPitchHz?: number;
+  sungKey?: string;
+  troupeKey?: string;
+  transpositionSemitones?: number;
+  patterns: Record<string, any>[];
+  slots?: Record<string, any>[];
+  updatedAt?: number;
 }
 
 /** Structure globale du pack d'export */

@@ -8,6 +8,7 @@
     "build": "tsc -b && vite build",
     "deploy": "tsc -b && vite build && firebase deploy --only hosting:vocal-lab",
     "lint": "oxlint",
+    "check:governance": "node .agents/hooks/check_governance.mjs",
     "preview": "vite preview"
   },
   "dependencies": {

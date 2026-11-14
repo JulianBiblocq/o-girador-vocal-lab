@@ -69,7 +69,7 @@ export const UncertainNotesResolverBar: React.FC<UncertainNotesResolverBarProps>
         {uncertainBricks.map(({ step, idx }) => {
           const posLabel = formatStepMeasureBeatLabel(idx, hasAnacrusis, beatsPerMeasure, resPerBeat);
           const sylLabel = step.syllable?.trim() || '•';
-          const mainNote = step.note || midiToNoteName(step.midiNumber);
+          const mainNote = step.note || midiToNoteName(step.midiNumber ?? 60);
           const altNote = step.alternativeNote || midiToNoteName((step.midiNumber || 60) + 2);
           const mainSolfege = formatReferencePitchSolfege(mainNote, language), altSolfege = formatReferencePitchSolfege(altNote, language);
           return (

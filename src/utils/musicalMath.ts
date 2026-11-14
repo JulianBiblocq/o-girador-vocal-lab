@@ -3,6 +3,9 @@
  * Utilitaires de conversion de notes, calcul solfégique bilingue et métrique rythmique.
  */
 import type { TimeSignatureString } from '../types/vocalPack.types';
+import { sanitizePitchHz } from './pitchHzContract';
+
+export { sanitizePitchHz };
 
 const NOTE_TO_SEMITONE: Record<string, number> = {
   C: 0, 'C#': 1, Db: 1, D: 2, 'D#': 3, Eb: 3, E: 4, F: 5,
@@ -68,9 +71,9 @@ export function getTransposedNoteDisplay(
   return { noteCode: targetNote, solfege, label };
 }
 
-export function noteToFrequency(note: string): number {
+export function noteToFrequency(note: string, referencePitchHz?: unknown): number {
   const midi = noteToMidi(note);
-  return 440 * Math.pow(2, (midi - 69) / 12);
+  return sanitizePitchHz(referencePitchHz) * Math.pow(2, (midi - 69) / 12);
 }
 
 export function getBeatsPerMeasure(timeSignature: TimeSignatureString): number {

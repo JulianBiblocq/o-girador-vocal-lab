@@ -26,8 +26,8 @@ export function scheduleSecondaryTakeGuide(
   guideGain.connect(destination);
 
   const transposeSteps = (steps: VocalStepData[]): VocalStepData[] =>
-    steps.map((s) => (s.active && s.midiNumber > 0 && s.note !== '───')
-      ? { ...s, midiNumber: s.midiNumber + pitchShiftSemitones }
+    steps.map((s) => (s.active && (s.midiNumber ?? 0) > 0 && s.note !== '───')
+      ? { ...s, midiNumber: (s.midiNumber ?? 60) + pitchShiftSemitones }
       : s
     );
 

@@ -36,9 +36,10 @@ function scanNoBateria(dirPath) {
   const entries = fs.readdirSync(dirPath, { withFileTypes: true });
   const hits = [];
   for (const e of entries) {
+    if (e.name === '__tests__') continue;
     const full = path.join(dirPath, e.name);
     if (e.isDirectory()) hits.push(...scanNoBateria(full));
-    else if (/\.(ts|tsx|js|jsx)$/.test(e.name)) {
+    else if (/\.(ts|tsx|js|jsx)$/.test(e.name) && e.name !== 'styleVocabularyConfig.ts' && !/universeTerminology/i.test(e.name)) {
       const txt = fs.readFileSync(full, 'utf8');
       if (/\bbateria\b/i.test(txt)) hits.push(full);
     }

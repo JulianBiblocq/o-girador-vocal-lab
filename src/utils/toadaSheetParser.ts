@@ -10,6 +10,7 @@ import { extractSheetHeaders } from './sheetHeaderParser';
 import { preprocessTwoLineLyrics } from './timeAnchorParser';
 import { isOrganizadorStructureText, parseOrganizadorToadaSegments, extractInlineLineDirectives } from './toadaCardParser';
 import { getBeatsPerMeasure } from './musicalMath';
+import { parseVocalSlashTokens } from './vocalGrammarV2';
 
 export function parseRichTextLyricsAndPhonetics(
   rawOriginal: string, rawPhonetic?: string, boldRole: VocalRole = 'puxador', signature = '4/4'
@@ -45,12 +46,13 @@ export function parseRichTextLyricsAndPhonetics(
     let hasLineAnacrusis = false;
     let isLineLinked = false;
 
+    const slashCheck = parseVocalSlashTokens(line, { grammarVersion: 1 });
     if (line.startsWith('+')) {
       hasLineAnacrusis = true;
       line = line.replace(/^\+\s*/, '');
-    } else if (line.startsWith('/')) {
+    } else if (slashCheck.isLinkedMeasureLine) {
       isLineLinked = true;
-      line = line.replace(/^\/\s*/, '');
+      line = slashCheck.lineWithoutLinkPrefix.trim();
     }
 
     const rawSegs = parseRichLineIntoSegments(line, boldRole);

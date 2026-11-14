@@ -20,12 +20,12 @@ export function foldStudentPitchToTargetOctave(studentMidiFloat: number, targetM
 export function buildTargetNoteGroups(targetSteps: VocalStepData[], stepDurSec: number): TargetNoteGroup[] {
   const groups: TargetNoteGroup[] = [];
   for (let i = 0; i < targetSteps.length; i++) {
-    const s = targetSteps[i];
-    if (!s.active || s.midiNumber <= 0 || s.note === '───') continue;
+    const s = targetSteps[i], sMidi = s.midiNumber ?? 0;
+    if (!s.active || sMidi <= 0 || s.note === '───') continue;
     let ties = 0;
     while (i + 1 + ties < targetSteps.length && targetSteps[i + 1 + ties].note === '───') ties++;
     const endStep = i + ties;
-    groups.push({ startStep: i, endStep, tStart: i * stepDurSec, tEnd: (endStep + 1) * stepDurSec, midiNumber: s.midiNumber, stepsCount: 1 + ties });
+    groups.push({ startStep: i, endStep, tStart: i * stepDurSec, tEnd: (endStep + 1) * stepDurSec, midiNumber: sMidi, stepsCount: 1 + ties });
     i += ties;
   }
   return groups;

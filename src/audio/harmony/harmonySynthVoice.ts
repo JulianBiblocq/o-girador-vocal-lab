@@ -4,6 +4,8 @@
  * Utilise l'horloge native AudioContext, enveloppes douces sans clic et déconnexion propre.
  */
 
+import { midiToFrequency } from '../../utils/noteUtils';
+
 export interface ScheduledVoiceNode {
   stop: () => void;
   disconnect: () => void;
@@ -16,9 +18,10 @@ export function playPolyphonicChordNote(
   startTime: number,
   durationSec: number,
   volume = 0.5,
-  nodesList?: ScheduledVoiceNode[]
+  nodesList?: ScheduledVoiceNode[],
+  referencePitchHz?: number
 ): void {
-  const freq = 440 * Math.pow(2, (midi - 69) / 12);
+  const freq = midiToFrequency(midi, referencePitchHz);
   const osc = ctx.createOscillator();
   const filter = ctx.createBiquadFilter();
   const gain = ctx.createGain();
@@ -53,9 +56,10 @@ export function playBassNote(
   startTime: number,
   durationSec: number,
   volume = 0.5,
-  nodesList?: ScheduledVoiceNode[]
+  nodesList?: ScheduledVoiceNode[],
+  referencePitchHz?: number
 ): void {
-  const freq = 440 * Math.pow(2, (midi - 69) / 12);
+  const freq = midiToFrequency(midi, referencePitchHz);
   const osc = ctx.createOscillator();
   const filter = ctx.createBiquadFilter();
   const gain = ctx.createGain();
@@ -89,10 +93,11 @@ export function playBerimbauHit(
   startTime: number,
   durationSec: number,
   volume = 0.5,
-  nodesList?: ScheduledVoiceNode[]
+  nodesList?: ScheduledVoiceNode[],
+  referencePitchHz?: number
 ): void {
   const noteMidi = isOpen ? midi : midi + 2; // Tom Aberto / Tom Preso (+2 ST)
-  const freq = 440 * Math.pow(2, (noteMidi - 69) / 12);
+  const freq = midiToFrequency(noteMidi, referencePitchHz);
 
   const osc1 = ctx.createOscillator();
   const osc2 = ctx.createOscillator();

@@ -68,7 +68,7 @@ export function convertTapsToSteps(params: ConvertTapsToStepsParams): { steps: V
   }));
 
   const sortedTaps = [...taps].sort((a, b) => a.onsetSec - b.onsetSec);
-  let lastFallbackMidi = existingSteps.find((s) => s.active && s.midiNumber > 0)?.midiNumber || 60;
+  let lastFallbackMidi = existingSteps.find((s) => s.active && (s.midiNumber ?? 0) > 0)?.midiNumber || 60;
 
   for (let tIdx = 0; tIdx < sortedTaps.length; tIdx++) {
     const tap = sortedTaps[tIdx], corrOnset = Math.max(gridStartSec, tap.onsetSec - latencySec);

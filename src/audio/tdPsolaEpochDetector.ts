@@ -5,6 +5,7 @@
  */
 import type { PitchCurvePoint } from '../types/vocalPack.types';
 import type { NoteBrickSpan } from './melodynePitchDecomposer';
+import { midiToFrequency } from '../utils/noteUtils';
 
 export interface TdPsolaAnalysis {
   voicedMask: Uint8Array; voicedWeight: Float32Array; framePeriods: Float32Array; hopSamples: number; epochs: Int32Array;
@@ -52,7 +53,7 @@ function filterZeroPhaseFundamentalBand(rawAudio: Float32Array, sampleRate: numb
 }
 
 export function analyzeVoicingAndEpochs(
-  rawAudio: Float32Array, sampleRate: number, rawPitchCurve: PitchCurvePoint[], bricks: NoteBrickSpan[] = []
+  rawAudio: Float32Array, sampleRate: number, rawPitchCurve: PitchCurvePoint[], bricks: NoteBrickSpan[] = [], referencePitchHz?: number
 ): TdPsolaAnalysis {
   const n = rawAudio.length, hopSamples = Math.max(1, Math.round(sampleRate * 0.005)), numFrames = Math.ceil(n / hopSamples);
   const frameVoiced = new Uint8Array(numFrames), framePeriods = new Float32Array(numFrames);
@@ -62,7 +63,7 @@ export function analyzeVoicingAndEpochs(
   for (let f = 0; f < numFrames; f++) {
     const center = Math.min(n - 1, f * hopSamples + (hopSamples >> 1)), timeSec = center / sampleRate;
     const pitchInfo = findNearestCurveMidi(rawPitchCurve, timeSec);
-    if (pitchInfo.found) lastValidPeriod = Math.max(minPeriod, Math.min(maxPeriod, sampleRate / (440 * Math.pow(2, (pitchInfo.midi - 69) / 12))));
+    if (pitchInfo.found) lastValidPeriod = Math.max(minPeriod, Math.min(maxPeriod, sampleRate / midiToFrequency(pitchInfo.midi, referencePitchHz)));
     framePeriods[f] = lastValidPeriod;
     if (!pitchInfo.found || isInsideProtectedAttack(bricks, timeSec)) { frameVoiced[f] = 0; continue; }
     const w0 = Math.max(0, center - zcrHalfWin), w1 = Math.min(n - 1, center + zcrHalfWin);

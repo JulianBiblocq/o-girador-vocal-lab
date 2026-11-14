@@ -23,7 +23,7 @@ export const AmbitusSummaryCard: React.FC<Props> = ({ profile, isCompleted = tru
 
   const p = profile.vocalProfile;
   const compatibility = analyzeToadaCompatibility(profile, project.patterns);
-  const toadaMidis = project.patterns.flatMap((pat) => [...(pat.anacrusisSteps || []), ...(pat.mainSteps || [])]).filter((s) => s.active && s.midiNumber > 0).map((s) => s.midiNumber);
+  const toadaMidis = project.patterns.flatMap((pat) => [...(pat.anacrusisSteps || []), ...(pat.mainSteps || [])]).filter((s) => s.active && (s.midiNumber ?? 0) > 0).map((s) => s.midiNumber as number);
   const toadaRangeText = toadaMidis.length > 0 ? `${midiToNoteName(Math.min(...toadaMidis))} – ${midiToNoteName(Math.max(...toadaMidis))}` : null;
 
   return (

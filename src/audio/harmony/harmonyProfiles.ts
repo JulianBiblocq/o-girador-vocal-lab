@@ -101,6 +101,8 @@ export function scheduleHarmonyProfileMeasure(profile: HarmonyProfileId, opts: S
       scheduleCapoeiraBerimbau(opts);
       break;
     case 'samba':
+    case 'batucada':
+    case 'sambareggae':
       scheduleSambaLevada(opts);
       break;
     case 'forro':

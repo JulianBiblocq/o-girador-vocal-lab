@@ -35,9 +35,9 @@ export const MaracatuVocalGames: React.FC = () => {
     const raw = [...(activePattern.anacrusisSteps || []), ...(activePattern.mainSteps || [])];
     const groups: { midi: number; syllable: string; len: number }[] = [];
     for (let i = 0; i < raw.length; i++) {
-      const s = raw[i]; if (!s.active || s.midiNumber <= 0 || s.note === '───') continue;
+      const s = raw[i], sMidi = s.midiNumber ?? 0; if (!s.active || sMidi <= 0 || s.note === '───') continue;
       let ties = 0; while (i + 1 + ties < raw.length && raw[i + 1 + ties].note === '───') ties++;
-      groups.push({ midi: s.midiNumber, syllable: s.syllable?.trim() || '', len: 1 + ties }); i += ties;
+      groups.push({ midi: sMidi, syllable: s.syllable?.trim() || '', len: 1 + ties }); i += ties;
     }
     const attackNote = groups[0]?.midi ?? fallbackMidi, attackSyl = groups[0]?.syllable || CALL_SYLLABLES[0];
     const holdGroup = [...groups].sort((a, b) => b.len - a.len)[0];

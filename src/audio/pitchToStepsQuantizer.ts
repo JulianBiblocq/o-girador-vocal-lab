@@ -74,7 +74,7 @@ export function quantizePitchToSteps(params: QuantizerParams): QuantizedGridResu
         }
         if (sylCount > 0 && s < startSub) {
           const sVoiced = computeVowelCoreMidi(pitchCurve, stepStart, stepEnd, 0) !== null;
-          if (!hasLeadingRest && prevStep?.active && prevStep.midiNumber > 0 && sVoiced) {
+          if (!hasLeadingRest && prevStep?.active && (prevStep.midiNumber ?? 0) > 0 && sVoiced) {
             allSteps.push({ stepIndex: globalStepIndex++, active: true, note: '───', midiNumber: prevStep.midiNumber, syllable: '', syllableAttack: false, isTie: true, velocity: 90, decay: stepDuration });
           } else {
             allSteps.push({ stepIndex: globalStepIndex++, active: false, note: '', midiNumber: 0, velocity: 0, decay: stepDuration });
@@ -104,7 +104,7 @@ export function quantizePitchToSteps(params: QuantizerParams): QuantizedGridResu
         const samePitch = Boolean(prevStep && prevStep.active && (sylCount > 0 || (prevStep.midiNumber === targetMidi && (prevMidiFloat <= 0 || Math.abs(curFloat - prevMidiFloat) < pitchDiffLimit))));
         const canTie = Boolean(prevStep && prevStep.active && (isSustainedHold || (!hasAttack && samePitch)));
         if (!canTie) prevMidiFloat = curFloat;
-        const effectiveMidi = (canTie && (isSustainedHold || sylCount > 0)) ? prevStep.midiNumber : targetMidi;
+        const effectiveMidi = (canTie && (isSustainedHold || sylCount > 0)) ? (prevStep?.midiNumber ?? targetMidi) : targetMidi;
         allSteps.push({
           stepIndex: globalStepIndex++, active: true, note: canTie ? '───' : midiToNoteName(effectiveMidi),
           midiNumber: effectiveMidi, syllable: '', syllableAttack: hasAttack, isTie: canTie, velocity: canTie ? 90 : 100, decay: stepDuration,

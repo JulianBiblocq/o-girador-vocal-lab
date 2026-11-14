@@ -38,7 +38,7 @@ export const MelodiaNextStepFooter: React.FC = () => {
     if (isPushingOrg) return;
     setIsPushingOrg(true);
     try {
-      const res = await publishToadaToOrganizador(project, project.toadaMeta?.groupId || 'samambaia');
+      const res = await publishToadaToOrganizador(project, project.toadaMeta?.groupId);
       loadProject({
         ...project, organizadorSyncedAt: Date.now(),
         toadaMeta: { ...(project.toadaMeta || {}), id: res.documentId, bpmDefaut: res.bpm, tonaliteDefaut: res.scaleLabel },

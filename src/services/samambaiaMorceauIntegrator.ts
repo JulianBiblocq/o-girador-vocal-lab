@@ -1,10 +1,10 @@
 /**
  * samambaiaMorceauIntegrator.ts
- * Récupération des morceaux sauvegardés du répertoire Samambaia (Sequenciador `presets`)
- * et intégration directe de la Toada Cantador calée au BPM maître du morceau Sequenciador (< 125 lignes).
+ * Récupération des morceaux sauvegardés du répertoire du groupe actif (Sequenciador `presets`)
+ * et intégration directe de la Toada Cantador calée au BPM maître du morceau Sequenciador (< 130 lignes).
  */
 import { collection, doc, getDocs, limit, query, setDoc, updateDoc, where, addDoc } from 'firebase/firestore';
-import { auth, db } from '../firebase/config';
+import { db } from '../firebase/config';
 import type { ToadaProject } from '../types/toadaProject.types';
 import { publishToadaToSequencer } from './cloudToadaPublisher';
 import { parseSequenciadorPresetData, encodeSequenciadorPresetData } from '../utils/lzStringCodec';
@@ -13,8 +13,7 @@ import {
   injectToadaPackIntoSequenciadorPreset, applySequenciadorBpmBackToProject,
 } from '../utils/sequenciadorPresetBuilder';
 import { getEcosystemAppUrl } from '../utils/ecosystemUrls';
-
-const SAMAMBAIA_MESTRE_UID = 'iA0SweEHyOPzAPGIDVZdeKAV2mk1';
+import { resolveActiveTenantContext, buildGroupCandidates } from './activeTenantResolver';
 
 function detectHasVocalToada(parsed: Record<string, any> | null, rawDoc: Record<string, any>): boolean {
   if (rawDoc?.toadaPackId || parsed?.metadata?.toadaPackId) return true;
@@ -25,14 +24,16 @@ function detectHasVocalToada(parsed: Record<string, any> | null, rawDoc: Record<
   );
 }
 
-export async function fetchSamambaiaSavedMorceaux(): Promise<SamambaiaMorceauSummary[]> {
-  const presetsRef = collection(db, 'presets'), currentUid = auth.currentUser?.uid;
-  const queries = [
-    getDocs(query(presetsRef, where('groupId', 'in', ['samambaia', 'Samambaia', 'SAMAMBAIA']), limit(150))),
-    getDocs(query(presetsRef, where('mestreId', '==', SAMAMBAIA_MESTRE_UID), limit(150))),
-    getDocs(query(presetsRef, where('visibility', 'in', ['mestre_group', 'admin_global', 'public']), limit(150))),
-  ];
-  if (currentUid) queries.push(getDocs(query(presetsRef, where('ownerId', '==', currentUid), limit(100))));
+export async function fetchSamambaiaSavedMorceaux(explicitGroupId?: string | null): Promise<SamambaiaMorceauSummary[]> {
+  const presetsRef = collection(db, 'presets');
+  const { uid: currentUid, groupId } = await resolveActiveTenantContext(explicitGroupId);
+  const groupVariants = buildGroupCandidates(groupId);
+  const queries = [getDocs(query(presetsRef, where('visibility', 'in', ['admin_global', 'public']), limit(150)))];
+  if (groupVariants.length > 0) queries.unshift(getDocs(query(presetsRef, where('groupId', 'in', groupVariants), limit(150))));
+  if (currentUid) {
+    queries.push(getDocs(query(presetsRef, where('ownerId', '==', currentUid), limit(100))));
+    queries.push(getDocs(query(presetsRef, where('mestreId', '==', currentUid), limit(100))));
+  }
 
   const settled = await Promise.allSettled(queries);
   const seenIds = new Set<string>(), seenNormNames = new Set<string>(), list: SamambaiaMorceauSummary[] = [];
@@ -88,13 +89,17 @@ export async function integrateToadaIntoSamambaiaMorceau(
     bpm: sequenciadorBpm, timeSig: project.timeSignature || '4/4', totalMeasures: 8, tracks: [],
     metadata: { toada: morceauName, nacao: project.toadaMeta?.nacao || 'Nagô', ritmo: options.createNewMorceau?.ritmo || 'Baque Virado' },
   };
+  const tenant = await resolveActiveTenantContext(project.toadaMeta?.groupId);
+  const resolvedUid = target?.rawDoc?.ownerId || tenant.uid;
+  if (!resolvedUid) throw new Error('Session authentifiée requise pour intégrer un morceau dans Sequenciador.');
+  const resolvedGroupId = String(target?.rawDoc?.groupId || project.toadaMeta?.groupId || tenant.groupId || '').trim().toLowerCase();
+  if (!resolvedGroupId) throw new Error('Aucun groupe actif identifié pour ce morceau.');
   let finalPresetId = target?.id || '';
   const mergedPreset = injectToadaPackIntoSequenciadorPreset(basePreset, pubRes.publishedPack, sequenciadorBpm, finalPresetId || undefined);
-  const ownerId = target?.rawDoc?.ownerId || auth.currentUser?.uid || SAMAMBAIA_MESTRE_UID;
   const presetPayload: Record<string, any> = {
     name: morceauName, data: encodeSequenciadorPresetData(mergedPreset), bpm: sequenciadorBpm, toadaPackId: pubRes.toadaId,
-    groupId: target?.rawDoc?.groupId || 'samambaia', mestreId: target?.rawDoc?.mestreId || SAMAMBAIA_MESTRE_UID,
-    visibility: target?.rawDoc?.visibility || 'mestre_group', ownerId, updatedAt: Date.now(),
+    groupId: resolvedGroupId, mestreId: target?.rawDoc?.mestreId || tenant.uid || resolvedUid,
+    visibility: target?.rawDoc?.visibility || 'mestre_group', ownerId: resolvedUid, updatedAt: Date.now(),
   };
 
   if (finalPresetId) {

@@ -63,7 +63,7 @@ export class MelodicPreviewPlayer {
     const t1 = options.t1OffsetSec ?? getPatternT1OffsetSec(options.hasAnacrusis, beatsPerMeasure * beatDuration);
     const startOffsetSec = options.hasAnacrusis === false ? t1 : Math.max(0, t1 - beatsPerMeasure * beatDuration);
     const effectiveSteps = (pitchShiftSemitones && pitchShiftSemitones !== 0)
-      ? allSteps.map((s) => (s.active && s.midiNumber > 0 && s.note !== '───') ? { ...s, midiNumber: s.midiNumber + pitchShiftSemitones } : s)
+      ? allSteps.map((s) => (s.active && (s.midiNumber ?? 0) > 0 && s.note !== '───') ? { ...s, midiNumber: (s.midiNumber ?? 60) + pitchShiftSemitones } : s)
       : allSteps;
     this.synthNodes = scheduleMelodySteps(this.ctx, this.synthGainNode, effectiveSteps, stepDuration, now, this.seekStartSec, startOffsetSec);
 

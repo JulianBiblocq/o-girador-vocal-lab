@@ -10,6 +10,8 @@ import type { ToadaDocument } from '../types/toadaDocument.types';
 import { type ToadaProject, DEFAULT_TOADA_BPM } from '../types/toadaProject.types';
 import { isVaralSong, normalizeToadaDoc, mergeAndDeduplicateToadas, findDocByIdOrNormalizedTitle } from '../utils/varalSongFilter';
 import { normalizeHarmonyGrid, normalizeLexiconList, normalizeQuizList } from '../utils/toadaDocNormalizer';
+import { buildGroupCandidates } from './activeTenantResolver';
+import { sanitizePitchHz } from '../utils/pitchHzContract';
 
 export type { ToadaDocument };
 export const storage = getStorage(app);
@@ -44,25 +46,25 @@ export async function getUserGroupId(uid: string): Promise<string | null> {
 }
 
 export async function fetchOrganizadorToadas(groupId?: string | null): Promise<ToadaDocument[]> {
+  const effectiveGroup = groupId || (auth.currentUser?.uid ? await getUserGroupId(auth.currentUser.uid) : null);
+  const groupCandidates = buildGroupCandidates(effectiveGroup);
+  if (groupCandidates.length === 0) return [];
   const primaryDocs: ToadaDocument[] = [], seenIds = new Set<string>();
   const addSnap = (snap: any) => snap?.forEach((d: any) => {
     if (!seenIds.has(d.id) && isVaralSong(d.data())) { seenIds.add(d.id); primaryDocs.push(normalizeToadaDoc(d.id, d.data())); }
   });
 
   try {
-    const docsRef = collection(db, 'documents');
+    const docsRef = collection(db, 'documents'), gFilter = where('groupId', 'in', groupCandidates);
     const [s1, s2, s3] = await Promise.all([
-      getDocs(query(docsRef, where('type', '==', 'song'))).catch(() => null),
-      getDocs(query(docsRef, where('categoryId', '==', 'Toadas'))).catch(() => null),
-      getDocs(query(docsRef, limit(300))).catch(() => null),
+      getDocs(query(docsRef, gFilter, where('type', '==', 'song'))).catch(() => null),
+      getDocs(query(docsRef, gFilter, where('categoryId', '==', 'Toadas'))).catch(() => null),
+      getDocs(query(docsRef, gFilter, limit(300))).catch(() => null),
     ]);
     addSnap(s1); addSnap(s2); addSnap(s3);
-  } catch (err) {
-    console.warn('[firebaseClient] Erreur documents :', err);
-  }
+  } catch (err) { console.warn('[firebaseClient] Erreur documents :', err); }
 
   const repertoireDocs: { id: string; data: any }[] = [];
-  const groupCandidates = Array.from(new Set([groupId, groupId?.toLowerCase(), 'Samambaia', 'samambaia'].filter(Boolean) as string[]));
   for (const gId of groupCandidates) {
     try {
       const repSnap = await getDocs(query(collection(db, 'associations', gId, 'repertoire'), limit(150)));
@@ -78,7 +80,8 @@ export async function fetchOrganizadorToadaById(songId: string, groupId?: string
     if (docSnap.exists() && isVaralSong(docSnap.data())) return normalizeToadaDoc(docSnap.id, docSnap.data());
   } catch {}
 
-  const groupCandidates = Array.from(new Set([groupId, groupId?.toLowerCase(), 'Samambaia', 'samambaia'].filter(Boolean) as string[]));
+  const effectiveGroup = groupId || (auth.currentUser?.uid ? await getUserGroupId(auth.currentUser.uid) : null);
+  const groupCandidates = buildGroupCandidates(effectiveGroup);
   for (const gId of groupCandidates) {
     try {
       const pSnap = await getDoc(doc(db, 'associations', gId, 'repertoire', songId));
@@ -128,6 +131,8 @@ export async function fetchToadaPackById(toadaId: string): Promise<ToadaProject 
       timeSignature: d.timeSignature || d.metadata?.timeSignature || d.project?.timeSignature || '4/4',
       sungScaleRoot: d.sungScaleRoot || toadaMeta.sungScaleRoot, sungScaleMode: d.sungScaleMode || toadaMeta.sungScaleMode,
       troupeScaleRoot: d.troupeScaleRoot || toadaMeta.troupeScaleRoot, transpositionSemitones,
+      referencePitchHz: sanitizePitchHz(d.referencePitchHz ?? d.metadata?.referencePitchHz ?? toadaMeta.referencePitchHz),
+      recordedAtPitchHz: d.recordedAtPitchHz ? sanitizePitchHz(d.recordedAtPitchHz) : undefined,
       patterns: (d.patterns || []).map((p: any, idx: number) => ({ ...p, cardIndex: p.cardIndex ?? idx, bpm: p.bpm ?? p.baseBpm ?? resolvedBpm, baseBpm: p.baseBpm ?? p.bpm ?? resolvedBpm })),
       slots: d.slots || d.arrangementSlots || [], activePatternId: (d.patterns && d.patterns[0]?.id) || 'pattern_puxador_1',
       toadaMeta, globalHarmonyGrid, harmonyConfig: d.harmonyConfig,

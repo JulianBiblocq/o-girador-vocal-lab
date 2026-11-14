@@ -1,12 +1,13 @@
 /**
  * sheetSlotBuilder.ts
- * Construction des motifs (VocalPatternItem) et de la Frise Conducteur (slots) avec superposition
- * automatique des phrases Tutti / Ensemble (K >= 2 lignes Puxador + Coro identiques ou ***...***) (< 130 lignes).
+ * Construction des motifs (VocalPatternItem) et de la Frise Conducteur (slots) avec fusion complète
+ * des mesures liées (préfixe `/` et lignes bold liées) et superposition Tutti/Ensemble (< 145 lignes).
  */
 import type { VocalPatternItem, ToadaArrangementSlot, VocalRole } from '../types/toadaProject.types';
 import type { ParsedLyricsSegment } from '../types/toadaDocument.types';
 import { createDefaultVocalPattern } from '../types/toadaProject.types';
 import { createHarmonyGridFromChords } from './chordGridHelper';
+import { collapseLinkedSegments, type MergedLinkedSegment } from './linkedSegmentMerger';
 
 export function extractCleanFirstWord(text: string): string {
   if (!text) return 'Phrase';
@@ -31,7 +32,7 @@ export function normalizeLyricsForComparison(text: string): string {
 }
 
 export function initPatternFromSegment(
-  role: VocalRole, seg: ParsedLyricsSegment, bpm: number, existingNames: string[],
+  role: VocalRole, seg: MergedLinkedSegment, bpm: number, existingNames: string[],
   measuresCount: 1 | 2 | 3 | 4 = 1, defaultAna = false, cardIndex = 0
 ): VocalPatternItem {
   const effBpm = seg.sectionBpm ?? bpm;
@@ -43,7 +44,8 @@ export function initPatternFromSegment(
   pat.hasAnacrusis = seg.hasAnacrusis ?? defaultAna;
   pat.anacrusisBeats = seg.anacrusisBeats ?? (pat.hasAnacrusis ? 2 : undefined);
   pat.timeAnchors = seg.timeAnchors; pat.exitBeat = seg.exitBeat;
-  if (seg.chords?.length) pat.harmonyGrid = createHarmonyGridFromChords(seg.chords, measuresCount);
+  if (seg.mergedHarmonyGrid) pat.harmonyGrid = seg.mergedHarmonyGrid;
+  else if (seg.chords?.length) pat.harmonyGrid = createHarmonyGridFromChords(seg.chords, measuresCount);
   return pat;
 }
 
@@ -74,8 +76,9 @@ export function findSimultaneousBlockLength(segments: ParsedLyricsSegment[], sta
 }
 
 export function buildPatternsAndSlotsFromSegments(
-  segments: ParsedLyricsSegment[], targetBpm: number, defaultHasAnacrusis = false
+  rawSegments: ParsedLyricsSegment[], targetBpm: number, defaultHasAnacrusis = false
 ): { patterns: VocalPatternItem[]; slots: ToadaArrangementSlot[] } {
+  const segments = collapseLinkedSegments(rawSegments);
   const newPatterns: VocalPatternItem[] = [], newSlots: ToadaArrangementSlot[] = [];
   const namesOf = (r: VocalRole, extra: VocalPatternItem[] = []) => [...newPatterns, ...extra].filter((p) => p.role === r).map((p) => p.name);
   let i = 0;
@@ -87,8 +90,8 @@ export function buildPatternsAndSlotsFromSegments(
     }
     if (seg.isMixedPair && nextSeg && nextSeg.isMixedPair && seg.role !== nextSeg.role) {
       const puxSeg = seg.role === 'puxador' ? seg : nextSeg, coroSeg = seg.role === 'coro' ? seg : nextSeg;
-      const patPux = initPatternFromSegment('puxador', puxSeg, targetBpm, namesOf('puxador'), 1, false, newPatterns.length);
-      const patCoro = initPatternFromSegment('coro', coroSeg, targetBpm, namesOf('coro'), 1, false, newPatterns.length + 1);
+      const patPux = initPatternFromSegment('puxador', puxSeg, targetBpm, namesOf('puxador'), (puxSeg.measuresCount ?? 1) as 1 | 2 | 3 | 4, false, newPatterns.length);
+      const patCoro = initPatternFromSegment('coro', coroSeg, targetBpm, namesOf('coro'), (coroSeg.measuresCount ?? 1) as 1 | 2 | 3 | 4, false, newPatterns.length + 1);
       newPatterns.push(patPux, patCoro);
       newSlots.push({ slotId: `slot-${newSlots.length + 1}`, puxadorPatternId: patPux.id, coroPatternId: patCoro.id });
       i += 2; continue;
@@ -106,8 +109,7 @@ export function buildPatternsAndSlotsFromSegments(
       for (let m = 0; m < simK; m++) newSlots.push({ slotId: `slot-${newSlots.length + 1}`, puxadorPatternId: blockPux[m].id, coroPatternId: blockCoro[m].id });
       i += 2 * simK; continue;
     }
-    let measuresCount: 1 | 2 | 3 | 4 = (seg.measuresCount ?? 1) as 1 | 2 | 3 | 4, lookAhead = i + 1;
-    while (lookAhead < segments.length && segments[lookAhead].isLinkedMeasure && measuresCount < 4) { measuresCount = (measuresCount + 1) as 1 | 2 | 3 | 4; lookAhead++; }
+    const measuresCount = (seg.measuresCount ?? 1) as 1 | 2 | 3 | 4;
     if (seg.isSimultaneousTutti) {
       const patPux = initPatternFromSegment('puxador', seg, targetBpm, namesOf('puxador'), measuresCount, defaultHasAnacrusis, seg.cardIndex ?? newSlots.length);
       const patCoro = initPatternFromSegment('coro', seg, targetBpm, namesOf('coro'), measuresCount, defaultHasAnacrusis, seg.cardIndex ?? newSlots.length);
@@ -118,7 +120,7 @@ export function buildPatternsAndSlotsFromSegments(
       newPatterns.push(pat);
       newSlots.push({ slotId: `slot-${newSlots.length + 1}`, puxadorPatternId: seg.role === 'puxador' ? pat.id : null, coroPatternId: seg.role === 'coro' ? pat.id : null });
     }
-    i = lookAhead;
+    i++;
   }
   const patMap = new Map(newPatterns.map((p) => [p.id, p]));
   for (let s = 0; s < newSlots.length; s++) {

@@ -11,6 +11,9 @@ import { detectToadaLexicon } from '../utils/toadaLexiconDetector';
 import { generateQuizFromLexicon } from '../utils/toadaQuizGenerator';
 import { analyzeFullProjectScale } from '../audio/projectScaleAnalyzer';
 import { resolveProjectDualScale } from '../utils/scaleTranspositionHelper';
+import { resolveActiveTenantContext } from './activeTenantResolver';
+import { sanitizePitchHz } from '../utils/pitchHzContract';
+import { VOCAL_GRAMMAR_VERSION, normalizeToadaTextV1ToV2 } from '../utils/vocalGrammarV2';
 
 export interface OrganizadorPublishPayloadResult {
   payload: Record<string, any>;
@@ -27,11 +30,12 @@ export interface OrganizadorPublishPayloadResult {
 
 export function buildOrganizadorDocumentPayload(
   project: ToadaProject,
-  groupId: string = 'samambaia'
+  groupId?: string | null
 ): OrganizadorPublishPayloadResult {
-  const { rawTxtCode, cleanHtml } = reconstituteToadaTxt(project);
-  const rawGroupId = project.toadaMeta?.groupId || groupId || 'samambaia';
-  const targetGroupId = rawGroupId.trim().toLowerCase();
+  const { rawTxtCode: rawReconstituted, cleanHtml } = reconstituteToadaTxt(project, { upgradeToV2: true });
+  const rawTxtCode = normalizeToadaTextV1ToV2(rawReconstituted, { grammarVersion: VOCAL_GRAMMAR_VERSION });
+  const rawGroupId = String(groupId || project.toadaMeta?.groupId || '').trim();
+  const targetGroupId = rawGroupId.toLowerCase();
 
   const existingLexicon = project.toadaMeta?.notesLexique || [];
   const notesLexique = existingLexicon.length > 0 ? existingLexicon : detectToadaLexicon(project);
@@ -58,6 +62,8 @@ export function buildOrganizadorDocumentPayload(
     parolesOriginales: cleanHtml || meta.parolesOriginales || '', parolesPhonetiques,
     signature: project.timeSignature || '4/4', timeSignature: project.timeSignature || '4/4',
     bpmDefaut: resolvedBpm, bpm: resolvedBpm, tonaliteDefaut: formattedScaleLabel,
+    grammarVersion: VOCAL_GRAMMAR_VERSION,
+    referencePitchHz: sanitizePitchHz(project.referencePitchHz ?? meta.referencePitchHz),
     tonaliteChanteeOrigine, transpositionSemitones,
     sungScaleRoot: dualScale.sungScaleRoot, sungScaleMode: dualScale.sungScaleMode, troupeScaleRoot: dualScale.troupeScaleRoot,
     scaleRoot, scaleMode, cantadorToadaId: project.id, cantadorValidated: true,
@@ -79,38 +85,34 @@ export function buildOrganizadorDocumentPayload(
 }
 
 export async function syncTonaliteToOrganizadorFirestore(project: ToadaProject): Promise<boolean> {
-  const docId = project.toadaMeta?.id;
-  const repId = project.toadaMeta?.repertoireId;
+  const docId = project.toadaMeta?.id, repId = project.toadaMeta?.repertoireId;
   if (!docId && !repId) return false;
   try {
     const dual = resolveProjectDualScale(project, 'fr');
     const fields = {
-      tonaliteDefaut: dual.troupeScaleLabel,
-      tonaliteChanteeOrigine: dual.sungScaleLabel,
-      transpositionSemitones: dual.transpositionSemitones,
-      sungScaleRoot: dual.sungScaleRoot,
-      sungScaleMode: dual.sungScaleMode,
-      troupeScaleRoot: dual.troupeScaleRoot,
-      scaleRoot: dual.troupeScaleRoot,
-      scaleMode: dual.troupeScaleMode,
-      dateMaj: new Date().toISOString(),
+      tonaliteDefaut: dual.troupeScaleLabel, tonaliteChanteeOrigine: dual.sungScaleLabel,
+      transpositionSemitones: dual.transpositionSemitones, sungScaleRoot: dual.sungScaleRoot,
+      sungScaleMode: dual.sungScaleMode, troupeScaleRoot: dual.troupeScaleRoot,
+      scaleRoot: dual.troupeScaleRoot, scaleMode: dual.troupeScaleMode, dateMaj: new Date().toISOString(),
     };
     if (docId) await updateDoc(doc(db, 'documents', docId), fields).catch(() => {});
     if (repId) {
-      const gId = (project.toadaMeta?.groupId || 'samambaia').trim().toLowerCase();
-      await updateDoc(doc(db, 'associations', gId, 'repertoire', repId), fields).catch(() => {});
+      const resolved = await resolveActiveTenantContext(project.toadaMeta?.groupId);
+      const gId = String(resolved.groupId || '').trim().toLowerCase();
+      if (gId) await updateDoc(doc(db, 'associations', gId, 'repertoire', repId), fields).catch(() => {});
     }
     return true;
-  } catch {
-    return false;
-  }
+  } catch { return false; }
 }
 
 export async function publishToadaToOrganizador(
   project: ToadaProject,
-  groupId: string = 'samambaia'
+  groupId?: string | null
 ): Promise<{ success: boolean; documentId: string; bpm: number; scaleLabel: string }> {
-  const { payload, resolvedBpm, formattedScaleLabel, tonaliteChanteeOrigine, transpositionSemitones, targetGroupId } = buildOrganizadorDocumentPayload(project, groupId);
+  const resolvedCtx = await resolveActiveTenantContext(groupId || project.toadaMeta?.groupId);
+  const effectiveGroupId = resolvedCtx.groupId || groupId || project.toadaMeta?.groupId || '';
+  if (!effectiveGroupId) throw new Error('Aucun groupe actif identifié pour publier dans Organizador.');
+  const { payload, resolvedBpm, formattedScaleLabel, tonaliteChanteeOrigine, transpositionSemitones, targetGroupId } = buildOrganizadorDocumentPayload(project, effectiveGroupId);
 
   const existingDocId = project.toadaMeta?.id;
   if (existingDocId) {

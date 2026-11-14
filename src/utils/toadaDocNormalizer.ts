@@ -7,6 +7,8 @@ import type { ToadaDocument } from '../types/toadaDocument.types';
 import type { ToadaLexiconEntry, ToadaQuizItem } from '../types/toadaLexicon.types';
 import type { PatternHarmonyGrid } from '../types/harmony.types';
 import { createHarmonyGridFromChords } from './chordGridHelper';
+import { sanitizePitchHz } from './pitchHzContract';
+import { normalizeElisionApostrophes } from './vocalGrammarV2';
 
 export function normalizeLexiconList(raw: any): ToadaLexiconEntry[] {
   if (!raw) return [];
@@ -89,7 +91,10 @@ export function normalizeHarmonyGrid(raw: any): PatternHarmonyGrid | undefined {
 }
 
 export function normalizeToadaDoc(id: string, data: any, repertoireId?: string): ToadaDocument {
-  const paroles = data.parolesOriginales || data.paroles || data.lyrics || (data.type === 'song' ? data.texte : '') || data.activeToada?.paroles || '';
+  const ver = data.grammarVersion !== undefined ? Number(data.grammarVersion) : undefined;
+  const rawParoles = data.parolesOriginales || data.paroles || data.lyrics || (data.type === 'song' ? data.texte : '') || data.activeToada?.paroles || '';
+  const paroles = typeof rawParoles === 'string' ? normalizeElisionApostrophes(rawParoles) : rawParoles;
+  const rawTxt = data.rawTxtCode || (typeof rawParoles === 'string' && /\[(?:[1-9]|1[0-2])\]/.test(rawParoles) ? rawParoles : undefined);
   const notesLexique = normalizeLexiconList(data.notesLexique || data.lexique);
   const questionsQcm = normalizeQuizList(data.questionsQcm || data.quiz || data.customQuestions);
   const harmonyGrid = normalizeHarmonyGrid(data.harmonyGrid || data.globalHarmonyGrid || data.grilleHarmonique || data.chords);
@@ -103,7 +108,7 @@ export function normalizeToadaDoc(id: string, data: any, repertoireId?: string):
     type: 'song',
     categoryId: data.categoryId || data.categorie || 'Toadas',
     categorie: data.categorie || data.categoryId || 'Toadas',
-    groupId: data.groupId || 'samambaia',
+    groupId: data.groupId || '',
     nacao: data.nacao || data.nação || '',
     rythme: data.rythme || data.ritmo || '',
     annee: data.annee || (data.year ? Number(data.year) : undefined),
@@ -111,9 +116,11 @@ export function normalizeToadaDoc(id: string, data: any, repertoireId?: string):
     timeSignature: data.timeSignature || data.signature || '4/4',
     tonaliteDefaut: data.tonaliteDefaut,
     bpmDefaut: parsedBpm,
+    grammarVersion: ver,
+    referencePitchHz: data.referencePitchHz !== undefined ? sanitizePitchHz(data.referencePitchHz) : undefined,
     parolesOriginales: paroles,
     parolesPhonetiques: data.parolesPhonetiques || data.phonetique || data.activeToada?.parolesPhonetiques || '',
-    rawTxtCode: data.rawTxtCode || (typeof paroles === 'string' && /\[(?:[1-9]|1[0-2])\]/.test(paroles) ? paroles : undefined),
+    rawTxtCode: rawTxt ? normalizeElisionApostrophes(rawTxt) : undefined,
     traduction: data.traduction || '',
     anecdote: data.anecdote || '',
     notesLexique,

@@ -98,7 +98,7 @@ export const VocalPaperImportTab: React.FC<VocalPaperImportTabProps> = ({ projec
     if (!scanResult) return;
     setIsScanning(true);
     const updated = convertVocalPaperScanToProject(project, scanResult, { title, bpm, sungKey, troupeKey }, matchedDoc);
-    if (syncOrganizador) await publishToadaToOrganizador(updated, groupId || 'samambaia').catch(() => {});
+    if (syncOrganizador) await publishToadaToOrganizador(updated, groupId).catch(() => {});
     if (syncSequenciador) await publishToadaToSequencer(updated, undefined, bpm).catch(() => {});
     setIsScanning(false); onProjectImported(updated);
   };

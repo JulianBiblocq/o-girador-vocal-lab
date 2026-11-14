@@ -1,20 +1,28 @@
 /**
  * SequenciadorExportBar.tsx
- * Sélecteur global d'envoi vers Sequenciador ouvrant la modale d'intégration directe au Répertoire Samambaia (< 75 lignes).
+ * Sélecteur global d'envoi vers Sequenciador ouvrant la modale d'intégration directe au Répertoire du groupe (< 75 lignes).
  */
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Drum, Piano, Rocket, Upload } from 'lucide-react';
 import { useToadaProject } from '../../context/ToadaProjectContext';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { getActiveTimelinePatterns } from '../../services/cloudToadaPublisher';
 import { isPatternReadyForSequenciador } from '../../utils/toadaPackExporter';
 import { SamambaiaRepertoireTargetModal } from '../modals/SamambaiaRepertoireTargetModal';
+import { resolveActiveTenantContext, formatRepertoireLabel } from '../../services/activeTenantResolver';
 
 export const SequenciadorExportBar: React.FC<{ compact?: boolean }> = ({ compact = false }) => {
   const { project, setSequenciadorExportMode } = useToadaProject();
   const { language } = useLanguage();
   const isBr = language === 'br';
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [groupName, setGroupName] = useState<string | null>(null);
+
+  useEffect(() => {
+    resolveActiveTenantContext(project.toadaMeta?.groupId).then((ctx) => setGroupName(ctx.groupName));
+  }, [project.toadaMeta?.groupId]);
+
+  const repLabel = formatRepertoireLabel(groupName, isBr);
 
   const exportMode = project.sequenciadorExportMode ?? 'rhythm_only';
   const activePatterns = getActiveTimelinePatterns(project);
@@ -50,7 +58,7 @@ export const SequenciadorExportBar: React.FC<{ compact?: boolean }> = ({ compact
       <button
         type="button" onClick={() => setIsModalOpen(true)}
         className="px-2.5 py-1 rounded bg-amber-600 hover:bg-amber-500 text-white text-[11px] font-bold flex items-center gap-1.5 cursor-pointer shadow-2xs transition-colors"
-        title={isBr ? `Integrar num música do Repertório Samambaia (${readyCount}/${totalCount} padrões prontos)` : `Intégrer dans un morceau du Répertoire Samambaia (${readyCount}/${totalCount} patterns prêts)`}
+        title={isBr ? `Integrar numa música — ${repLabel} (${readyCount}/${totalCount} padrões prontos)` : `Intégrer dans un morceau — ${repLabel} (${readyCount}/${totalCount} patterns prêts)`}
       >
         <Rocket className="w-3.5 h-3.5" />
         <span>{isBr ? 'Enviar ao Sequenciador' : 'Envoyer à Sequenciador'}</span>

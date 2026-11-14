@@ -49,15 +49,15 @@ export function buildNoteBrickSpans(
   const spans: NoteBrickSpan[] = [];
   const beatDur = (geom.gridDur / allSteps.length) * 4;
   for (let i = 0; i < allSteps.length; i++) {
-    const step = allSteps[i];
-    if (step.tripletSlot === 'unused' || !step.active || step.note === '───' || step.isTie || step.midiNumber <= 0) continue;
+    const step = allSteps[i], stepMidi = step.midiNumber ?? 0;
+    if (step.tripletSlot === 'unused' || !step.active || step.note === '───' || step.isTie || stepMidi <= 0) continue;
     const endIdx = findLastTiedStepIndex(allSteps, i);
     const { startSec, endSec } = getStepTimeWindowSec(allSteps, i, geom.tGridStart, beatDur);
     const cutRatio = step.melodyneStartRatio !== undefined ? Math.max(0, Math.min(0.85, step.melodyneStartRatio)) : 0;
     const attackEndSec = startSec + (endSec - startSec) * cutRatio;
-    const rawMed = computeIntervalMedianPitch(cleanCurve, Math.min(endSec, attackEndSec), endSec, step.midiNumber);
-    const sungMedian = rawMed + Math.round((step.midiNumber - rawMed) / 12) * 12;
-    spans.push({ rootIndex: i, startSec, endSec, attackEndSec, targetMidi: step.midiNumber, sungMedian, isManualMove: Boolean(step.manualPitchMoved) });
+    const rawMed = computeIntervalMedianPitch(cleanCurve, Math.min(endSec, attackEndSec), endSec, stepMidi);
+    const sungMedian = rawMed + Math.round((stepMidi - rawMed) / 12) * 12;
+    spans.push({ rootIndex: i, startSec, endSec, attackEndSec, targetMidi: stepMidi, sungMedian, isManualMove: Boolean(step.manualPitchMoved) });
     i = endIdx;
   }
   return spans;

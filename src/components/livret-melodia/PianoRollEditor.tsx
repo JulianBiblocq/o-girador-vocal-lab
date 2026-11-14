@@ -62,7 +62,7 @@ export const PianoRollEditor: React.FC<PianoRollEditorProps> = (p) => {
     return () => { obs.disconnect(); el.removeEventListener('wheel', onWheel); };
   }, []);
 
-  const activeMidis = useMemo(() => p.allSteps.filter((s) => s.active && s.midiNumber > 0).map((s) => s.midiNumber), [p.allSteps]);
+  const activeMidis = useMemo(() => p.allSteps.filter((s) => s.active && (s.midiNumber ?? 0) > 0).map((s) => s.midiNumber as number), [p.allSteps]);
   const { minMidi, maxMidi } = useMemo(() => calculateTessitura(activeMidis), [activeMidis]);
   const viewportHeight = isFolded ? FOLDED_RHYTHM_HEIGHT : NOTES_VIEWPORT_HEIGHT;
   const canvasHeight = isFolded ? FOLDED_RHYTHM_HEIGHT : Math.max(1, maxMidi - minMidi + 1) * ROW_HEIGHT;
@@ -89,7 +89,7 @@ export const PianoRollEditor: React.FC<PianoRollEditorProps> = (p) => {
       const nextActive = nextSteps.findIndex((st, i) => i > cur && st.active && st.note !== '───');
       if (nextActive !== -1) {
         const stepW = gridWidth / nextSteps.length;
-        setTextInput({ stepIndex: nextActive, rect: { x: nextActive * stepW, y: isFolded ? 29 : (maxMidi - nextSteps[nextActive].midiNumber) * ROW_HEIGHT, w: stepW * 2, h: ROW_HEIGHT } });
+        setTextInput({ stepIndex: nextActive, rect: { x: nextActive * stepW, y: isFolded ? 29 : (maxMidi - (nextSteps[nextActive].midiNumber ?? 60)) * ROW_HEIGHT, w: stepW * 2, h: ROW_HEIGHT } });
         return;
       }
     }

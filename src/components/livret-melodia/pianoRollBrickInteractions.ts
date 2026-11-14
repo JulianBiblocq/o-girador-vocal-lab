@@ -104,8 +104,8 @@ export function weldAdjacentBricks(
   }
 
   if (!secondRange) return steps;
-  const firstMidi = steps[firstRange.rootIndex].midiNumber;
-  const secondMidi = steps[secondRange.rootIndex].midiNumber;
+  const firstMidi = steps[firstRange.rootIndex].midiNumber ?? 60;
+  const secondMidi = steps[secondRange.rootIndex].midiNumber ?? 60;
   if (Math.abs(firstMidi - secondMidi) > maxSemitoneDiff) return steps;
 
   const next = steps.map((s) => ({ ...s }));

@@ -34,8 +34,8 @@ export function checkPatternHasAudio(pat: VocalPatternItem): boolean {
 export function checkPatternHasMidi(pat: VocalPatternItem): boolean {
   return Boolean(
     pat.pack &&
-    ((pat.mainSteps?.some((s) => s.active && s.midiNumber > 0)) ||
-      (pat.anacrusisSteps?.some((s) => s.active && s.midiNumber > 0)))
+    ((pat.mainSteps?.some((s) => s.active && (s.midiNumber ?? 0) > 0)) ||
+      (pat.anacrusisSteps?.some((s) => s.active && (s.midiNumber ?? 0) > 0)))
   );
 }
 

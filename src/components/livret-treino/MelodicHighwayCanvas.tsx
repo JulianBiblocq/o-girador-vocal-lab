@@ -17,7 +17,7 @@ export const MelodicHighwayCanvas: React.FC<MelodicHighwayCanvasProps> = ({
   allSteps, mestrePitchCurve = [], studentPitchCurve, totalDurationSec, beatsPerMeasure, hasAnacrusis, isPlaying, getPlayheadSec,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null), rafRef = useRef<number | null>(null);
-  const activeMidis = allSteps.filter((s) => s.active && s.midiNumber > 0).map((s) => s.midiNumber);
+  const activeMidis = allSteps.filter((s) => s.active && (s.midiNumber ?? 0) > 0).map((s) => s.midiNumber as number);
   const minTarget = activeMidis.length > 0 ? Math.min(...activeMidis) : 55, maxTarget = activeMidis.length > 0 ? Math.max(...activeMidis) : 67;
   const minMidi = Math.max(36, minTarget - 3), maxMidi = Math.min(84, maxTarget + 3), medianMidi = Math.round((minTarget + maxTarget) / 2);
 
@@ -45,7 +45,7 @@ export const MelodicHighwayCanvas: React.FC<MelodicHighwayCanvasProps> = ({
     }
 
     const m1StartBeat = hasAnacrusis ? beatsPerMeasure : 0;
-    const firstActiveStep = allSteps.findIndex((st, idx) => idx >= m1StartBeat * subdivPerBeat && st.active && st.midiNumber > 0);
+    const firstActiveStep = allSteps.findIndex((st, idx) => idx >= m1StartBeat * subdivPerBeat && st.active && (st.midiNumber ?? 0) > 0);
     for (let i = 0; i < totalSteps; i += subdivPerBeat) {
       const x = leftPad + i * stepW, b = Math.floor(i / subdivPerBeat), isT1 = hasAnacrusis ? b === beatsPerMeasure : b === 0;
       ctx.strokeStyle = isT1 ? '#d4af37' : b % beatsPerMeasure === 0 ? (isLight ? 'rgba(0,0,0,0.28)' : 'rgba(255,255,255,0.28)') : (isLight ? 'rgba(0,0,0,0.10)' : 'rgba(255,255,255,0.10)');
@@ -59,13 +59,13 @@ export const MelodicHighwayCanvas: React.FC<MelodicHighwayCanvasProps> = ({
 
     // 3. Briques cibles du Mestre avec syllabes
     for (let i = 0; i < allSteps.length; i++) {
-      const s = allSteps[i];
-      if (s.tripletSlot === 'unused' || !s.active || s.note === '───' || s.midiNumber < minMidi || s.midiNumber > maxMidi) continue;
+      const s = allSteps[i], sMidi = s.midiNumber ?? -1;
+      if (s.tripletSlot === 'unused' || !s.active || s.note === '───' || sMidi < minMidi || sMidi > maxMidi) continue;
       const endIdx = findLastTiedStepIndex(allSteps, i);
       const bounds = getStepHorizontalBoundsPx(allSteps, i, plotW);
       if (bounds.hidden || bounds.widthPx <= 0) { i = endIdx; continue; }
       const x = leftPad + bounds.xPx, w = Math.max(6, bounds.widthPx - 2);
-      const y = (maxMidi - s.midiNumber) * rowH + 2, h = Math.max(10, rowH - 4);
+      const y = (maxMidi - sMidi) * rowH + 2, h = Math.max(10, rowH - 4);
       ctx.fillStyle = isLight ? 'rgba(180, 83, 9, 0.25)' : 'rgba(217, 119, 6, 0.28)';
       ctx.strokeStyle = '#f59e0b'; ctx.lineWidth = 1.5;
       ctx.beginPath(); ctx.roundRect(x, y, w, h, 4); ctx.fill(); ctx.stroke();
@@ -97,7 +97,7 @@ export const MelodicHighwayCanvas: React.FC<MelodicHighwayCanvasProps> = ({
         const p1 = studentPitchCurve[k], p2 = studentPitchCurve[k + 1];
         if (Math.abs(p2.timeSec - p1.timeSec) > 0.08) continue;
         const stepIdx = Math.min(allSteps.length - 1, Math.max(0, Math.floor((p1.timeSec / totalDurationSec) * totalSteps)));
-        const targetM = allSteps[stepIdx]?.active && allSteps[stepIdx].midiNumber > 0 ? allSteps[stepIdx].midiNumber : medianMidi;
+        const targetM = allSteps[stepIdx]?.active && (allSteps[stepIdx].midiNumber ?? 0) > 0 ? (allSteps[stepIdx].midiNumber ?? medianMidi) : medianMidi;
         const m1 = foldStudentPitchToTargetOctave(p1.midiFloat, targetM);
         const m2 = foldStudentPitchToTargetOctave(p2.midiFloat, targetM);
         const errCents = Math.abs(m1 - targetM) * 100;

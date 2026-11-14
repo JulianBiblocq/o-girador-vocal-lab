@@ -1,6 +1,6 @@
 /**
  * SaveAndExportDropdown.tsx
- * Menu déroulant Cordel 'Sauvegarder & Exporter' avec retour visuel ✓ et modale d'intégration Répertoire Samambaia (< 115 lignes).
+ * Menu déroulant Cordel 'Sauvegarder & Exporter' avec retour visuel ✓ et modale d'intégration Répertoire du groupe (< 115 lignes).
  */
 import React, { useState, useRef, useEffect } from 'react';
 import type { ToadaProject } from '../../types/toadaProject.types';
@@ -45,7 +45,7 @@ export const SaveAndExportDropdown: React.FC<Props> = ({ project, isUserLoggedIn
     setIsOpen(false);
     try {
       await actionFeedback.trigger(async () => {
-        const res = await publishToadaToOrganizador(project, project.toadaMeta?.groupId || 'samambaia');
+        const res = await publishToadaToOrganizador(project, project.toadaMeta?.groupId);
         onProjectUpdate?.({ ...project, toadaMeta: { ...(project.toadaMeta || {}), id: res.documentId, bpmDefaut: res.bpm, tonaliteDefaut: res.scaleLabel } });
         const label = isBr ? '✓ Organizador atualizado !' : '✓ Organizador mis à jour !';
         window.dispatchEvent(new CustomEvent('app-toast', { detail: { type: 'success', message: label } }));

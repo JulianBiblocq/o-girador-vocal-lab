@@ -15,6 +15,9 @@ import { resolveProjectDualScale } from '../utils/scaleTranspositionHelper';
 import { getOrComputeTroupeTransposedPCM } from '../audio/formantPreservingPitchShifter';
 import { pcmToWavBlob, slicePatternPcm, sanitizePatternForFirestore } from './toadaPublishHelpers';
 import { getPatternUsageCount, getUnusedPatternsSummary, deleteOrphanPatternWavsFromStorage } from '../utils/unusedPatternsPurger';
+import { resolveActiveTenantContext } from './activeTenantResolver';
+import { sanitizePitchHz } from '../utils/pitchHzContract';
+import { VOCAL_GRAMMAR_VERSION } from '../utils/vocalGrammarV2';
 
 export function removeUndefinedFields<T>(obj: T): T {
   if (obj === null || obj === undefined) return null as unknown as T;
@@ -37,9 +40,12 @@ export function getActiveTimelinePatterns(project: ToadaProject): VocalPatternIt
 }
 
 export function buildSequencerToadaPackDocument(
-  project: ToadaProject, processedPatterns?: Record<string, any>[], targetSequenciadorBpm?: number
+  project: ToadaProject, processedPatterns?: Record<string, any>[], targetSequenciadorBpm?: number, explicitGroupId?: string | null
 ): Record<string, any> {
   const toadaId = project.id;
+  const groupId = String(explicitGroupId || project.toadaMeta?.groupId || '').trim().toLowerCase() || undefined;
+  const referencePitchHz = sanitizePitchHz(project.referencePitchHz ?? project.toadaMeta?.referencePitchHz);
+  const recordedAtPitchHz = sanitizePitchHz(project.recordedAtPitchHz ?? referencePitchHz);
   const projectBpm = Number(targetSequenciadorBpm || project.bpm || project.toadaMeta?.bpmDefaut || DEFAULT_TOADA_BPM);
   const dualScale = resolveProjectDualScale(project, 'fr'), shiftSt = dualScale.transpositionSemitones;
   const sequenciadorExportMode = project.sequenciadorExportMode ?? 'rhythm_only', ignoreMelodyPitch = sequenciadorExportMode === 'rhythm_only';
@@ -52,19 +58,20 @@ export function buildSequencerToadaPackDocument(
   })).map((pat) => ({ ...pat, sungKey: pat.sungKey ?? dualScale.sungScaleLabel, troupeKey: pat.troupeKey ?? dualScale.troupeScaleLabel, transpositionSemitones: pat.transpositionSemitones ?? shiftSt, ignoreMelodyPitch }));
 
   return {
-    id: toadaId, title: project.title, bpm: projectBpm, timeSignature: project.timeSignature, sequenciadorExportMode, ignoreMelodyPitch,
+    id: toadaId, title: project.title, groupId, bpm: projectBpm, timeSignature: project.timeSignature,
+    grammarVersion: VOCAL_GRAMMAR_VERSION, referencePitchHz, recordedAtPitchHz, sequenciadorExportMode, ignoreMelodyPitch,
     sungKey: dualScale.sungScaleLabel, troupeKey: dualScale.troupeScaleLabel,
     sungScaleRoot: dualScale.sungScaleRoot, sungScaleMode: dualScale.sungScaleMode, troupeScaleRoot: dualScale.troupeScaleRoot, transpositionSemitones: shiftSt,
     project: {
-      id: project.id, title: project.title, bpm: projectBpm, timeSignature: project.timeSignature, sequenciadorExportMode, ignoreMelodyPitch,
+      id: project.id, title: project.title, groupId, bpm: projectBpm, timeSignature: project.timeSignature, grammarVersion: VOCAL_GRAMMAR_VERSION, referencePitchHz, recordedAtPitchHz, sequenciadorExportMode, ignoreMelodyPitch,
       sungKey: dualScale.sungScaleLabel, troupeKey: dualScale.troupeScaleLabel, transpositionSemitones: shiftSt,
       measuresCount: (project as any).measuresCount || 2, harmonyConfig: project.harmonyConfig ?? null, updatedAt: Date.now(),
     },
     metadata: {
-      title: project.title, toada: project.title, bpm: projectBpm, timeSignature: project.timeSignature, sequenciadorExportMode, ignoreMelodyPitch,
+      title: project.title, toada: project.title, groupId, bpm: projectBpm, timeSignature: project.timeSignature, grammarVersion: VOCAL_GRAMMAR_VERSION, vocalGrammarVersion: VOCAL_GRAMMAR_VERSION, referencePitchHz, recordedAtPitchHz, sequenciadorExportMode, ignoreMelodyPitch,
       sungKey: dualScale.sungScaleLabel, troupeKey: dualScale.troupeScaleLabel, transpositionSemitones: shiftSt, publishedAt: Date.now(),
     },
-    toadaMeta: { ...(project.toadaMeta || {}), bpmDefaut: projectBpm, tonaliteDefaut: dualScale.troupeScaleLabel, tonaliteChanteeOrigine: dualScale.sungScaleLabel, transpositionSemitones: shiftSt },
+    toadaMeta: { ...(project.toadaMeta || {}), ...(groupId ? { groupId } : {}), grammarVersion: VOCAL_GRAMMAR_VERSION, referencePitchHz, bpmDefaut: projectBpm, tonaliteDefaut: dualScale.troupeScaleLabel, tonaliteChanteeOrigine: dualScale.sungScaleLabel, transpositionSemitones: shiftSt },
     patterns, arrangementSlots: project.slots || [], slots: project.slots || [],
     harmonyConfig: project.harmonyConfig ?? null, globalHarmonyGrid: project.globalHarmonyGrid ?? null,
     createdAt: (project as any).createdAt || Date.now(), updatedAt: Date.now(),
@@ -117,7 +124,8 @@ export async function publishToadaToSequencer(
   }
 
   onProgress?.('Enregistrement du pack dans Firestore...');
-  const publishedPack = removeUndefinedFields(buildSequencerToadaPackDocument(project, processedPatterns, targetSequenciadorBpm));
+  const tenantCtx = await resolveActiveTenantContext(project.toadaMeta?.groupId);
+  const publishedPack = removeUndefinedFields(buildSequencerToadaPackDocument(project, processedPatterns, targetSequenciadorBpm, tenantCtx.groupId));
   await setDoc(doc(db, 'toada_packs', toadaId), publishedPack);
   return { success: true, toadaId, sequenciadorUrl: getSequenciadorUrl(toadaId), exportedPatternsCount: activePatterns.length, savedMegabytes: unusedSummary.formattedMegabytes, publishedPack };
 }

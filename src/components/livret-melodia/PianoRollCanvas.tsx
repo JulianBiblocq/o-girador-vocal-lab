@@ -58,7 +58,7 @@ export const PianoRollCanvas: React.FC<PianoRollCanvasProps> = (p) => {
   const handlePointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
     const { stepIdx, midi, x, y } = getCoords(e);
     if (e.button === 2) { e.preventDefault(); e.stopPropagation(); if (!p.readOnly) p.onOpenContextMenu(e.clientX, e.clientY); return; }
-    if (p.readOnly) { const s = p.allSteps[stepIdx]; if (s?.active && s.midiNumber > 0) p.onPlayNotePreview(s.midiNumber); return; }
+    if (p.readOnly) { const s = p.allSteps[stepIdx]; if (s?.active && (s.midiNumber ?? 0) > 0) p.onPlayNotePreview(s.midiNumber ?? 60); return; }
     if (p.activeTool === 'erase') { p.onSelectStep?.(null); return p.onUpdateSteps(eraseBrick(p.allSteps, stepIdx)); }
     if (p.activeTool === 'glue' || p.activeTool === 'paste') return p.onUpdateSteps(glueBrickToNext(p.allSteps, stepIdx));
     if (p.activeTool === 'cut' || p.activeTool === 'split') return p.onUpdateSteps(splitTieAtStep(p.allSteps, stepIdx));
@@ -76,16 +76,16 @@ export const PianoRollCanvas: React.FC<PianoRollCanvasProps> = (p) => {
     const range = findBrickRange(p.allSteps, stepIdx);
     if (range) {
       p.onSelectStep?.(range.rootIndex);
-      const rootStep = p.allSteps[range.rootIndex];
-      const onVariHandle = !p.foldNotesView && isOnBrickVariAudioHandle(x, y, range.rootIndex, range.endIndex, rootStep.midiNumber, stepW, p.maxMidi, p.rowHeight, p.allSteps);
+      const rootStep = p.allSteps[range.rootIndex], rootMidi = rootStep.midiNumber ?? 60;
+      const onVariHandle = !p.foldNotesView && isOnBrickVariAudioHandle(x, y, range.rootIndex, range.endIndex, rootMidi, stepW, p.maxMidi, p.rowHeight, p.allSteps);
       const isNearRight = !onVariHandle && isOnBrickRightResizeHandle(x, p.width, p.allSteps.length, range.endIndex, 8, p.allSteps);
       e.currentTarget.setPointerCapture(e.pointerId);
       if (onVariHandle) dragRef.current = { mode: 'variaudio_pull', rootIdx: range.rootIndex, startY: e.clientY, startPull: rootStep.melodynePullPct ?? 0, changed: false };
       else if (p.foldNotesView) {
-        dragRef.current = { mode: isNearRight ? 'resize' : 'none', rootIdx: range.rootIndex, lastMidi: rootStep.midiNumber, changed: false };
+        dragRef.current = { mode: isNearRight ? 'resize' : 'none', rootIdx: range.rootIndex, lastMidi: rootMidi, changed: false };
       } else {
-        dragRef.current = { mode: isNearRight ? 'resize' : 'move', rootIdx: range.rootIndex, lastMidi: rootStep.midiNumber, changed: false };
-        if (!isNearRight) p.onPlayNotePreview(rootStep.midiNumber);
+        dragRef.current = { mode: isNearRight ? 'resize' : 'move', rootIdx: range.rootIndex, lastMidi: rootMidi, changed: false };
+        if (!isNearRight) p.onPlayNotePreview(rootMidi);
       }
     }
   };
@@ -95,7 +95,7 @@ export const PianoRollCanvas: React.FC<PianoRollCanvasProps> = (p) => {
     if (!dragRef.current) {
       const range = findBrickRange(p.allSteps, stepIdx);
       setHoveredBrickRootIdx(range ? range.rootIndex : null);
-      if (!p.foldNotesView && range && isOnBrickVariAudioHandle(x, y, range.rootIndex, range.endIndex, p.allSteps[range.rootIndex].midiNumber, stepW, p.maxMidi, p.rowHeight, p.allSteps)) setHoverHandleCursor('ns-resize');
+      if (!p.foldNotesView && range && isOnBrickVariAudioHandle(x, y, range.rootIndex, range.endIndex, p.allSteps[range.rootIndex].midiNumber ?? 60, stepW, p.maxMidi, p.rowHeight, p.allSteps)) setHoverHandleCursor('ns-resize');
       else if (range && isOnBrickRightResizeHandle(x, p.width, p.allSteps.length, range.endIndex, 8, p.allSteps)) setHoverHandleCursor('ew-resize');
       else setHoverHandleCursor(null);
       return;

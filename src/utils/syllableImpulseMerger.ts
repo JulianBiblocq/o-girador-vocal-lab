@@ -54,12 +54,12 @@ export function countVocalImpulsesInBeatSteps(stepsInBeat: VocalStepData[], writ
   if (writtenSylCount <= 1 || !stepsInBeat || stepsInBeat.length === 0) return Math.max(1, writtenSylCount);
   let impulses = 0, prevMidi = 0;
   for (let i = 0; i < stepsInBeat.length; i++) {
-    const st = stepsInBeat[i];
-    if (!st.active || st.midiNumber <= 0) { prevMidi = 0; continue; }
+    const st = stepsInBeat[i], stMidi = st.midiNumber ?? 0;
+    if (!st.active || stMidi <= 0) { prevMidi = 0; continue; }
     const isAttack = st.note !== '───' && !st.isTie;
-    const pitchChanged = prevMidi > 0 && Math.abs(st.midiNumber - prevMidi) >= 1;
+    const pitchChanged = prevMidi > 0 && Math.abs(stMidi - prevMidi) >= 1;
     if (isAttack || pitchChanged || impulses === 0) impulses++;
-    prevMidi = st.midiNumber;
+    prevMidi = stMidi;
   }
   return Math.max(1, Math.min(writtenSylCount, impulses || writtenSylCount));
 }
@@ -119,6 +119,7 @@ export function splitBrickAndSyllableAt(steps: VocalStepData[], rootStepIdx: num
 
   const next = steps.map((s) => ({ ...s }));
   next[rootStepIdx] = { ...next[rootStepIdx], syllable: leftSyl };
-  next[splitIdx] = { ...next[splitIdx], active: true, midiNumber: root.midiNumber, note: midiToNoteName(root.midiNumber), isTie: false, syllableAttack: true, syllable: rightSyl, velocity: 100 };
+  const rootMidi = root.midiNumber ?? 60;
+  next[splitIdx] = { ...next[splitIdx], active: true, midiNumber: rootMidi, note: midiToNoteName(rootMidi), isTie: false, syllableAttack: true, syllable: rightSyl, velocity: 100 };
   return next;
 }

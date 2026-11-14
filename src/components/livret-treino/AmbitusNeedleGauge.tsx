@@ -4,17 +4,19 @@
  * toujours visible à l'écran dès que l'élève émet un son (< 85 lignes).
  */
 import React from 'react';
-import { midiToNoteName } from '../../utils/noteUtils';
+import { midiToNoteName, midiToFrequency } from '../../utils/noteUtils';
+import { useToadaProject } from '../../context/ToadaProjectContext';
 import type { ValidationSample } from '../../audio/ambitusValidator';
 
 interface AmbitusNeedleGaugeProps {
   targetMidi: number;
   livePitchMidi: number;
   samples: ValidationSample[];
+  referencePitchHz?: number;
 }
 
-function midiToHz(midi: number): number {
-  return Math.round(440 * Math.pow(2, (midi - 69) / 12));
+function midiToHz(midi: number, referencePitchHz?: number): number {
+  return Math.round(midiToFrequency(midi, referencePitchHz));
 }
 
 /** Convertit un écart en demi-tons vers une position % (4%..96%) à double échelle progressive */
@@ -28,8 +30,10 @@ function diffSemitonesToPercent(diffSt: number): number {
 }
 
 export const AmbitusNeedleGauge: React.FC<AmbitusNeedleGaugeProps> = ({
-  targetMidi, livePitchMidi, samples,
+  targetMidi, livePitchMidi, samples, referencePitchHz,
 }) => {
+  const { project } = useToadaProject();
+  const refHz = referencePitchHz ?? project.referencePitchHz ?? project.toadaMeta?.referencePitchHz;
   const lastSampleMidi = samples.length > 0 ? samples[samples.length - 1].pitchMidi : 0;
   const activeMidi = livePitchMidi >= 30 ? livePitchMidi : lastSampleMidi >= 30 ? lastSampleMidi : 0;
   const hasVoice = activeMidi >= 30;
@@ -56,13 +60,13 @@ export const AmbitusNeedleGauge: React.FC<AmbitusNeedleGaugeProps> = ({
         <div className="flex items-center gap-1.5">
           <span className="opacity-75">Cible :</span>
           <span className="font-bold text-sm px-2 py-0.5 rounded bg-[#0f766e]/15 text-[#0f766e] dark:text-[#2dd4bf] border border-[#0f766e]/30">
-            {targetName} ({midiToHz(targetMidi)} Hz)
+            {targetName} ({midiToHz(targetMidi, refHz)} Hz)
           </span>
         </div>
         <div className="flex items-center gap-1.5">
           <span className="opacity-75">Vous chantez :</span>
           <span className={`font-bold text-sm px-2 py-0.5 rounded border ${!hasVoice ? 'bg-[var(--cordel-surface)] opacity-60 border-[var(--cordel-border-sub)]' : isCentered ? 'bg-[#0f766e] text-white border-[#0f766e]' : 'bg-amber-600/20 text-amber-600 dark:text-amber-300 border-amber-500/40'}`}>
-            {hasVoice ? `${sungName} (${midiToHz(activeMidi)} Hz)` : 'En attente...'}
+            {hasVoice ? `${sungName} (${midiToHz(activeMidi, refHz)} Hz)` : 'En attente...'}
           </span>
         </div>
       </div>

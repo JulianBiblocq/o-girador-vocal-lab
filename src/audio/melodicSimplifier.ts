@@ -74,11 +74,12 @@ export function simplifyStepsToMainMelody(
   for (let i = 1; i < cleaned.length - 1; i++) {
     const prev = cleaned[i - 1], cur = cleaned[i], next = cleaned[i + 1];
     if (!cur.active || !prev.active || !next.active) continue;
+    const prevM = prev.midiNumber ?? 0, curM = cur.midiNumber ?? 0, nextM = next.midiNumber ?? 0;
     const hasOwnSyl = Boolean(cur.syllable && cur.syllable.trim() && cur.syllable !== '───');
-    if (!hasOwnSyl && prev.midiNumber === next.midiNumber && Math.abs(cur.midiNumber - prev.midiNumber) <= 2) {
-      cur.midiNumber = prev.midiNumber;
-    } else if (!hasOwnSyl && Math.abs(cur.midiNumber - next.midiNumber) === 1 && prev.midiNumber !== cur.midiNumber) {
-      cur.midiNumber = next.midiNumber;
+    if (!hasOwnSyl && prevM === nextM && Math.abs(curM - prevM) <= 2) {
+      cur.midiNumber = prevM;
+    } else if (!hasOwnSyl && Math.abs(curM - nextM) === 1 && prevM !== curM) {
+      cur.midiNumber = nextM;
     }
   }
 
@@ -86,7 +87,7 @@ export function simplifyStepsToMainMelody(
   const result = cleaned.map((st) => ({ ...st }));
   let i = 0;
   while (i < result.length) {
-    if (!result[i].active || result[i].midiNumber <= 0) { i++; continue; }
+    if (!result[i].active || (result[i].midiNumber ?? 0) <= 0) { i++; continue; }
     const groupStart = i;
     const rootSyl = (result[i].syllable && result[i].syllable !== '───') ? result[i].syllable : '';
     let groupEnd = i;
@@ -94,24 +95,24 @@ export function simplifyStepsToMainMelody(
     while (groupEnd + 1 < result.length) {
       const nextIdx = groupEnd + 1;
       const nextStep = result[nextIdx];
-      if (!nextStep.active || nextStep.midiNumber <= 0) break;
+      if (!nextStep.active || (nextStep.midiNumber ?? 0) <= 0) break;
 
       const nextHasSyl = Boolean(nextStep.syllable && nextStep.syllable.trim() && nextStep.syllable !== '───');
       if (nextHasSyl) break;
       if (anchorStartSteps.has(nextIdx) && !sustainedHoldBeats.has(nextIdx)) break;
 
       // S'il n'y a pas de syllabe explicite mais un changement franc de hauteur (>= 2 demi-tons) tenu sur >= 2 pas
-      const pitchDiff = Math.abs(nextStep.midiNumber - result[groupStart].midiNumber);
+      const pitchDiff = Math.abs((nextStep.midiNumber ?? 0) - (result[groupStart].midiNumber ?? 0));
       const afterNext = result[nextIdx + 1];
       const isSustainedJump = !rootSyl && !sustainedHoldBeats.has(nextIdx) && pitchDiff >= 2 &&
-        Boolean(afterNext?.active && Math.abs(afterNext.midiNumber - nextStep.midiNumber) <= 1);
+        Boolean(afterNext?.active && Math.abs((afterNext.midiNumber ?? 0) - (nextStep.midiNumber ?? 0)) <= 1);
       if (isSustainedJump) break;
 
       groupEnd = nextIdx;
     }
 
     const midis: number[] = [];
-    for (let k = groupStart; k <= groupEnd; k++) midis.push(result[k].midiNumber);
+    for (let k = groupStart; k <= groupEnd; k++) midis.push(result[k].midiNumber ?? 60);
     const dominantMidi = computeDominantMedianMidi(midis);
     const noteName = midiToNoteName(dominantMidi);
 

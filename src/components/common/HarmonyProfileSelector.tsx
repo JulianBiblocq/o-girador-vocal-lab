@@ -22,9 +22,7 @@ export const HarmonyProfileSelector: React.FC<HarmonyProfileSelectorProps> = ({ 
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        setIsOpen(false);
-      }
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) setIsOpen(false);
     };
     if (isOpen) window.addEventListener('mousedown', handleClickOutside);
     return () => window.removeEventListener('mousedown', handleClickOutside);
@@ -34,19 +32,18 @@ export const HarmonyProfileSelector: React.FC<HarmonyProfileSelectorProps> = ({ 
     if (disabled) return;
     if (!isOpen && containerRef.current) {
       const rect = containerRef.current.getBoundingClientRect();
-      const spaceBelow = window.innerHeight - rect.bottom;
-      const spaceAbove = rect.top;
-      setOpenUpward(spaceBelow < 310 && spaceAbove > spaceBelow);
-      const spaceRight = window.innerWidth - rect.right;
-      setAlignRight(spaceRight < 270 && rect.left > spaceRight);
+      setOpenUpward(window.innerHeight - rect.bottom < 310 && rect.top > window.innerHeight - rect.bottom);
+      setAlignRight(window.innerWidth - rect.right < 270 && rect.left > window.innerWidth - rect.right);
     }
     setIsOpen((prev) => !prev);
   };
 
   const profiles: { id: HarmonyProfileId; label: string }[] = [
     { id: 'maracatu', label: t('harmonyProfileMaracatu') },
-    { id: 'capoeira', label: t('harmonyProfileCapoeira') },
+    { id: 'batucada', label: 'Batucada (Cavaquinho)' },
+    { id: 'sambareggae', label: 'Samba-Reggae (Levada)' },
     { id: 'samba', label: t('harmonyProfileSamba') },
+    { id: 'capoeira', label: t('harmonyProfileCapoeira') },
     { id: 'forro', label: t('harmonyProfileForro') },
   ];
 

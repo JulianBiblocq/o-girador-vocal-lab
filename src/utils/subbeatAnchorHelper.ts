@@ -24,10 +24,10 @@ export function computeBeatSyllableSubdivs(
   if (syllables.some((s) => s.includes("'")) && !cleaned.includes("'")) {
     cleaned = cleaned.replace(/\b([aáàâãeéêèëiíïoóôõuúü]+)\s+([aáàâãeéêèëiíïoóôõuúü]+)\b/gi, "$1'$2");
   }
-  const rawTokens = cleaned.split(/\s+|(?=[_𝄽])|(?<=[_𝄽])/g).map((t) => t.trim()).filter(Boolean);
+  const rawTokens = cleaned.replace(/<\/?u\b[^>]*>/gi, '').split(/\s+|(?=[_𝄽])|(?<=[_𝄽])/g).map((t) => t.trim()).filter(Boolean);
   const tokens: Array<'rest' | 'syl'> = [];
   for (const tk of rawTokens) {
-    if (tk === '_' || tk === '𝄽') tokens.push('rest');
+    if (tk === '0' || tk === '_' || tk === '𝄽') tokens.push('rest');
     else {
       const sList = splitTextIntoLetraSyllables(tk);
       for (let i = 0; i < Math.max(1, sList.length); i++) tokens.push('syl');

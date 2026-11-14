@@ -41,6 +41,8 @@ export interface ToadaDocument {
   sungScaleMode?: string;
   troupeScaleRoot?: string;
   bpmDefaut?: number;
+  grammarVersion?: number;
+  referencePitchHz?: number;
   repertoireId?: string;
   harmonyGrid?: PatternHarmonyGrid;
   globalHarmonyGrid?: PatternHarmonyGrid;

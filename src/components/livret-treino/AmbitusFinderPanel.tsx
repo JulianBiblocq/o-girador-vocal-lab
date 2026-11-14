@@ -11,18 +11,18 @@ import { AmbitusPitchGraph } from './AmbitusPitchGraph';
 import { AmbitusWizardStepToneCheck } from './AmbitusWizardStepToneCheck';
 import { AmbitusWizardStepStaircase } from './AmbitusWizardStepStaircase';
 import { AmbitusSummaryCard } from './AmbitusSummaryCard';
-import { midiToNoteName } from '../../utils/noteUtils';
+import { midiToNoteName, midiToFrequency } from '../../utils/noteUtils';
+import { useToadaProject } from '../../context/ToadaProjectContext';
 import { Play, Check } from 'lucide-react';
 
 export const AmbitusFinderPanel: React.FC = () => {
   const { t } = useLanguage();
+  const { project } = useToadaProject();
+  const refPitchHz = project.referencePitchHz ?? project.toadaMeta?.referencePitchHz;
   const j = useAmbitusJourney(t);
 
   const handleSelectStage = (next: AmbitusStage) => {
-    if (j.isTesting) {
-      j.engine.stopListening();
-      j.setIsTesting(false);
-    }
+    if (j.isTesting) { j.engine.stopListening(); j.setIsTesting(false); }
     j.setSamples([]); j.setFeedback(null);
     if (next === 'low_test') j.setCurrentMidi(j.medianMidi);
     if (next === 'high_test') j.setCurrentMidi(Math.max(j.highestMidi, j.lowestMidi + 5));
@@ -30,7 +30,7 @@ export const AmbitusFinderPanel: React.FC = () => {
   };
 
   const liveNoteStr = j.sweepLiveMidi >= 30
-    ? `${midiToNoteName(Math.round(j.sweepLiveMidi))} (${Math.round(440 * Math.pow(2, (j.sweepLiveMidi - 69) / 12))} Hz)`
+    ? `${midiToNoteName(Math.round(j.sweepLiveMidi))} (${Math.round(midiToFrequency(j.sweepLiveMidi, refPitchHz))} Hz)`
     : 'Chantez la sirène...';
 
   return (

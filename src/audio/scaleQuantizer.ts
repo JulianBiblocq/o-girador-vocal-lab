@@ -135,9 +135,10 @@ export function applyScaleToSteps(steps: VocalStepData[], tonic: string, scaleTy
   const allowed = buildAllowedPitchClasses(tonic, scaleType, customPitchClasses);
   if (scaleType === 'chromatic' && (!customPitchClasses || allowed.size >= 12)) return steps;
   return steps.map((st, idx, arr) => {
-    if (!st.active || st.midiNumber <= 0) return st;
-    if (st.note === '───') return { ...st, midiNumber: snapMidiToScale(arr[idx - 1]?.midiNumber ?? st.midiNumber, allowed) };
-    const snapped = snapMidiToScale(st.midiNumber, allowed);
+    const stMidi = st.midiNumber ?? 0;
+    if (!st.active || stMidi <= 0) return st;
+    if (st.note === '───') return { ...st, midiNumber: snapMidiToScale(arr[idx - 1]?.midiNumber ?? stMidi, allowed) };
+    const snapped = snapMidiToScale(stMidi, allowed);
     return { ...st, midiNumber: snapped, note: midiToNoteName(snapped) };
   });
 }

@@ -67,7 +67,7 @@ export function drawPianoRollGrid(ctx: CanvasRenderingContext2D, opts: DrawGridO
     ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, height); ctx.stroke();
 
     const m1StartBeat = hasAnacrusis ? beatsPerMeasure : 0;
-    const firstActiveStep = allSteps.findIndex((st, idx) => idx >= m1StartBeat * subdivPerBeat && st.active && st.midiNumber > 0);
+    const firstActiveStep = allSteps.findIndex((st, idx) => idx >= m1StartBeat * subdivPerBeat && st.active && (st.midiNumber ?? 0) > 0);
     if (b >= m1StartBeat && b < m1StartBeat + beatsPerMeasure && firstActiveStep > (b + 1) * subdivPerBeat - 1) {
       const beatInM1 = (b - m1StartBeat) + 1;
       ctx.fillStyle = isLight ? 'rgba(180, 83, 9, 0.18)' : 'rgba(245, 158, 11, 0.18)';

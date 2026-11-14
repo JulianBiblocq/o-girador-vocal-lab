@@ -1,6 +1,6 @@
 /**
  * SamambaiaRepertoireTargetModal.tsx
- * Modale Cordel d'intégration directe d'une Toada Cantador dans un morceau sauvegardé du Répertoire Samambaia (Sequenciador) (< 135 lignes).
+ * Modale Cordel d'intégration directe d'une Toada Cantador dans un morceau sauvegardé du Répertoire du groupe actif (Sequenciador) (< 142 lignes).
  */
 import React, { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
@@ -10,6 +10,7 @@ import { useLanguage } from '../../i18n/LanguageContext';
 import { resolveProjectDualScale } from '../../utils/scaleTranspositionHelper';
 import { type SamambaiaMorceauSummary, findBestMatchingSamambaiaMorceau } from '../../utils/sequenciadorPresetBuilder';
 import { fetchSamambaiaSavedMorceaux, integrateToadaIntoSamambaiaMorceau, type IntegrateMorceauResult } from '../../services/samambaiaMorceauIntegrator';
+import { resolveActiveTenantContext, formatRepertoireLabel } from '../../services/activeTenantResolver';
 
 export interface SamambaiaRepertoireTargetModalProps {
   isOpen: boolean;
@@ -19,26 +20,26 @@ export interface SamambaiaRepertoireTargetModalProps {
 export const SamambaiaRepertoireTargetModal: React.FC<SamambaiaRepertoireTargetModalProps> = ({ isOpen, onClose }) => {
   const { project, loadProject, setSequenciadorExportMode } = useToadaProject();
   const { language } = useLanguage(), isBr = language === 'br';
-  const [morceaux, setMorceaux] = useState<SamambaiaMorceauSummary[]>([]);
-  const [loadingList, setLoadingList] = useState(false);
-  const [search, setSearch] = useState(''), [selectedId, setSelectedId] = useState<string>('');
+  const [morceaux, setMorceaux] = useState<SamambaiaMorceauSummary[]>([]), [groupName, setGroupName] = useState<string | null>(null);
+  const [loadingList, setLoadingList] = useState(false), [search, setSearch] = useState(''), [selectedId, setSelectedId] = useState<string>('');
   const [isCreatingNew, setIsCreatingNew] = useState(false);
   const [newTitle, setNewTitle] = useState(project.title || ''), [newBpm, setNewBpm] = useState<number>(project.bpm || 96);
-  const [isSubmitting, setIsSubmitting] = useState(false), [progressMsg, setProgressMsg] = useState('');
-  const [doneResult, setDoneResult] = useState<IntegrateMorceauResult | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false), [progressMsg, setProgressMsg] = useState(''), [doneResult, setDoneResult] = useState<IntegrateMorceauResult | null>(null);
+  const repLabel = formatRepertoireLabel(groupName, isBr);
 
   useEffect(() => {
     if (!isOpen) return;
     setDoneResult(null); setIsSubmitting(false); setProgressMsg('');
     setNewTitle(project.title || 'Nouvelle Toada'); setNewBpm(project.bpm || 96); setLoadingList(true);
-    fetchSamambaiaSavedMorceaux().then((list) => {
+    resolveActiveTenantContext(project.toadaMeta?.groupId).then((ctx) => setGroupName(ctx.groupName));
+    fetchSamambaiaSavedMorceaux(project.toadaMeta?.groupId).then((list) => {
       setMorceaux(list);
       const match = findBestMatchingSamambaiaMorceau(list, project);
       if (match) { setSelectedId(match.id); setIsCreatingNew(false); }
       else if (list.length > 0) { setSelectedId(list[0].id); setIsCreatingNew(false); }
       else setIsCreatingNew(true);
     }).finally(() => setLoadingList(false));
-  }, [isOpen, project.id]);
+  }, [isOpen, project.id, project.toadaMeta?.groupId]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -72,7 +73,7 @@ export const SamambaiaRepertoireTargetModal: React.FC<SamambaiaRepertoireTargetM
     <div className="fixed inset-0 z-[500] flex items-center justify-center bg-black/70 backdrop-blur-xs p-4 font-mono text-xs" onClick={onClose}>
       <div className="w-full max-w-xl cordel-card bg-[var(--cordel-surface)] text-[var(--cordel-text)] border-2 border-[var(--cordel-border)] p-4 rounded flex flex-col gap-3 max-h-[88vh] shadow-2xl" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between border-b border-[var(--cordel-border-sub)] pb-2">
-          <div className="flex items-center gap-2 font-bold text-sm"><Drum className="w-4 h-4 text-theme-accent shrink-0" /><span>{isBr ? 'Integrar a Toada num música do Repertório (Samambaia)' : 'Intégrer la Toada dans un morceau du Répertoire (Samambaia)'}</span></div>
+          <div className="flex items-center gap-2 font-bold text-sm"><Drum className="w-4 h-4 text-theme-accent shrink-0" /><span>{isBr ? `Integrar a Toada numa música — ${repLabel}` : `Intégrer la Toada dans un morceau — ${repLabel}`}</span></div>
           <button type="button" onClick={onClose} className="p-1 rounded hover:bg-black/10 cursor-pointer"><X className="w-4 h-4" /></button>
         </div>
 
@@ -101,18 +102,18 @@ export const SamambaiaRepertoireTargetModal: React.FC<SamambaiaRepertoireTargetM
             </div>
 
             <div className="flex items-center gap-2">
-              <div className="relative flex-1"><Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 opacity-60" /><input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder={isBr ? 'Filtrar repertório Samambaia...' : 'Rechercher un morceau du répertoire Samambaia...'} className="w-full pl-8 pr-2.5 py-1.5 rounded bg-[var(--cordel-subcard-bg)] border border-[var(--cordel-border-sub)] outline-none" /></div>
-              <button type="button" onClick={() => setIsCreatingNew((v) => !v)} className={`px-2.5 py-1.5 rounded font-bold inline-flex items-center gap-1 cursor-pointer border ${isCreatingNew ? 'bg-[#9a3412] text-white border-[#9a3412]' : 'cordel-btn'}`}><Plus className="w-3.5 h-3.5" /><span>{isBr ? 'Criar nova música' : 'Créer un nouveau morceau dans le répertoire Samambaia'}</span></button>
+              <div className="relative flex-1"><Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 opacity-60" /><input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder={isBr ? `Filtrar ${repLabel}...` : `Rechercher dans ${repLabel}...`} className="w-full pl-8 pr-2.5 py-1.5 rounded bg-[var(--cordel-subcard-bg)] border border-[var(--cordel-border-sub)] outline-none" /></div>
+              <button type="button" onClick={() => setIsCreatingNew((v) => !v)} className={`px-2.5 py-1.5 rounded font-bold inline-flex items-center gap-1 cursor-pointer border ${isCreatingNew ? 'bg-[#9a3412] text-white border-[#9a3412]' : 'cordel-btn'}`}><Plus className="w-3.5 h-3.5" /><span>{isBr ? `Criar nova música (${repLabel})` : `Créer un nouveau morceau (${repLabel})`}</span></button>
             </div>
 
             {isCreatingNew ? (
               <div className="p-2.5 rounded bg-[var(--cordel-subcard-bg)] border border-[var(--cordel-border-sub)] flex flex-wrap items-center gap-2">
-                <label className="flex-1 min-w-[180px] flex flex-col gap-1"><span className="font-bold opacity-80">{isBr ? 'Título da música Samambaia :' : 'Titre du morceau Samambaia :'}</span><input type="text" value={newTitle} onChange={(e) => setNewTitle(e.target.value)} className="px-2 py-1 rounded bg-[var(--cordel-surface)] border border-[var(--cordel-border-sub)] font-bold" /></label>
+                <label className="flex-1 min-w-[180px] flex flex-col gap-1"><span className="font-bold opacity-80">{isBr ? 'Título da música :' : 'Titre du morceau :'}</span><input type="text" value={newTitle} onChange={(e) => setNewTitle(e.target.value)} className="px-2 py-1 rounded bg-[var(--cordel-surface)] border border-[var(--cordel-border-sub)] font-bold" /></label>
                 <label className="w-28 flex flex-col gap-1"><span className="font-bold opacity-80">BPM Sequenciador :</span><input type="number" min={30} max={240} value={newBpm} onChange={(e) => setNewBpm(Number(e.target.value) || 96)} className="px-2 py-1 rounded bg-[var(--cordel-surface)] border border-[var(--cordel-border-sub)] font-bold text-center" /></label>
               </div>
             ) : (
               <div className="flex-1 overflow-y-auto max-h-56 flex flex-col gap-1.5 pr-1">
-                {loadingList ? <div className="py-8 flex items-center justify-center gap-2 opacity-75"><Loader2 className="w-4 h-4 animate-spin text-theme-accent" /><span>{isBr ? 'Carregando repertório Samambaia...' : 'Chargement du répertoire Samambaia...'}</span></div> : filtered.map((m) => (
+                {loadingList ? <div className="py-8 flex items-center justify-center gap-2 opacity-75"><Loader2 className="w-4 h-4 animate-spin text-theme-accent" /><span>{isBr ? `Carregando ${repLabel}...` : `Chargement : ${repLabel}...`}</span></div> : filtered.map((m) => (
                   <button key={m.id} type="button" onClick={() => setSelectedId(m.id)} className={`w-full text-left p-2 rounded border flex items-center justify-between gap-2 cursor-pointer transition-colors ${m.id === selectedId ? 'bg-amber-500/15 border-amber-500 font-bold' : 'bg-[var(--cordel-subcard-bg)] border-[var(--cordel-border-sub)] hover:border-amber-500/50'}`}>
                     <div className="flex flex-col gap-0.5 min-w-0">
                       <div className="flex items-center gap-1.5 truncate"><Drum className="w-3.5 h-3.5 text-theme-accent shrink-0" /><span className="truncate">{m.name}</span>{m.hasVocalToada && <span className="px-1.5 py-0.2 rounded bg-emerald-600/20 text-emerald-800 dark:text-emerald-300 text-[10px]">Toada associée</span>}</div>
@@ -129,7 +130,7 @@ export const SamambaiaRepertoireTargetModal: React.FC<SamambaiaRepertoireTargetM
               <div className="flex items-center gap-2">
                 <button type="button" onClick={onClose} className="px-3 py-1.5 rounded cordel-btn font-bold cursor-pointer">{isBr ? 'Cancelar' : 'Annuler'}</button>
                 <button type="button" disabled={isSubmitting || (!isCreatingNew && !selectedMorceau)} onClick={handleIntegrate} className="px-3.5 py-1.5 rounded bg-emerald-700 hover:bg-emerald-600 text-white font-bold inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-50">
-                  {isSubmitting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}<span>{isBr ? 'Integrar nesta música Samambaia' : 'Intégrer dans ce morceau Samambaia'}</span>
+                  {isSubmitting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}<span>{isBr ? 'Integrar nesta música' : 'Intégrer dans ce morceau'}</span>
                 </button>
               </div>
             </div>
