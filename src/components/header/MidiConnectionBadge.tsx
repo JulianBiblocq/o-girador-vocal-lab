@@ -1,6 +1,6 @@
 /**
  * MidiConnectionBadge.tsx
- * Temoin discret Cordel de connexion MIDI dans l'en-tete (< 40 lignes).
+ * Témoin discret Cordel de connexion MIDI avec contraste Jour/Nuit (< 35 lignes).
  */
 import React from 'react';
 import { useVocalTransportStore } from '../../stores/useVocalTransportStore';
@@ -16,10 +16,10 @@ export const MidiConnectionBadge: React.FC = () => {
 
   return (
     <div
-      className="h-9 cordel-card-sm px-2.5 inline-flex items-center gap-1.5 text-xs font-mono font-bold select-none text-emerald-400 border border-emerald-500/40 bg-emerald-950/30"
+      className="h-8 cordel-card-sm px-2 inline-flex items-center gap-1.5 text-[11px] font-mono font-bold select-none text-emerald-800 dark:text-emerald-300 border border-emerald-600/50 bg-emerald-500/15"
       title={t('midiConnectedTitle', { device: activeMidiDeviceName || 'MIDI Controller' })}
     >
-      <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+      <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 dark:bg-emerald-400 animate-pulse" />
       <Piano className="w-3.5 h-3.5" />
       <span>{t('midiBadge')}</span>
     </div>

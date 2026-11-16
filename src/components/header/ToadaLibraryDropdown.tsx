@@ -1,6 +1,6 @@
 /**
  * ToadaLibraryDropdown.tsx
- * Menu déroulant unifié 'Toadas' : Nouvelle Toada, Fiches Organizador et Bibliothèque (< 125 lignes).
+ * Menu déroulant unifié 'Toadas' : Nouvelle Toada (Studio), Fiches Organizador et Bibliothèque (< 135 lignes).
  */
 import React, { useState, useEffect, useRef } from 'react';
 import { useToadaProject } from '../../context/ToadaProjectContext';
@@ -31,13 +31,16 @@ export const ToadaLibraryDropdown: React.FC<Props> = ({ onOpenOrganizador, group
   useEffect(() => {
     refreshList();
     const handleSaved = () => refreshList();
+    const onClosePopovers = () => setIsOpen(false);
     const onClickOutside = (e: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) setIsOpen(false);
     };
     window.addEventListener('toada-saved', handleSaved);
+    window.addEventListener('cordel-close-popovers', onClosePopovers);
     document.addEventListener('mousedown', onClickOutside);
     return () => {
       window.removeEventListener('toada-saved', handleSaved);
+      window.removeEventListener('cordel-close-popovers', onClosePopovers);
       document.removeEventListener('mousedown', onClickOutside);
     };
   }, []);
@@ -78,34 +81,28 @@ export const ToadaLibraryDropdown: React.FC<Props> = ({ onOpenOrganizador, group
       <button
         type="button"
         onClick={() => { setIsOpen((prev) => { if (!prev) refreshList(); return !prev; }); }}
-        className="h-9 px-2.5 cordel-card-sm text-xs font-mono font-bold flex items-center gap-1.5 hover:opacity-90 text-theme-ink transition-colors cursor-pointer max-w-[200px]"
-        title={project.title}
+        className="h-8 px-2.5 cordel-card-sm text-xs font-mono font-bold flex items-center gap-1.5 hover:opacity-90 text-theme-ink transition-colors cursor-pointer max-w-[210px]"
+        title={`Toadas — ${project.title || 'Sans titre'}`}
       >
         <FolderKanban className="w-3.5 h-3.5 text-[var(--cordel-accent-text)] shrink-0" />
-        <span className="truncate">Toadas : {project.title || 'Sans titre'}</span>
+        <span className="truncate">{project.title || 'Toadas'}</span>
         <ChevronDown className="w-3 h-3 opacity-60 shrink-0" />
       </button>
 
       {isOpen && (
-        <div className="absolute top-10 left-0 sm:left-auto sm:right-0 z-[100] w-64 cordel-card p-1.5 bg-[var(--cordel-surface)] text-[var(--cordel-text)] border border-[var(--cordel-border-panel)] shadow-lg flex flex-col gap-1 text-xs font-mono max-h-80 overflow-y-auto cordel-scrollbar rounded">
-          {viewRoleMode !== 'eleve' && (
-            <div className="flex flex-col gap-1 pb-1.5 border-b border-[var(--cordel-border-sub)]">
-              <button
-                type="button" onClick={handleNewToada}
-                className="w-full p-1.5 text-left flex items-center gap-2 hover:bg-[var(--cordel-subcard-bg)] rounded transition-colors cursor-pointer"
-              >
+        <div className="absolute top-9 left-0 z-[100] w-64 cordel-card p-1.5 bg-[var(--cordel-surface)] text-[var(--cordel-text)] border border-[var(--cordel-border-panel)] shadow-lg flex flex-col gap-1 text-xs font-mono max-h-80 overflow-y-auto cordel-scrollbar rounded">
+          <div className="flex flex-col gap-1 pb-1.5 border-b border-[var(--cordel-border-sub)]">
+            {viewRoleMode !== 'eleve' && (
+              <button type="button" onClick={handleNewToada} className="w-full p-1.5 text-left flex items-center gap-2 hover:bg-[var(--cordel-subcard-bg)] rounded transition-colors cursor-pointer">
                 <Plus className="w-3.5 h-3.5 text-theme-accent" />
                 <span className="font-bold">{t('newToada')}</span>
               </button>
-              <button
-                type="button" onClick={() => { setIsOpen(false); onOpenOrganizador(); }}
-                className="w-full p-1.5 text-left flex items-center gap-2 hover:bg-[var(--cordel-subcard-bg)] rounded transition-colors cursor-pointer"
-              >
-                <Scroll className="w-3.5 h-3.5 text-[var(--cordel-accent-text)]" />
-                <span className="font-bold">Toadas {groupLabel}</span>
-              </button>
-            </div>
-          )}
+            )}
+            <button type="button" onClick={() => { setIsOpen(false); onOpenOrganizador(); }} className="w-full p-1.5 text-left flex items-center gap-2 hover:bg-[var(--cordel-subcard-bg)] rounded transition-colors cursor-pointer">
+              <Scroll className="w-3.5 h-3.5 text-[var(--cordel-accent-text)]" />
+              <span className="font-bold">Toadas {groupLabel}</span>
+            </button>
+          </div>
 
           <div className="text-[10px] font-bold uppercase tracking-wider text-[var(--cordel-accent-text)] px-1 pt-1">
             {t('myToadas')} ({toadas.length})
@@ -118,16 +115,14 @@ export const ToadaLibraryDropdown: React.FC<Props> = ({ onOpenOrganizador, group
                 key={item.id}
                 onClick={() => handleSelectToada(item.id)}
                 className={`p-1.5 flex items-center justify-between gap-1.5 cursor-pointer transition-colors rounded ${
-                  item.id === project.id
-                    ? 'bg-[var(--cordel-subcard-bg)] font-bold border border-[var(--cordel-accent)] text-[var(--cordel-text)]'
-                    : 'bg-[var(--cordel-surface)] hover:bg-[var(--cordel-subcard-bg)] border border-[var(--cordel-border-sub)] text-[var(--cordel-text)]'
+                  item.id === project.id ? 'bg-[var(--cordel-subcard-bg)] font-bold border border-[var(--cordel-accent)] text-[var(--cordel-text)]' : 'bg-[var(--cordel-surface)] hover:bg-[var(--cordel-subcard-bg)] border border-[var(--cordel-border-sub)] text-[var(--cordel-text)]'
                 }`}
               >
                 <div className="flex flex-col min-w-0 flex-1">
                   <span className="truncate text-xs font-bold">{item.title}</span>
                   <span className="text-[9px] text-[var(--cordel-text)] opacity-80">{item.bpm} BPM • {item.patternsCount} pats</span>
                 </div>
-                {item.id !== project.id && (
+                {viewRoleMode !== 'eleve' && item.id !== project.id && (
                   <button type="button" onClick={(e) => handleDeleteToada(e, item)} className="p-1 hover:text-red-500 cursor-pointer">
                     <Trash2 className="w-3 h-3 text-red-500/80" />
                   </button>

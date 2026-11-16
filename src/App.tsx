@@ -1,31 +1,28 @@
 /**
  * App.tsx
- * Point d'entrée de O Girador — Cantador avec navigation 5 livrets + Réglages (< 135 lignes).
+ * Point d'entrée O Girador — Cantador : CompactStudioHeader + BandeirolasNavbar + Page Élève dédiée (< 110 lignes).
  */
 import React, { useState, useEffect } from 'react';
 import { LanguageProvider, useLanguage } from './i18n/LanguageContext';
-import { ToadaProjectProvider } from './context/ToadaProjectContext';
+import { ToadaProjectProvider, useToadaProject } from './context/ToadaProjectContext';
 import { AudioHardwareProvider } from './context/AudioHardwareContext';
-import { BrandHeaderLogo } from './components/header/BrandHeaderLogo';
-import { ProjectSelectorBar } from './components/header/ProjectSelectorBar';
-import { RoleModeSwitcher } from './components/header/RoleModeSwitcher';
-import { UserAvatarMenu } from './components/header/UserAvatarMenu';
+import { CompactStudioHeader } from './components/header/CompactStudioHeader';
+import { BandeirolasNavbar } from './components/navigation/BandeirolasNavbar';
+import { LivretContentRenderer } from './components/navigation/LivretContentRenderer';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { CordelDialogModal } from './components/ui/CordelDialogModal';
 import { AppUpdateBanner } from './components/common/AppUpdateBanner';
-import { MainLivretNavbar } from './components/navigation/MainLivretNavbar';
-import { SongProgressStrip } from './components/navigation/SongProgressStrip';
-import { LivretContentRenderer } from './components/navigation/LivretContentRenderer';
 import { useGlobalTransportShortcuts } from './hooks/useGlobalTransportShortcuts';
 import { useVocalLabMidi } from './hooks/useVocalLabMidi';
 import { usePwaInstall } from './hooks/usePwaInstall';
-import { Sun, Moon, Download } from 'lucide-react';
 
 const AppContent: React.FC = () => {
   useGlobalTransportShortcuts();
   useVocalLabMidi();
-  const { locale, setLocale, t } = useLanguage();
+  const { locale } = useLanguage();
   const { isInstalled, triggerInstall } = usePwaInstall(locale);
+  const { project, setActivePatternId } = useToadaProject();
+
   const [theme, setTheme] = useState<'dark' | 'light'>(() => {
     try {
       const saved = localStorage.getItem('ogirador_vocal_lab_theme');
@@ -56,48 +53,35 @@ const AppContent: React.FC = () => {
 
   useEffect(() => {
     const blockContextMenu = (e: MouseEvent) => e.preventDefault();
+    const onStepPattern = (e: Event) => {
+      const delta = (e as CustomEvent<{ delta: number }>).detail?.delta || 0;
+      if (!delta || project.patterns.length <= 1) return;
+      const curIdx = Math.max(0, project.patterns.findIndex((p) => p.id === project.activePatternId));
+      const nextIdx = (curIdx + delta + project.patterns.length) % project.patterns.length;
+      if (project.patterns[nextIdx]) setActivePatternId(project.patterns[nextIdx].id);
+    };
     window.addEventListener('contextmenu', blockContextMenu);
-    return () => window.removeEventListener('contextmenu', blockContextMenu);
-  }, []);
-
-  const toggleTheme = () => setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
+    window.addEventListener('cordel-step-pattern', onStepPattern);
+    return () => {
+      window.removeEventListener('contextmenu', blockContextMenu);
+      window.removeEventListener('cordel-step-pattern', onStepPattern);
+    };
+  }, [project.patterns, project.activePatternId, setActivePatternId]);
 
   return (
-    <div className="relative min-h-screen bg-theme-bg text-theme-ink flex flex-col p-2.5 sm:p-4 md:p-6 transition-colors duration-200 overflow-x-hidden">
+    <div className="relative min-h-screen bg-theme-bg text-theme-ink flex flex-col px-2.5 sm:px-5 md:px-8 py-2.5 sm:py-4 transition-colors duration-200 overflow-x-hidden">
       <div className="fixed inset-0 pointer-events-none z-0 wallpaper-surface-bg" aria-hidden="true" />
-      <header className="relative z-40 w-full max-w-none mb-3 cordel-card p-3 sm:p-4 flex flex-wrap items-center justify-between gap-3">
-        <BrandHeaderLogo />
+      <div className="relative z-40 w-full max-w-[1440px] mx-auto">
+        <CompactStudioHeader
+          theme={theme}
+          onToggleTheme={() => setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'))}
+          isInstalled={isInstalled}
+          onTriggerInstall={triggerInstall}
+        />
+      </div>
 
-        <div className="flex items-center gap-2.5 flex-wrap">
-          <ProjectSelectorBar />
-          <RoleModeSwitcher />
-          {!isInstalled && (
-            <button
-              type="button"
-              onClick={triggerInstall}
-              title={locale === 'br' ? 'Instalar aplicativo' : "Installer l'application"}
-              className="h-9 px-2.5 cordel-btn font-mono text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer rounded transition-transform active:scale-95"
-            >
-              <Download className="w-3.5 h-3.5 text-theme-accent" />
-              <span>{t('pwaInstallBtn') || (locale === 'br' ? 'Instalar' : 'Installer')}</span>
-            </button>
-          )}
-          <div className="h-9 cordel-card-sm inline-flex items-center p-0.5 text-xs font-mono select-none">
-            <button type="button" onClick={() => setLocale('fr')} className={`h-full px-2.5 font-bold transition-all flex items-center justify-center cursor-pointer rounded ${locale === 'fr' ? 'bg-theme-wood text-[var(--cordel-on-primary)] font-black shadow-sm' : 'opacity-60 hover:opacity-100 text-theme-ink'}`} title="Francais">FR</button>
-            <button type="button" onClick={() => setLocale('br')} className={`h-full px-2.5 font-bold transition-all flex items-center justify-center cursor-pointer rounded ${locale === 'br' ? 'bg-theme-wood text-[var(--cordel-on-primary)] font-black shadow-sm' : 'opacity-60 hover:opacity-100 text-theme-ink'}`} title="Portugues Brasileiro">BR</button>
-          </div>
-
-          <button type="button" onClick={toggleTheme} className="h-9 w-9 p-0 cordel-card-sm inline-flex items-center justify-center cursor-pointer transition-colors" title={t('themeToggle')}>
-            {theme === 'dark' ? <Sun className="w-4 h-4 text-theme-accent" /> : <Moon className="w-4 h-4 text-theme-accent" />}
-          </button>
-
-          <UserAvatarMenu isInstalled={isInstalled} onInstall={triggerInstall} />
-        </div>
-      </header>
-
-      <main className="relative z-10 flex-1 flex flex-col items-center justify-start w-full max-w-none">
-        <MainLivretNavbar />
-        <SongProgressStrip />
+      <main className="relative z-10 flex-1 flex flex-col items-center justify-start w-full max-w-[1440px] mx-auto pb-8">
+        <BandeirolasNavbar />
         <LivretContentRenderer />
       </main>
     </div>
