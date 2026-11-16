@@ -1,21 +1,23 @@
 /**
  * LivretStructure.tsx
- * Livret 1 : Structure & Chant épuré (Mode Organizador par défaut vs Mode Création / Édition Manuelle,
- * Bandeau Tempo/Batuque/Gamme unifiée FR/BR, Bibliothèque avec badges [XM] [+Ana] [+1T], Conducteur et Paroles) (< 130 lignes).
+ * Livret 1 : Structure & Chant autour de « A Fita — Conducteur », Bibliothèque, Paroles et tiroir d'options (< 120 lignes).
  */
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { Lock, Edit3, Mic } from 'lucide-react';
 import type { ToadaProject } from '../../types/toadaProject.types';
-import { DEFAULT_TOADA_BPM } from '../../types/toadaProject.types';
 import { useToadaProject } from '../../context/ToadaProjectContext';
 import { useAudioHardware } from '../../context/AudioHardwareContext';
+import { useVocalTransportStore } from '../../stores/useVocalTransportStore';
 import { useLanguage } from '../../i18n/LanguageContext';
+import { AFitaFrame } from '../fita/AFitaFrame';
 import { PatternLibraryBar } from '../conductor/PatternLibraryBar';
+import { PatternInjectionBar } from '../conductor/PatternInjectionBar';
 import { ToadaConductorStrip } from '../conductor/ToadaConductorStrip';
-import { StructureTopControls } from './StructureTopControls';
 import { BlockMusicalSettingsCard } from './BlockMusicalSettingsCard';
 import { ScaleProposalBanner } from '../common/ScaleProposalBanner';
-import { AmbitusReminderBanner } from '../common/AmbitusReminderBanner';
 import { TwinPatternsManagerBar } from '../common/TwinPatternsManagerBar';
+import { SequenciadorExportBar } from '../common/SequenciadorExportBar';
+import { CordelAccordion } from '../common/CordelAccordion';
 import { analyzeFullProjectScale, type ProjectScaleAnalysisResult } from '../../audio/projectScaleAnalyzer';
 import { resolveProjectDualScale, applyDualScaleToProject } from '../../utils/scaleTranspositionHelper';
 import type { ScaleType } from '../../audio/scaleQuantizer';
@@ -27,19 +29,19 @@ export function resolveDefaultManualStructureEdit(project: ToadaProject): boolea
 }
 
 export const LivretStructure: React.FC = () => {
-  const { language } = useLanguage();
+  const { language, t } = useLanguage(), isBr = language === 'br';
   const {
     project, activePattern, loadProject, updatePattern,
-    updateScopedBpm, updateScopedMeasuresCount, updateScopedHasAnacrusis, updateScopedTimeSignature,
+    updateScopedMeasuresCount, updateScopedHasAnacrusis, updateScopedTimeSignature,
+    injectPatternIntoTarget, mirrorPatternToRole,
   } = useToadaProject();
-  const { engine, selectedOutputDeviceId } = useAudioHardware();
+  const { selectedOutputDeviceId } = useAudioHardware();
+  const setActiveLivret = useVocalTransportStore((s) => s.setActiveLivret);
 
   const [isManualStructureEdit, setIsManualStructureEdit] = useState<boolean>(() => resolveDefaultManualStructureEdit(project));
   const [scaleProposal, setScaleProposal] = useState<ProjectScaleAnalysisResult | null>(null);
 
-  useEffect(() => {
-    setIsManualStructureEdit(resolveDefaultManualStructureEdit(project));
-  }, [project.id, project.source]);
+  useEffect(() => { setIsManualStructureEdit(resolveDefaultManualStructureEdit(project)); }, [project.id, project.source]);
 
   useEffect(() => {
     if (project.toadaMeta?.tonaliteDefaut || scaleProposal) return;
@@ -49,20 +51,8 @@ export const LivretStructure: React.FC = () => {
     if (res.analyzedPatternsCount > 0) setScaleProposal(res);
   }, [project.patterns, project.toadaMeta?.tonaliteDefaut, scaleProposal, language]);
 
-  const timeSignature = project.timeSignature || '4/4';
-  const bpm = activePattern.bpm ?? activePattern.baseBpm ?? project.bpm ?? DEFAULT_TOADA_BPM;
   const dualScale = useMemo(() => resolveProjectDualScale(project, language, scaleProposal || undefined), [project, language, scaleProposal]);
-  const referencePitch = dualScale.troupeReferencePitch;
-  const activeScaleLabel =
-    project.toadaMeta?.tonaliteDefaut || scaleProposal
-      ? (dualScale.transpositionSemitones !== 0 ? `${dualScale.troupeScaleLabel} (${dualScale.transpositionSemitones > 0 ? '+' : ''}${dualScale.transpositionSemitones} st)` : dualScale.troupeScaleLabel)
-      : (language === 'br' ? 'Auto (Não travada)' : 'Auto (Non verrouillée)');
-
-  const handleAnalyzeProjectScale = useCallback(() => {
-    const res = analyzeFullProjectScale(project.patterns, language);
-    setScaleProposal(res);
-    loadProject({ ...project, patterns: res.updatedPatterns.map((p) => ({ ...p, referencePitch: res.referencePitch })) });
-  }, [project, loadProject, language]);
+  const coroPatterns = useMemo(() => project.patterns.filter((p) => p.role === 'coro'), [project.patterns]);
 
   const handleApplyScale = useCallback((tonic: string, scaleType: ScaleType, refPitch?: string) => {
     loadProject(applyDualScaleToProject(project, tonic, scaleType, dualScale.transpositionSemitones, refPitch, language));
@@ -77,49 +67,46 @@ export const LivretStructure: React.FC = () => {
   }, [project, loadProject, scaleProposal, dualScale, language]);
 
   return (
-    <div className="flex flex-col gap-3.5 w-full">
-      <AmbitusReminderBanner />
-      <StructureTopControls
-        projectId={project.id}
-        bpm={bpm}
-        onBpmChange={(v) => updateScopedBpm(v)}
-        activeScaleLabel={activeScaleLabel}
-        referencePitch={referencePitch}
-        onPlayTonicPreview={() => engine.playReferencePitchPreview(referencePitch, 1.5, selectedOutputDeviceId)}
-        onAnalyzeProjectScale={handleAnalyzeProjectScale}
-        isManualStructureEdit={isManualStructureEdit}
-        onToggleManualStructureEdit={() => setIsManualStructureEdit((prev) => !prev)}
-      />
-
+    <div className="flex flex-col gap-5 w-full max-w-6xl mx-auto my-2">
+      <ScaleProposalBanner proposal={scaleProposal} onApplyScale={handleApplyScale} onKeepUncertain={handleApplyScale} onDisengageFreeMode={handleDisengageFreeMode} onDismiss={() => setScaleProposal(null)} />
       <TwinPatternsManagerBar />
 
-      <ScaleProposalBanner
-        proposal={scaleProposal}
-        onApplyScale={handleApplyScale}
-        onKeepUncertain={handleApplyScale}
-        onDisengageFreeMode={handleDisengageFreeMode}
-        onDismiss={() => setScaleProposal(null)}
-      />
+      <AFitaFrame
+        title={t('fitaTitleConductor')}
+        headerRight={
+          <>
+            <button type="button" onClick={() => setIsManualStructureEdit((p) => !p)} className={`px-2.5 py-1 rounded text-[11px] font-bold inline-flex items-center gap-1.5 cursor-pointer border ${isManualStructureEdit ? 'bg-[#9a3412] text-white border-[#9a3412]' : 'cordel-card-sm text-theme-ink'}`}>
+              {isManualStructureEdit ? <Edit3 className="w-3 h-3" /> : <Lock className="w-3 h-3 text-emerald-700 dark:text-emerald-400" />}
+              <span>{isManualStructureEdit ? (isBr ? 'Editar' : 'Modifier') : 'Organizador'}</span>
+            </button>
+            <button type="button" onClick={() => setActiveLivret('prise')} className="px-2.5 py-1 rounded cordel-btn-primary text-[11px] font-bold inline-flex items-center gap-1.5 cursor-pointer">
+              <Mic className="w-3 h-3" /><span>{t('fanion2Short')}</span>
+            </button>
+          </>
+        }
+      >
+        <ToadaConductorStrip outputDeviceId={selectedOutputDeviceId} isManualStructureEdit={isManualStructureEdit} frameless />
+      </AFitaFrame>
 
-      <div className="w-full grid grid-cols-1 xl:grid-cols-12 gap-4 items-stretch">
-        <div className="xl:col-span-5 h-full">
-          <PatternLibraryBar isManualStructureEdit={isManualStructureEdit} />
-        </div>
-        <div className="xl:col-span-7 h-full">
-          <ToadaConductorStrip outputDeviceId={selectedOutputDeviceId} isManualStructureEdit={isManualStructureEdit} />
+      <div className="w-full grid grid-cols-1 lg:grid-cols-12 gap-4 items-stretch">
+        <div className="lg:col-span-6 h-full"><PatternLibraryBar isManualStructureEdit={isManualStructureEdit} /></div>
+        <div className="lg:col-span-6 h-full">
+          <BlockMusicalSettingsCard
+            activePattern={activePattern} timeSignature={project.timeSignature || '4/4'} isManualStructureEdit={isManualStructureEdit}
+            onTimeSignatureChange={updateScopedTimeSignature} onMeasuresCountChange={updateScopedMeasuresCount}
+            onHasAnacrusisChange={updateScopedHasAnacrusis}
+            onHasTailBeatChange={(has) => updatePattern(activePattern.id, { hasTailBeat: has, exitBeat: has ? 1 : undefined })}
+            onLyricsChange={(lyrics) => updatePattern(activePattern.id, { assignedLyricsText: lyrics })}
+          />
         </div>
       </div>
 
-      <BlockMusicalSettingsCard
-        activePattern={activePattern}
-        timeSignature={timeSignature}
-        isManualStructureEdit={isManualStructureEdit}
-        onTimeSignatureChange={(sig) => updateScopedTimeSignature(sig)}
-        onMeasuresCountChange={(cnt) => updateScopedMeasuresCount(cnt)}
-        onHasAnacrusisChange={(has) => updateScopedHasAnacrusis(has)}
-        onHasTailBeatChange={(has) => updatePattern(activePattern.id, { hasTailBeat: has, exitBeat: has ? 1 : undefined })}
-        onLyricsChange={(lyrics) => updatePattern(activePattern.id, { assignedLyricsText: lyrics })}
-      />
+      <CordelAccordion title={t('drawerStructureToolsTitle')} defaultOpen={false}>
+        <div className="flex flex-col gap-3 pt-2">
+          {project.patterns.length > 1 && <PatternInjectionBar sourcePattern={activePattern} coroPatterns={coroPatterns} onInject={injectPatternIntoTarget} onCreateMirror={(srcId) => mirrorPatternToRole(srcId, 'coro')} defaultAudioChecked={true} />}
+          <SequenciadorExportBar />
+        </div>
+      </CordelAccordion>
     </div>
   );
 };

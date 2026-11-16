@@ -12,8 +12,8 @@ import { ConductorLiveTempoControl } from './ConductorLiveTempoControl';
 import { ConductorWaveformTimeline } from './ConductorWaveformTimeline';
 import { ConductorBackingAndLoopBar, type ConductorLoopRange } from './ConductorBackingAndLoopBar';
 
-export const ToadaConductorStrip: React.FC<{ outputDeviceId?: string; isManualStructureEdit?: boolean }> = ({
-  outputDeviceId, isManualStructureEdit = false,
+export const ToadaConductorStrip: React.FC<{ outputDeviceId?: string; isManualStructureEdit?: boolean; frameless?: boolean }> = ({
+  outputDeviceId, isManualStructureEdit = false, frameless = false,
 }) => {
   const { project, addSlot, removeSlot, updateSlot, reorderSlots, loadProject } = useToadaProject();
   const { t } = useLanguage();
@@ -41,7 +41,7 @@ export const ToadaConductorStrip: React.FC<{ outputDeviceId?: string; isManualSt
   const handleApplyLiveBpm = (nb: number) => { loadProject(batchUpdateProjectBpm(project, 'all', [], nb)); };
 
   return (
-    <div className="cordel-card p-2 w-full h-full flex flex-col select-none">
+    <div className={`${frameless ? '' : 'cordel-card p-2'} w-full h-full flex flex-col select-none`}>
       <div className="flex items-center justify-between text-xs font-mono mb-1.5 flex-wrap gap-1">
         <span className="font-bold text-theme-ink flex items-center gap-1.5 uppercase text-[11px] tracking-wider">
           <Layers className="w-3.5 h-3.5 text-theme-accent" /><span>{t('conductorTitle')}</span>

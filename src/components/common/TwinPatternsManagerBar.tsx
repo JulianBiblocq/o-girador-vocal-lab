@@ -14,7 +14,10 @@ import {
 } from '../../utils/twinPatternsHelper';
 import type { ToadaProject, VocalPatternItem } from '../../types/toadaProject.types';
 
-export const dismissedRepeatBannerPatternIds = new Set<string>();
+const TWIN_SESSION_KEY = 'ogirador_dismissed_twins_v1';
+export const dismissedRepeatBannerPatternIds = new Set<string>(
+  (() => { try { return JSON.parse(sessionStorage.getItem(TWIN_SESSION_KEY) || '[]'); } catch { return []; } })()
+);
 
 export function getPatternTwinRepeatCount(project: ToadaProject, patternId: string): number {
   const twins = findTwinPatterns(project, patternId);
@@ -30,13 +33,9 @@ export function isTwinBannerDismissed(pat: VocalPatternItem): boolean {
 export function setTwinBannerDismissed(project: ToadaProject, pat: VocalPatternItem, dismissed: boolean): void {
   const key = normalizePatternLyricKey(pat) || pat.id;
   const twins = findTwinPatterns(project, pat.id);
-  if (dismissed) {
-    dismissedRepeatBannerPatternIds.add(key);
-    twins.forEach((tw) => dismissedRepeatBannerPatternIds.add(tw.id));
-  } else {
-    dismissedRepeatBannerPatternIds.delete(key);
-    twins.forEach((tw) => dismissedRepeatBannerPatternIds.delete(tw.id));
-  }
+  if (dismissed) { dismissedRepeatBannerPatternIds.add(key); twins.forEach((tw) => dismissedRepeatBannerPatternIds.add(tw.id)); }
+  else { dismissedRepeatBannerPatternIds.delete(key); twins.forEach((tw) => dismissedRepeatBannerPatternIds.delete(tw.id)); }
+  try { sessionStorage.setItem(TWIN_SESSION_KEY, JSON.stringify([...dismissedRepeatBannerPatternIds])); } catch {}
   if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('twin-banner-changed'));
 }
 

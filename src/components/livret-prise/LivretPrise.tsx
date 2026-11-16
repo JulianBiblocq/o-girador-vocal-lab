@@ -1,17 +1,15 @@
 /**
  * LivretPrise.tsx
- * Livret 2 : Cabine d'enregistrement avec Retour Confort, Mémoire de Crête (-0.5 dBFS), Baque casque & Punch-in (< 140 lignes).
+ * Livret 2 : Cabine d'enregistrement autour de « A Fita — Cabine » + tiroir d'options avancées (< 120 lignes).
  */
 import React, { useMemo, useCallback, useState, useEffect } from 'react';
+import { RotateCcw, Scissors, Music } from 'lucide-react';
 import { useToadaProject } from '../../context/ToadaProjectContext';
 import { useAudioHardware } from '../../context/AudioHardwareContext';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { useVocalTransportStore } from '../../stores/useVocalTransportStore';
 import { confirmAsync } from '../../stores/useCordelDialogStore';
-import { PatternCompassBar } from '../common/PatternCompassBar';
-import { AmbitusReminderBanner } from '../common/AmbitusReminderBanner';
-import { PreTakeSetupAssistantBar } from '../prise/PreTakeSetupAssistantBar';
-import { StudioSettingsStatusBar } from './StudioSettingsStatusBar';
+import { AFitaFrame } from '../fita/AFitaFrame';
 import { CabineMonitoringAndPunchBar } from './CabineMonitoringAndPunchBar';
 import type { ComfortMonitoringPreset } from '../../audio/ComfortMonitoringNode';
 import { getActiveBackingTrack, subscribeBackingTrack } from '../../utils/backingTrackStorage';
@@ -25,7 +23,6 @@ import { ContinuousPrompterBanner } from './ContinuousPrompterBanner';
 import { useContinuousTakeController } from './useContinuousTakeController';
 import { usePriseRecorder } from './usePriseRecorder';
 import { getBeatsPerMeasure, transposePitchNote } from '../../utils/musicalMath';
-import { RotateCcw, Scissors, Music } from 'lucide-react';
 
 export const LivretPrise: React.FC = () => {
   const { project, activePattern, activeVariant, updatePattern, updateVariant, updatePatternAndVariant, cueMode, getPreviousConductorPattern, loadProject } = useToadaProject();
@@ -72,7 +69,6 @@ export const LivretPrise: React.FC = () => {
   const isRecordingAny = isCycleActive || isContinuousActive;
   const hasRecording = activeVariant.recordingResult !== null && activeVariant.recordingResult.pcm.length > 0;
   const recordedCount = Object.values(activePattern.variants || {}).filter((v) => v.recordingResult !== null).length;
-  const isMainVariant = activeVariant.speedRatio === 1.0 && activeVariant.pitchShiftSemitones === 0;
 
   const handleReset = useCallback(async () => {
     const ok = await confirmAsync({ title: t('resetRecordingTitle'), message: t('resetRecordingConfirm'), confirmLabel: t('dialogConfirm'), cancelLabel: t('dialogCancel'), variant: 'warning' });
@@ -80,41 +76,39 @@ export const LivretPrise: React.FC = () => {
   }, [t, updateVariant, activePattern.id, activeVariant.variantKey]);
 
   return (
-    <div className="flex flex-col gap-3 w-full">
-      <AmbitusReminderBanner />
-      <PreTakeSetupAssistantBar />
+    <div className="flex flex-col gap-5 w-full max-w-5xl mx-auto my-2">
       <TakeModeSelector mode={takeMode} onChangeMode={setTakeMode} disabled={isRecordingAny} />
       {takeMode !== 'pattern' && <ContinuousPrompterBanner info={prompterInfo} isActive={isContinuousActive} />}
-      <PatternCompassBar />
-      <StudioSettingsStatusBar />
-      <CabineMonitoringAndPunchBar
-        listeningMode={listeningMode} comfortPreset={comfortPreset} comfortMix={comfortMix}
-        onChangeComfortPreset={setComfortPreset} onChangeComfortMix={setComfortMix}
-        hasBackingTrack={hasBackingTrack} backingInHeadphones={backingInHeadphones} onToggleBackingInHeadphones={() => setBackingInHeadphones((v) => !v)}
-        measuresCount={measuresCount} hasRecording={hasRecording} punchMeasureIndex={punchMeasureIndex} onChangePunchMeasureIndex={setPunchMeasureIndex}
-        peakDb={peakDb} registerPeakListener={registerPeakListener} hasClipped={hasClipped} onResetClipIndicator={resetClipIndicator} disabled={isRecordingAny}
-      />
 
-      <CabineTimelineRibbon
-        engine={engine} isActive={isRecordingAny} takeMode={takeMode} project={project} activePattern={activePattern}
-        cuePattern={effectiveCuePattern} beatsPerMeasure={beatsPerMeasure} isPunchIn={Boolean(punchMeasureIndex && punchMeasureIndex >= 1 && hasRecording)}
-        counterRoleCueEnabled={counterRoleCueEnabled} onToggleCounterRoleCue={() => setCounterRoleCueEnabled((v) => !v)} getContinuousLiveStatus={getContinuousLiveStatus}
-      >
-        <RecordActionButton isCycleActive={takeMode === 'pattern' ? isCycleActive : isContinuousActive} measuresCount={measuresCount} onToggleRecord={takeMode === 'pattern' ? handleToggleRecord : handleToggleContinuous} />
-        <div className="pt-1 border-t border-[var(--cordel-border-sub)]">
+      <AFitaFrame title={t('fitaTitleCabine')} isSpinning={isRecordingAny} showPatternNav={takeMode === 'pattern'}>
+        <CabineTimelineRibbon
+          frameless engine={engine} isActive={isRecordingAny} takeMode={takeMode} project={project} activePattern={activePattern}
+          cuePattern={effectiveCuePattern} beatsPerMeasure={beatsPerMeasure} isPunchIn={Boolean(punchMeasureIndex && punchMeasureIndex >= 1 && hasRecording)}
+          counterRoleCueEnabled={counterRoleCueEnabled} onToggleCounterRoleCue={() => setCounterRoleCueEnabled((v) => !v)} getContinuousLiveStatus={getContinuousLiveStatus}
+        >
+          <RecordActionButton isCycleActive={takeMode === 'pattern' ? isCycleActive : isContinuousActive} measuresCount={measuresCount} onToggleRecord={takeMode === 'pattern' ? handleToggleRecord : handleToggleContinuous} />
+          {hasRecording && (
+            <div className="flex flex-wrap items-center justify-center gap-2 pt-2 border-t border-[var(--cordel-border-sub)]">
+              <button type="button" onClick={() => setActiveLivret('calage')} className="cordel-btn-primary px-3 py-1.5 text-xs font-mono font-bold flex items-center gap-1.5 cursor-pointer"><Scissors className="w-3.5 h-3.5" /><span>{t('fanion3Short')}</span></button>
+              <button type="button" onClick={() => setActiveLivret('melodia')} className="cordel-btn px-3 py-1.5 text-xs font-mono font-bold flex items-center gap-1.5 cursor-pointer"><Music className="w-3.5 h-3.5 text-theme-accent" /><span>{t('fanion4Short')}</span></button>
+              <button type="button" onClick={handleReset} className="cordel-card-sm px-2.5 py-1.5 text-[11px] font-mono text-red-600 dark:text-red-400 flex items-center gap-1 cursor-pointer"><RotateCcw className="w-3 h-3" /><span>{t('resetRecordingTitle')}</span></button>
+            </div>
+          )}
+        </CabineTimelineRibbon>
+      </AFitaFrame>
+
+      <CordelAccordion title={t('drawerCabineAdvancedTitle')} summaryBadge={`${recordedCount} var.`} defaultOpen={false}>
+        <div className="flex flex-col gap-3 pt-2">
+          <CabineMonitoringAndPunchBar
+            listeningMode={listeningMode} comfortPreset={comfortPreset} comfortMix={comfortMix}
+            onChangeComfortPreset={setComfortPreset} onChangeComfortMix={setComfortMix}
+            hasBackingTrack={hasBackingTrack} backingInHeadphones={backingInHeadphones} onToggleBackingInHeadphones={() => setBackingInHeadphones((v) => !v)}
+            measuresCount={measuresCount} hasRecording={hasRecording} punchMeasureIndex={punchMeasureIndex} onChangePunchMeasureIndex={setPunchMeasureIndex}
+            peakDb={peakDb} registerPeakListener={registerPeakListener} hasClipped={hasClipped} onResetClipIndicator={resetClipIndicator} disabled={isRecordingAny}
+          />
           <CuePatternSelector disabled={isRecordingAny} />
+          <PatternVariantSelector baseBpm={bpm} referencePitch={referencePitch} disabled={isRecordingAny} onPlayPitchPreview={(p) => engine.playReferencePitchPreview(p, 1.5, selectedOutputDeviceId)} />
         </div>
-        {hasRecording && (
-          <div className="flex flex-wrap items-center justify-center gap-2 pt-2 border-t border-[var(--cordel-border-sub)]">
-            <button type="button" onClick={() => setActiveLivret('calage')} className="cordel-btn-primary px-3 py-1.5 text-xs font-mono font-bold flex items-center gap-1.5 cursor-pointer"><Scissors className="w-3.5 h-3.5" /><span>{t('goToCalageBtn')}</span></button>
-            <button type="button" onClick={() => setActiveLivret('melodia')} className="cordel-btn px-3 py-1.5 text-xs font-mono font-bold flex items-center gap-1.5 cursor-pointer"><Music className="w-3.5 h-3.5 text-theme-accent" /><span>{t('goToMelodiaBtn')}</span></button>
-            <button type="button" onClick={handleReset} className="cordel-card-sm px-2.5 py-1.5 text-[11px] font-mono text-red-500 hover:text-red-400 flex items-center gap-1 cursor-pointer"><RotateCcw className="w-3 h-3" /><span>{t('resetRecordingTitle')}</span></button>
-          </div>
-        )}
-      </CabineTimelineRibbon>
-
-      <CordelAccordion title={t('grainPlayerAccordionTitle')} summaryBadge={t('grainPlayerAccordionSummary', { recorded: recordedCount, active: isMainVariant ? t('variantMainLabel') : `${Math.round(activeVariant.speedRatio * 100)}% / ${activeVariant.pitchShiftSemitones}st` })} storageKey={`variants_${activePattern.id}`} defaultOpen={false}>
-        <PatternVariantSelector baseBpm={bpm} referencePitch={referencePitch} disabled={isRecordingAny} onPlayPitchPreview={(p) => engine.playReferencePitchPreview(p, 1.5, selectedOutputDeviceId)} />
       </CordelAccordion>
     </div>
   );
