@@ -91,7 +91,7 @@ export const uiPolishTranslationsBr = {
   melodiaRecordNextBtn: 'Gravar: {name} →',
   melodiaGoCabineBtn: 'Cabine de Gravação (Folheto 2) →',
   melodiaGoTreinoBtn: '5. Treino →',
-  melodiaGoTreinoTitle: 'Testar este canto no Folheto 5 (Treino e Karaokê)',
+  melodiaGoTreinoTitle: 'Testar este canto na Visão Aluno (Letra ao Vivo — Canto ao vivo)',
   melodiaBackLivret1Title: 'Voltar ao Folheto 1 com segurança',
   melodiaBackLivret1Btn: 'Voltar ao Folheto 1',
   syllableInputTitle: 'Sílaba para {note} (Tecla Tab para avançar)',

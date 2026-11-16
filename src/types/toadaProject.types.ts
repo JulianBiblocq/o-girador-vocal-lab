@@ -82,6 +82,7 @@ export interface VocalPatternItem {
   troupeTransposedPCM?: Float32Array | null;
   troupeTransposedSemitones?: number;
   foldNotesView?: boolean;
+  referenceMidiNotes?: number[];
   stepStatus?: Partial<PatternStepStatus>;
 }
 
@@ -115,6 +116,7 @@ export interface ToadaProject {
   globalHarmonyGrid?: PatternHarmonyGrid;
   sungScaleRoot?: string;
   sungScaleMode?: string;
+  customPitchClasses?: number[] | null;
   transpositionSemitones?: number;
   troupeScaleRoot?: string;
   grammarVersion?: number;

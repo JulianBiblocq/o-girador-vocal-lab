@@ -27,6 +27,8 @@ export interface VocalStepData {
   decay: number; // Durée relative ou millisecondes
   microtiming?: number; // Décalage fin (nudge en ms ou fraction de pas)
   melodyneStartRatio?: number; // 0.0 à 0.95 (défaut 0.25) découpe interne d'attaque naturelle
+  consonantHeadRatio?: number; // Ratio tête consonantique / sibilante détectée par sibilantBreathMasker (0..0.65)
+  waveEnvelopeBins?: number[]; // Silhouette fine d'amplitude vocale interne à la brique (0..1)
   melodynePullPct?: number; // 0 à 100 % (défaut 0 = voix brute) correction Melodyne par brique (VariAudio)
   originalVoiceMidi?: number; // Hauteur médiane réelle de la courbe verte sous la brique
   manualPitchMoved?: boolean; // Indique que l'utilisateur a déplacé manuellement la brique MIDI

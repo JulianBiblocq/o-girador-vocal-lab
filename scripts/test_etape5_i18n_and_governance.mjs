@@ -149,7 +149,7 @@ let maxObservedLines = 0;
 let maxObservedFile = '';
 
 for (const file of allSrcFiles) {
-  const lines = fs.readFileSync(file, 'utf8').split(/\r?\n/).length;
+  const lines = fs.readFileSync(file, 'utf8').replace(/\r\n/g, '\n').replace(/\n$/, '').split('\n').length;
   if (lines > maxObservedLines) {
     maxObservedLines = lines;
     maxObservedFile = path.relative(SRC_DIR, file);

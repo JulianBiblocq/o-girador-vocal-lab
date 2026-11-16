@@ -1,11 +1,11 @@
 /**
  * melodicExtractionHelper.ts
- * Pipeline unifie d'extraction de pitch Viterbi et de quantification MIDI (< 130 lignes).
- * Utilise sur la portion trimmee [trimStartSec, trimEndSec] de l'AudioBuffer.
+ * Pipeline unifié d'extraction de pitch Viterbi, masquage sibilantes, alignement forcé et quantification MIDI (< 125 lignes).
  */
 import type { VocalPackExport, PitchCurvePoint, VocalStepData, TimeSignatureString } from '../types/vocalPack.types';
 import type { TessituraRange } from '../types/tessitura.types';
 import type { TimeAnchor } from '../types/toadaDocument.types';
+import type { EffectiveVocalBounds } from '../utils/ambitusStorage';
 import { createPaddedPreviewBuffer, audioBufferToWavBase64 } from '../utils/wavEncoder';
 import { extractContinuousPitchCurve } from './pitchExtractor';
 import { quantizePitchToSteps } from './pitchToStepsQuantizer';
@@ -14,13 +14,15 @@ import { applyLyricsSyllablesToSteps } from '../utils/syllableAligner';
 import { resolveFreshTimeAnchors } from '../utils/timeAnchorParser';
 import { getPatternT1OffsetSec, getPatternTotalDurationSec } from '../utils/anacrusisTimingHelper';
 import { computeAlignmentMeta } from '../utils/alignmentMath';
+import { maskSibilantsInPitchCurve, annotateBricksConsonantAndEnvelope } from './sibilantBreathMasker';
+import { alignStepsWithReferenceMidiNotes } from './forcedMelodyAligner';
 
 export interface ExtractMelodicParams {
   rawPCM: Float32Array; sampleRate: number; bpm: number; timeSignature: TimeSignatureString;
   measuresCount: number; beatsPerMeasure: number; beatResolutions: number[]; hasAnacrusis: boolean;
   trimStartSec?: number; trimEndSec?: number; referencePitch: string; pitchShiftSemitones?: number;
-  tessitura?: TessituraRange; assignedLyricsText?: string; timeAnchors?: TimeAnchor[];
-  lowCutEnabled?: boolean; enableTonePolish?: boolean; t1OffsetSec?: number;
+  tessitura?: TessituraRange; vocalBounds?: Partial<EffectiveVocalBounds>; assignedLyricsText?: string; timeAnchors?: TimeAnchor[];
+  lowCutEnabled?: boolean; enableTonePolish?: boolean; t1OffsetSec?: number; referenceMidiNotes?: number[] | null; createdAt?: string;
 }
 
 export interface ExtractMelodicResult {
@@ -33,8 +35,7 @@ export function rebuildCanonicalCleanAudio(params: {
   beatsPerMeasure: number; hasAnacrusis: boolean; trimStartSec?: number; trimEndSec?: number;
   t1OffsetSec?: number; lowCutEnabled?: boolean; enableTonePolish?: boolean;
 }): Float32Array {
-  const beatDuration = 60 / Math.max(30, params.bpm);
-  const measureDuration = params.beatsPerMeasure * beatDuration;
+  const beatDuration = 60 / Math.max(30, params.bpm), measureDuration = params.beatsPerMeasure * beatDuration;
   const cleanT1OffsetSec = params.hasAnacrusis ? measureDuration : 0.15;
   const rawT1OffsetSec = getPatternT1OffsetSec(params.hasAnacrusis, measureDuration, params.t1OffsetSec);
   const totalDurationSec = getPatternTotalDurationSec(params.hasAnacrusis, params.measuresCount, measureDuration, 0.25, beatDuration, cleanT1OffsetSec);
@@ -50,11 +51,10 @@ export function extractPatternMelodicData(params: ExtractMelodicParams): Extract
   const {
     rawPCM, sampleRate, bpm, timeSignature, measuresCount, beatsPerMeasure,
     beatResolutions, hasAnacrusis, referencePitch, pitchShiftSemitones = 0,
-    tessitura, assignedLyricsText, timeAnchors, lowCutEnabled = true, enableTonePolish = true,
+    tessitura, assignedLyricsText, timeAnchors, lowCutEnabled = true, enableTonePolish = true, referenceMidiNotes,
   } = params;
 
-  const beatDuration = 60 / bpm;
-  const measureDuration = beatsPerMeasure * beatDuration;
+  const beatDuration = 60 / bpm, measureDuration = beatsPerMeasure * beatDuration;
   const cleanT1OffsetSec = hasAnacrusis ? measureDuration : 0.15;
   const rawT1OffsetSec = getPatternT1OffsetSec(hasAnacrusis, measureDuration, params.t1OffsetSec);
   const totalDurationSec = getPatternTotalDurationSec(hasAnacrusis, measuresCount, measureDuration, 0.25, beatDuration, cleanT1OffsetSec);
@@ -70,9 +70,8 @@ export function extractPatternMelodicData(params: ExtractMelodicParams): Extract
     lowCutEnabled, true, enableTonePolish, rawT1OffsetSec, cleanT1OffsetSec
   );
 
-  const pitchCurve = extractContinuousPitchCurve(cleanPCM, {
-    sampleRate, totalDurationSec, trimStartSec: cleanTrimStart, trimEndSec: cleanTrimEnd, tessitura,
-  });
+  const rawCurve = extractContinuousPitchCurve(cleanPCM, { sampleRate, totalDurationSec, trimStartSec: cleanTrimStart, trimEndSec: cleanTrimEnd, tessitura, vocalBounds: params.vocalBounds });
+  const pitchCurve = maskSibilantsInPitchCurve(rawCurve, cleanPCM, sampleRate);
   const effectiveAnchors = resolveFreshTimeAnchors(undefined, timeAnchors, beatsPerMeasure, !hasAnacrusis, assignedLyricsText);
 
   const q = quantizePitchToSteps({
@@ -82,14 +81,16 @@ export function extractPatternMelodicData(params: ExtractMelodicParams): Extract
   });
 
   const rawSteps = hasAnacrusis ? [...q.anacrusisSteps, ...q.gridSteps] : q.gridSteps;
-  const stepsPerBeat = beatResolutions[0] || 4;
+  const stepsPerBeat = beatResolutions[0] || 4, gridStartSec = hasAnacrusis ? 0 : cleanT1OffsetSec;
   const alignedSteps = (assignedLyricsText || (effectiveAnchors && effectiveAnchors.length > 0))
     ? applyLyricsSyllablesToSteps(rawSteps, assignedLyricsText, effectiveAnchors, beatsPerMeasure, stepsPerBeat)
     : rawSteps;
-  const recalibratedSteps = recalibrateBricksToLocalPitchCurve(
-    alignedSteps, pitchCurve, hasAnacrusis ? 0 : cleanT1OffsetSec, beatDuration / stepsPerBeat, referencePitch.replace(/\d+$/, '') || 'C', 'chromatic'
-  );
-  const allSteps = recalibratedSteps;
+  const recalibratedSteps = recalibrateBricksToLocalPitchCurve(alignedSteps, pitchCurve, gridStartSec, beatDuration / stepsPerBeat, referencePitch.replace(/\d+$/, '') || 'C', 'chromatic');
+  const forcedSteps = referenceMidiNotes?.length
+    ? alignStepsWithReferenceMidiNotes({ steps: recalibratedSteps, referenceMidiNotes, pitchCurve, gridStartSec, beatDurationSec: beatDuration, pcm: cleanPCM, sampleRate })
+    : recalibratedSteps;
+  const allSteps = annotateBricksConsonantAndEnvelope(forcedSteps, cleanPCM, sampleRate, gridStartSec, beatDuration);
+
   const anacCount = hasAnacrusis ? q.anacrusisSteps.length : 0;
   const anacrusisSteps = hasAnacrusis ? allSteps.slice(0, anacCount) : [];
   const mainSteps = (hasAnacrusis ? allSteps.slice(anacCount) : allSteps).map((s, idx) => ({ ...s, stepIndex: idx }));
@@ -98,18 +99,10 @@ export function extractPatternMelodicData(params: ExtractMelodicParams): Extract
   const audioBase64 = audioBufferToWavBase64(cleanPCM, sampleRate);
   const pack: VocalPackExport = {
     schemaVersion: '1.0',
-    metadata: { bpm, timeSignature, measuresCount, beatResolutions, referencePitch, createdAt: new Date().toISOString() },
-    alignment: {
-      startOffsetSec: alignment.startOffsetSec,
-      anacrusis: { ...alignment.anacrusis, steps: anacrusisSteps },
-      nudgeMs: 0,
-    },
+    metadata: { bpm, timeSignature, measuresCount, beatResolutions, referencePitch, createdAt: params.createdAt ?? new Date().toISOString() },
+    alignment: { startOffsetSec: alignment.startOffsetSec, anacrusis: { ...alignment.anacrusis, steps: anacrusisSteps }, nudgeMs: 0 },
     grid: { steps: mainSteps, totalSteps: mainSteps.length },
-    audio: {
-      format: 'wav', sampleRate, channels: 1, durationSec: totalDurationSec, audioBase64, nudgeMs: 0,
-      trim: { startSec: cleanTrimStart, endSec: cleanTrimEnd },
-    },
+    audio: { format: 'wav', sampleRate, channels: 1, durationSec: totalDurationSec, audioBase64, nudgeMs: 0, trim: { startSec: cleanTrimStart, endSec: cleanTrimEnd } },
   };
-
   return { pack, cleanPCM, pitchCurve, anacrusisSteps, mainSteps, allSteps, totalDurationSec };
 }

@@ -6,7 +6,7 @@
 import type { TimeSignatureString } from './vocalPack.types';
 import type { ScaleType } from '../audio/scaleQuantizer';
 
-export type VocalSheetType = 'sequence' | 'notes_1m' | 'notes_2m' | 'rhythm_only' | 'instructions';
+export type VocalSheetType = 'sequence' | 'notes_1m' | 'notes_2m' | 'rhythm_only' | 'instructions' | 'tab_4e';
 
 export type VocalPatternNumberingMode = 'blank' | 'continuous' | 'per_sheet';
 
@@ -16,7 +16,8 @@ export type VocalSheetOpticalCode =
   | 'CHANT-NOTES-1M'
   | 'CHANT-NOTES-2M'
   | 'CHANT-RYTHME'
-  | 'CHANT-GUIDE';
+  | 'CHANT-GUIDE'
+  | 'CHANT-TAB-4E';
 
 export type KeyboardOctaveNote =
   | 'G#' | 'G' | 'F#' | 'F' | 'E' | 'D#' | 'Eb' | 'D' | 'C#' | 'C' | 'B' | 'A#' | 'Bb' | 'A';
@@ -35,6 +36,7 @@ export interface VocalPaperPrintOptions {
   blankPatternLabels?: boolean;
   rhythmMeasuresPerLine?: 1 | 2;
   prefillFromProject?: boolean;
+  prefillPatterns?: Array<{ code?: string; lyricsText?: string; referenceMidiNotes?: number[] }>;
 }
 
 export interface VocalPaperCartQuantities {
@@ -42,6 +44,7 @@ export interface VocalPaperCartQuantities {
   notes: number;
   rhythm: number;
   instructions: number;
+  tab4e?: number;
 }
 
 export interface ScannedVocalStepCell {
@@ -65,6 +68,9 @@ export interface ScannedVocalPatternBlock {
   hasTailBeat?: boolean;
   rhythmOnlyMode: boolean;
   beatNumbers?: Array<number | string | null>;
+  subdivisionLine?: string;
+  notesLine?: string;
+  syllablesLine?: string;
   cells?: ScannedVocalStepCell[];
   anacrusisCells?: ScannedVocalStepCell[];
   mainCells: ScannedVocalStepCell[];

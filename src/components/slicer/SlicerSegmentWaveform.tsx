@@ -10,13 +10,13 @@ import { useSlicerViewport, SLICER_ZOOM_PRESETS, formatSlicerDragTooltip } from 
 
 interface SlicerSegmentWaveformProps {
   pcm: Float32Array; durationSec: number; segments: SliceSegment[]; selectedSegmentId: string | null;
-  playheadSec: number; bpm: number; gridOffsetSec: number; cascadeMove?: boolean;
+  playheadSec: number; getPlayheadSec?: () => number; isPlaying?: boolean; bpm: number; gridOffsetSec: number; cascadeMove?: boolean;
   onSegmentsChange: (segments: SliceSegment[]) => void; onSelectSegment: (id: string | null) => void;
   onSeek: (sec: number) => void; onAddSegmentAtSec: (sec: number) => void; onGridOffsetChange?: (offset: number) => void;
 }
 
 export const SlicerSegmentWaveform: React.FC<SlicerSegmentWaveformProps> = ({
-  pcm, durationSec, segments, selectedSegmentId, playheadSec, bpm, gridOffsetSec, cascadeMove = false,
+  pcm, durationSec, segments, selectedSegmentId, playheadSec, getPlayheadSec, isPlaying = false, bpm, gridOffsetSec, cascadeMove = false,
   onSegmentsChange, onSelectSegment, onSeek, onAddSegmentAtSec, onGridOffsetChange,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null), [dragTooltip, setDragTooltip] = useState<string | null>(null);
@@ -29,16 +29,18 @@ export const SlicerSegmentWaveform: React.FC<SlicerSegmentWaveformProps> = ({
   };
 
   const render = useCallback(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const w = canvas.clientWidth, h = canvas.clientHeight, dpr = window.devicePixelRatio || 1;
-    if (w <= 0 || h <= 0) return;
+    const canvas = canvasRef.current; if (!canvas) return;
+    const w = canvas.clientWidth, h = canvas.clientHeight, dpr = window.devicePixelRatio || 1; if (w <= 0 || h <= 0) return;
     if (canvas.width !== w * dpr || canvas.height !== h * dpr) { canvas.width = w * dpr; canvas.height = h * dpr; }
-    const ctx = canvas.getContext('2d');
-    if (ctx) drawSegmentWaveform(ctx, { width: w, height: h, dpr, pcm, durationSec, segments, selectedSegmentId, playheadSec, bpm, gridOffsetSec, viewStartSec: scrollStartSec, viewDurationSec: visibleDurationSec, zoomLevel });
-  }, [pcm, durationSec, segments, selectedSegmentId, playheadSec, bpm, gridOffsetSec, scrollStartSec, visibleDurationSec, zoomLevel]);
+    const ctx = canvas.getContext('2d'), curHead = getPlayheadSec ? getPlayheadSec() : playheadSec;
+    if (ctx) drawSegmentWaveform(ctx, { width: w, height: h, dpr, pcm, durationSec, segments, selectedSegmentId, playheadSec: curHead, bpm, gridOffsetSec, viewStartSec: scrollStartSec, viewDurationSec: visibleDurationSec, zoomLevel });
+  }, [pcm, durationSec, segments, selectedSegmentId, playheadSec, getPlayheadSec, bpm, gridOffsetSec, scrollStartSec, visibleDurationSec, zoomLevel]);
 
-  useEffect(() => { render(); }, [render]);
+  useEffect(() => {
+    render(); if (!isPlaying) return;
+    let id = requestAnimationFrame(function loop() { render(); id = requestAnimationFrame(loop); });
+    return () => cancelAnimationFrame(id);
+  }, [render, isPlaying]);
 
   const handlePointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
     const { x, sec, width } = getCanvasCoords(e);

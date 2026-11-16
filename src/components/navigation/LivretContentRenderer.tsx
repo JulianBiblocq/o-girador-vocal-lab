@@ -1,6 +1,6 @@
 /**
  * LivretContentRenderer.tsx
- * Aiguillage et rendu du Livret actif parmi les 5 Livrets + Réglages (< 60 lignes).
+ * Aiguillage et rendu du Livret actif avec garde-fou strict en Vue Élève (< 45 lignes).
  */
 import React from 'react';
 import { useVocalTransportStore } from '../../stores/useVocalTransportStore';
@@ -13,6 +13,11 @@ import { LivretReglages } from '../livret-reglages/LivretReglages';
 
 export const LivretContentRenderer: React.FC = () => {
   const activeLivret = useVocalTransportStore((s) => s.activeLivret);
+  const viewRoleMode = useVocalTransportStore((s) => s.viewRoleMode);
+
+  if (viewRoleMode === 'eleve') {
+    return activeLivret === 'reglages' ? <LivretReglages /> : <LivretTreino />;
+  }
 
   switch (activeLivret) {
     case 'structure':

@@ -91,7 +91,7 @@ export const uiPolishTranslationsFr = {
   melodiaRecordNextBtn: 'Enregistrer : {name} →',
   melodiaGoCabineBtn: 'Cabine de Prise (Livret 2) →',
   melodiaGoTreinoBtn: '5. Entraînement →',
-  melodiaGoTreinoTitle: 'Tester ce chant dans le Livret 5 (Entraînement & Karaoké)',
+  melodiaGoTreinoTitle: "Tester ce chant en Vue Élève (Letra ao Vivo — Chant en direct)",
   melodiaBackLivret1Title: 'Revenir au Livret 1 en toute sécurité',
   melodiaBackLivret1Btn: 'Retour au Livret 1',
   syllableInputTitle: 'Syllabe pour {note} (Touche Tab pour passer à la suivante)',

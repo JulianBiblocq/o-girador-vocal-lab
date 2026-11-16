@@ -8,13 +8,15 @@ import type { PatternHarmonyGrid } from '../../types/harmony.types';
 import { isBeatTriplet } from '../../utils/tripletBeatHelper';
 import { drawPianoRollRows } from './pianoRollRowsDrawer';
 import { drawPianoRollBricks, drawFoldedRhythmBricks, drawVariAudioPulledCurveOverlay } from './pianoRollBricksDrawer';
+import { drawSmartToolHoverGhost } from './pianoRollSmartGhostDrawer';
+import type { SmartToolHoverState } from './pianoRollSmartTool';
 
 export interface DrawGridOptions {
   width: number; height: number; dpr: number; minMidi: number; maxMidi: number; rowHeight: number;
   beatsPerMeasure: number; beatResolutions: number[]; allSteps: VocalStepData[]; pitchCurve: PitchCurvePoint[];
   rawPitchCurve?: PitchCurvePoint[]; totalDurationSec: number; anacrusisDurationSec: number; seekStartSec: number;
   playheadSec: number; isPlaying: boolean; hasAnacrusis?: boolean; t1OffsetSec?: number; bpm?: number;
-  selectedStepIdx?: number | null; hoveredBrickRootIdx?: number | null;
+  selectedStepIdx?: number | null; hoveredBrickRootIdx?: number | null; smartHover?: SmartToolHoverState | null;
   harmonyGrid?: PatternHarmonyGrid; pitchShiftSemitones?: number;
   allowedPitchClasses?: Set<number> | number[] | null; rootPitchClass?: number | null; tonic?: string;
   foldNotesView?: boolean;
@@ -121,6 +123,7 @@ export function drawPianoRollGrid(ctx: CanvasRenderingContext2D, opts: DrawGridO
       }
     }
     drawVariAudioPulledCurveOverlay(ctx, allSteps, pitchCurve, tGridStart, gridDur, width, maxMidi, rowHeight);
+    drawSmartToolHoverGhost({ ctx, allSteps, width, maxMidi, rowHeight, hoveredBrickRootIdx, smartHover: opts.smartHover });
   }
 
   // 4. Lignes de Playhead & Seek

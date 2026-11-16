@@ -1,20 +1,20 @@
 /**
  * LivretMelodia.tsx
- * Livret 4 : Melodia & Letra (Piano Roll, Letra, Melodyne & Boussole de pattern) (< 120 lignes).
- * Auto-extraction à la volée dès la sélection d'un pattern disposant d'un audio enregistré.
+ * Livret 4 : Melodia & Letra autour de « A Fita — Boussole » et du Piano Roll (< 115 lignes).
  */
 import React, { useEffect, useState, useCallback } from 'react';
 import type { VocalPackExport, PitchCurvePoint, VocalStepData } from '../../types/vocalPack.types';
 import { useToadaProject } from '../../context/ToadaProjectContext';
 import { useAudioHardware } from '../../context/AudioHardwareContext';
-import { PatternCompassBar, resolvePatternAudioSource, checkPatternHasMidi } from '../common/PatternCompassBar';
+import { resolvePatternAudioSource, checkPatternHasMidi } from '../common/PatternCompassBar';
+import { AFitaCompassStrip } from '../fita/AFitaCompassStrip';
 import { TwinPatternsManagerBar } from '../common/TwinPatternsManagerBar';
 import { MelodiaEmptyNotice } from './MelodiaEmptyNotice';
 import { LivretMelodiaWorkspace } from './LivretMelodiaWorkspace';
 import { ScaleProposalBanner } from '../common/ScaleProposalBanner';
 import { analyzeFullProjectScale, applyDetectedScaleToProject, type ProjectScaleAnalysisResult } from '../../audio/projectScaleAnalyzer';
 import type { ScaleType } from '../../audio/scaleQuantizer';
-import { extractPatternMelodicData } from '../../audio/melodicExtractionHelper';
+import { extractMelodicDataInWorker, isVocalDspCancelled } from '../../workers/vocalDspWorkerClient';
 import { extractProjectRawLyricsSource } from '../../audio/livretResetHelper';
 import { resolveFreshTimeAnchors } from '../../utils/timeAnchorParser';
 import { getBeatsPerMeasure, transposePitchNote } from '../../utils/musicalMath';
@@ -60,7 +60,8 @@ export const LivretMelodia: React.FC<LivretMelodiaProps> = (props) => {
     const rawT1 = activeVariant?.t1OffsetSec ?? activePattern.t1OffsetSec ?? activePattern.recordingResult?.t1OffsetSec;
     const freshAnchors = resolveFreshTimeAnchors(activePattern.rawLineCode, activePattern.timeAnchors, beatsPerMeasure, !hasAnacrusis, activePattern.assignedLyricsText, extractProjectRawLyricsSource(project, activePattern));
 
-    const res = extractPatternMelodicData({
+    let cancelled = false;
+    extractMelodicDataInWorker({
       rawPCM: resolvedPCM, sampleRate, bpm: effectiveBpm, timeSignature: project.timeSignature,
       measuresCount: activePattern.measuresCount, beatsPerMeasure, beatResolutions,
       hasAnacrusis, trimStartSec: activeVariant?.trimStartSec ?? activePattern.trimStartSec ?? 0,
@@ -69,26 +70,29 @@ export const LivretMelodia: React.FC<LivretMelodiaProps> = (props) => {
       tessitura: activePattern.tessitura, assignedLyricsText: activePattern.assignedLyricsText,
       timeAnchors: freshAnchors, lowCutEnabled: activeVariant?.lowCutEnabled ?? activePattern.lowCutEnabled ?? true,
       enableTonePolish: (activeVariant?.enableTonePolish ?? activePattern.enableTonePolish) !== false,
-    });
-
-    const preserveMidi = Boolean(activePattern.midiLocked && checkPatternHasMidi(activePattern));
-    updatePattern(activePattern.id, {
-      pack: res.pack, rawAudioSamples: res.cleanPCM, rawPitchCurve: res.pitchCurve,
-      pitchCurve: res.pitchCurve, timeAnchors: freshAnchors,
-      anacrusisSteps: preserveMidi ? (activePattern.anacrusisSteps || []) : res.anacrusisSteps,
-      mainSteps: preserveMidi ? (activePattern.mainSteps || []) : res.mainSteps,
-      isMidiInitialized: true, midiLocked: preserveMidi, correctedAudioSamples: null,
-    });
+      referenceMidiNotes: activePattern.referenceMidiNotes,
+    }, { dedupeKey: `melodia_init_${activePattern.id}` }).then((res) => {
+      if (cancelled) return;
+      const preserveMidi = Boolean(activePattern.midiLocked && checkPatternHasMidi(activePattern));
+      updatePattern(activePattern.id, {
+        pack: res.pack, rawAudioSamples: res.cleanPCM, rawPitchCurve: res.pitchCurve,
+        pitchCurve: res.pitchCurve, timeAnchors: freshAnchors,
+        anacrusisSteps: preserveMidi ? (activePattern.anacrusisSteps || []) : res.anacrusisSteps,
+        mainSteps: preserveMidi ? (activePattern.mainSteps || []) : res.mainSteps,
+        isMidiInitialized: true, midiLocked: preserveMidi, correctedAudioSamples: null,
+      });
+    }).catch((err) => { if (!isVocalDspCancelled(err)) console.warn('[LivretMelodia] Worker error:', err); });
+    return () => { cancelled = true; };
   }, [hasAudio, resolvedPCM, isMelodiaReady, activePattern, activeVariant, project, sampleRate, updatePattern]);
 
   const pack = props.initialPack ?? activePattern.pack;
   if (!hasAudio && !pack) {
-    return <div className="flex flex-col gap-3 w-full"><PatternCompassBar /><TwinPatternsManagerBar /><MelodiaEmptyNotice /></div>;
+    return <div className="flex flex-col gap-3 w-full max-w-6xl mx-auto my-2"><AFitaCompassStrip /><TwinPatternsManagerBar /><MelodiaEmptyNotice /></div>;
   }
   if (!pack || !activePattern.rawAudioSamples) {
     return (
-      <div className="flex flex-col gap-3 w-full">
-        <PatternCompassBar />
+      <div className="flex flex-col gap-3 w-full max-w-6xl mx-auto my-2">
+        <AFitaCompassStrip />
         <div className="cordel-card p-8 flex flex-col items-center justify-center text-center gap-2">
           <div className="w-8 h-8 rounded-full border-2 border-theme-accent border-t-transparent animate-spin" />
           <p className="text-xs font-mono text-[var(--cordel-secondary-text)]">Extraction du pitch et des briques MIDI en cours...</p>
@@ -103,30 +107,10 @@ export const LivretMelodia: React.FC<LivretMelodiaProps> = (props) => {
   const totalDurationSec = getPatternTotalDurationSec(activePattern.hasAnacrusis !== false, activePattern.measuresCount, measureDuration, 0.25, beatDuration);
 
   return (
-    <div className="flex flex-col gap-3 w-full">
-      <PatternCompassBar />
+    <div className="flex flex-col gap-3 w-full max-w-6xl mx-auto my-2">
       <TwinPatternsManagerBar />
-      <ScaleProposalBanner
-        proposal={scaleProposal}
-        onApplyScale={handleApplyScale}
-        onKeepUncertain={handleApplyScale}
-        onDisengageFreeMode={() => { loadProject(applyDetectedScaleToProject(project, scaleProposal?.tonic || 'A', 'chromatic', scaleProposal?.referencePitch)); setScaleProposal(null); }}
-        onDismiss={() => setScaleProposal(null)}
-      />
-      <LivretMelodiaWorkspace
-        key={`${project.id}-${activePattern.id}`}
-        {...props}
-        initialPack={pack}
-        cleanPCM={activePattern.rawAudioSamples}
-        sampleRate={sampleRate}
-        totalDurationSec={totalDurationSec}
-        beatsPerMeasure={beatsPerMeasure}
-        measuresCount={activePattern.measuresCount}
-        pitchCurve={activePattern.pitchCurve}
-        outputDeviceId={selectedOutputDeviceId}
-        pitchShiftSemitones={activeVariant?.pitchShiftSemitones ?? 0}
-        onAnalyzeFullProjectScale={handleAnalyzeFullProjectScale}
-      />
+      <ScaleProposalBanner proposal={scaleProposal} onApplyScale={handleApplyScale} onKeepUncertain={handleApplyScale} onDisengageFreeMode={() => { loadProject(applyDetectedScaleToProject(project, scaleProposal?.tonic || 'A', 'chromatic', scaleProposal?.referencePitch)); setScaleProposal(null); }} onDismiss={() => setScaleProposal(null)} />
+      <LivretMelodiaWorkspace key={`${project.id}-${activePattern.id}-${(activePattern.referenceMidiNotes || []).join(',')}`} {...props} initialPack={pack} cleanPCM={activePattern.rawAudioSamples} sampleRate={sampleRate} totalDurationSec={totalDurationSec} beatsPerMeasure={beatsPerMeasure} measuresCount={activePattern.measuresCount} pitchCurve={activePattern.pitchCurve} outputDeviceId={selectedOutputDeviceId} pitchShiftSemitones={activeVariant?.pitchShiftSemitones ?? 0} onAnalyzeFullProjectScale={handleAnalyzeFullProjectScale} />
     </div>
   );
 };

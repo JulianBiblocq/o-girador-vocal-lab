@@ -22,8 +22,13 @@ export const UserAvatarMenu: React.FC<UserAvatarMenuProps> = ({ isInstalled = fa
     const onClickOutside = (e: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) setIsOpen(false);
     };
+    const onClosePopovers = () => setIsOpen(false);
     document.addEventListener('mousedown', onClickOutside);
-    return () => document.removeEventListener('mousedown', onClickOutside);
+    window.addEventListener('cordel-close-popovers', onClosePopovers);
+    return () => {
+      document.removeEventListener('mousedown', onClickOutside);
+      window.removeEventListener('cordel-close-popovers', onClosePopovers);
+    };
   }, []);
 
   if (isLoading) {
@@ -81,7 +86,7 @@ export const UserAvatarMenu: React.FC<UserAvatarMenuProps> = ({ isInstalled = fa
               <button
                 type="button"
                 onClick={() => { setIsOpen(false); logout(); }}
-                className="w-full p-1.5 flex items-center gap-2 text-red-400 hover:text-red-300 hover:bg-[var(--cordel-subcard-bg)] rounded transition-colors cursor-pointer"
+                className="w-full p-1.5 flex items-center gap-2 text-red-700 dark:text-red-400 hover:bg-[var(--cordel-subcard-bg)] rounded transition-colors cursor-pointer"
               >
                 <LogOut className="w-3.5 h-3.5" />
                 <span className="font-bold">{t('authLogout') || 'Se déconnecter'}</span>

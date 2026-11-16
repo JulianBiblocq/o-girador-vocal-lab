@@ -7,7 +7,6 @@ import React, { useMemo } from 'react';
 import { useToadaProject } from '../../context/ToadaProjectContext';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { PatternCardItem } from './PatternCardItem';
-import { PatternInjectionBar } from './PatternInjectionBar';
 import { confirmAsync, alertAsync } from '../../stores/useCordelDialogStore';
 import { getPatternUsageCount, getUnusedPatternsSummary, purgeUnusedPatternsFromProject, deleteOrphanPatternWavsFromStorage } from '../../utils/unusedPatternsPurger';
 import { saveProjectToIndexedDB } from '../../utils/projectAutoSave';
@@ -111,12 +110,6 @@ export const PatternLibraryBar: React.FC<{ isManualStructureEdit?: boolean }> = 
           )}
         </div>
       </div>
-
-      {project.patterns.length > 1 && (
-        <div className="mb-1.5">
-          <PatternInjectionBar sourcePattern={activePattern} coroPatterns={coroPatterns} onInject={injectPatternIntoTarget} onCreateMirror={(srcId) => mirrorPatternToRole(srcId, 'coro')} defaultAudioChecked={true} />
-        </div>
-      )}
 
       <div className="grid grid-cols-2 gap-3 h-full">
         <div className="flex flex-col gap-1.5 min-w-0">

@@ -1,53 +1,56 @@
 /**
- * ChanterToadaWorkshop.tsx — Atelier 1 du Studio Élève 2.0 : Autoroute 60 FPS, Paliers 75➔88➔100%, Jauge Projection Roda & Diagnostic 4 Piliers (< 138 lignes).
+ * ChanterToadaWorkshop.tsx — Atelier Letra ao Vivo 60 FPS : commutateur [En rythme (Autoroute) | Pas-à-pas (Cherche-Notes)],
+ * Bourdon + Clic sans clavier, Paliers 75➔88➔100%, Jauge Roda & Diagnostic (< 140 lignes).
  */
 import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import { useToadaProject } from '../../context/ToadaProjectContext';
 import { useAudioHardware } from '../../context/AudioHardwareContext';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { TrainerConfigBar, type TrainerScope, type StudentRole, type TrainerGuideMode, type TrainerPatternOption } from './TrainerConfigBar';
+import { StudentStepByStepTrainer } from './StudentStepByStepTrainer';
 import { KaraokeLyricsBanner, type KaraokeSyllableItem } from './KaraokeLyricsBanner';
 import { MelodicHighwayCanvas } from './MelodicHighwayCanvas';
 import { RodaProjectionGauge } from './RodaProjectionGauge';
 import { StudentDiagnosticCard } from './StudentDiagnosticCard';
+import { CordelAccordion } from '../common/CordelAccordion';
 import { StudentTrainerEngine, type ComparativePlaybackMode } from '../../audio/StudentTrainerEngine';
 import { analyzeStudentTake, type StudentAnalysisResult } from '../../audio/studentPitchAnalyzer';
 import type { RodaProjectionStatus, SessionProjectionSummary } from '../../audio/rodaResonanceAnalyzer';
-import {
-  loadPatternSpeedMastery, savePatternSpeedMastery, evaluateSpeedTierProgression,
-  computeWeightedStudentScore, countMasteredPatternsInToada, type PatternSpeedMastery,
-} from '../../utils/progressiveSpeedMastery';
+import { loadPatternSpeedMastery, savePatternSpeedMastery, evaluateSpeedTierProgression, computeWeightedStudentScore, countMasteredPatternsInToada, type PatternSpeedMastery } from '../../utils/progressiveSpeedMastery';
 import { exportStudentEvaluationJson } from '../../utils/studentEvaluationExporter';
+import { resolveProjectDualScale, transposeVocalSteps } from '../../utils/scaleTranspositionHelper';
+import { sanitizePitchHz } from '../../utils/pitchHzContract';
 import { getBeatsPerMeasure } from '../../utils/musicalMath';
 import { registerTreinoKillSwitch } from '../../audio/maracatuVocalGameEngine';
 import { HarmonyProfileSelector } from '../common/HarmonyProfileSelector';
 import { DEFAULT_HARMONY_CONFIG } from '../../types/harmony.types';
 import type { PitchCurvePoint } from '../../types/vocalPack.types';
-import { Play, Square, Sparkles } from 'lucide-react';
+import { Play, Square, Sparkles, Sliders, Compass, Activity } from 'lucide-react';
 
 export const ChanterToadaWorkshop: React.FC = () => {
   const { project, activePattern, setActivePatternId, getPreviousConductorPattern, updateHarmonyConfig } = useToadaProject();
   const { selectedDeviceId, selectedOutputDeviceId } = useAudioHardware();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const engine = useMemo(() => new StudentTrainerEngine(), []);
+  const dual = useMemo(() => resolveProjectDualScale(project, language), [project, language]);
   const playheadSecRef = useRef<number>(0), loopEnabledRef = useRef<boolean>(false), speedRatioRef = useRef<number>(0.75);
+  const livePitchCurveRef = useRef<PitchCurvePoint[]>([]), lastStepRef = useRef<number>(-1);
+  const liveGaugeRef = useRef<((pct: number, status: RodaProjectionStatus) => void) | null>(null);
 
+  const [workshopMode, setWorkshopMode] = useState<'rhythm' | 'step_by_step'>('rhythm');
   const [scope, setScope] = useState<TrainerScope>('pattern'), [studentRole, setStudentRole] = useState<StudentRole>('coro');
   const [guideMode, setGuideMode] = useState<TrainerGuideMode>('accompanied'), [speedRatio, setSpeedRatio] = useState<number>(0.75);
   const [autoProgression, setAutoProgression] = useState<boolean>(true), [loopEnabled, setLoopEnabled] = useState<boolean>(false);
   const [isTraining, setIsTraining] = useState<boolean>(false), [isPlayingComparative, setIsPlayingComparative] = useState<boolean>(false);
   const [comparativeMode, setComparativeMode] = useState<ComparativePlaybackMode>('mix'), [activeStepIndex, setActiveStepIndex] = useState<number>(0);
-  const [livePitchCurve, setLivePitchCurve] = useState<PitchCurvePoint[]>([]), [studentPCM, setStudentPCM] = useState<Float32Array | null>(null);
+  const [postPitchCurve, setPostPitchCurve] = useState<PitchCurvePoint[]>([]), [studentPCM, setStudentPCM] = useState<Float32Array | null>(null);
   const [studentSampleRate, setStudentSampleRate] = useState<number>(44100), [analysisResult, setAnalysisResult] = useState<StudentAnalysisResult | null>(null);
   const [liveProjPct, setLiveProjPct] = useState<number>(0), [liveProjStatus, setLiveProjStatus] = useState<RodaProjectionStatus>('timide');
   const [projectionSummary, setProjectionSummary] = useState<SessionProjectionSummary | null>(null), [tierToast, setTierToast] = useState<string | null>(null);
   const [patternMastery, setPatternMastery] = useState<PatternSpeedMastery>(() => loadPatternSpeedMastery(project.id, activePattern.id));
 
   loopEnabledRef.current = loopEnabled; speedRatioRef.current = speedRatio;
-  useEffect(() => {
-    const m = loadPatternSpeedMastery(project.id, activePattern.id);
-    setPatternMastery(m); setSpeedRatio(m.tier88 ? 1.0 : m.tier75 ? 0.88 : 0.75);
-  }, [project.id, activePattern.id]);
+  useEffect(() => { const m = loadPatternSpeedMastery(project.id, activePattern.id); setPatternMastery(m); setSpeedRatio(m.tier88 ? 1.0 : m.tier75 ? 0.88 : 0.75); }, [project.id, activePattern.id]);
 
   const toadaMasteryCounts = useMemo(() => countMasteredPatternsInToada(project.id, project.patterns.map((p) => p.id)), [project.id, project.patterns, patternMastery]);
   const patternOptions: TrainerPatternOption[] = useMemo(() => project.patterns.map((p) => {
@@ -58,79 +61,75 @@ export const ChanterToadaWorkshop: React.FC = () => {
   const baseBpm = activePattern.bpm ?? activePattern.baseBpm ?? project.bpm ?? 88, bpm = Math.max(30, Math.round(baseBpm * speedRatio));
   const beatsPerMeasure = getBeatsPerMeasure(project.timeSignature), beatDur = 60 / bpm, measuresCount = activePattern.measuresCount;
   const hasAnac = activePattern.hasAnacrusis !== false, totalDurationSec = (hasAnac ? 1 + measuresCount : measuresCount) * beatsPerMeasure * beatDur;
-  const allSteps = useMemo(() => [...(hasAnac ? (activePattern.anacrusisSteps || []) : []), ...(activePattern.pack?.grid.steps ?? activePattern.mainSteps ?? [])], [activePattern, hasAnac]);
+  const rawSteps = useMemo(() => [...(hasAnac ? (activePattern.anacrusisSteps || []) : []), ...(activePattern.pack?.grid.steps ?? activePattern.mainSteps ?? [])], [activePattern, hasAnac]);
+  const allSteps = useMemo(() => transposeVocalSteps(rawSteps, dual.transpositionSemitones), [rawSteps, dual.transpositionSemitones]);
   const syllables: KaraokeSyllableItem[] = useMemo(() => allSteps.map((s, idx) => ({ text: s.syllable || '', stepIndex: idx })).filter((s) => s.text.length > 0 && s.text !== '───'), [allSteps]);
 
-  useEffect(() => {
-    const kill = () => { engine.stop(); setIsTraining(false); setIsPlayingComparative(false); };
-    const unregister = registerTreinoKillSwitch(kill);
-    return () => { unregister(); kill(); };
-  }, [engine]);
+  useEffect(() => { const kill = () => { engine.stop(); setIsTraining(false); setIsPlayingComparative(false); }; const unreg = registerTreinoKillSwitch(kill); return () => { unreg(); kill(); }; }, [engine]);
 
-  const handleStartTraining = useCallback(async () => {
-    setIsTraining(true); setIsPlayingComparative(false); setAnalysisResult(null); setStudentPCM(null); setLivePitchCurve([]); setTierToast(null);
+  const startTrainingRun = useCallback(async (overrideGuide?: TrainerGuideMode) => {
+    const effGuide = overrideGuide ?? guideMode;
+    setIsTraining(true); setIsPlayingComparative(false); setAnalysisResult(null); setStudentPCM(null); setPostPitchCurve([]); setTierToast(null);
+    livePitchCurveRef.current = []; lastStepRef.current = -1;
     const curRatio = speedRatioRef.current, curBpm = Math.max(30, Math.round(baseBpm * curRatio));
     const curTotalDur = (hasAnac ? 1 + measuresCount : measuresCount) * beatsPerMeasure * (60 / curBpm);
     await engine.startTraining(
-      {
-        pattern: activePattern, cuePattern: scope === 'toada' ? getPreviousConductorPattern() : null, baseBpm, bpm: curBpm, speedRatio: curRatio,
-        beatsPerMeasure, measuresCount, scope, studentRole, guideMode, deviceId: selectedDeviceId, outputDeviceId: selectedOutputDeviceId, harmonyConfig: project.harmonyConfig,
-      },
+      { pattern: activePattern, cuePattern: scope === 'toada' ? getPreviousConductorPattern() : null, baseBpm, bpm: curBpm, speedRatio: curRatio, beatsPerMeasure, measuresCount, scope, studentRole, guideMode: effGuide, deviceId: selectedDeviceId, outputDeviceId: selectedOutputDeviceId, harmonyConfig: project.harmonyConfig, pitchShiftSemitones: dual.transpositionSemitones, troupeTonicRoot: dual.troupeScaleRoot, referencePitchHz: sanitizePitchHz(project.referencePitchHz) },
       (elapsedSec, step, livePt, liveProj) => {
-        playheadSecRef.current = elapsedSec; setActiveStepIndex(step);
-        if (livePt) setLivePitchCurve((prev) => [...prev, livePt]);
-        if (liveProj?.isVoiced) { setLiveProjPct(liveProj.projectionScorePct); setLiveProjStatus(liveProj.status); }
+        playheadSecRef.current = elapsedSec;
+        if (step !== lastStepRef.current) { lastStepRef.current = step; setActiveStepIndex(step); }
+        if (livePt) livePitchCurveRef.current.push(livePt);
+        if (liveProj?.isVoiced) liveGaugeRef.current?.(liveProj.projectionScorePct, liveProj.status);
       },
       (pcm, sr, projSum) => {
-        setStudentPCM(pcm); setStudentSampleRate(sr); setProjectionSummary(projSum);
-        setLiveProjPct(projSum.avgProjectionScorePct); setLiveProjStatus(projSum.dominantStatus);
+        setStudentPCM(pcm); setStudentSampleRate(sr); setProjectionSummary(projSum); setLiveProjPct(projSum.avgProjectionScorePct); setLiveProjStatus(projSum.dominantStatus);
         const analysis = analyzeStudentTake({ rawPCM: pcm, sampleRate: sr, totalDurationSec: curTotalDur, targetSteps: allSteps, bpm: curBpm, shouldAnalyzeNotes: true });
-        setAnalysisResult(analysis);
+        setAnalysisResult(analysis); setPostPitchCurve(analysis.studentPitchCurve?.length ? analysis.studentPitchCurve : [...livePitchCurveRef.current]);
         const weighted = computeWeightedStudentScore(analysis.pitchAccuracyPct, analysis.attackPrecisionPct, analysis.stabilityPct);
         const outcome = evaluateSpeedTierProgression({ currentSpeedRatio: curRatio, weightedScorePct: weighted, autoProgressionEnabled: autoProgression, previousMastery: loadPatternSpeedMastery(project.id, activePattern.id) });
-        savePatternSpeedMastery(project.id, activePattern.id, outcome.updatedMastery);
-        setPatternMastery(outcome.updatedMastery);
+        savePatternSpeedMastery(project.id, activePattern.id, outcome.updatedMastery); setPatternMastery(outcome.updatedMastery);
         if (outcome.unlockedTier === 75) setTierToast(t('tierUnlocked75Toast', { score: weighted }));
         else if (outcome.unlockedTier === 88) setTierToast(t('tierUnlocked88Toast', { score: weighted }));
         else if (outcome.unlockedTier === 100) setTierToast(t('tierUnlocked100Toast', { score: weighted }));
         if (outcome.advancedToNextTier) { speedRatioRef.current = outcome.nextSpeedRatio; setSpeedRatio(outcome.nextSpeedRatio); }
-        if (loopEnabledRef.current) setTimeout(() => { if (loopEnabledRef.current) handleStartTraining(); else setIsTraining(false); }, 450);
+        if (loopEnabledRef.current) setTimeout(() => { if (loopEnabledRef.current) void startTrainingRun(effGuide); else setIsTraining(false); }, 450);
         else setIsTraining(false);
       }
     );
-  }, [engine, project.id, activePattern, scope, getPreviousConductorPattern, baseBpm, beatsPerMeasure, measuresCount, hasAnac, studentRole, guideMode, selectedDeviceId, selectedOutputDeviceId, project.harmonyConfig, allSteps, autoProgression, t]);
+  }, [engine, project.id, project.referencePitchHz, activePattern, scope, getPreviousConductorPattern, baseBpm, beatsPerMeasure, measuresCount, hasAnac, studentRole, guideMode, selectedDeviceId, selectedOutputDeviceId, project.harmonyConfig, dual, allSteps, autoProgression, t]);
 
   const handleStop = useCallback(() => { loopEnabledRef.current = false; setLoopEnabled(false); engine.stop(); setIsTraining(false); setIsPlayingComparative(false); }, [engine]);
-  const handlePlayComparative = useCallback(async (mode: ComparativePlaybackMode) => {
-    if (!studentPCM) return;
-    setComparativeMode(mode); setIsPlayingComparative(true);
-    await engine.playComparative(studentPCM, studentSampleRate, activePattern, baseBpm, speedRatio, mode, () => setIsPlayingComparative(false));
-  }, [engine, studentPCM, studentSampleRate, activePattern, baseBpm, speedRatio]);
-  const handleExport = useCallback(() => {
-    if (!analysisResult) return;
-    exportStudentEvaluationJson({ patternId: activePattern.id, patternName: activePattern.name, patternRole: activePattern.role, accuracyScore: analysisResult.accuracyScore, okNotes: analysisResult.okNotes, totalNotes: analysisResult.totalNotes, studentPitchCurve: analysisResult.studentPitchCurve, date: new Date().toISOString() });
-  }, [analysisResult, activePattern]);
+  const handlePlayComparative = useCallback(async (mode: ComparativePlaybackMode) => { if (!studentPCM) return; setComparativeMode(mode); setIsPlayingComparative(true); await engine.playComparative(studentPCM, studentSampleRate, activePattern, baseBpm, speedRatio, mode, () => setIsPlayingComparative(false)); }, [engine, studentPCM, studentSampleRate, activePattern, baseBpm, speedRatio]);
+  const handleExport = useCallback(() => { if (!analysisResult) return; exportStudentEvaluationJson({ patternId: activePattern.id, patternName: activePattern.name, patternRole: activePattern.role, accuracyScore: analysisResult.accuracyScore, okNotes: analysisResult.okNotes, totalNotes: analysisResult.totalNotes, studentPitchCurve: analysisResult.studentPitchCurve, date: new Date().toISOString() }); }, [analysisResult, activePattern]);
 
   return (
     <div className="flex flex-col gap-3 w-full max-w-none">
-      <TrainerConfigBar
-        scope={scope} onScopeChange={setScope} studentRole={studentRole} onStudentRoleChange={setStudentRole}
-        guideMode={guideMode} onGuideModeChange={setGuideMode} speedRatio={speedRatio} onSpeedRatioChange={setSpeedRatio}
-        loopEnabled={loopEnabled} onToggleLoop={() => setLoopEnabled((v) => !v)} autoProgressionEnabled={autoProgression} onToggleAutoProgression={() => setAutoProgression((v) => !v)}
-        patternMastery={patternMastery} masteredPatternsCount={toadaMasteryCounts.masteredCount} totalPatternsCount={toadaMasteryCounts.totalCount}
-        patternOptions={patternOptions} activePatternId={activePattern.id} onSelectPattern={setActivePatternId} disabled={isTraining || isPlayingComparative}
-      />
-      {tierToast && <div className="cordel-card p-2.5 bg-amber-500/20 border-amber-500/60 text-amber-900 dark:text-amber-200 font-mono text-xs font-bold flex items-center gap-2 rounded"><Sparkles className="w-4 h-4 text-amber-500 shrink-0" /><span>{tierToast}</span></div>}
-      <KaraokeLyricsBanner currentRole={activePattern.role} studentRole={studentRole} patternName={activePattern.name} syllables={syllables} activeStepIndex={activeStepIndex} />
-      <MelodicHighwayCanvas allSteps={allSteps} mestrePitchCurve={activePattern.pitchCurve} studentPitchCurve={isTraining ? livePitchCurve : (analysisResult?.studentPitchCurve ?? livePitchCurve)} totalDurationSec={totalDurationSec} beatsPerMeasure={beatsPerMeasure} hasAnacrusis={hasAnac} isPlaying={isTraining || isPlayingComparative} getPlayheadSec={() => playheadSecRef.current} />
-      <RodaProjectionGauge projectionScorePct={liveProjPct} status={liveProjStatus} isActive={isTraining} />
-      <div className="cordel-card p-2.5 w-full flex flex-wrap items-center justify-between gap-3 select-none">
-        <div className="flex items-center gap-2">
-          {!isTraining ? <button type="button" onClick={handleStartTraining} className="cordel-btn-primary py-1.5 px-4 flex items-center gap-1.5 text-xs font-bold rounded cursor-pointer"><Play className="w-4 h-4 fill-current text-[var(--cordel-on-primary)]" /><span>{t('btn_start_training')}</span></button> : <button type="button" onClick={handleStop} className="bg-[#c25e38] text-white border border-[#c25e38] animate-pulse py-1.5 px-4 flex items-center gap-1.5 text-xs font-bold rounded cursor-pointer"><Square className="w-4 h-4 fill-current" /><span>{t('btn_stop_training')}</span></button>}
-          <HarmonyProfileSelector config={project.harmonyConfig ?? DEFAULT_HARMONY_CONFIG} onChange={updateHarmonyConfig} disabled={isTraining || isPlayingComparative} />
-        </div>
+      <div className="flex items-center justify-center gap-1.5 font-mono text-xs">
+        <button type="button" onClick={() => { handleStop(); setWorkshopMode('rhythm'); }} className={`px-3 py-1.5 rounded font-bold inline-flex items-center gap-1.5 cursor-pointer border ${workshopMode === 'rhythm' ? 'cordel-btn-primary' : 'cordel-btn opacity-75 hover:opacity-100'}`}><Activity className="w-3.5 h-3.5" /><span>{t('stepModeRhythmBtn')}</span></button>
+        <button type="button" onClick={() => { handleStop(); setWorkshopMode('step_by_step'); }} className={`px-3 py-1.5 rounded font-bold inline-flex items-center gap-1.5 cursor-pointer border ${workshopMode === 'step_by_step' ? 'cordel-btn-primary' : 'cordel-btn opacity-75 hover:opacity-100'}`}><Compass className="w-3.5 h-3.5" /><span>{t('stepModeStepByStepBtn')}</span></button>
       </div>
-      {analysisResult && studentPCM && <StudentDiagnosticCard result={analysisResult} projectionSummary={projectionSummary} isPlayingComparative={isPlayingComparative} activeComparativeMode={comparativeMode} onPlayComparative={handlePlayComparative} onStopComparative={handleStop} onExport={handleExport} />}
+
+      {workshopMode === 'step_by_step' ? (
+        <StudentStepByStepTrainer
+          patternOptions={patternOptions} activePatternId={activePattern.id} onSelectPattern={setActivePatternId}
+          onLaunchDroneClickRhythm={() => { setGuideMode('drone_click'); setWorkshopMode('rhythm'); setTimeout(() => void startTrainingRun('drone_click'), 80); }}
+        />
+      ) : (
+        <>
+          <TrainerConfigBar scope={scope} onScopeChange={setScope} studentRole={studentRole} onStudentRoleChange={setStudentRole} guideMode={guideMode} onGuideModeChange={setGuideMode} speedRatio={speedRatio} onSpeedRatioChange={setSpeedRatio} loopEnabled={loopEnabled} onToggleLoop={() => setLoopEnabled((v) => !v)} autoProgressionEnabled={autoProgression} onToggleAutoProgression={() => setAutoProgression((v) => !v)} patternMastery={patternMastery} masteredPatternsCount={toadaMasteryCounts.masteredCount} totalPatternsCount={toadaMasteryCounts.totalCount} patternOptions={patternOptions} activePatternId={activePattern.id} onSelectPattern={setActivePatternId} disabled={isTraining || isPlayingComparative} />
+          {tierToast && <div className="cordel-card p-2.5 bg-amber-500/20 border-amber-500/60 text-amber-900 dark:text-amber-200 font-mono text-xs font-bold flex items-center gap-2 rounded"><Sparkles className="w-4 h-4 text-amber-500 shrink-0" /><span>{tierToast}</span></div>}
+          <KaraokeLyricsBanner currentRole={activePattern.role} studentRole={studentRole} patternName={activePattern.name} syllables={syllables} activeStepIndex={activeStepIndex} />
+          <MelodicHighwayCanvas allSteps={allSteps} mestrePitchCurve={activePattern.pitchCurve} studentPitchCurve={postPitchCurve} getLiveStudentCurve={() => livePitchCurveRef.current} totalDurationSec={totalDurationSec} beatsPerMeasure={beatsPerMeasure} hasAnacrusis={hasAnac} isPlaying={isTraining || isPlayingComparative} getPlayheadSec={() => playheadSecRef.current} />
+          <RodaProjectionGauge projectionScorePct={liveProjPct} status={liveProjStatus} isActive={isTraining} liveUpdaterRef={liveGaugeRef} />
+          <div className="flex items-center justify-center py-1">
+            {!isTraining ? <button type="button" onClick={() => void startTrainingRun()} className="cordel-btn-primary py-2 px-6 flex items-center gap-2 text-xs font-bold rounded cursor-pointer shadow-md"><Play className="w-4 h-4 fill-current text-[var(--cordel-on-primary)]" /><span>{t('btn_start_training')}</span></button> : <button type="button" onClick={handleStop} className="bg-[#c25e38] text-white border border-[#c25e38] animate-pulse py-2 px-6 flex items-center gap-2 text-xs font-bold rounded cursor-pointer"><Square className="w-4 h-4 fill-current" /><span>{t('btn_stop_training')}</span></button>}
+          </div>
+          {analysisResult && studentPCM && <StudentDiagnosticCard result={analysisResult} projectionSummary={projectionSummary} isPlayingComparative={isPlayingComparative} activeComparativeMode={comparativeMode} onPlayComparative={handlePlayComparative} onStopComparative={handleStop} onExport={handleExport} />}
+          <CordelAccordion title={<span className="inline-flex items-center gap-1.5"><Sliders className="w-3.5 h-3.5 text-theme-accent" /><span>{t('drawerTreinoOptionsTitle')}</span></span>} defaultOpen={false}>
+            <div className="pt-2 flex flex-wrap items-center gap-3"><HarmonyProfileSelector config={project.harmonyConfig ?? DEFAULT_HARMONY_CONFIG} onChange={updateHarmonyConfig} disabled={isTraining || isPlayingComparative} /></div>
+          </CordelAccordion>
+        </>
+      )}
     </div>
   );
 };

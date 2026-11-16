@@ -203,7 +203,8 @@ console.log('3. Test analyzeAVozNaRoda (Défi 4 « 🔔 A Voz na Roda »)...');
 console.log('4. Vérification Gouvernance (< 145 lignes, Règle 0, i18n FR/PT-BR, version 1.4.0)...');
 {
   const pkg = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8'));
-  assert.equal(pkg.version, '1.4.0', `package.json version must be 1.4.0, got ${pkg.version}`);
+  const [maj, min] = String(pkg.version || '0.0.0').split('.').map(Number);
+  assert.ok(maj > 1 || (maj === 1 && min >= 4), `package.json version must be >= 1.4.0, got ${pkg.version}`);
 
   assert.deepEqual(
     Object.keys(harmonyTranslationsFr).sort(),
@@ -230,7 +231,7 @@ console.log('4. Vérification Gouvernance (< 145 lignes, Règle 0, i18n FR/PT-BR
   const srcFiles = walkSrc(path.join(ROOT, 'src'));
   for (const file of srcFiles) {
     const content = fs.readFileSync(file, 'utf8');
-    const lines = content.split(/\r?\n/).length;
+    const lines = content.replace(/\r\n/g, '\n').replace(/\n$/, '').split('\n').length;
     const rel = path.relative(ROOT, file);
     assert.ok(lines < 145, `Règle Anti-Monolithe 6.A violée : ${rel} fait ${lines} lignes (max 144)`);
     assert.ok(!forbiddenRegex.test(content), `Règle 0 violée dans ${rel}`);

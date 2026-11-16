@@ -511,8 +511,8 @@ console.log('=== TEST E2E : ATELIER PAPIER DU CHANT (CANTADOR • ORGANIZADOR �
     path.join(cantadorRoot, 'src/components/modals/vocal-paper/VocalPaperWorkshopModal.tsx'),
     path.join(cantadorRoot, 'src/components/modals/vocal-paper/VocalPaperPrintTab.tsx'),
     path.join(cantadorRoot, 'src/components/modals/vocal-paper/VocalPaperImportTab.tsx'),
-    path.join(cantadorRoot, 'src/components/header/ProjectSelectorBar.tsx'),
-    path.join(cantadorRoot, 'src/components/livret-structure/StructureTopControls.tsx'),
+    path.join(cantadorRoot, 'src/components/header/CompactStudioHeader.tsx'),
+    path.join(cantadorRoot, 'src/components/header/SyncAndExportDropdown.tsx'),
     path.join(organizadorRoot, 'src/utils/vocalPaperSheetPrinter.js'),
     path.join(organizadorRoot, 'src/utils/vocalPaperToOrganizadorConverter.js'),
     path.join(organizadorRoot, 'src/components/documents/toada/VocalPaperOrganizadorModal.jsx'),
@@ -529,7 +529,7 @@ console.log('=== TEST E2E : ATELIER PAPIER DU CHANT (CANTADOR • ORGANIZADOR �
   for (const filePath of filesToCheck) {
     assert.ok(fs.existsSync(filePath), `Fichier introuvable : ${filePath}`);
     const content = fs.readFileSync(filePath, 'utf8');
-    const linesCount = content.split(/\r?\n/).length;
+    const linesCount = content.replace(/\r\n/g, '\n').replace(/\n$/, '').split('\n').length;
     assert.ok(linesCount < 145, `Règle 6.A violée : ${filePath} fait ${linesCount} lignes (max 144)`);
     assert.ok(!iaRegex.test(content), `Mention interdite d'IA trouvée dans ${filePath}`);
   }

@@ -1,12 +1,8 @@
 /**
  * CabineMonitoringAndPunchBar.tsx
- * Barre studio du Livret 2 (Cabine) (< 125 lignes) :
- * - Retour Casque Confort non-destructif (Off | Studio Doux | Roda Chaude + dosage)
- * - Option Baque dans le casque pendant la prise
- * - Sélecteur de reprise partielle Punch-in par mesure (Tout le bloc | Mesure 1..N)
- * - Témoin de saturation à mémoire de crête (-0.5 dBFS / Peak Hold).
+ * Barre studio du Livret 2 (Cabine) avec Peak Hold piloté par ref DOM (0 re-render 60 Hz) (< 120 lignes).
  */
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Headphones, Target, AlertTriangle, Drum } from 'lucide-react';
 import { useLanguage } from '../../i18n/LanguageContext';
 import type { ComfortMonitoringPreset } from '../../audio/ComfortMonitoringNode';
@@ -23,9 +19,10 @@ interface CabineMonitoringAndPunchBarProps {
   onToggleBackingInHeadphones: () => void;
   measuresCount: number;
   hasRecording: boolean;
-  punchMeasureIndex: number | null; // null = Tout le bloc, 1..N = Mesure K
+  punchMeasureIndex: number | null;
   onChangePunchMeasureIndex: (m: number | null) => void;
-  peakDb: number | null;
+  peakDb?: number | null;
+  registerPeakListener?: (fn: ((db: number | null) => void) | null) => void;
   hasClipped: boolean;
   onResetClipIndicator: () => void;
   disabled?: boolean;
@@ -35,10 +32,26 @@ export const CabineMonitoringAndPunchBar: React.FC<CabineMonitoringAndPunchBarPr
   listeningMode, comfortPreset, comfortMix, onChangeComfortPreset, onChangeComfortMix,
   hasBackingTrack, backingInHeadphones, onToggleBackingInHeadphones,
   measuresCount, hasRecording, punchMeasureIndex, onChangePunchMeasureIndex,
-  peakDb, hasClipped, onResetClipIndicator, disabled,
+  peakDb = null, registerPeakListener, hasClipped, onResetClipIndicator, disabled,
 }) => {
   const { t } = useLanguage();
   const isHeadphones = listeningMode === 'headphones';
+  const peakWrapRef = useRef<HTMLSpanElement>(null);
+  const peakValueRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    if (!registerPeakListener) return;
+    registerPeakListener((db) => {
+      if (!peakWrapRef.current || !peakValueRef.current) return;
+      if (db === null) {
+        peakWrapRef.current.style.display = 'none';
+      } else {
+        peakWrapRef.current.style.display = 'inline';
+        peakValueRef.current.textContent = `${db.toFixed(1)} dB`;
+      }
+    });
+    return () => registerPeakListener(null);
+  }, [registerPeakListener]);
 
   return (
     <div className="cordel-card-sm px-2.5 py-1.5 flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono rounded select-none">
@@ -48,8 +61,7 @@ export const CabineMonitoringAndPunchBar: React.FC<CabineMonitoringAndPunchBarPr
             <Headphones className="w-3.5 h-3.5 text-theme-accent" />
             <span className="font-bold text-theme-ink">{t('comfortMonitorLabel')}</span>
             <select
-              value={comfortPreset}
-              disabled={disabled}
+              value={comfortPreset} disabled={disabled}
               onChange={(e) => onChangeComfortPreset(e.target.value as ComfortMonitoringPreset)}
               className="px-1.5 py-0.5 cordel-card-sm rounded font-bold cursor-pointer"
             >
@@ -81,8 +93,7 @@ export const CabineMonitoringAndPunchBar: React.FC<CabineMonitoringAndPunchBarPr
             <Target className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
             <span className="font-bold">{t('punchInSelectLabel')}</span>
             <select
-              value={punchMeasureIndex ?? 0}
-              disabled={disabled}
+              value={punchMeasureIndex ?? 0} disabled={disabled}
               onChange={(e) => { const v = Number(e.target.value); onChangePunchMeasureIndex(v === 0 ? null : v); }}
               className="px-1.5 py-0.5 cordel-card-sm rounded font-bold text-theme-accent cursor-pointer"
             >
@@ -96,16 +107,11 @@ export const CabineMonitoringAndPunchBar: React.FC<CabineMonitoringAndPunchBarPr
       </div>
 
       <div className="flex items-center gap-2">
-        {peakDb !== null && (
-          <span className="text-[10.5px] font-bold text-[var(--cordel-secondary-text)]">
-            Peak : <strong className={hasClipped ? 'text-red-500' : 'text-theme-ink'}>{peakDb.toFixed(1)} dB</strong>
-          </span>
-        )}
+        <span ref={peakWrapRef} style={{ display: peakDb !== null ? 'inline' : 'none' }} className="text-[10.5px] font-bold text-[var(--cordel-secondary-text)]">
+          Peak : <strong ref={peakValueRef} className={hasClipped ? 'text-red-500' : 'text-theme-ink'}>{peakDb !== null ? `${peakDb.toFixed(1)} dB` : ''}</strong>
+        </span>
         {hasClipped && (
-          <button
-            type="button" onClick={onResetClipIndicator}
-            className="px-2 py-0.5 rounded bg-red-700 text-white font-bold flex items-center gap-1 animate-pulse cursor-pointer"
-          >
+          <button type="button" onClick={onResetClipIndicator} className="px-2 py-0.5 rounded bg-red-700 text-white font-bold flex items-center gap-1 animate-pulse cursor-pointer">
             <AlertTriangle className="w-3.5 h-3.5" /><span>{t('peakClipWarningBadge')}</span>
           </button>
         )}
@@ -113,4 +119,3 @@ export const CabineMonitoringAndPunchBar: React.FC<CabineMonitoringAndPunchBarPr
     </div>
   );
 };
-

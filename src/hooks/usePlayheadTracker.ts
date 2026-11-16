@@ -1,35 +1,31 @@
 /**
  * usePlayheadTracker.ts
- * Hook de suivi de tete de lecture haute precision (RAF) pour WaveformTrimEditor (< 35 lignes).
+ * Hook de suivi de tête de lecture sans Render Thrashing (0 setState en boucle RAF) (< 40 lignes).
  */
-import { useState, useEffect } from 'react';
+import { useEffect, useCallback } from 'react';
 import type { PreviewPlayer } from '../audio/PreviewPlayer';
 
 export function usePlayheadTracker(
   player: PreviewPlayer,
   isPlaying: boolean,
   onPlaybackEnded: () => void
-): number {
-  const [playheadSec, setPlayheadSec] = useState<number>(-1);
-
+): () => number {
   useEffect(() => {
-    if (!isPlaying) {
-      setPlayheadSec(-1);
-      return;
-    }
+    if (!isPlaying) return;
     let animId: number;
     const tick = () => {
-      setPlayheadSec(player.getCurrentPlayheadSec());
       if (player.getIsPlaying()) {
         animId = requestAnimationFrame(tick);
       } else {
         onPlaybackEnded();
-        setPlayheadSec(-1);
       }
     };
     animId = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(animId);
   }, [isPlaying, player, onPlaybackEnded]);
 
-  return playheadSec;
+  return useCallback(
+    () => (isPlaying && player.getIsPlaying() ? player.getCurrentPlayheadSec() : -1),
+    [isPlaying, player]
+  );
 }

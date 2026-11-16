@@ -13,12 +13,11 @@ import { getSavedLatencyOffsetMs } from '../../utils/latencyStorage';
 import { useVocalTransportStore } from '../../stores/useVocalTransportStore';
 import { NO_ANACRUSIS_PRE_MARGIN_SEC, getPatternTotalDurationSec, resolvePatternAnacrusisBeats } from '../../utils/anacrusisTimingHelper';
 import { registerAudioKillSwitch, stopAllActiveAudioEngines } from '../../audio/sharedAudioContext';
-import { autoSnapT1ToVocalOnset } from '../../audio/vocalOnsetDetector';
-import { rebuildCanonicalCleanAudio } from '../../audio/melodicExtractionHelper';
 import { createComfortMonitoringGraph, type ComfortMonitoringPreset, type ComfortMonitoringHandle } from '../../audio/ComfortMonitoringNode';
 import { getActiveBackingTrack } from '../../utils/backingTrackStorage';
 import { scheduleBackingTrackOnContext, type BackingTrackPlaybackHandle } from '../../audio/BackingTrackEngine';
-import { mergePunchInMeasure, schedulePunchInLeadInAudio } from '../../audio/punchInMerger';
+import { schedulePunchInLeadInAudio } from '../../audio/punchInMerger';
+import { commitRecordedTakeNonBlocking } from './commitTakeAsyncHelper';
 
 export interface UsePriseRecorderParams {
   engine: MetronomeEngine; recorder: VocalRecorderEngine; activePattern: VocalPatternItem; activeVariant: VocalAudioVariant;
@@ -42,12 +41,12 @@ export function usePriseRecorder(params: UsePriseRecorderParams) {
     recordedSampleRate, setRecordedSampleRate, activeLivret, harmonyConfig,
     comfortPreset = 'off', comfortMix = 0.35, backingInHeadphones = true, punchMeasureIndex = null,
   } = params;
-  const [isCycleActive, setIsCycleActive] = useState(false);
-  const [peakDb, setPeakDb] = useState<number | null>(null), [hasClipped, setHasClipped] = useState(false);
+  const [isCycleActive, setIsCycleActive] = useState(false), [hasClipped, setHasClipped] = useState(false);
+  const peakDbRef = useRef<number | null>(null), peakListenerRef = useRef<((db: number | null) => void) | null>(null);
   const cueHandleRef = useRef<CuePlaybackHandle | null>(null), takeGuideRef = useRef<TakeGuideHandle | null>(null);
   const comfortRef = useRef<ComfortMonitoringHandle | null>(null), backingRef = useRef<BackingTrackPlaybackHandle | null>(null);
-  const punchLeadRef = useRef<{ stop: () => void } | null>(null);
-  const sessionTokenRef = useRef<number>(0), isMountedRef = useRef<boolean>(true), activeLivretRef = useRef<string>(activeLivret);
+  const punchLeadRef = useRef<{ stop: () => void } | null>(null), sessionTokenRef = useRef<number>(0);
+  const isMountedRef = useRef<boolean>(true), activeLivretRef = useRef<string>(activeLivret);
   activeLivretRef.current = activeLivret;
   const setIsRecording = useVocalTransportStore((s) => s.setIsRecording);
 
@@ -60,26 +59,12 @@ export function usePriseRecorder(params: UsePriseRecorderParams) {
   }, [engine, recorder, setIsRecording, stopAuxHandles]);
 
   const commitRecordedTake = useCallback((rawCapturedPcm: Float32Array, sr: number, t1OffsetSec: number, totalRecordedSec: number) => {
-    const existingRec = activeVariant.recordingResult;
-    const isPunchIn = Boolean(punchMeasureIndex && punchMeasureIndex >= 1 && existingRec?.pcm?.length);
-    const measureDuration = beatsPerMeasure * beatDuration;
-    const pcm = isPunchIn && existingRec && punchMeasureIndex
-      ? mergePunchInMeasure({ existingPCM: existingRec.pcm, punchPCM: rawCapturedPcm, sampleRate: sr, targetMeasureIndex: punchMeasureIndex, measuresCount, measureDurationSec: measureDuration, t1OffsetSec: existingRec.t1OffsetSec ?? t1OffsetSec })
-      : rawCapturedPcm;
-    const finalTotalSec = isPunchIn && existingRec ? existingRec.pcm.length / sr : totalRecordedSec;
-    const snappedT1 = isPunchIn && existingRec?.t1OffsetSec !== undefined ? existingRec.t1OffsetSec
-      : autoSnapT1ToVocalOnset({ pcm, sampleRate: sr, bpm: effectiveBpm, timeAnchors: activePattern.timeAnchors, hasAnacrusis, beatsPerMeasure, expectedT1Sec: t1OffsetSec });
-    const cleanPCM = rebuildCanonicalCleanAudio({ rawPCM: pcm, sampleRate: sr, bpm: effectiveBpm, measuresCount, beatsPerMeasure, hasAnacrusis, trimStartSec: 0, trimEndSec: finalTotalSec, t1OffsetSec: snappedT1, lowCutEnabled: activeVariant.lowCutEnabled, enableTonePolish: activeVariant.enableTonePolish !== false });
-    const recResult = { pcm, sampleRate: sr, recordedBpm: effectiveBpm, t1OffsetSec: snappedT1 };
-    const varUpdates: Partial<VocalAudioVariant> = { recordingResult: recResult, t1OffsetSec: snappedT1, trimStartSec: 0, trimEndSec: finalTotalSec };
-    const isMainTake = activeVariant.speedRatio === 1.0 && activeVariant.pitchShiftSemitones === 0;
-    const patUpdates: Partial<VocalPatternItem> = {
-      ...(isMainTake ? { recordingResult: recResult, t1OffsetSec: snappedT1, trimStartSec: 0, trimEndSec: finalTotalSec, rawAudioSamples: cleanPCM } : { t1OffsetSec: snappedT1 }),
-      pack: null, isMidiInitialized: false, midiLocked: false, hasCanonicalAlignment: false as any, correctedAudioSamples: null,
-    };
-    if (updatePatternAndVariant) updatePatternAndVariant(activePattern.id, activeVariant.variantKey, patUpdates, varUpdates);
-    else { updateVariant(activePattern.id, activeVariant.variantKey, varUpdates); updatePattern?.(activePattern.id, patUpdates); }
-  }, [activePattern.id, activePattern.timeAnchors, activeVariant, punchMeasureIndex, effectiveBpm, hasAnacrusis, beatsPerMeasure, beatDuration, measuresCount, updatePatternAndVariant, updateVariant, updatePattern]);
+    commitRecordedTakeNonBlocking({
+      rawCapturedPcm, sampleRate: sr, t1OffsetSec, totalRecordedSec, activePattern, activeVariant,
+      punchMeasureIndex, effectiveBpm, effectivePitch, timeSignature, measuresCount, hasAnacrusis,
+      beatsPerMeasure, beatDuration, updateVariant, updatePattern, updatePatternAndVariant,
+    });
+  }, [activePattern, activeVariant, punchMeasureIndex, effectiveBpm, effectivePitch, timeSignature, hasAnacrusis, beatsPerMeasure, beatDuration, measuresCount, updatePatternAndVariant, updateVariant, updatePattern]);
 
   const handleToggleRecord = useCallback(async () => {
     const measureDuration = beatsPerMeasure * beatDuration;
@@ -106,7 +91,7 @@ export function usePriseRecorder(params: UsePriseRecorderParams) {
     const captureStart = isPunchIn ? targetT1Time + latencySec : (targetT1Time - t1OffsetSec) + latencySec;
     const effectiveRecSec = isPunchIn ? measureDuration + (punchMeasureIndex === measuresCount ? beatDuration : 0) : totalRecordedSec;
 
-    recorder.setOnPeakUpdate((db, clipped) => { setPeakDb(db); if (clipped) setHasClipped(true); });
+    recorder.setOnPeakUpdate((db, clipped) => { peakDbRef.current = db; peakListenerRef.current?.(db); if (clipped) setHasClipped(true); });
     const srcNode = recorder.getSourceNode();
     if (listeningMode === 'headphones' && srcNode && comfortPreset !== 'off') comfortRef.current = createComfortMonitoringGraph(ctx, srcNode, comfortPreset, comfortMix);
     if (listeningMode === 'headphones' && backingInHeadphones) backingRef.current = scheduleBackingTrackOnContext(ctx, getActiveBackingTrack(), targetT1Time, effectiveBpm, effectiveRecSec);
@@ -137,6 +122,7 @@ export function usePriseRecorder(params: UsePriseRecorderParams) {
     return useVocalTransportStore.getState().registerHandlers({ toggleRecord: handleToggleRecord, stop: () => { if (isCycleActive) abortCycle(); } });
   }, [activeLivret, handleToggleRecord, isCycleActive, abortCycle, setIsRecording]);
   useEffect(() => { isMountedRef.current = true; return () => { isMountedRef.current = false; abortCycle(); }; }, [abortCycle]);
-  const resetClipIndicator = useCallback(() => { recorder.resetPeakHold(); setHasClipped(false); }, [recorder]);
-  return { isCycleActive, handleToggleRecord, peakDb, hasClipped, resetClipIndicator };
+  const registerPeakListener = useCallback((fn: ((db: number | null) => void) | null) => { peakListenerRef.current = fn; if (fn) fn(peakDbRef.current); }, []);
+  const resetClipIndicator = useCallback(() => { recorder.resetPeakHold(); peakDbRef.current = null; peakListenerRef.current?.(null); setHasClipped(false); }, [recorder]);
+  return { isCycleActive, handleToggleRecord, peakDb: null as number | null, registerPeakListener, hasClipped, resetClipIndicator };
 }

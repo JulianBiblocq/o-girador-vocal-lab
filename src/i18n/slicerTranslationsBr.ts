@@ -46,6 +46,8 @@ export const slicerTranslationsBr = {
   slicerOptionNewPattern: '+ Criar novo bloco',
   slicerExistingPatternsGroup: 'Blocos existentes da Toada',
   slicerAssigningProgress: 'Fatiamento & Análise em andamento...',
+  slicerAnalyzingStepProgress: 'Análise {current} / {total}...',
+  dspWorkerBusyBadge: 'Processando áudio...',
   slicerExecuteBatchAssignBtn: 'Fatiar e Atribuir aos blocos ({count})',
   slicerAssignSuccessToast: '{count} bloco(s) atualizado(s) com sucesso a partir do áudio fatiado!',
   slicerDuplicateTargetAlert: 'Cópia duplicada',

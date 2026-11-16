@@ -53,7 +53,7 @@ export const WaveformTrimEditor: React.FC<WaveformTrimEditorProps> = (props) => 
 
   const [isPlaying, setIsPlaying] = useState<boolean>(false), [clickEnabled, setClickEnabled] = useState<boolean>(true);
   const [highPassEnabled, setHighPassEnabled] = useState<boolean>(true), [tonePolishEnabled, setTonePolishEnabled] = useState<boolean>(true);
-  const playheadSec = usePlayheadTracker(player, isPlaying, () => setIsPlaying(false));
+  const getPlayheadSec = usePlayheadTracker(player, isPlaying, () => setIsPlaying(false));
 
   useEffect(() => {
     const el = containerRef.current; if (!el) return;
@@ -101,7 +101,7 @@ export const WaveformTrimEditor: React.FC<WaveformTrimEditorProps> = (props) => 
             <WaveformGridCanvas width={zoomedWidth} height={144} totalDurationSec={totalDurationSec} t1OffsetSec={t1OffsetSec} hasAnacrusis={hasAnacrusis} bpm={bpm} measuresCount={measuresCount} beatsPerMeasure={beatsPerMeasure} beatResolutions={beatResolutions} />
             <WaveformOverlayCanvas
               rawPCM={rawPCM} sampleRate={sampleRate} width={zoomedWidth} height={144} totalDurationSec={totalDurationSec}
-              trimStartSec={trimStartSec} trimEndSec={trimEndSec} t1OffsetSec={t1OffsetSec} playheadSec={playheadSec} isPlaying={isPlaying}
+              trimStartSec={trimStartSec} trimEndSec={trimEndSec} t1OffsetSec={t1OffsetSec} getPlayheadSec={getPlayheadSec} isPlaying={isPlaying}
               onTrimChange={(s, e) => { setTrimStartSec(s); setTrimEndSec(e); }} onTrimCommit={(s, e) => onTrimChange?.(s, e)}
               onT1OffsetChange={(t1) => setT1OffsetSec(t1)} onT1OffsetCommit={commitT1Offset}
             />

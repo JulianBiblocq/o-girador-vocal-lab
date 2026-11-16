@@ -1,12 +1,11 @@
 /**
  * MicGainAssistantCard.tsx
- * Assistant de Gain Micro en 3 Secondes (< 125 lignes) :
- * - Classification pure du niveau de crête en dBFS (too_hot > -1 dB, optimal [-18, -1] dB, too_low < -18 dB)
- * - Composant interactif de test vocal 3s dans Réglages.
+ * Assistant de Gain Micro en 3 Secondes (0 setState en RAF + Kill-Switch audio) (< 122 lignes).
  */
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Mic, CheckCircle2, AlertTriangle, Volume2 } from 'lucide-react';
 import { useLanguage } from '../../i18n/LanguageContext';
+import { registerAudioKillSwitch } from '../../audio/sharedAudioContext';
 import type { TranslationKey } from '../../i18n/i18n.types';
 
 export type MicGainDiagnosticStatus = 'too_hot' | 'optimal' | 'too_low';
@@ -34,12 +33,12 @@ export function classifyMicGainLevel(peakDb: number, rmsDb = -24): MicGainDiagno
   return { status: 'too_low', peakDb: roundedPeak, rmsDb: roundedRms, titleKey: 'gainDiagTooLowTitle', adviceKey: 'gainDiagTooLowAdvice' };
 }
 
-export const MicGainAssistantCard: React.FC<{ selectedDeviceId?: string }> = ({ selectedDeviceId }) => {
+export const MicGainAssistantCard: React.FC<{ selectedDeviceId?: string; compact?: boolean }> = ({ selectedDeviceId, compact = false }) => {
   const { t } = useLanguage();
   const [isTesting, setIsTesting] = useState(false);
-  const [livePeakDb, setLivePeakDb] = useState<number>(-60);
   const [result, setResult] = useState<MicGainDiagnosticResult | null>(null);
   const abortRef = useRef<(() => void) | null>(null);
+  const liveSpanRef = useRef<HTMLSpanElement | null>(null);
 
   const stopTest = useCallback(() => {
     abortRef.current?.();
@@ -50,7 +49,8 @@ export const MicGainAssistantCard: React.FC<{ selectedDeviceId?: string }> = ({ 
 
   const startThreeSecondTest = async () => {
     if (isTesting) { stopTest(); return; }
-    setResult(null); setLivePeakDb(-60); setIsTesting(true);
+    setResult(null); setIsTesting(true);
+    registerAudioKillSwitch('settings-gain-test', stopTest);
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: {
@@ -80,7 +80,9 @@ export const MicGainAssistantCard: React.FC<{ selectedDeviceId?: string }> = ({ 
           if (a > maxAbs) maxAbs = a;
           sumSq += a * a; count++;
         }
-        setLivePeakDb(sampleToDbFs(maxAbs));
+        if (liveSpanRef.current) {
+          liveSpanRef.current.textContent = t('gainAssistantTestingPrompt', { db: sampleToDbFs(maxAbs).toFixed(1) });
+        }
         if (performance.now() - startMs < 3000) {
           animId = requestAnimationFrame(tick);
         } else {
@@ -96,17 +98,14 @@ export const MicGainAssistantCard: React.FC<{ selectedDeviceId?: string }> = ({ 
   };
 
   return (
-    <div className="cordel-card p-3 flex flex-col gap-2 rounded text-xs font-mono">
+    <div className={`${compact ? 'cordel-card-sm p-2' : 'cordel-card p-3'} flex flex-col gap-2 rounded text-xs font-mono`}>
       <div className="flex items-center justify-between gap-2 flex-wrap">
         <span className="font-bold text-theme-ink flex items-center gap-1.5">
           <Volume2 className="w-4 h-4 text-theme-accent" /><span>{t('gainAssistantTitle')}</span>
         </span>
-        <button
-          type="button" onClick={startThreeSecondTest}
-          className={`px-2.5 py-1 rounded font-bold flex items-center gap-1.5 cursor-pointer ${isTesting ? 'bg-red-700 text-white animate-pulse' : 'cordel-btn-primary'}`}
-        >
+        <button type="button" onClick={startThreeSecondTest} className={`px-2.5 py-1 rounded font-bold flex items-center gap-1.5 cursor-pointer ${isTesting ? 'bg-red-700 text-white animate-pulse' : 'cordel-btn-primary'}`}>
           <Mic className="w-3.5 h-3.5" />
-          <span>{isTesting ? t('gainAssistantTestingPrompt', { db: livePeakDb.toFixed(1) }) : t('gainAssistantStartBtn')}</span>
+          <span ref={liveSpanRef}>{isTesting ? t('gainAssistantTestingPrompt', { db: '-60.0' }) : t('gainAssistantStartBtn')}</span>
         </button>
       </div>
       {result && (

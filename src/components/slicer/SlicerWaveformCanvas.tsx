@@ -9,14 +9,14 @@ import { hitTestSlicer, addBeatPeg, moveBeatPeg, deleteBeatPeg, type SlicerHitRe
 interface SlicerWaveformCanvasProps {
   pcm: Float32Array; sampleRate: number; durationSec: number;
   trimInSec: number; trimOutSec: number; beatPegs: number[]; targetPegs: number[];
-  playheadSec: number; beatsPerMeasure: number;
+  playheadSec: number; getPlayheadSec?: () => number; isPlaying?: boolean; beatsPerMeasure: number;
   onTrimChange: (trimIn: number, trimOut: number) => void;
   onPegsChange: (pegs: number[]) => void;
   onSeek?: (sec: number) => void;
 }
 
 export const SlicerWaveformCanvas: React.FC<SlicerWaveformCanvasProps> = (props) => {
-  const { pcm, sampleRate, durationSec, trimInSec, trimOutSec, beatPegs, targetPegs, playheadSec, beatsPerMeasure, onTrimChange, onPegsChange, onSeek } = props;
+  const { pcm, sampleRate, durationSec, trimInSec, trimOutSec, beatPegs, targetPegs, playheadSec, getPlayheadSec, isPlaying = false, beatsPerMeasure, onTrimChange, onPegsChange, onSeek } = props;
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const dragRef = useRef<{ mode: SlicerHitResult; startSec: number } | null>(null);
   const [themeTick, setThemeTick] = React.useState(0);
@@ -43,10 +43,16 @@ export const SlicerWaveformCanvas: React.FC<SlicerWaveformCanvasProps> = (props)
     if (canvas.width !== w * dpr || canvas.height !== h * dpr) { canvas.width = w * dpr; canvas.height = h * dpr; }
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
-    drawSlicerWaveform(ctx, { width: w, height: h, dpr, pcm, sampleRate, durationSec, trimInSec, trimOutSec, beatPegs, targetPegs, playheadSec, beatsPerMeasure });
-  }, [pcm, sampleRate, durationSec, trimInSec, trimOutSec, beatPegs, targetPegs, playheadSec, beatsPerMeasure, themeTick]);
+    const curHead = getPlayheadSec ? getPlayheadSec() : playheadSec;
+    drawSlicerWaveform(ctx, { width: w, height: h, dpr, pcm, sampleRate, durationSec, trimInSec, trimOutSec, beatPegs, targetPegs, playheadSec: curHead, beatsPerMeasure });
+  }, [pcm, sampleRate, durationSec, trimInSec, trimOutSec, beatPegs, targetPegs, playheadSec, getPlayheadSec, beatsPerMeasure, themeTick]);
 
-  useEffect(() => { render(); }, [render]);
+  useEffect(() => {
+    render();
+    if (!isPlaying) return;
+    let id = requestAnimationFrame(function loop() { render(); id = requestAnimationFrame(loop); });
+    return () => cancelAnimationFrame(id);
+  }, [render, isPlaying]);
 
   const handlePointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
     const { x, sec, width } = getCanvasCoords(e);

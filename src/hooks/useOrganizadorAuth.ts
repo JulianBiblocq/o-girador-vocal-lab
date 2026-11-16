@@ -1,20 +1,20 @@
 /**
  * useOrganizadorAuth.ts
- * Hook d'authentification unifiée SSO & Google Auth pour Cantador (< 80 lignes).
+ * Hook d'authentification unifiée SSO & Google Auth + synchronisation du droit `canWriteCantador` (< 105 lignes).
  */
 import { useState, useEffect, useCallback } from 'react';
 import { onAuthStateChanged, type User } from 'firebase/auth';
-import { auth } from '../firebase/config';
-import {
-  handleSsoUrlToken,
-  signInWithGoogle,
-  logoutUser,
-  getUserGroupId,
-} from '../services/firebaseClient';
+import { doc, getDoc } from 'firebase/firestore';
+import { auth, db } from '../firebase/config';
+import { handleSsoUrlToken, signInWithGoogle, logoutUser } from '../services/firebaseClient';
+import { canAccessVocalStudio, type VocalUserPermissions } from '../utils/vocalPermissions';
+import { useVocalTransportStore } from '../stores/useVocalTransportStore';
 
 export interface OrganizadorAuthState {
   currentUser: User | null;
   groupId: string | null;
+  userPermissions: VocalUserPermissions | null;
+  canWriteStudio: boolean;
   isLoading: boolean;
   loginWithGoogle: () => Promise<void>;
   logout: () => Promise<void>;
@@ -23,6 +23,7 @@ export interface OrganizadorAuthState {
 export function useOrganizadorAuth(): OrganizadorAuthState {
   const [currentUser, setCurrentUser] = useState<User | null>(auth.currentUser);
   const [groupId, setGroupId] = useState<string | null>(null);
+  const [userPermissions, setUserPermissions] = useState<VocalUserPermissions | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -38,13 +39,33 @@ export function useOrganizadorAuth(): OrganizadorAuthState {
           setCurrentUser(user);
           if (user) {
             try {
-              const gId = await getUserGroupId(user.uid);
-              if (isMounted) setGroupId(gId);
+              const snap = await getDoc(doc(db, 'users', user.uid));
+              const data = snap.exists() ? snap.data() : {};
+              const perms: VocalUserPermissions = {
+                uid: user.uid,
+                role: data.role || data.dbRole || 'membre',
+                dbRole: data.dbRole,
+                isSystemAdmin: Boolean(data.isSystemAdmin),
+                canWriteCantador: Boolean(data.canWriteCantador),
+                canWriteVocal: Boolean(data.canWriteVocal),
+              };
+              if (isMounted) {
+                setGroupId(data.groupId || null);
+                setUserPermissions(perms);
+                useVocalTransportStore.getState().setUserPermissions(perms);
+              }
             } catch {
-              if (isMounted) setGroupId(null);
+              const fallbackPerms: VocalUserPermissions = { uid: user.uid, role: 'membre' };
+              if (isMounted) {
+                setGroupId(null);
+                setUserPermissions(fallbackPerms);
+                useVocalTransportStore.getState().setUserPermissions(fallbackPerms);
+              }
             }
-          } else {
+          } else if (isMounted) {
             setGroupId(null);
+            setUserPermissions(null);
+            useVocalTransportStore.getState().setUserPermissions(null);
           }
           if (isMounted) setIsLoading(false);
         });
@@ -61,12 +82,7 @@ export function useOrganizadorAuth(): OrganizadorAuthState {
     try {
       await signInWithGoogle();
     } catch (err: any) {
-      console.warn('[useOrganizadorAuth] Erreur login Google :', err);
-      window.dispatchEvent(
-        new CustomEvent('app-toast', {
-          detail: { type: 'error', message: `Échec de connexion : ${err?.message || 'erreur'}` },
-        })
-      );
+      window.dispatchEvent(new CustomEvent('app-toast', { detail: { type: 'error', message: `Échec de connexion : ${err?.message || 'erreur'}` } }));
     } finally {
       setIsLoading(false);
     }
@@ -77,10 +93,12 @@ export function useOrganizadorAuth(): OrganizadorAuthState {
     try {
       await logoutUser();
       setGroupId(null);
+      setUserPermissions(null);
+      useVocalTransportStore.getState().setUserPermissions(null);
     } finally {
       setIsLoading(false);
     }
   }, []);
 
-  return { currentUser, groupId, isLoading, loginWithGoogle, logout };
+  return { currentUser, groupId, userPermissions, canWriteStudio: canAccessVocalStudio(userPermissions), isLoading, loginWithGoogle, logout };
 }

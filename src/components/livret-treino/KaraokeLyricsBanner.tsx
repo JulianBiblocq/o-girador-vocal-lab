@@ -1,6 +1,6 @@
 /**
  * KaraokeLyricsBanner.tsx
- * Bandeau Karaoke synchronise avec badge Puxador / Coro,
+ * Bandeau Letra ao Vivo synchronisé avec badge Puxador / Coro,
  * indicateur "A vous de chanter !" et surlignage des syllabes sans saccade (Zero Render Thrashing).
  */
 import React from 'react';

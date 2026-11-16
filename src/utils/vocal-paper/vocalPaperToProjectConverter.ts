@@ -16,6 +16,7 @@ import { applyDualScaleToProject, computeSemitoneDistance } from '../scaleTransp
 import { parseStoredScaleString } from '../../audio/projectScaleAnalyzer';
 import { alignScannedPatternsWithOrganizadorLyrics } from './vocalPaperLyricsAligner';
 import { normalizeScannedBlockToCanonical, mergeMultiLineScannedBlocks, isCellActive } from './vocalPaperBeatDecoder';
+import { alignStepsWithReferenceMidiNotes } from '../../audio/forcedMelodyAligner';
 
 const SEMITONE_FROM_A3: Record<string, number> = {
   A: 0, LA: 0, BB: 1, 'A#': 1, SIB: 1, 'SI♭': 1, 'LA#': 1, B: 2, SI: 2,
@@ -98,12 +99,15 @@ export function convertVocalPaperScanToProject(
     if (roleInstanceMap.has(key)) return roleInstanceMap.get(key)!;
     const entry = blockMap.get(normCode); if (!entry) return null;
     const { block, cardIdx } = entry;
-    const { anacrusisSteps, mainSteps, assignedLyricsText, hasAnacrusis, hasTailBeat, measuresCount, anacrusisBeats } = buildStepsAndLyricsFromScannedBlock(block);
+    const { anacrusisSteps: rawAna, mainSteps: rawMain, assignedLyricsText, hasAnacrusis, hasTailBeat, measuresCount, anacrusisBeats } = buildStepsAndLyricsFromScannedBlock(block);
+    const refMidis = currentProject.patterns[cardIdx]?.referenceMidiNotes;
+    const combined = block.rhythmOnlyMode && refMidis?.length ? alignStepsWithReferenceMidiNotes({ steps: [...rawAna, ...rawMain], referenceMidiNotes: refMidis }) : null;
+    const anacrusisSteps = combined ? combined.slice(0, rawAna.length) : rawAna, mainSteps = combined ? combined.slice(rawAna.length) : rawMain;
     const pat = createDefaultVocalPattern(role, block.name || `${normCode} (${role === 'puxador' ? 'Pux' : 'Cor'})`, measuresCount, bpm, 'C4');
     Object.assign(pat, {
       cardIndex: cardIdx, measuresCount, hasAnacrusis, anacrusisBeats, hasTailBeat, exitBeat: hasTailBeat ? 1 : undefined,
-      foldNotesView: block.rhythmOnlyMode, anacrusisSteps, mainSteps, assignedLyricsText: assignedLyricsText || block.name || normCode,
-      isMidiInitialized: true, midiLocked: true, stepStatus: { recorded: false, trimmed: false, rhythmValidated: true, notesValidated: !block.rhythmOnlyMode, variantsReady: false },
+      foldNotesView: Boolean(block.rhythmOnlyMode && !combined), referenceMidiNotes: refMidis, anacrusisSteps, mainSteps, assignedLyricsText: assignedLyricsText || block.name || normCode,
+      isMidiInitialized: true, midiLocked: true, stepStatus: { recorded: false, trimmed: false, rhythmValidated: true, notesValidated: Boolean(!block.rhythmOnlyMode || combined), variantsReady: false },
     });
     pat.rawLineCode = buildOrganizadorLineFromSteps(pat, { isTutti });
     pat.timeAnchors = extractTimeAnchors(pat.rawLineCode.replace(/^\*+|\*+$/g, ''), 4, !hasAnacrusis).timeAnchors;

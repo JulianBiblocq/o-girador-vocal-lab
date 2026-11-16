@@ -3,25 +3,27 @@
   --cordel-bg: #16120e;
   --cordel-surface: #211a15;
   --cordel-subcard-bg: #2a211b;
+  --cordel-panel: #2a211b;
   --cordel-text: #efe6d2;
+  --cordel-paper: #efe6d2;
   --cordel-secondary-text: #b5a48b;
-  --cordel-muted: rgba(181, 164, 139, 0.7);
+  --cordel-muted: rgba(181, 164, 139, 0.75);
   --cordel-faint: rgba(239, 230, 210, 0.08);
-  --cordel-border-panel: rgba(239, 230, 210, 0.14);
-  --cordel-border-sub: rgba(239, 230, 210, 0.08);
+  --cordel-border-panel: rgba(239, 230, 210, 0.16);
+  --cordel-border-sub: rgba(239, 230, 210, 0.1);
   --cordel-border: var(--cordel-border-panel);
 
-  /* Identité Cordel & Pupitres */
+  /* Identité Cordel & Pupitres (Puxador #9a3412 / Coro #0f766e) */
   --cordel-wood: #8b2a1a;
   --cordel-wood-light: #a83820;
-  --cordel-puxador: #8b2a1a;
-  --cordel-puxador-hover: #a83820;
+  --cordel-puxador: #9a3412;
+  --cordel-puxador-hover: #b45309;
   --cordel-coro: #0f766e;
-  --cordel-coro-hover: #14b8a6;
+  --cordel-coro-hover: #0d9488;
   --cordel-primary: var(--cordel-wood);
   --cordel-terracotta: #c25e38;
   --cordel-terracotta-dark: #9a3412;
-  --cordel-on-primary: #efe6d2;
+  --cordel-on-primary: #f4ecd8;
   --cordel-accent: #c88a2b;
   --cordel-accent-text: #e69d35;
 
@@ -29,27 +31,30 @@
   --cordel-shadow: 0 4px 14px rgba(0, 0, 0, 0.4), 0 1px 3px rgba(0, 0, 0, 0.3);
   --cordel-shadow-sm: 0 2px 6px rgba(0, 0, 0, 0.35);
   --cordel-shadow-color: rgba(0, 0, 0, 0.5);
-  --cordel-btn-primary-text: #efe6d2;
+  --cordel-btn-primary-text: #f4ecd8;
 }
 
 [data-theme='light'] {
+  /* Mode Jour Parchemin (#f4ecd8) */
   --cordel-bg: #f4ecd8;
   --cordel-surface: #efe6d0;
-  --cordel-subcard-bg: rgba(26, 26, 26, 0.04);
+  --cordel-subcard-bg: #e7dcc3;
+  --cordel-panel: #e7dcc3;
   --cordel-text: #1a1a1a;
-  --cordel-secondary-text: #57534e;
-  --cordel-muted: rgba(26, 26, 26, 0.6);
+  --cordel-paper: #f4ecd8;
+  --cordel-secondary-text: #4a443f;
+  --cordel-muted: rgba(26, 26, 26, 0.65);
   --cordel-faint: rgba(26, 26, 26, 0.12);
-  --cordel-border-panel: rgba(26, 26, 26, 0.28);
-  --cordel-border-sub: rgba(26, 26, 26, 0.12);
+  --cordel-border-panel: rgba(26, 26, 26, 0.3);
+  --cordel-border-sub: rgba(26, 26, 26, 0.16);
   --cordel-border: var(--cordel-border-panel);
 
   --cordel-wood: #8b2a1a;
   --cordel-wood-light: #a83820;
-  --cordel-puxador: #8b2a1a;
-  --cordel-puxador-hover: #a83820;
+  --cordel-puxador: #9a3412;
+  --cordel-puxador-hover: #7c2d12;
   --cordel-coro: #0f766e;
-  --cordel-coro-hover: #14b8a6;
+  --cordel-coro-hover: #115e59;
   --cordel-primary: var(--cordel-wood);
   --cordel-terracotta: #c25e38;
   --cordel-terracotta-dark: #9a3412;
@@ -57,7 +62,7 @@
   --cordel-accent: #9a3412;
   --cordel-accent-text: #9a3412;
 
-  --cordel-shadow: 2px 2px 0px rgba(26, 26, 26, 0.12);
+  --cordel-shadow: 2px 2px 0px rgba(26, 26, 26, 0.14);
   --cordel-shadow-sm: 1px 1px 0px rgba(26, 26, 26, 0.1);
   --cordel-shadow-color: #8c857b;
   --cordel-btn-primary-text: #f4ecd8;
@@ -77,7 +82,7 @@
 .text-theme-secondary { color: var(--cordel-secondary-text); }
 .text-theme-on-primary { color: var(--cordel-on-primary) !important; }
 
-/* Couleurs pupitres strictes Puxador / Coro */
+/* Couleurs pupitres strictes Puxador (#9a3412) / Coro (#0f766e) */
 .bg-role-puxador { background-color: var(--cordel-puxador) !important; color: #f4ecd8 !important; }
 .bg-role-puxador-hover:hover { background-color: var(--cordel-puxador-hover) !important; }
 .bg-role-coro { background-color: var(--cordel-coro) !important; color: #f4ecd8 !important; }

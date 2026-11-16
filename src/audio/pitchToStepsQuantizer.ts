@@ -1,5 +1,5 @@
 /**
- * pitchToStepsQuantizer.ts — Quantification MIDI sub-temps Maracatu, noyau vocalique et gestion des silences (< 130 lignes).
+ * pitchToStepsQuantizer.ts — Quantification MIDI sub-temps Maracatu, masquage sibilantes, noyau vocalique et silences (< 140 lignes).
  */
 import type { PitchCurvePoint, VocalStepData } from '../types/vocalPack.types';
 import type { TimeAnchor } from '../types/toadaDocument.types';
@@ -9,6 +9,7 @@ import { hasSyllableAttack } from './onsetDetector';
 import { getPatternT1OffsetSec } from '../utils/anacrusisTimingHelper';
 import { filterConsonantPitchDips, segmentPitchCurve, computeVowelCoreMidi, recalibrateBricksToLocalPitchCurve, type PitchSegment } from './pitchStepSegmentation';
 import { computeVowelOnsetStrength, scoreMaracatuSubBeatPattern } from './maracatuSubBeatAligner';
+import { maskSibilantsInPitchCurve, annotateBricksConsonantAndEnvelope } from './sibilantBreathMasker';
 import { buildBeatLyricsMap } from '../utils/timeAnchorParser';
 
 export interface QuantizerParams {
@@ -34,7 +35,7 @@ function findSegmentForStep(segments: PitchSegment[], sStart: number, sEnd: numb
 
 export function quantizePitchToSteps(params: QuantizerParams): QuantizedGridResult {
   const { bpm, beatsPerMeasure, measuresCount, beatResolutions, trimStartSec, trimEndSec, hasAnacrusis = true, tonic = 'C', scaleType = 'chromatic', allowedPitchClasses, pcm, sampleRate, timeAnchors = [] } = params;
-  const pitchCurve = filterConsonantPitchDips(params.pitchCurve);
+  const pitchCurve = filterConsonantPitchDips(maskSibilantsInPitchCurve(params.pitchCurve, pcm, sampleRate));
   const allowedSize = allowedPitchClasses instanceof Set ? allowedPitchClasses.size : (Array.isArray(allowedPitchClasses) ? allowedPitchClasses.length : 12);
   const isScaleLocked = scaleType !== 'chromatic' || (Boolean(allowedPitchClasses) && allowedSize > 0 && allowedSize < 12);
   const scaleSet = isScaleLocked ? (allowedPitchClasses instanceof Set ? allowedPitchClasses : (Array.isArray(allowedPitchClasses) ? new Set(allowedPitchClasses) : null)) : null;
@@ -52,15 +53,11 @@ export function quantizePitchToSteps(params: QuantizerParams): QuantizedGridResu
 
     for (let b = 0; b < beatsInThisM; b++) {
       const beatStartTime = mBaseSec + b * beatDuration, resolution = beatResolutions[b] || 4, stepDuration = beatDuration / resolution;
-      const anchor = beatMap[`${mOffset}_${b + 1}`];
-      const isInitialRest = anchor?.isInitialRest === true, isSustainedHold = anchor?.isSustainedHold === true, hasLeadingRest = anchor?.hasLeadingRest === true;
+      const anchor = beatMap[`${mOffset}_${b + 1}`], isInitialRest = anchor?.isInitialRest === true, isSustainedHold = anchor?.isSustainedHold === true, hasLeadingRest = anchor?.hasLeadingRest === true;
       const sylCount = anchor?.syllables?.length || 0;
       const onsetProfile = computeVowelOnsetStrength(pcm, sampleRate, pitchCurve, beatStartTime, beatDuration, resolution);
       const hasExplicitUnderscore = Boolean(hasLeadingRest || anchor?.isDownbeatLocked || anchor?.hasTrailingPickup || (anchor?.textSlice && /[_𝄽]/.test(anchor.textSlice)));
-      const maracatuFit = scoreMaracatuSubBeatPattern({
-        syllableCount: sylCount, profile: onsetProfile, hasLeadingRest, hasTrailingPickup: anchor?.hasTrailingPickup,
-        isDownbeatLocked: anchor?.isDownbeatLocked, explicitSubdivs: anchor?.syllableSubdivs, hasExplicitUnderscore,
-      });
+      const maracatuFit = scoreMaracatuSubBeatPattern({ syllableCount: sylCount, profile: onsetProfile, hasLeadingRest, hasTrailingPickup: anchor?.hasTrailingPickup, isDownbeatLocked: anchor?.isDownbeatLocked, explicitSubdivs: anchor?.syllableSubdivs, hasExplicitUnderscore });
       const subdivTargets = new Set<number>(maracatuFit.subdivs), startSub = maracatuFit.subdivs.length > 0 ? maracatuFit.subdivs[0] : (hasLeadingRest ? 1 : 0);
       const beatPitch = computeVowelCoreMidi(pitchCurve, beatStartTime, beatStartTime + beatDuration, 0, scaleSet)
         ?? (sylCount > 0 && !isInitialRest ? computeVowelCoreMidi(pitchCurve, beatStartTime, beatStartTime + beatDuration * 1.6, 0, scaleSet) : null);
@@ -114,7 +111,7 @@ export function quantizePitchToSteps(params: QuantizerParams): QuantizedGridResu
   }
 
   const baseStepDur = beatDuration / (beatResolutions[0] || 4);
-  const calibrated = recalibrateBricksToLocalPitchCurve(allSteps, pitchCurve, gridStartSec, baseStepDur, tonic, scaleType, params.smoothingLevel ?? 0.15, allowedPitchClasses);
+  const calibrated = annotateBricksConsonantAndEnvelope(recalibrateBricksToLocalPitchCurve(allSteps, pitchCurve, gridStartSec, baseStepDur, tonic, scaleType, params.smoothingLevel ?? 0.15, allowedPitchClasses), pcm, sampleRate, gridStartSec, beatDuration);
   const anacrusisCount = hasAnac ? beatsPerMeasure * (beatResolutions[0] || 4) : 0;
   return {
     anacrusisSteps: hasAnac ? calibrated.slice(0, anacrusisCount) : [],

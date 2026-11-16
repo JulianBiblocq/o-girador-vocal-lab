@@ -10,35 +10,7 @@ import { selectBestAudioVariant } from './variantMatcher';
 import { scheduleMelodySteps } from '../audio/synthVoiceHelper';
 import { computeSlotsMeasureLayout } from '../components/conductor/toadaTimingScheduler';
 import { HarmonyPlayerEngine } from '../audio/harmony/HarmonyPlayerEngine';
-
-function encodeWavBlob(pcm: Float32Array, sampleRate: number): Blob {
-  const dataSize = pcm.length * 2;
-  const buffer = new ArrayBuffer(44 + dataSize);
-  const view = new DataView(buffer);
-  const writeStr = (off: number, s: string) => { for (let i = 0; i < s.length; i++) view.setUint8(off + i, s.charCodeAt(i)); };
-
-  writeStr(0, 'RIFF');
-  view.setUint32(4, 36 + dataSize, true);
-  writeStr(8, 'WAVE');
-  writeStr(12, 'fmt ');
-  view.setUint32(16, 16, true);
-  view.setUint16(20, 1, true); // PCM
-  view.setUint16(22, 1, true); // Mono
-  view.setUint32(24, sampleRate, true);
-  view.setUint32(28, sampleRate * 2, true);
-  view.setUint16(32, 2, true);
-  view.setUint16(34, 16, true);
-  writeStr(36, 'data');
-  view.setUint32(40, dataSize, true);
-
-  let offset = 44;
-  for (let i = 0; i < pcm.length; i++) {
-    const s = Math.max(-1, Math.min(1, pcm[i]));
-    view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
-    offset += 2;
-  }
-  return new Blob([buffer], { type: 'audio/wav' });
-}
+import { encodeWavInWorker } from '../workers/vocalDspWorkerClient';
 
 function schedulePatternAudio(ctx: BaseAudioContext, pat: VocalPatternItem, slotT1Sec: number, measureDurationSec: number, projectBpm: number) {
   const match = selectBestAudioVariant(pat.variants, 1.0, 0, pat.baseBpm ?? pat.bpm ?? projectBpm);
@@ -127,7 +99,8 @@ export async function exportFullSongWav(project: ToadaProject): Promise<void> {
   });
 
   const rendered = await offlineCtx.startRendering();
-  const blob = encodeWavBlob(rendered.getChannelData(0), sampleRate);
+  const { wavArrayBuffer } = await encodeWavInWorker({ pcm: rendered.getChannelData(0), sampleRate });
+  const blob = new Blob([wavArrayBuffer], { type: 'audio/wav' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;

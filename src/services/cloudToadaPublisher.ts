@@ -12,8 +12,8 @@ import { getSequenciadorToadaUrl } from '../utils/ecosystemUrls';
 import { getBeatsPerMeasure } from '../utils/musicalMath';
 import { getPatternT1OffsetSec } from '../utils/anacrusisTimingHelper';
 import { resolveProjectDualScale } from '../utils/scaleTranspositionHelper';
-import { getOrComputeTroupeTransposedPCM } from '../audio/formantPreservingPitchShifter';
-import { pcmToWavBlob, slicePatternPcm, sanitizePatternForFirestore } from './toadaPublishHelpers';
+import { EXPORT_WAV_SAMPLE_RATE, slicePatternPcm, sanitizePatternForFirestore } from './toadaPublishHelpers';
+import { renderVoiceDspInWorker, encodeWavInWorker } from '../workers/vocalDspWorkerClient';
 import { getPatternUsageCount, getUnusedPatternsSummary, deleteOrphanPatternWavsFromStorage } from '../utils/unusedPatternsPurger';
 import { resolveActiveTenantContext } from './activeTenantResolver';
 import { sanitizePitchHz } from '../utils/pitchHzContract';
@@ -58,7 +58,7 @@ export function buildSequencerToadaPackDocument(
   })).map((pat) => ({ ...pat, sungKey: pat.sungKey ?? dualScale.sungScaleLabel, troupeKey: pat.troupeKey ?? dualScale.troupeScaleLabel, transpositionSemitones: pat.transpositionSemitones ?? shiftSt, ignoreMelodyPitch }));
 
   return {
-    id: toadaId, title: project.title, groupId, bpm: projectBpm, timeSignature: project.timeSignature,
+    id: toadaId, documentId: project.toadaMeta?.id, title: project.title, groupId, bpm: projectBpm, timeSignature: project.timeSignature,
     grammarVersion: VOCAL_GRAMMAR_VERSION, referencePitchHz, recordedAtPitchHz, sequenciadorExportMode, ignoreMelodyPitch,
     sungKey: dualScale.sungScaleLabel, troupeKey: dualScale.troupeScaleLabel,
     sungScaleRoot: dualScale.sungScaleRoot, sungScaleMode: dualScale.sungScaleMode, troupeScaleRoot: dualScale.troupeScaleRoot, transpositionSemitones: shiftSt,
@@ -110,9 +110,12 @@ export async function publishToadaToSequencer(
       try {
         const sliced = slicePatternPcm(fullPcm, sampleRate, rawT1, rawTrimStart, rawTrimEnd);
         slicedDurationSec = sliced.slicedDurationSec; exportedT1OffsetSec = sliced.exportedT1OffsetSec; startOffsetSec = sliced.startOffsetSec;
-        const troupePcm = shiftSt !== 0 ? getOrComputeTroupeTransposedPCM(sliced.slicedPcm, sampleRate, shiftSt) : sliced.slicedPcm;
+        const troupePcm = shiftSt !== 0
+          ? (await renderVoiceDspInWorker({ mode: 'formant_shift', pcm: sliced.slicedPcm, sampleRate, shiftSemitones: shiftSt })).processedPCM
+          : sliced.slicedPcm;
+        const { wavArrayBuffer } = await encodeWavInWorker({ pcm: troupePcm, sampleRate, targetSampleRate: EXPORT_WAV_SAMPLE_RATE });
         const storageRef = ref(storage, `vocalRecordings/${toadaId}_${p.id}.wav`);
-        await uploadBytes(storageRef, pcmToWavBlob(troupePcm, sampleRate), { contentType: 'audio/wav' });
+        await uploadBytes(storageRef, new Blob([wavArrayBuffer], { type: 'audio/wav' }), { contentType: 'audio/wav' });
         audioUrl = await getDownloadURL(storageRef);
       } catch (err) {
         console.warn(`[cloudToadaPublisher] Échec upload audio maître ${p.id} :`, err);

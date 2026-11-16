@@ -1,7 +1,7 @@
 /**
  * vocalPaperPrintHelper.ts
- * Moteur d'impression A4 Paysage 100 % Noir & Blanc sans pop-up (iframe invisible),
- * panier multi-feuilles (.vocal-print-page), repères optiques ■ et forçage monochrome (< 138 lignes).
+ * Moteur d'impression A4 dynamique (landscape grilles vierges vs portrait partitions/tablatures remplies) 100 % Noir & Blanc,
+ * panier multi-feuilles 5 modèles (.vocal-print-page), repères optiques ■ et forçage monochrome (< 130 lignes).
  */
 import type {
   VocalSheetOpticalCode, VocalPaperPrintOptions, VocalPaperCartQuantities, VocalPatternNumberingMode,
@@ -10,6 +10,7 @@ import { renderVocalSheetSequenceHTML } from './vocalSheetSequenceTemplate';
 import { renderVocalSheetNotesHTML } from './vocalSheetNotesTemplate';
 import { renderVocalSheetRhythmHTML } from './vocalSheetRhythmTemplate';
 import { renderVocalSheetInstructionsHTML } from './vocalSheetInstructionsTemplate';
+import { renderVocalSheetTab4EHTML } from './vocalSheetTab4ETemplate';
 
 export function renderFiducialCornersHTML(): string {
   const base = 'position:absolute;width:5.5mm;height:5.5mm;background:#000000;color:#ffffff;font-size:6pt;display:flex;align-items:center;justify-content:center;font-weight:900;z-index:20;';
@@ -22,7 +23,7 @@ export function renderFiducialCornersHTML(): string {
 }
 
 export function renderOpticalSheetCodeBadge(code: VocalSheetOpticalCode): string {
-  return `<span class="optical-sheet-code" style="display:inline-block;border:2px solid #000000;padding:0.5px 5px;font-family:monospace;font-size:7.8pt;font-weight:900;letter-spacing:0.4px;background:#ffffff;color:#000000;">[CODE: ${code}]</span>`;
+  return `<span class="optical-sheet-code" style="display:inline-block;white-space:nowrap;flex-shrink:0;border:2px solid #000000;padding:0.5px 5px;font-family:monospace;font-size:7.6pt;font-weight:900;letter-spacing:0.3px;background:#ffffff;color:#000000;">[CODE: ${code}]</span>`;
 }
 
 export function renderBwCheckbox(checked: boolean, label: string): string {
@@ -31,26 +32,26 @@ export function renderBwCheckbox(checked: boolean, label: string): string {
 
 export function wrapVocalSheetA4Document(
   innerPageHtml: string,
-  _orientation?: string,
+  orientation: 'landscape' | 'portrait' = 'landscape',
   title = 'Atelier Papier du Chant — O Girador'
 ): string {
+  const isPortrait = orientation === 'portrait';
+  const pageSizeCss = isPortrait ? 'A4 portrait' : 'A4 landscape';
+  const pageMargin = isPortrait ? '8mm' : '7mm';
+  const pageW = isPortrait ? '194mm' : '283mm';
+  const pageH = isPortrait ? '281mm' : '196mm';
+
   return `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8" />
   <title>${title}</title>
   <style>
-    @page { size: A4 landscape; margin: 7mm; }
+    @page { size: ${pageSizeCss}; margin: ${pageMargin}; }
     @media print {
       html, body {
-        width: 283mm;
-        margin: 0 !important;
-        padding: 0 !important;
-        background: #ffffff !important;
-        color: #000000 !important;
-        filter: grayscale(100%) contrast(105%) !important;
-        -webkit-filter: grayscale(100%) contrast(105%) !important;
-        color-scheme: only light !important;
+        width: ${pageW}; margin: 0 !important; padding: 0 !important; background: #ffffff !important; color: #000000 !important;
+        filter: grayscale(100%) contrast(105%) !important; -webkit-filter: grayscale(100%) contrast(105%) !important; color-scheme: only light !important;
       }
       .no-print { display: none !important; }
     }
@@ -60,7 +61,7 @@ export function wrapVocalSheetA4Document(
       filter: grayscale(100%) contrast(105%); -webkit-filter: grayscale(100%) contrast(105%); color-scheme: only light;
     }
     .vocal-sheet-page, .vocal-print-page {
-      position: relative; width: 283mm; max-width: 283mm; height: 196mm; max-height: 196mm;
+      position: relative; width: ${pageW}; max-width: ${pageW}; height: ${pageH}; max-height: ${pageH};
       margin: 0 auto; padding: 3.5mm 4.5mm; border: 2px solid #000000; background: #ffffff; color: #000000;
       display: flex; flex-direction: column; justify-content: flex-start; gap: 2.5mm; overflow: hidden;
       page-break-inside: avoid; break-inside: avoid; page-break-after: always; break-after: page;
@@ -86,7 +87,8 @@ export function buildVocalPaperBatchDocumentHTML(
   options?: Partial<VocalPaperPrintOptions> & { patternNumberingMode?: VocalPatternNumberingMode }
 ): string {
   const clampQty = (v?: number) => Math.max(0, Math.min(20, Number(v ?? 0)));
-  const seqCount = clampQty(cart.sequence), notesCount = clampQty(cart.notes), rhythmCount = clampQty(cart.rhythm), guideCount = clampQty(cart.instructions);
+  const seqCount = clampQty(cart.sequence), notesCount = clampQty(cart.notes), rhythmCount = clampQty(cart.rhythm);
+  const guideCount = clampQty(cart.instructions), tab4eCount = clampQty(cart.tab4e);
   const mode: VocalPatternNumberingMode = options?.patternNumberingMode || (options?.blankPatternLabels ? 'blank' : 'continuous');
   const pages: string[] = [];
   let nextPatNum = options?.startPatternNumber ?? 1;
@@ -103,6 +105,16 @@ export function buildVocalPaperBatchDocumentHTML(
     if (mode === 'continuous') nextPatNum += 6;
   }
   for (let i = 0; i < guideCount; i++) pages.push(renderVocalSheetInstructionsHTML());
+  for (let i = 0; i < tab4eCount; i++) {
+    const startP = mode === 'continuous' ? nextPatNum : 1;
+    const projPatterns = (options as any)?.project?.patterns;
+    const prefillFromProject = Boolean(options?.prefillFromProject || (options as any)?.prefillTab4EFromReference);
+    const prefillPatterns = options?.prefillPatterns || (Array.isArray(projPatterns)
+      ? projPatterns.map((p: any, idx: number) => ({ code: `P${idx + 1}`, lyricsText: p.assignedLyricsText || '', referenceMidiNotes: p.referenceMidiNotes || [] }))
+      : undefined);
+    pages.push(renderVocalSheetTab4EHTML({ ...options, sheetType: 'tab_4e', patternsCount: 5, startPatternNumber: startP, patternNumberingMode: mode, blankPatternLabels: mode === 'blank', prefillFromProject, prefillPatterns }));
+    if (mode === 'continuous') nextPatNum += 5;
+  }
 
   return wrapVocalSheetA4Document(pages.join('\n'), 'landscape', `Lot Atelier Papier (${pages.length} feuilles A4)`);
 }

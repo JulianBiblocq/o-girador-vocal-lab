@@ -16,13 +16,15 @@ interface WaveformOverlayCanvasProps {
   onTrimCommit?: (start: number, end: number) => void;
   onT1OffsetChange?: (t1Sec: number) => void;
   onT1OffsetCommit?: (t1Sec: number) => void;
-  playheadSec: number;
+  playheadSec?: number;
+  getPlayheadSec?: () => number;
   isPlaying: boolean;
 }
 
 export const WaveformOverlayCanvas: React.FC<WaveformOverlayCanvasProps> = ({
   rawPCM, width, height, totalDurationSec, trimStartSec, trimEndSec,
-  t1OffsetSec, onTrimChange, onTrimCommit, onT1OffsetChange, onT1OffsetCommit, playheadSec, isPlaying,
+  t1OffsetSec, onTrimChange, onTrimCommit, onT1OffsetChange, onT1OffsetCommit,
+  playheadSec = -1, getPlayheadSec, isPlaying,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const peaksCacheRef = useRef<Float32Array | null>(null);
@@ -34,13 +36,8 @@ export const WaveformOverlayCanvas: React.FC<WaveformOverlayCanvasProps> = ({
   const { t } = useLanguage();
   const [themeTick, setThemeTick] = React.useState(0);
 
-  useEffect(() => {
-    latestTrimRef.current = { start: trimStartSec, end: trimEndSec };
-  }, [trimStartSec, trimEndSec]);
-
-  useEffect(() => {
-    latestT1Ref.current = t1OffsetSec;
-  }, [t1OffsetSec]);
+  useEffect(() => { latestTrimRef.current = { start: trimStartSec, end: trimEndSec }; }, [trimStartSec, trimEndSec]);
+  useEffect(() => { latestT1Ref.current = t1OffsetSec; }, [t1OffsetSec]);
 
   useEffect(() => {
     const obs = new MutationObserver(() => setThemeTick((v) => v + 1));
@@ -62,27 +59,33 @@ export const WaveformOverlayCanvas: React.FC<WaveformOverlayCanvasProps> = ({
     }
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
+    const curPlayhead = getPlayheadSec ? getPlayheadSec() : playheadSec;
     drawWaveformOverlay(ctx, {
       width, height, dpr, peaks: peaksCacheRef.current, totalDurationSec,
-      trimStartSec, trimEndSec, latencyOffsetMs: 0, playheadSec, isPlaying,
+      trimStartSec, trimEndSec, latencyOffsetMs: 0, playheadSec: curPlayhead, isPlaying,
       trimStartLabel: t('trimStartFlag'),
       trimEndLabel: t('trimEndFlag'),
     });
-  }, [width, height, totalDurationSec, trimStartSec, trimEndSec, playheadSec, isPlaying, t, themeTick]);
+  }, [width, height, totalDurationSec, trimStartSec, trimEndSec, playheadSec, getPlayheadSec, isPlaying, t, themeTick]);
 
-  useEffect(() => { draw(); }, [draw]);
+  useEffect(() => {
+    draw();
+    if (!isPlaying) return;
+    let animId = requestAnimationFrame(function loop() {
+      draw();
+      animId = requestAnimationFrame(loop);
+    });
+    return () => cancelAnimationFrame(animId);
+  }, [draw, isPlaying]);
 
   const handlePointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const xStart = (trimStartSec / totalDurationSec) * width;
     const xEnd = (trimEndSec / totalDurationSec) * width;
-
-    if (x >= xStart - 14 && x <= xStart + 42) {
-      dragModeRef.current = 'start';
-    } else if (x >= xEnd - 42 && x <= xEnd + 14) {
-      dragModeRef.current = 'end';
-    } else if (onT1OffsetChange) {
+    if (x >= xStart - 14 && x <= xStart + 42) dragModeRef.current = 'start';
+    else if (x >= xEnd - 42 && x <= xEnd + 14) dragModeRef.current = 'end';
+    else if (onT1OffsetChange) {
       dragModeRef.current = 't1';
       dragStartXRef.current = e.clientX;
       initialT1SecRef.current = t1OffsetSec;
@@ -95,7 +98,6 @@ export const WaveformOverlayCanvas: React.FC<WaveformOverlayCanvasProps> = ({
     const rect = e.currentTarget.getBoundingClientRect();
     const x = Math.max(0, Math.min(width, e.clientX - rect.left));
     const timeAtX = (x / width) * totalDurationSec;
-
     if (dragModeRef.current === 'start') {
       const nextStart = Math.min(trimEndSec - 0.05, Math.max(0, timeAtX));
       latestTrimRef.current = { start: nextStart, end: trimEndSec };
@@ -105,8 +107,7 @@ export const WaveformOverlayCanvas: React.FC<WaveformOverlayCanvasProps> = ({
       latestTrimRef.current = { start: trimStartSec, end: nextEnd };
       onTrimChange(trimStartSec, nextEnd);
     } else if (dragModeRef.current === 't1' && onT1OffsetChange) {
-      const deltaPx = e.clientX - dragStartXRef.current;
-      const deltaSec = (deltaPx / width) * totalDurationSec;
+      const deltaSec = ((e.clientX - dragStartXRef.current) / width) * totalDurationSec;
       const nextT1 = Math.max(0, Math.min(totalDurationSec, Math.round((initialT1SecRef.current + deltaSec) * 1000) / 1000));
       latestT1Ref.current = nextT1;
       onT1OffsetChange(nextT1);
@@ -114,25 +115,19 @@ export const WaveformOverlayCanvas: React.FC<WaveformOverlayCanvasProps> = ({
   };
 
   const handlePointerEnd = (e: React.PointerEvent<HTMLCanvasElement>) => {
-    if (dragModeRef.current) {
-      const mode = dragModeRef.current;
-      dragModeRef.current = null;
-      try { e.currentTarget.releasePointerCapture(e.pointerId); } catch { /* ignore */ }
-      if (mode === 'start' || mode === 'end') {
-        onTrimCommit?.(latestTrimRef.current.start, latestTrimRef.current.end);
-      } else if (mode === 't1') {
-        onT1OffsetCommit?.(latestT1Ref.current);
-      }
-    }
+    if (!dragModeRef.current) return;
+    const mode = dragModeRef.current;
+    dragModeRef.current = null;
+    try { e.currentTarget.releasePointerCapture(e.pointerId); } catch {}
+    if (mode === 'start' || mode === 'end') onTrimCommit?.(latestTrimRef.current.start, latestTrimRef.current.end);
+    else if (mode === 't1') onT1OffsetCommit?.(latestT1Ref.current);
   };
 
   return (
     <canvas
       ref={canvasRef}
-      onPointerDown={handlePointerDown}
-      onPointerMove={handlePointerMove}
-      onPointerUp={handlePointerEnd}
-      onPointerCancel={handlePointerEnd}
+      onPointerDown={handlePointerDown} onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerEnd} onPointerCancel={handlePointerEnd}
       style={{ width: `${width}px`, height: `${height}px` }}
       className="absolute inset-0 cursor-ew-resize touch-none select-none"
     />

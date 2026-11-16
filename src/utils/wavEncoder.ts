@@ -1,7 +1,7 @@
 /**
  * wavEncoder.ts
- * Utilitaires purs de decoupe avec compensation de latence, filtre coupe-bas,
- * normalisation vocale intelligente -16 dBFS et encodage WAV 16-bit PCM mono.
+ * Utilitaires purs de découpe avec compensation de latence, filtre coupe-bas,
+ * normalisation vocale intelligente -16 dBFS, rééchantillonnage Hermite et encodage WAV 16-bit PCM mono (< 125 lignes).
  */
 import { applyHighPass90Hz } from '../audio/vocalFilterHelper';
 import { applyVocalToneShaping } from '../audio/vocalToneShaper';
@@ -21,10 +21,7 @@ export function extractCompensatedSlice(
   const targetSamples = Math.floor(durationSec * sampleRate);
   const result = new Float32Array(targetSamples);
 
-  const offsetSec = latencyOffsetMs / 1000;
-  const bufferStartSec = trimStartSec - offsetSec;
-  const rawStartSample = Math.floor(bufferStartSec * sampleRate);
-
+  const rawStartSample = Math.floor((trimStartSec - latencyOffsetMs / 1000) * sampleRate);
   const sourceStart = Math.max(0, rawStartSample);
   const sourceEnd = Math.min(rawPCM.length, rawStartSample + targetSamples);
   const destStart = rawStartSample < 0 ? -rawStartSample : 0;
@@ -39,13 +36,9 @@ export function extractCompensatedSlice(
   if (normalizeRMS) normalizeActiveRMS(result, sampleRate);
 
   const fadeInSamples = Math.min(targetSamples, Math.floor(0.01 * sampleRate));
-  for (let i = 0; i < fadeInSamples; i++) result[i] *= (i / fadeInSamples);
-
+  for (let i = 0; i < fadeInSamples; i++) result[i] *= i / fadeInSamples;
   const fadeOutSamples = Math.min(targetSamples, Math.floor(0.03 * sampleRate));
-  for (let i = 0; i < fadeOutSamples; i++) {
-    result[targetSamples - 1 - i] *= (i / fadeOutSamples);
-  }
-
+  for (let i = 0; i < fadeOutSamples; i++) result[targetSamples - 1 - i] *= i / fadeOutSamples;
   return result;
 }
 
@@ -79,40 +72,45 @@ export function createPaddedPreviewBuffer(
   return fullBuffer;
 }
 
-export function audioBufferToWavBase64(pcm: Float32Array, sampleRate: number): string {
-  const numChannels = 1, bitsPerSample = 16;
-  const byteRate = sampleRate * numChannels * (bitsPerSample / 8);
-  const blockAlign = numChannels * (bitsPerSample / 8);
-  const dataSize = pcm.length * (bitsPerSample / 8);
+function resampleHermiteIfNeeded(pcm: Float32Array, srcRate: number, dstRate?: number): { samples: Float32Array; rate: number } {
+  const outRate = dstRate && dstRate > 0 ? dstRate : srcRate;
+  if (!pcm || pcm.length === 0 || srcRate <= 0 || outRate === srcRate) return { samples: pcm, rate: srcRate };
+  const nIn = pcm.length, ratio = srcRate / outRate, nOut = Math.max(1, Math.round(nIn / ratio));
+  const out = new Float32Array(nOut);
+  for (let i = 0; i < nOut; i++) {
+    const pos = i * ratio, idx = Math.floor(pos), t = pos - idx;
+    const y0 = pcm[Math.max(0, idx - 1)], y1 = pcm[Math.min(nIn - 1, idx)];
+    const y2 = pcm[Math.min(nIn - 1, idx + 1)], y3 = pcm[Math.min(nIn - 1, idx + 2)];
+    const c1 = 0.5 * (y2 - y0), c2 = y0 - 2.5 * y1 + 2 * y2 - 0.5 * y3, c3 = 0.5 * (y3 - y0) + 1.5 * (y1 - y2);
+    out[i] = Math.max(-1, Math.min(1, ((c3 * t + c2) * t + c1) * t + y1));
+  }
+  return { samples: out, rate: outRate };
+}
+
+export function encodePcmToWavArrayBuffer(pcm: Float32Array, sampleRate: number, targetSampleRate?: number): ArrayBuffer {
+  const { samples, rate } = resampleHermiteIfNeeded(pcm, sampleRate, targetSampleRate);
+  const dataSize = samples.length * 2;
   const buffer = new ArrayBuffer(44 + dataSize);
   const view = new DataView(buffer);
+  const writeStr = (off: number, str: string) => { for (let i = 0; i < str.length; i++) view.setUint8(off + i, str.charCodeAt(i)); };
 
-  function writeString(offset: number, str: string) {
-    for (let i = 0; i < str.length; i++) view.setUint8(offset + i, str.charCodeAt(i));
-  }
-
-  writeString(0, 'RIFF');
-  view.setUint32(4, 36 + dataSize, true);
-  writeString(8, 'WAVE');
-  writeString(12, 'fmt ');
-  view.setUint32(16, 16, true);
-  view.setUint16(20, 1, true);
-  view.setUint16(22, numChannels, true);
-  view.setUint32(24, sampleRate, true);
-  view.setUint32(28, byteRate, true);
-  view.setUint16(32, blockAlign, true);
-  view.setUint16(34, bitsPerSample, true);
-  writeString(36, 'data');
-  view.setUint32(40, dataSize, true);
+  writeStr(0, 'RIFF'); view.setUint32(4, 36 + dataSize, true); writeStr(8, 'WAVE');
+  writeStr(12, 'fmt '); view.setUint32(16, 16, true); view.setUint16(20, 1, true);
+  view.setUint16(22, 1, true); view.setUint32(24, rate, true);
+  view.setUint32(28, rate * 2, true); view.setUint16(32, 2, true);
+  view.setUint16(34, 16, true); writeStr(36, 'data'); view.setUint32(40, dataSize, true);
 
   let offset = 44;
-  for (let i = 0; i < pcm.length; i++) {
-    const s = Math.max(-1, Math.min(1, pcm[i]));
-    view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+  for (let i = 0; i < samples.length; i++) {
+    const s = Math.max(-1, Math.min(1, samples[i]));
+    view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7fff, true);
     offset += 2;
   }
+  return buffer;
+}
 
-  const bytes = new Uint8Array(buffer);
+export function audioBufferToWavBase64(pcm: Float32Array, sampleRate: number): string {
+  const bytes = new Uint8Array(encodePcmToWavArrayBuffer(pcm, sampleRate));
   let binary = '';
   for (let i = 0; i < bytes.length; i += 8192) {
     binary += String.fromCharCode.apply(null, Array.from(bytes.subarray(i, i + 8192)));

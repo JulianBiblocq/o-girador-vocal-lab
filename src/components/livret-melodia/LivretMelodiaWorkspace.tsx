@@ -1,22 +1,24 @@
 /**
- * LivretMelodiaWorkspace.tsx — Espace de travail Cubase VariAudio du Livret 4 (< 140 lignes).
+ * LivretMelodiaWorkspace.tsx — Espace Piano Roll & VariAudio autour de « A Fita — Boussole » + Worker DSP asynchrone (< 136 lignes).
  */
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { Music, Compass, Loader2 } from 'lucide-react';
 import type { PitchCurvePoint, VocalPackExport, VocalStepData } from '../../types/vocalPack.types';
 import { useToadaProject } from '../../context/ToadaProjectContext';
 import { useStepsHistory, type LivretMelodiaSnapshot } from '../../hooks/useStepsHistory';
 import { useMelodyneAudioProcessor } from '../../hooks/useMelodyneAudioProcessor';
+import { useAsyncTroupePlaybackPcm } from '../../hooks/useAsyncTroupePlaybackPcm';
 import { useLivretMelodiaPlayback } from './useLivretMelodiaPlayback';
 import { buildAllowedPitchClasses, detectBestScaleFromPitchCurve, type ScaleType } from '../../audio/scaleQuantizer';
-import { resolveProjectDualScale, applyDualScaleToProject } from '../../utils/scaleTranspositionHelper';
-import { getOrComputeTroupeTransposedPCM } from '../../audio/formantPreservingPitchShifter';
+import { resolveProjectDualScale } from '../../utils/scaleTranspositionHelper';
 import { downloadToadaPackJson } from '../../utils/toadaPackExporter';
 import { checkPatternIsAligned } from '../common/PatternCompassBar';
-import { AmbitusReminderBanner } from '../common/AmbitusReminderBanner';
 import { useVocalTransportStore } from '../../stores/useVocalTransportStore';
-import { ScaleLockBar } from './ScaleLockBar'; import { PianoRollEditor } from './PianoRollEditor';
-import { MelodicControls } from './MelodicControls'; import { LetraEditorPanel } from './LetraEditorPanel';
-import { MelodiaNextStepFooter } from './MelodiaNextStepFooter'; import { HarmonyProfileSelector } from '../common/HarmonyProfileSelector';
+import { AFitaCompassStrip } from '../fita/AFitaCompassStrip';
+import { PianoRollEditor } from './PianoRollEditor';
+import { MelodicControls } from './MelodicControls';
+import { MelodiaNextStepFooter } from './MelodiaNextStepFooter';
+import { MelodiaAdvancedDrawer } from './MelodiaAdvancedDrawer';
 import { DEFAULT_HARMONY_CONFIG } from '../../types/harmony.types';
 import { moveBrick, setAllBricksMelodynePullPct, type PianoRollTool } from './pianoRollInteractions';
 import { buildUpdatedVocalPackExport, upgradeStalePatternStepsIfNeeded, extractProjectRawLyricsSource } from '../../audio/livretResetHelper';
@@ -31,17 +33,19 @@ export interface LivretMelodiaWorkspaceProps {
 }
 export const LivretMelodiaWorkspace: React.FC<LivretMelodiaWorkspaceProps> = ({
   initialPack, cleanPCM, sampleRate = 44100, totalDurationSec = 4, anacrusisDurationSec = 0, beatsPerMeasure = 4,
-  measuresCount = 2, pitchCurve = [], initialSteps, outputDeviceId, pitchShiftSemitones = 0, onBackToPrise, onPackUpdated, onAnalyzeFullProjectScale,
+  measuresCount = 2, pitchCurve = [], initialSteps, outputDeviceId, pitchShiftSemitones = 0, onBackToPrise, onPackUpdated,
 }) => {
-  const { t, language } = useLanguage(), { activePattern, updatePattern, project, loadProject, updateHarmonyConfig, togglePatternFoldNotes, setAllPatternsFoldNotes } = useToadaProject();
+  const { t, language } = useLanguage(), isBr = language === 'br';
+  const { activePattern, updatePattern, project, loadProject, updateHarmonyConfig, togglePatternFoldNotes, setAllPatternsFoldNotes } = useToadaProject();
   const [activeTool, setActiveTool] = useState<PianoRollTool>('pointer'), [selectedStepIdx, setSelectedStepIdx] = useState<number | null>(null);
+  const [showChordGrid, setShowChordGrid] = useState(false), [smoothingLevel, setSmoothingLevel] = useState(0);
   const rawPitchCurve = useMemo(() => activePattern.rawPitchCurve ?? pitchCurve, [activePattern.rawPitchCurve, pitchCurve]);
   const dualScale = useMemo(() => resolveProjectDualScale(project, language), [project, language]);
   const initialScale = useMemo(() => detectBestScaleFromPitchCurve(rawPitchCurve, project.toadaMeta?.tonaliteChanteeOrigine || project.toadaMeta?.tonaliteDefaut || initialPack.metadata.referencePitch), [rawPitchCurve, project.toadaMeta?.tonaliteChanteeOrigine, project.toadaMeta?.tonaliteDefaut, initialPack.metadata.referencePitch]);
   const hasStoredScale = Boolean(project.sungScaleRoot || project.toadaMeta?.tonaliteDefaut);
   const [tonic, setTonic] = useState(() => hasStoredScale ? dualScale.sungScaleRoot : initialScale.tonic);
   const [scaleType, setScaleType] = useState<ScaleType>(() => hasStoredScale ? dualScale.sungScaleMode : 'chromatic');
-  const [customPitchClasses, setCustomPitchClasses] = useState<number[] | null>(null), [smoothingLevel, setSmoothingLevel] = useState(0);
+  const customPitchClasses = project.customPitchClasses ?? null;
   const transpositionSemitones = dualScale.transpositionSemitones, listenTarget: 'sung' | 'troupe' = project.previewListenTarget ?? (transpositionSemitones !== 0 ? 'troupe' : 'sung');
   const alignedCount = useMemo(() => project.patterns.filter(checkPatternIsAligned).length, [project.patterns]);
   useEffect(() => {
@@ -53,7 +57,7 @@ export const LivretMelodiaWorkspace: React.FC<LivretMelodiaWorkspaceProps> = ({
   const anacLen = hasAnac ? beatsPerMeasure * resPerBeat : 0, t1OffsetSec = hasAnac ? beatsPerMeasure * (60 / (initialPack.metadata.bpm || 88)) : 0.15;
   const activePCM = activePattern.correctedAudioSamples ?? rawPCM, harmonyConfig = project.harmonyConfig ?? DEFAULT_HARMONY_CONFIG;
   const effectivePlayShift = pitchShiftSemitones + (listenTarget === 'troupe' ? transpositionSemitones : 0);
-  const playbackPCM = useMemo(() => (listenTarget === 'troupe' && transpositionSemitones !== 0 ? getOrComputeTroupeTransposedPCM(activePCM, sampleRate, transpositionSemitones) : activePCM), [activePCM, sampleRate, listenTarget, transpositionSemitones]);
+  const { playbackPCM, isDspBusy } = useAsyncTroupePlaybackPcm(activePattern.id, activePCM, sampleRate, listenTarget, transpositionSemitones);
 
   const rawDefaultSteps = initialSteps ?? [...(activePattern.anacrusisSteps || []), ...(activePattern.mainSteps || [])];
   const expectedStepsCount = ((hasAnac ? beatsPerMeasure : 0) + measuresCount * beatsPerMeasure + 1) * resPerBeat;
@@ -62,8 +66,8 @@ export const LivretMelodiaWorkspace: React.FC<LivretMelodiaWorkspaceProps> = ({
     rawDefaultSteps, expectedStepsCount, rawPitchCurve, activePattern, initialPack, beatsPerMeasure, measuresCount, hasAnac, t1OffsetSec, resPerBeat, totalDurationSec, tonic, scaleType, rawPCM, sampleRate, rawTxtCode,
   }), [rawDefaultSteps, expectedStepsCount, rawPitchCurve, activePattern, initialPack, beatsPerMeasure, measuresCount, hasAnac, t1OffsetSec, resPerBeat, totalDurationSec, tonic, scaleType, rawPCM, sampleRate, rawTxtCode]);
 
-  const { regions, selectedRegionId, selectedRegion, displayedCurve, syncMovedBrickRegion, deleteSelected, clearAllRegions, restoreRegions } = useMelodyneAudioProcessor({
-    initialRegions: activePattern.melodyneRegions || [], rawAudio: rawPCM, sampleRate, totalDurationSec, rawPitchCurve, allSteps: defaultSteps,
+  const { regions, selectedRegionId, selectedRegion, displayedCurve, isProcessing: melodyneBusy, syncMovedBrickRegion, deleteSelected, clearAllRegions, restoreRegions } = useMelodyneAudioProcessor({
+    patternId: activePattern.id, initialRegions: activePattern.melodyneRegions || [], rawAudio: rawPCM, sampleRate, totalDurationSec, rawPitchCurve, allSteps: defaultSteps,
     onAudioUpdated: (pcm, updatedRegions) => updatePattern(activePattern.id, { correctedAudioSamples: pcm, melodyneRegions: updatedRegions }),
   });
 
@@ -116,18 +120,12 @@ export const LivretMelodiaWorkspace: React.FC<LivretMelodiaWorkspaceProps> = ({
   useEffect(() => { useVocalTransportStore.getState().setIsPlaying(isPlaying); }, [isPlaying]);
 
   return (
-    <div className="flex flex-col gap-3 w-full">
-      <AmbitusReminderBanner />
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex-1 min-w-[280px]">
-          <ScaleLockBar tonic={tonic} scaleType={scaleType} customPitchClasses={customPitchClasses} pitchCurve={rawPitchCurve} defaultKeyStr={project.toadaMeta?.tonaliteChanteeOrigine || project.toadaMeta?.tonaliteDefaut || initialPack.metadata.referencePitch} transpositionSemitones={transpositionSemitones} listenTarget={listenTarget} onUpdateScale={(ton, st, cust) => { setTonic(ton); setScaleType(st); setCustomPitchClasses(cust); loadProject(applyDualScaleToProject(project, ton, st, transpositionSemitones, activePattern.referencePitch, language)); handleSnapToGreenLine(ton, st, cust); }} onChangeTransposition={(nextSt) => loadProject({ ...applyDualScaleToProject(project, tonic, scaleType === 'chromatic' ? 'natural_minor' : scaleType, nextSt, activePattern.referencePitch, language), previewListenTarget: 'troupe' })} onChangeListenTarget={(target) => loadProject({ ...project, previewListenTarget: target })} onAnalyzeFullProjectScale={onAnalyzeFullProjectScale} />
-        </div>
-        <HarmonyProfileSelector config={harmonyConfig} onChange={updateHarmonyConfig} />
-      </div>
-      <PianoRollEditor allSteps={allSteps} pitchCurve={displayedCurve} rawPitchCurve={rawPitchCurve} totalDurationSec={totalDurationSec} anacrusisDurationSec={anacrusisDurationSec} beatsPerMeasure={beatsPerMeasure} measuresCount={measuresCount} beatResolutions={initialPack.metadata.beatResolutions} seekStartSec={seekStartSec} isPlaying={isPlaying} tonic={tonic} scaleType={scaleType} smoothingLevel={smoothingLevel} canUndo={canUndo} canRedo={canRedo} historyCount={historyCount} allowedPitchClasses={allowedPitchClasses} hasAnacrusis={hasAnac} bpm={initialPack.metadata.bpm} activeTool={activeTool} onSelectTool={setActiveTool} foldNotesView={Boolean(activePattern.foldNotesView)} onToggleFoldNotes={(folded) => { togglePatternFoldNotes(activePattern.id, folded); if (folded) { setPlayMode('voice'); player.setPlayMode('voice', clickEnabled); } }} onApplyFoldToAllPatterns={(folded) => { setAllPatternsFoldNotes(folded); if (folded) { setPlayMode('voice'); player.setPlayMode('voice', clickEnabled); } window.dispatchEvent(new CustomEvent('app-toast', { detail: { type: 'info', message: folded ? `Notes repliées (Rythme) appliquées aux ${project.patterns.length} patterns` : `Notes dépliées (Mélodie) appliquées aux ${project.patterns.length} patterns` } })); }} alignedPatternsCount={alignedCount} totalPatternsCount={project.patterns.length} selectedStepIdx={selectedStepIdx} onSelectStep={setSelectedStepIdx} getPlayheadSec={() => player.getCurrentPlayheadSec()} onSeek={handleSeek} onUndo={undo} onRedo={redo} onSetTonic={(ton) => { setTonic(ton); handleSnapToGreenLine(ton, scaleType, customPitchClasses); }} onSetScaleType={(st) => { setScaleType(st); handleSnapToGreenLine(tonic, st, customPitchClasses); }} onSetSmoothingLevel={setSmoothingLevel} onUpdateSteps={handleUpdateSteps} onBrickMoved={syncMovedBrickRegion} onPlayNotePreview={(m) => player.playNotePreview(m + (listenTarget === 'troupe' ? transpositionSemitones : 0))} onSnapToGreenLine={() => handleSnapToGreenLine(tonic, scaleType, customPitchClasses)} onAnalyzeFullSongMelody={handleAnalyzeFullSongMelody} onReExtractNotes={handleReset} globalVariAudioPct={globalVariAudioPct} onChangeGlobalVariAudioPct={(pct) => { const next = setAllBricksMelodynePullPct(allSteps, pct); commitCurrentSnapshot({ steps: next }); handleUpdateSteps(next, true); }} onPurgeVariAudio={() => { const next = setAllBricksMelodynePullPct(allSteps, 0); commitCurrentSnapshot({ steps: next, melodyneRegions: [] }); clearAllRegions(); handleUpdateSteps(next, true); }} harmonyGrid={activePattern.harmonyGrid} onUpdateHarmonyGrid={(g) => updatePattern(activePattern.id, { harmonyGrid: g })} pitchShiftSemitones={pitchShiftSemitones} patternId={activePattern.id} />
+    <div className="flex flex-col gap-3.5 w-full">
+      <AFitaCompassStrip isPlaying={isPlaying} headerRight={<div className="inline-flex items-center gap-1.5">{(isDspBusy || melodyneBusy) && <span className="px-2 py-0.5 rounded text-[10.5px] font-mono font-bold inline-flex items-center gap-1 cordel-card-sm text-theme-accent"><Loader2 className="w-3 h-3 animate-spin" /><span>{t('dspWorkerBusyBadge')}</span></span>}<button type="button" onClick={() => useVocalTransportStore.getState().setDictationModalOpen(true)} title={t('dialOpenDictationTitle')} className="px-2 py-0.5 rounded text-[11px] font-bold inline-flex items-center gap-1 cursor-pointer cordel-card-sm text-theme-ink hover:border-amber-500/60"><Compass className="w-3 h-3 text-[#9a3412] dark:text-amber-300" /><span>{activePattern.referenceMidiNotes?.length ? t('dialRefNotesBadge', { count: activePattern.referenceMidiNotes.length }) : t('dialOpenDictationBtn')}</span></button><button type="button" onClick={() => setShowChordGrid((v) => !v)} className={`px-2 py-0.5 rounded text-[11px] font-bold inline-flex items-center gap-1 cursor-pointer border ${showChordGrid ? 'bg-theme-wood text-[#f4ecd8] border-amber-500' : 'cordel-card-sm text-theme-ink'}`}><Music className="w-3 h-3" /><span>{isBr ? 'Acordes' : 'Accords'}</span></button></div>} />
+      <PianoRollEditor allSteps={allSteps} pitchCurve={displayedCurve} rawPitchCurve={rawPitchCurve} totalDurationSec={totalDurationSec} anacrusisDurationSec={anacrusisDurationSec} beatsPerMeasure={beatsPerMeasure} measuresCount={measuresCount} beatResolutions={initialPack.metadata.beatResolutions} seekStartSec={seekStartSec} isPlaying={isPlaying} tonic={tonic} scaleType={scaleType} smoothingLevel={smoothingLevel} canUndo={canUndo} canRedo={canRedo} historyCount={historyCount} allowedPitchClasses={allowedPitchClasses} hasAnacrusis={hasAnac} bpm={initialPack.metadata.bpm} activeTool={activeTool} onSelectTool={setActiveTool} foldNotesView={Boolean(activePattern.foldNotesView)} onToggleFoldNotes={(folded) => { togglePatternFoldNotes(activePattern.id, folded); if (folded) { setPlayMode('voice'); player.setPlayMode('voice', clickEnabled); } }} onApplyFoldToAllPatterns={(folded) => { setAllPatternsFoldNotes(folded); if (folded) { setPlayMode('voice'); player.setPlayMode('voice', clickEnabled); } }} alignedPatternsCount={alignedCount} totalPatternsCount={project.patterns.length} selectedStepIdx={selectedStepIdx} onSelectStep={setSelectedStepIdx} getPlayheadSec={() => player.getCurrentPlayheadSec()} onSeek={handleSeek} onUndo={undo} onRedo={redo} onSetTonic={(ton) => { setTonic(ton); handleSnapToGreenLine(ton, scaleType, customPitchClasses); }} onSetScaleType={(st) => { setScaleType(st); handleSnapToGreenLine(tonic, st, customPitchClasses); }} onSetSmoothingLevel={setSmoothingLevel} onUpdateSteps={handleUpdateSteps} onBrickMoved={syncMovedBrickRegion} onPlayNotePreview={(m) => player.playNotePreview(m + (listenTarget === 'troupe' ? transpositionSemitones : 0))} onSnapToGreenLine={() => handleSnapToGreenLine(tonic, scaleType, customPitchClasses)} onAnalyzeFullSongMelody={handleAnalyzeFullSongMelody} onReExtractNotes={handleReset} globalVariAudioPct={globalVariAudioPct} onChangeGlobalVariAudioPct={(pct) => { const next = setAllBricksMelodynePullPct(allSteps, pct); commitCurrentSnapshot({ steps: next }); handleUpdateSteps(next, true); }} onPurgeVariAudio={() => { const next = setAllBricksMelodynePullPct(allSteps, 0); commitCurrentSnapshot({ steps: next, melodyneRegions: [] }); clearAllRegions(); handleUpdateSteps(next, true); }} harmonyGrid={activePattern.harmonyGrid} onUpdateHarmonyGrid={(g) => updatePattern(activePattern.id, { harmonyGrid: g })} showChordGrid={showChordGrid} pitchShiftSemitones={pitchShiftSemitones} patternId={activePattern.id} />
       <MelodicControls isPlaying={isPlaying} playMode={playMode} clickEnabled={clickEnabled} onTogglePlay={handleTogglePlay} onResetSeek={() => handleSeek(0)} onSetPlayMode={(m) => { setPlayMode(m); player.setPlayMode(m, clickEnabled); }} onToggleClick={() => setClickEnabled((p) => { const n = !p; player.setPlayMode(playMode, n); return n; })} onBackToPrise={onBackToPrise ?? (() => useVocalTransportStore.getState().setActiveLivret('prise'))} onDownloadPack={() => { const u = buildUpdatedVocalPackExport(initialPack, allSteps, hasAnac, beatsPerMeasure, displayedCurve); onPackUpdated?.(u); downloadToadaPackJson(project, u); }} />
-      <LetraEditorPanel allSteps={allSteps} onUpdateSteps={handleUpdateSteps} onCommitHistory={() => commitCurrentSnapshot()} />
       <MelodiaNextStepFooter />
+      <MelodiaAdvancedDrawer allSteps={allSteps} rawPitchCurve={rawPitchCurve} rawPCM={rawPCM} sampleRate={sampleRate} bpm={initialPack.metadata.bpm} beatsPerMeasure={beatsPerMeasure} resPerBeat={resPerBeat} hasAnac={hasAnac} totalDurationSec={totalDurationSec} allowedPitchClasses={allowedPitchClasses} isPlaying={isPlaying} getPlayheadSec={() => player.getCurrentPlayheadSec()} harmonyConfig={harmonyConfig} onUpdateHarmonyConfig={updateHarmonyConfig} onStartVoicePlayback={() => { if (!isPlaying) handleTogglePlay(); }} onStopVoicePlayback={() => { player.stop(); setIsPlaying(false); }} onUpdateSteps={handleUpdateSteps} onCommitHistory={() => commitCurrentSnapshot()} />
     </div>
   );
 };

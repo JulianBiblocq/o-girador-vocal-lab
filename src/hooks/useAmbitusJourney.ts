@@ -69,13 +69,18 @@ export function useAmbitusJourney(t: (k: any, p?: any) => string) {
 
     const liveArr: ValidationSample[] = [];
     const sweepDur = 6.0;
+    let lastUiUpdateMs = 0;
     const stopFn = await engine.startListening((tick) => {
-      setSweepProgress(Math.round(tick.progressRatio * 100));
-      setSweepRemainingSec(Math.max(0, +(sweepDur * (1 - tick.progressRatio)).toFixed(1)));
-      setSweepLiveMidi(tick.pitchMidi);
       if (tick.pitchMidi > 0) {
         liveArr.push({ timeSec: +(tick.progressRatio * sweepDur).toFixed(2), pitchMidi: tick.pitchMidi, rms: tick.rms });
-        setSamples([...liveArr]);
+      }
+      const nowMs = performance.now();
+      if (nowMs - lastUiUpdateMs >= 95) {
+        lastUiUpdateMs = nowMs;
+        setSweepProgress(Math.round(tick.progressRatio * 100));
+        setSweepRemainingSec(Math.max(0, +(sweepDur * (1 - tick.progressRatio)).toFixed(1)));
+        setSweepLiveMidi(tick.pitchMidi);
+        if (tick.pitchMidi > 0) setSamples([...liveArr]);
       }
     }, sweepDur);
 

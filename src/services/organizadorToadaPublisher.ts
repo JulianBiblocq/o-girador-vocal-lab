@@ -14,6 +14,7 @@ import { resolveProjectDualScale } from '../utils/scaleTranspositionHelper';
 import { resolveActiveTenantContext } from './activeTenantResolver';
 import { sanitizePitchHz } from '../utils/pitchHzContract';
 import { VOCAL_GRAMMAR_VERSION, normalizeToadaTextV1ToV2 } from '../utils/vocalGrammarV2';
+import { syncLightweightToadaPackToFirestore } from './lightToadaPackPublisher';
 
 export interface OrganizadorPublishPayloadResult {
   payload: Record<string, any>;
@@ -108,7 +109,7 @@ export async function syncTonaliteToOrganizadorFirestore(project: ToadaProject):
 export async function publishToadaToOrganizador(
   project: ToadaProject,
   groupId?: string | null
-): Promise<{ success: boolean; documentId: string; bpm: number; scaleLabel: string }> {
+): Promise<{ success: boolean; documentId: string; cantadorToadaId: string; bpm: number; scaleLabel: string }> {
   const resolvedCtx = await resolveActiveTenantContext(groupId || project.toadaMeta?.groupId);
   const effectiveGroupId = resolvedCtx.groupId || groupId || project.toadaMeta?.groupId || '';
   if (!effectiveGroupId) throw new Error('Aucun groupe actif identifié pour publier dans Organizador.');
@@ -118,11 +119,13 @@ export async function publishToadaToOrganizador(
   if (existingDocId) {
     try {
       await updateDoc(doc(db, 'documents', existingDocId), payload);
-      return { success: true, documentId: existingDocId, bpm: resolvedBpm, scaleLabel: formattedScaleLabel };
+      await syncLightweightToadaPackToFirestore(project, existingDocId, targetGroupId).catch(() => {});
+      return { success: true, documentId: existingDocId, cantadorToadaId: project.id, bpm: resolvedBpm, scaleLabel: formattedScaleLabel };
     } catch {}
   }
 
   const newDocRef = await addDoc(collection(db, 'documents'), payload);
+  await syncLightweightToadaPackToFirestore(project, newDocRef.id, targetGroupId).catch(() => {});
   const repId = project.toadaMeta?.repertoireId;
   if (repId) {
     try {
@@ -132,7 +135,7 @@ export async function publishToadaToOrganizador(
       });
     } catch {}
   }
-  return { success: true, documentId: newDocRef.id, bpm: resolvedBpm, scaleLabel: formattedScaleLabel };
+  return { success: true, documentId: newDocRef.id, cantadorToadaId: project.id, bpm: resolvedBpm, scaleLabel: formattedScaleLabel };
 }
 
 export const publishProjectToOrganizador = publishToadaToOrganizador;
