@@ -4,6 +4,7 @@
  * Déduit les temps 1..4 par continuité modulo 4, découpe Anacrouse (1..3T) / Mesures (1M/2M) / Chute (+T1) et fusionne les lignes P__ identiques.
  */
 import type { ScannedVocalPatternBlock, ScannedVocalStepCell } from '../../types/vocalPaperWorkshop.types';
+import { decodeChantTab4EBlock } from './vocalTab4EDecoder';
 
 function parseBeatDigit(val: number | string | null | undefined): number | null {
   if (val === null || val === undefined) return null;
@@ -30,7 +31,8 @@ export type CanonicalScannedPatternBlock = ScannedVocalPatternBlock & {
   anacrusisBeatsCount?: number;
 };
 
-export function normalizeScannedBlockToCanonical(block: CanonicalScannedPatternBlock): CanonicalScannedPatternBlock {
+export function normalizeScannedBlockToCanonical(rawInputBlock: CanonicalScannedPatternBlock): CanonicalScannedPatternBlock {
+  const block = decodeChantTab4EBlock(rawInputBlock) as CanonicalScannedPatternBlock;
   const hasFreeGrid = Array.isArray(block.beatNumbers) || Array.isArray(block.cells);
   if (!hasFreeGrid) {
     const hasAna = Array.isArray(block.anacrusisCells) && block.anacrusisCells.some(isCellActive);

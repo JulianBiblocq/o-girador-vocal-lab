@@ -58,7 +58,7 @@ export function buildSequencerToadaPackDocument(
   })).map((pat) => ({ ...pat, sungKey: pat.sungKey ?? dualScale.sungScaleLabel, troupeKey: pat.troupeKey ?? dualScale.troupeScaleLabel, transpositionSemitones: pat.transpositionSemitones ?? shiftSt, ignoreMelodyPitch }));
 
   return {
-    id: toadaId, title: project.title, groupId, bpm: projectBpm, timeSignature: project.timeSignature,
+    id: toadaId, documentId: project.toadaMeta?.id, title: project.title, groupId, bpm: projectBpm, timeSignature: project.timeSignature,
     grammarVersion: VOCAL_GRAMMAR_VERSION, referencePitchHz, recordedAtPitchHz, sequenciadorExportMode, ignoreMelodyPitch,
     sungKey: dualScale.sungScaleLabel, troupeKey: dualScale.troupeScaleLabel,
     sungScaleRoot: dualScale.sungScaleRoot, sungScaleMode: dualScale.sungScaleMode, troupeScaleRoot: dualScale.troupeScaleRoot, transpositionSemitones: shiftSt,

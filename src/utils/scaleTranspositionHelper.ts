@@ -38,12 +38,14 @@ export function computeSemitoneDistance(fromTonic: string, toTonic: string): num
 export function transposeVocalSteps(steps: VocalStepData[], semitones: number): VocalStepData[] {
   const st = Math.round(semitones || 0);
   return (steps || []).map((s, idx) => {
-    const isTie = s.note === '───' || Boolean((s as any).isTie);
+    const isDashTie = s.note === '───';
+    const isIsoTie = isDashTie || Boolean((s as any).isTie && !s.isMelisma && s.syllable !== '_');
     const sMidi = s.midiNumber ?? 0;
-    if (!s.active || isTie || sMidi <= 0 || st === 0) {
-      return { ...s, stepIndex: idx, ...(isTie ? { isTie: true } : {}) };
+    if (!s.active || sMidi <= 0 || st === 0) {
+      return { ...s, stepIndex: idx, ...(isIsoTie ? { isTie: true } : {}) };
     }
     const nextMidi = Math.max(24, Math.min(108, sMidi + st));
+    if (isIsoTie) return { ...s, stepIndex: idx, isTie: true, note: '───', midiNumber: nextMidi };
     return { ...s, stepIndex: idx, midiNumber: nextMidi, note: midiToNoteName(nextMidi) };
   });
 }
@@ -57,8 +59,8 @@ export function resolveProjectDualScale(
   const transpositionSemitones = clampTranspositionSemitones(
     project.transpositionSemitones ?? project.toadaMeta?.transpositionSemitones ?? 0
   );
-  const parsedOrig = parseStoredScaleString(project.toadaMeta?.tonaliteChanteeOrigine);
-  const parsedDefaut = parseStoredScaleString(project.toadaMeta?.tonaliteDefaut);
+  const parsedOrig = parseStoredScaleString(project.toadaMeta?.tonaliteChanteeOrigine || (project as any).sungKey);
+  const parsedDefaut = parseStoredScaleString(project.toadaMeta?.tonaliteDefaut || (project as any).troupeKey);
   const hasAnalysis = Boolean(fallbackAnalysis && fallbackAnalysis.analyzedPatternsCount > 0);
 
   let sungScaleRoot = project.sungScaleRoot || project.toadaMeta?.sungScaleRoot || '';

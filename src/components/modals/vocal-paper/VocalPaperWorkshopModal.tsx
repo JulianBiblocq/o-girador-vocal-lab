@@ -1,15 +1,18 @@
 /**
  * VocalPaperWorkshopModal.tsx
- * Modale principale « Atelier Papier du Chant » (Cantador) à 3 onglets :
- * 1. Imprimer Feuilles Vierges (100 % N&B), 2. Photographier / Importer mes Feuilles (Multi-pages), 3. Guide & Conventions (< 120 lignes).
+ * Modale principale « Atelier Papier du Chant » (Cantador) à 4 onglets :
+ * 1. Imprimer Feuilles Vierges (5 modèles), 2. Photographier / Importer, 3. Partitions & MuseScore, 4. Guide (< 130 lignes).
  */
-import React, { useState } from 'react';
-import { Printer, Camera, BookOpen, Compass, X } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Printer, Camera, BookOpen, Compass, Music, X } from 'lucide-react';
 import type { ToadaProject } from '../../../types/toadaProject.types';
 import { useVocalTransportStore } from '../../../stores/useVocalTransportStore';
 import { useLanguage } from '../../../i18n/LanguageContext';
 import { VocalPaperPrintTab, triggerVocalSheetPrint } from './VocalPaperPrintTab';
 import { VocalPaperImportTab } from './VocalPaperImportTab';
+import { VocalScoreAndMusicXmlTab } from './VocalScoreAndMusicXmlTab';
+
+export type VocalPaperModalTabId = 'print' | 'import' | 'scores' | 'guide';
 
 export interface VocalPaperWorkshopModalProps {
   isOpen: boolean;
@@ -17,14 +20,20 @@ export interface VocalPaperWorkshopModalProps {
   project: ToadaProject;
   groupId?: string | null;
   isBr?: boolean;
+  initialTab?: VocalPaperModalTabId;
   onProjectUpdate: (updated: ToadaProject) => void;
 }
 
 export const VocalPaperWorkshopModal: React.FC<VocalPaperWorkshopModalProps> = ({
-  isOpen, onClose, project, groupId, isBr = false, onProjectUpdate,
+  isOpen, onClose, project, groupId, isBr = false, initialTab = 'print', onProjectUpdate,
 }) => {
   const { t } = useLanguage();
-  const [activeTab, setActiveTab] = useState<'print' | 'import' | 'guide'>('print');
+  const [activeTab, setActiveTab] = useState<VocalPaperModalTabId>(initialTab);
+
+  useEffect(() => {
+    if (isOpen) setActiveTab(initialTab);
+  }, [isOpen, initialTab]);
+
   if (!isOpen) return null;
 
   return (
@@ -39,8 +48,8 @@ export const VocalPaperWorkshopModal: React.FC<VocalPaperWorkshopModalProps> = (
               </h2>
               <p className="text-[11px] opacity-80">
                 {isBr
-                  ? 'Impressão A4 monocromática e leitura óptica multi-páginas (Sequência + Padrões P1..Pn)'
-                  : 'Impression A4 monochrome & lecture optique multi-pages (Séquence + Patterns neutres P1..Pn)'}
+                  ? 'Grides A4 (5 folhas), Partituras 2 Pautas, MuseScore (.musicxml) e leitura óptica'
+                  : 'Grilles A4 (5 feuilles), Partitions 2 Portées, MuseScore (.musicxml) & lecture optique'}
               </p>
             </div>
           </div>
@@ -59,21 +68,28 @@ export const VocalPaperWorkshopModal: React.FC<VocalPaperWorkshopModalProps> = (
             className={`px-3 py-1.5 rounded-t font-bold flex items-center gap-1.5 cursor-pointer border-b-2 ${activeTab === 'print' ? 'border-[#9a3412] bg-amber-500/15 text-[#9a3412] dark:text-amber-300' : 'border-transparent opacity-75 hover:opacity-100'}`}
           >
             <Printer className="w-3.5 h-3.5" />
-            <span>{isBr ? '1. Imprimir Folhas em Branco (100 % P&B)' : '1. Imprimer Feuilles Vierges (100 % N&B)'}</span>
+            <span>{isBr ? '1. Imprimir Folhas (5 modelos)' : '1. Imprimer Feuilles (5 modèles)'}</span>
           </button>
           <button
             type="button" onClick={() => setActiveTab('import')}
             className={`px-3 py-1.5 rounded-t font-bold flex items-center gap-1.5 cursor-pointer border-b-2 ${activeTab === 'import' ? 'border-[#9a3412] bg-amber-500/15 text-[#9a3412] dark:text-amber-300' : 'border-transparent opacity-75 hover:opacity-100'}`}
           >
             <Camera className="w-3.5 h-3.5" />
-            <span>{isBr ? '2. Fotografar / Importar Folhas (Multi-páginas)' : '2. Photographier / Importer mes Feuilles (Multi-pages)'}</span>
+            <span>{isBr ? '2. Fotografar / Importar' : '2. Photographier / Importer'}</span>
+          </button>
+          <button
+            type="button" onClick={() => setActiveTab('scores')}
+            className={`px-3 py-1.5 rounded-t font-bold flex items-center gap-1.5 cursor-pointer border-b-2 ${activeTab === 'scores' ? 'border-[#9a3412] bg-amber-500/15 text-[#9a3412] dark:text-amber-300' : 'border-transparent opacity-75 hover:opacity-100'}`}
+          >
+            <Music className="w-3.5 h-3.5" />
+            <span>{t('paperTabScoresMusicXml')}</span>
           </button>
           <button
             type="button" onClick={() => setActiveTab('guide')}
             className={`px-3 py-1.5 rounded-t font-bold flex items-center gap-1.5 cursor-pointer border-b-2 ${activeTab === 'guide' ? 'border-[#9a3412] bg-amber-500/15 text-[#9a3412] dark:text-amber-300' : 'border-transparent opacity-75 hover:opacity-100'}`}
           >
             <BookOpen className="w-3.5 h-3.5" />
-            <span>{isBr ? '3. Guia e Convenções de Escrita' : "3. Guide & Conventions d'écriture"}</span>
+            <span>{t('paperTabGuideConventions')}</span>
           </button>
         </div>
 
@@ -85,6 +101,7 @@ export const VocalPaperWorkshopModal: React.FC<VocalPaperWorkshopModalProps> = (
               onProjectImported={(updated) => { onProjectUpdate(updated); onClose(); }}
             />
           )}
+          {activeTab === 'scores' && <VocalScoreAndMusicXmlTab project={project} />}
           {activeTab === 'guide' && (
             <div className="space-y-3 text-xs font-mono">
               <div className="cordel-card-sm p-3 rounded space-y-1.5">
@@ -92,8 +109,8 @@ export const VocalPaperWorkshopModal: React.FC<VocalPaperWorkshopModalProps> = (
                 <p>Les feuilles de patterns sont neutres (<b>[Pattern : P1]</b>). C&apos;est sur la <b>Feuille 1 (Séquence)</b> que vous attribuez qui chante à chaque mesure sur les 2 lignes superposées : <b>Pux : P1 - P2 - X - X - P5</b> / <b>Cor : X - X - P3 - P4 - P5</b> (même code P5/P5 = Unisson ; P5/P6 = 2 voix ; X/X = [PAUSE 1M]).</p>
               </div>
               <div className="cordel-card-sm p-3 rounded space-y-1.5">
-                <div className="font-black uppercase text-[#9a3412] dark:text-amber-300">2. Syllabes, Tirets &quot;-&quot;, Élisions &quot;E&apos;O&quot; &amp; Tenues &quot;───►&quot;</div>
-                <p>Écrivez en <b>MAJUSCULES BÂTONS</b>. Ajoutez un tiret <b>-</b> en fin de case pour souder deux syllabes d&apos;un même mot (ex: <b>VO-</b> | <b>VÓ</b> | <b>FA-</b> | <b>LOU</b>). Unissez les élisions par une apostrophe dans la même case (<b>E&apos;O</b>). Tracez <b>───►</b> pour prolonger une tenue.</p>
+                <div className="font-black uppercase text-[#9a3412] dark:text-amber-300">2. Syllabes, Tirets &quot;-&quot;, Élisions &quot;E&apos;O&quot; &amp; Tablature 4 Étages (CHANT-TAB-4E)</div>
+                <p>Écrivez en <b>MAJUSCULES BÂTONS</b>. Sur la Feuille 5 (<b>CHANT-TAB-4E</b>), soudez les durées à cheval sur 2 temps avec <b>/</b> (ex: <b>4/4</b>), notez <b>0</b> pour un silence et <b>_</b> pour un mélisme.</p>
               </div>
               <div className="cordel-card-sm p-3 rounded flex items-center justify-between gap-2">
                 <div>

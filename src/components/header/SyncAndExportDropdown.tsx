@@ -1,6 +1,7 @@
 /**
  * SyncAndExportDropdown.tsx
- * Menu unifié [Sync & Export ▾] : Sauvegarde (Ctrl+S), Sync/Push Organizador, Push Sequenciador, Atelier Papier, Lexique & WAV (< 138 lignes).
+ * Menu unifié [Sync & Export ▾] : Sauvegarde (Ctrl+S), Sync/Push Organizador, Push Sequenciador,
+ * Atelier Papier, Partitions & MuseScore (.musicxml), Lexique & WAV (< 138 lignes).
  */
 import React, { useState, useRef, useEffect } from 'react';
 import type { ToadaProject } from '../../types/toadaProject.types';
@@ -12,8 +13,8 @@ import { exportFullSongWav } from '../../utils/fullSongWavExporter';
 import { alertAsync } from '../../stores/useCordelDialogStore';
 import { useActionFeedback, CORDEL_SUCCESS_BTN_CLASS } from '../common/useActionFeedback';
 import { SamambaiaRepertoireTargetModal } from '../modals/SamambaiaRepertoireTargetModal';
-import { VocalPaperWorkshopModal } from '../modals/vocal-paper/VocalPaperWorkshopModal';
-import { Save, RefreshCw, CloudUpload, FileText, Printer, BookOpen, Music, ChevronDown, Check, Loader2 } from 'lucide-react';
+import { VocalPaperWorkshopModal, type VocalPaperModalTabId } from '../modals/vocal-paper/VocalPaperWorkshopModal';
+import { Save, RefreshCw, CloudUpload, FileText, Printer, BookOpen, Music, FileSpreadsheet, ChevronDown, Check, Loader2 } from 'lucide-react';
 
 interface Props {
   project: ToadaProject;
@@ -30,7 +31,7 @@ export const SyncAndExportDropdown: React.FC<Props> = ({
   const dropdownRef = useRef<HTMLDivElement>(null);
   const [isOpen, setIsOpen] = useState(false);
   const [isSeqModalOpen, setIsSeqModalOpen] = useState(false);
-  const [isPaperOpen, setIsPaperOpen] = useState(false);
+  const [paperModalTab, setPaperModalTab] = useState<VocalPaperModalTabId | null>(null);
   const { isSaving, isSavedSuccess, handleSave } = useManualSave(project, isUserLoggedIn);
   const feedback = useActionFeedback(isBr ? '✓ Salvo !' : '✓ Synchronisé !');
 
@@ -60,7 +61,10 @@ export const SyncAndExportDropdown: React.FC<Props> = ({
     setIsOpen(false);
     await feedback.trigger(async () => {
       const res = await publishToadaToOrganizador(project, project.toadaMeta?.groupId || groupId || undefined);
-      onProjectUpdate({ ...project, toadaMeta: { ...(project.toadaMeta || {}), id: res.documentId, bpmDefaut: res.bpm, tonaliteDefaut: res.scaleLabel } });
+      onProjectUpdate({
+        ...project,
+        toadaMeta: { ...(project.toadaMeta || {}), id: res.documentId, cantadorToadaId: res.cantadorToadaId, bpmDefaut: res.bpm, tonaliteDefaut: res.scaleLabel },
+      });
       const label = isBr ? '✓ Organizador atualizado !' : '✓ Organizador mis à jour !';
       await alertAsync({
         title: label,
@@ -102,14 +106,25 @@ export const SyncAndExportDropdown: React.FC<Props> = ({
           <button type="button" onClick={handlePushOrganizador} className="w-full p-1.5 text-left flex items-center gap-2 hover:bg-[var(--cordel-subcard-bg)] rounded cursor-pointer"><FileText className="w-3.5 h-3.5 text-theme-accent shrink-0" /><span className="font-bold">{t('syncPushOrganizadorItem')}</span></button>
           <button type="button" onClick={() => { setIsOpen(false); setIsSeqModalOpen(true); }} className="w-full p-1.5 text-left flex items-center gap-2 hover:bg-[var(--cordel-subcard-bg)] rounded cursor-pointer"><CloudUpload className="w-3.5 h-3.5 text-theme-accent shrink-0" /><span className="font-bold">{t('syncPushSequenciadorItem')}</span></button>
           <div className="my-0.5 border-t border-[var(--cordel-border-sub)]" />
-          <button type="button" onClick={() => { setIsOpen(false); setIsPaperOpen(true); }} className="w-full p-1.5 text-left flex items-center gap-2 hover:bg-[var(--cordel-subcard-bg)] rounded cursor-pointer"><Printer className="w-3.5 h-3.5 text-[#9a3412] dark:text-amber-300 shrink-0" /><span className="font-bold">{t('syncPaperWorkshopItem')}</span></button>
+          <button type="button" onClick={() => { setIsOpen(false); setPaperModalTab('print'); }} className="w-full p-1.5 text-left flex items-center gap-2 hover:bg-[var(--cordel-subcard-bg)] rounded cursor-pointer"><Printer className="w-3.5 h-3.5 text-[#9a3412] dark:text-amber-300 shrink-0" /><span className="font-bold">{t('syncPaperWorkshopItem')}</span></button>
+          <button type="button" onClick={() => { setIsOpen(false); setPaperModalTab('scores'); }} className="w-full p-1.5 text-left flex items-center gap-2 hover:bg-[var(--cordel-subcard-bg)] rounded cursor-pointer"><FileSpreadsheet className="w-3.5 h-3.5 text-[#0f766e] dark:text-teal-300 shrink-0" /><span className="font-bold">{t('syncScoresMusicXmlItem')}</span></button>
           <button type="button" onClick={() => { setIsOpen(false); onOpenLexicon(); }} className="w-full p-1.5 text-left flex items-center justify-between gap-2 hover:bg-[var(--cordel-subcard-bg)] rounded cursor-pointer"><span className="flex items-center gap-2"><BookOpen className="w-3.5 h-3.5 text-theme-accent shrink-0" /><strong className="font-bold">{t('syncLexiconItem')}</strong></span>{lexCount > 0 && <span className="px-1.5 text-[10px] bg-theme-wood text-[var(--cordel-on-primary)] rounded font-bold">{lexCount}</span>}</button>
           <button type="button" onClick={handleWav} className="w-full p-1.5 text-left flex items-center gap-2 hover:bg-[var(--cordel-subcard-bg)] rounded cursor-pointer"><Music className="w-3.5 h-3.5 text-theme-accent shrink-0" /><span className="font-bold">{t('syncExportWavItem')}</span></button>
         </div>
       )}
 
       <SamambaiaRepertoireTargetModal isOpen={isSeqModalOpen} onClose={() => setIsSeqModalOpen(false)} />
-      {isPaperOpen && <VocalPaperWorkshopModal isOpen={isPaperOpen} onClose={() => setIsPaperOpen(false)} project={project} groupId={groupId} isBr={isBr} onProjectUpdate={onProjectUpdate} />}
+      {paperModalTab && (
+        <VocalPaperWorkshopModal
+          isOpen={Boolean(paperModalTab)}
+          initialTab={paperModalTab}
+          onClose={() => setPaperModalTab(null)}
+          project={project}
+          groupId={groupId}
+          isBr={isBr}
+          onProjectUpdate={onProjectUpdate}
+        />
+      )}
     </div>
   );
 };

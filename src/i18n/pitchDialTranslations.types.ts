@@ -37,4 +37,20 @@ export interface PitchDialTranslations {
   stepResetSyllablesBtn: string;
   gameEnduranceRecordLabel: string;
   gameArrowPlantedBadge: string;
+  syncScoresMusicXmlItem: string;
+  paperTabScoresMusicXml: string;
+  paperTabGuideConventions: string;
+  scoreModeTwoStaves: string;
+  scoreModeTab4E: string;
+  scoreClefLabel: string;
+  scoreClefAuto: string;
+  scoreClefTreble: string;
+  scoreClefTreble8vb: string;
+  scoreNotationLabel: string;
+  scoreNotationLetters: string;
+  scoreNotationSolfege: string;
+  scoreNotationDegrees: string;
+  scoreBtnPrintPortrait: string;
+  scoreBtnExportMusicXml: string;
+  scoreMusicXmlExportedToast: string;
 }

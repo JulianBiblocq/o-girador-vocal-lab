@@ -1,9 +1,9 @@
 /**
  * VocalPaperPrintTab.tsx
- * Onglet « Panier d'Impression Multi-Feuilles (A4 Paysage 100 % N&B) » de l'Atelier Papier du Chant (< 142 lignes).
- * Permet de choisir la quantité (0..20) de chaque modèle, le mode de numérotation ([P__], continu, par feuille), d'afficher un aperçu et d'imprimer tout le lot.
+ * Onglet « Panier d'Impression Multi-Feuilles (5 modèles A4 Paysage 100 % N&B) » de l'Atelier Papier du Chant (< 138 lignes).
+ * Conserve les 4 feuilles existantes + ajoute en Feuille 5 la Tablature 4 Étages ([CODE: CHANT-TAB-4E]) avec option de pré-remplissage.
  */
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Printer, Eye, X, Check } from 'lucide-react';
 import type { VocalSheetType, VocalPaperPrintOptions, VocalPaperCartQuantities, VocalPatternNumberingMode } from '../../../types/vocalPaperWorkshop.types';
 import type { ToadaProject } from '../../../types/toadaProject.types';
@@ -12,6 +12,7 @@ import { renderVocalSheetSequenceHTML } from '../../../utils/vocal-paper/vocalSh
 import { renderVocalSheetNotesHTML } from '../../../utils/vocal-paper/vocalSheetNotesTemplate';
 import { renderVocalSheetRhythmHTML } from '../../../utils/vocal-paper/vocalSheetRhythmTemplate';
 import { renderVocalSheetInstructionsHTML } from '../../../utils/vocal-paper/vocalSheetInstructionsTemplate';
+import { renderVocalSheetTab4EHTML } from '../../../utils/vocal-paper/vocalSheetTab4ETemplate';
 import { resolveProjectDualScale } from '../../../utils/scaleTranspositionHelper';
 
 export interface VocalPaperPrintTabProps {
@@ -19,7 +20,7 @@ export interface VocalPaperPrintTabProps {
   isBr?: boolean;
 }
 
-const CART_ITEMS: Array<{
+export const VOCAL_PAPER_CART_ITEMS: Array<{
   key: keyof VocalPaperCartQuantities; sheetType: VocalSheetType; code: string;
   titleFr: string; titleBr: string; descFr: string; descBr: string;
 }> = [
@@ -27,6 +28,7 @@ const CART_ITEMS: Array<{
   { key: 'notes', sheetType: 'notes_1m', code: 'CHANT-NOTES-1M', titleFr: 'Feuille 2 — Patterns & Notes (Clavier + Syllabes)', titleBr: 'Folha 2 — Padrões e Notas (Teclado + Sílabas)', descFr: '3 systèmes A4 Paysage (8 temps libres) : Piano Roll A (bas) ➔ G# (haut), TEMPS, OCT & SYLLABES.', descBr: '3 sistemas A4 Paisagem (8 tempos livres) : Piano Roll A (baixo) ➔ G# (alto), TEMPOS, OCT e SÍLABAS.' },
   { key: 'rhythm', sheetType: 'rhythm_only', code: 'CHANT-RYTHME', titleFr: 'Feuille 3 — Paroles & Rythme seul', titleBr: 'Folha 3 — Letra e Ritmo', descFr: '6 systèmes A4 Paysage (32 subdivisions) : bande TEMPS libre, RYTHME (5.5mm) + SYLLABES ouverte.', descBr: '6 sistemas A4 Paisagem (32 subdivisões) : faixa TEMPOS livre, RITMO (5.5mm) + SÍLABAS aberta.' },
   { key: 'instructions', sheetType: 'instructions', code: 'CHANT-GUIDE', titleFr: 'Feuille 4 — Guide & Instructions', titleBr: 'Folha 4 — Guia e Instruções', descFr: 'Mémo illustré A4 Paysage : grille 8 temps libres, traits (───), tirets "-" et élisions.', descBr: 'Resumo ilustrado A4 Paisagem : grade 8 tempos livres, traços (───), hífens "-" e elisões.' },
+  { key: 'tab4e', sheetType: 'tab_4e', code: 'CHANT-TAB-4E', titleFr: 'Feuille 5 — Tablature 4 Étages', titleBr: 'Folha 5 — Tablatura 4 Níveis', descFr: '4 systèmes A4 Paysage (4 bandes : TEMPS / SUBDIVISIONS soudées "/" / NOTES ou 0 / SYLLABES et _).', descBr: '4 sistemas A4 Paisagem (4 faixas : TEMPOS / SUBDIVISÕES soldadas "/" / NOTAS ou 0 / SÍLABAS e _).' },
 ];
 
 export function renderSingleSheetPreviewHTML(options: VocalPaperPrintOptions): string {
@@ -35,6 +37,7 @@ export function renderSingleSheetPreviewHTML(options: VocalPaperPrintOptions): s
   if (options.sheetType === 'sequence') inner = renderVocalSheetSequenceHTML(options);
   else if (options.sheetType === 'notes_1m' || options.sheetType === 'notes_2m') inner = renderVocalSheetNotesHTML({ ...options, patternsCount: 3, blankPatternLabels: isBlank });
   else if (options.sheetType === 'rhythm_only') inner = renderVocalSheetRhythmHTML({ ...options, patternsCount: 6, blankPatternLabels: isBlank });
+  else if (options.sheetType === 'tab_4e') inner = renderVocalSheetTab4EHTML({ ...options, patternsCount: 4, blankPatternLabels: isBlank });
   else inner = renderVocalSheetInstructionsHTML();
   return wrapVocalSheetA4Document(inner, 'landscape', `Aperçu — ${options.sheetType}`);
 }
@@ -45,17 +48,23 @@ export function triggerVocalSheetPrint(options: VocalPaperPrintOptions): void {
 
 export const VocalPaperPrintTab: React.FC<VocalPaperPrintTabProps> = ({ project, isBr = false }) => {
   const dual = resolveProjectDualScale(project, isBr ? 'br' : 'fr');
-  const [cart, setCart] = useState<VocalPaperCartQuantities>({ sequence: 1, notes: 3, rhythm: 1, instructions: 0 });
+  const [cart, setCart] = useState<VocalPaperCartQuantities>({ sequence: 1, notes: 3, rhythm: 1, instructions: 0, tab4e: 0 });
   const [numberingMode, setNumberingMode] = useState<VocalPatternNumberingMode>('blank');
   const [prefillHeader, setPrefillHeader] = useState(true);
+  const [prefillTab4E, setPrefillTab4E] = useState(false);
   const [previewSheet, setPreviewSheet] = useState<VocalSheetType | null>(null);
 
+  const prefillPatterns = useMemo(() => (project.patterns || []).map((p, idx) => ({
+    code: `P${idx + 1}`, lyricsText: p.assignedLyricsText || '', referenceMidiNotes: p.referenceMidiNotes || [],
+  })), [project.patterns]);
+
   const setQty = (key: keyof VocalPaperCartQuantities, val: number) => setCart((prev) => ({ ...prev, [key]: Math.max(0, Math.min(20, val)) }));
-  const totalPages = cart.sequence + cart.notes + cart.rhythm + cart.instructions;
-  const baseOpts = {
+  const totalPages = cart.sequence + cart.notes + cart.rhythm + cart.instructions + (cart.tab4e ?? 0);
+  const baseOpts: Partial<VocalPaperPrintOptions> = {
     title: prefillHeader ? project.title : '', bpm: prefillHeader ? project.bpm : undefined,
     timeSignature: project.timeSignature || '4/4', sungKey: prefillHeader ? dual.sungScaleLabel : '',
     troupeKey: prefillHeader ? dual.troupeScaleLabel : '', patternNumberingMode: numberingMode, blankPatternLabels: numberingMode === 'blank',
+    prefillFromProject: prefillTab4E, prefillPatterns,
   };
   const handlePrintBatch = () => {
     if (totalPages > 0) printViaInvisibleIframe(buildVocalPaperBatchDocumentHTML(cart, baseOpts), `Lot Atelier Papier (${totalPages} feuilles A4 Paysage)`);
@@ -64,16 +73,18 @@ export const VocalPaperPrintTab: React.FC<VocalPaperPrintTabProps> = ({ project,
   return (
     <div className="space-y-2.5 text-xs font-mono">
       <div className="cordel-card-sm p-2.5 rounded flex flex-wrap items-center justify-between gap-2">
-        <label className="inline-flex items-center gap-2 font-bold cursor-pointer">
-          <input type="checkbox" checked={prefillHeader} onChange={(e) => setPrefillHeader(e.target.checked)} className="accent-[#9a3412]" />
-          <span>{isBr ? `Pré-preencher cabeçalho (${project.title} • ${project.bpm} BPM)` : `Pré-remplir l'en-tête (${project.title} • ${project.bpm} BPM)`}</span>
-        </label>
+        <div className="flex flex-wrap items-center gap-3">
+          <label className="inline-flex items-center gap-1.5 font-bold cursor-pointer">
+            <input type="checkbox" checked={prefillHeader} onChange={(e) => setPrefillHeader(e.target.checked)} className="accent-[#9a3412]" />
+            <span>{isBr ? `Pré-preencher cabeçalho (${project.title})` : `Pré-remplir l'en-tête (${project.title})`}</span>
+          </label>
+          <label className="inline-flex items-center gap-1.5 font-bold cursor-pointer">
+            <input type="checkbox" checked={prefillTab4E} onChange={(e) => setPrefillTab4E(e.target.checked)} className="accent-[#9a3412]" />
+            <span>{isBr ? 'Pré-preencher letra/notas na Folha 5' : 'Pré-remplir paroles / notes réf. sur Feuille 5'}</span>
+          </label>
+        </div>
         <div className="flex flex-wrap items-center gap-2">
-          {([
-            ['blank', isBr ? 'Deixar [ P__ ] vazio' : 'Laisser [ P__ ] vierge (numérotation libre à la main)'],
-            ['continuous', isBr ? 'Numerar em contínuo (P1..Pn)' : 'Numéroter en continu sur tout le lot (P1, P2, P3... Pn)'],
-            ['per_sheet', isBr ? 'Numerar P1..P3 por folha' : 'Numéroter P1..P3 par feuille'],
-          ] as const).map(([mode, label]) => (
+          {([['blank', isBr ? '[ P__ ] vazio' : '[ P__ ] vierge'], ['continuous', isBr ? 'Contínuo (P1..Pn)' : 'Continu (P1..Pn)'], ['per_sheet', isBr ? 'Por folha' : 'Par feuille']] as const).map(([mode, label]) => (
             <label key={mode} className="inline-flex items-center gap-1 font-bold cursor-pointer">
               <input type="radio" name="patNumMode" checked={numberingMode === mode} onChange={() => setNumberingMode(mode)} className="accent-[#9a3412]" />
               <span className="text-[11px]">{label}</span>
@@ -83,15 +94,12 @@ export const VocalPaperPrintTab: React.FC<VocalPaperPrintTabProps> = ({ project,
       </div>
 
       <div className="space-y-2">
-        {CART_ITEMS.map((item) => {
-          const qty = cart[item.key];
+        {VOCAL_PAPER_CART_ITEMS.map((item) => {
+          const qty = cart[item.key] ?? 0;
           return (
             <div key={item.key} className={`p-2.5 rounded border-2 flex flex-wrap items-center justify-between gap-2 transition-all ${qty > 0 ? 'border-[#9a3412] bg-amber-500/10' : 'border-[var(--cordel-border-sub)] bg-[var(--cordel-surface)] opacity-80'}`}>
               <div className="min-w-[220px] flex-1">
-                <div className="flex items-center gap-2 font-bold">
-                  <span>{isBr ? item.titleBr : item.titleFr}</span>
-                  <span className="px-1.5 py-0.2 text-[10px] border border-current rounded">[{item.code}]</span>
-                </div>
+                <div className="flex items-center gap-2 font-bold"><span>{isBr ? item.titleBr : item.titleFr}</span><span className="px-1.5 py-0.2 text-[10px] border border-current rounded">[{item.code}]</span></div>
                 <p className="text-[10.5px] opacity-80 mt-0.5">{isBr ? item.descBr : item.descFr}</p>
               </div>
               <div className="flex flex-wrap items-center gap-1.5">
@@ -125,13 +133,9 @@ export const VocalPaperPrintTab: React.FC<VocalPaperPrintTabProps> = ({ project,
       )}
 
       <div className="flex flex-wrap items-center justify-between gap-2 p-2.5 rounded bg-amber-500/10 border border-amber-500/40">
-        <div className="flex items-center gap-2 text-[11px] font-bold">
-          <Check className="w-4 h-4 text-emerald-700 dark:text-emerald-400 shrink-0" />
-          <span>{isBr ? 'Abertura direta em A4 Paisagem • 100 % P&B monocromático.' : 'Ouverture directe en A4 Paysage • 100 % N&B monochrome strict.'}</span>
-        </div>
+        <div className="flex items-center gap-2 text-[11px] font-bold"><Check className="w-4 h-4 text-emerald-700 dark:text-emerald-400 shrink-0" /><span>{isBr ? 'Abertura direta em A4 Paisagem • 100 % P&B monocromático.' : 'Ouverture directe en A4 Paysage • 100 % N&B monochrome strict.'}</span></div>
         <button type="button" disabled={totalPages <= 0} onClick={handlePrintBatch} className="px-3.5 py-1.5 rounded bg-[#9a3412] hover:bg-[#7c2d12] disabled:opacity-40 text-white font-bold flex items-center gap-1.5 cursor-pointer">
-          <Printer className="w-4 h-4" />
-          <span>{isBr ? `Imprimir lote selecionado (${totalPages} folha(s) A4 Paisagem)` : `Imprimer le lot sélectionné (${totalPages} feuille${totalPages > 1 ? 's' : ''} A4 Paysage)`}</span>
+          <Printer className="w-4 h-4" /><span>{isBr ? `Imprimir lote selecionado (${totalPages} folha(s) A4 Paisagem)` : `Imprimer le lot sélectionné (${totalPages} feuille${totalPages > 1 ? 's' : ''} A4 Paysage)`}</span>
         </button>
       </div>
     </div>
