@@ -1,7 +1,7 @@
 /**
  * VocalPaperPrintTab.tsx
- * Onglet « Panier d'Impression Multi-Feuilles (5 modèles A4 Paysage 100 % N&B) » de l'Atelier Papier du Chant (< 138 lignes).
- * Conserve les 4 feuilles existantes + ajoute en Feuille 5 la Tablature 4 Étages ([CODE: CHANT-TAB-4E]) avec option de pré-remplissage.
+ * Onglet « Panier d'Impression Multi-Feuilles (5 modèles A4 Paysage 100 % N&B) » de l'Atelier Papier du Chant (< 142 lignes).
+ * Contraste Jour / Nuit Cordel strict sur les cartes sélectionnées (qty > 0), les cartes à 0 et le bandeau récapitulatif.
  */
 import React, { useState, useMemo } from 'react';
 import { Printer, Eye, X, Check } from 'lucide-react';
@@ -15,10 +15,7 @@ import { renderVocalSheetInstructionsHTML } from '../../../utils/vocal-paper/voc
 import { renderVocalSheetTab4EHTML } from '../../../utils/vocal-paper/vocalSheetTab4ETemplate';
 import { resolveProjectDualScale } from '../../../utils/scaleTranspositionHelper';
 
-export interface VocalPaperPrintTabProps {
-  project: ToadaProject;
-  isBr?: boolean;
-}
+export interface VocalPaperPrintTabProps { project: ToadaProject; isBr?: boolean; }
 
 export const VOCAL_PAPER_CART_ITEMS: Array<{
   key: keyof VocalPaperCartQuantities; sheetType: VocalSheetType; code: string;
@@ -33,12 +30,11 @@ export const VOCAL_PAPER_CART_ITEMS: Array<{
 
 export function renderSingleSheetPreviewHTML(options: VocalPaperPrintOptions): string {
   const isBlank = Boolean(options.blankPatternLabels || options.patternNumberingMode === 'blank');
-  let inner = '';
-  if (options.sheetType === 'sequence') inner = renderVocalSheetSequenceHTML(options);
-  else if (options.sheetType === 'notes_1m' || options.sheetType === 'notes_2m') inner = renderVocalSheetNotesHTML({ ...options, patternsCount: 3, blankPatternLabels: isBlank });
-  else if (options.sheetType === 'rhythm_only') inner = renderVocalSheetRhythmHTML({ ...options, patternsCount: 6, blankPatternLabels: isBlank });
-  else if (options.sheetType === 'tab_4e') inner = renderVocalSheetTab4EHTML({ ...options, patternsCount: 4, blankPatternLabels: isBlank });
-  else inner = renderVocalSheetInstructionsHTML();
+  const inner = options.sheetType === 'sequence' ? renderVocalSheetSequenceHTML(options)
+    : options.sheetType === 'notes_1m' || options.sheetType === 'notes_2m' ? renderVocalSheetNotesHTML({ ...options, patternsCount: 3, blankPatternLabels: isBlank })
+    : options.sheetType === 'rhythm_only' ? renderVocalSheetRhythmHTML({ ...options, patternsCount: 6, blankPatternLabels: isBlank })
+    : options.sheetType === 'tab_4e' ? renderVocalSheetTab4EHTML({ ...options, patternsCount: 4, blankPatternLabels: isBlank })
+    : renderVocalSheetInstructionsHTML();
   return wrapVocalSheetA4Document(inner, 'landscape', `Aperçu — ${options.sheetType}`);
 }
 
@@ -50,70 +46,55 @@ export const VocalPaperPrintTab: React.FC<VocalPaperPrintTabProps> = ({ project,
   const dual = resolveProjectDualScale(project, isBr ? 'br' : 'fr');
   const [cart, setCart] = useState<VocalPaperCartQuantities>({ sequence: 1, notes: 3, rhythm: 1, instructions: 0, tab4e: 0 });
   const [numberingMode, setNumberingMode] = useState<VocalPatternNumberingMode>('blank');
-  const [prefillHeader, setPrefillHeader] = useState(true);
-  const [prefillTab4E, setPrefillTab4E] = useState(false);
+  const [prefillHeader, setPrefillHeader] = useState(true), [prefillTab4E, setPrefillTab4E] = useState(false);
   const [previewSheet, setPreviewSheet] = useState<VocalSheetType | null>(null);
-
-  const prefillPatterns = useMemo(() => (project.patterns || []).map((p, idx) => ({
-    code: `P${idx + 1}`, lyricsText: p.assignedLyricsText || '', referenceMidiNotes: p.referenceMidiNotes || [],
-  })), [project.patterns]);
-
+  const prefillPatterns = useMemo(() => (project.patterns || []).map((p, idx) => ({ code: `P${idx + 1}`, lyricsText: p.assignedLyricsText || '', referenceMidiNotes: p.referenceMidiNotes || [] })), [project.patterns]);
   const setQty = (key: keyof VocalPaperCartQuantities, val: number) => setCart((prev) => ({ ...prev, [key]: Math.max(0, Math.min(20, val)) }));
   const totalPages = cart.sequence + cart.notes + cart.rhythm + cart.instructions + (cart.tab4e ?? 0);
   const baseOpts: Partial<VocalPaperPrintOptions> = {
-    title: prefillHeader ? project.title : '', bpm: prefillHeader ? project.bpm : undefined,
-    timeSignature: project.timeSignature || '4/4', sungKey: prefillHeader ? dual.sungScaleLabel : '',
-    troupeKey: prefillHeader ? dual.troupeScaleLabel : '', patternNumberingMode: numberingMode, blankPatternLabels: numberingMode === 'blank',
-    prefillFromProject: prefillTab4E, prefillPatterns,
+    title: prefillHeader ? project.title : '', bpm: prefillHeader ? project.bpm : undefined, timeSignature: project.timeSignature || '4/4',
+    sungKey: prefillHeader ? dual.sungScaleLabel : '', troupeKey: prefillHeader ? dual.troupeScaleLabel : '',
+    patternNumberingMode: numberingMode, blankPatternLabels: numberingMode === 'blank', prefillFromProject: prefillTab4E, prefillPatterns,
   };
-  const handlePrintBatch = () => {
-    if (totalPages > 0) printViaInvisibleIframe(buildVocalPaperBatchDocumentHTML(cart, baseOpts), `Lot Atelier Papier (${totalPages} feuilles A4 Paysage)`);
-  };
+  const handlePrintBatch = () => { if (totalPages > 0) printViaInvisibleIframe(buildVocalPaperBatchDocumentHTML(cart, baseOpts), `Lot Atelier Papier (${totalPages} feuilles A4 Paysage)`); };
 
   return (
     <div className="space-y-2.5 text-xs font-mono">
-      <div className="cordel-card-sm p-2.5 rounded flex flex-wrap items-center justify-between gap-2">
+      <div className="p-2.5 rounded border border-[#9a3412]/30 dark:border-[#4a392d] bg-[#efe6d0] dark:bg-[#211a15] text-[#1c1613] dark:text-[#f5ebd6] flex flex-wrap items-center justify-between gap-2 select-none">
         <div className="flex flex-wrap items-center gap-3">
-          <label className="inline-flex items-center gap-1.5 font-bold cursor-pointer">
-            <input type="checkbox" checked={prefillHeader} onChange={(e) => setPrefillHeader(e.target.checked)} className="accent-[#9a3412]" />
-            <span>{isBr ? `Pré-preencher cabeçalho (${project.title})` : `Pré-remplir l'en-tête (${project.title})`}</span>
-          </label>
-          <label className="inline-flex items-center gap-1.5 font-bold cursor-pointer">
-            <input type="checkbox" checked={prefillTab4E} onChange={(e) => setPrefillTab4E(e.target.checked)} className="accent-[#9a3412]" />
-            <span>{isBr ? 'Pré-preencher letra/notas na Folha 5' : 'Pré-remplir paroles / notes réf. sur Feuille 5'}</span>
-          </label>
+          <label className="inline-flex items-center gap-1.5 font-bold cursor-pointer"><input type="checkbox" checked={prefillHeader} onChange={(e) => setPrefillHeader(e.target.checked)} className="accent-[#9a3412]" /><span>{isBr ? `Pré-preencher cabeçalho (${project.title})` : `Pré-remplir l'en-tête (${project.title})`}</span></label>
+          <label className="inline-flex items-center gap-1.5 font-bold cursor-pointer"><input type="checkbox" checked={prefillTab4E} onChange={(e) => setPrefillTab4E(e.target.checked)} className="accent-[#9a3412]" /><span>{isBr ? 'Pré-preencher letra/notas na Folha 5' : 'Pré-remplir paroles / notes réf. sur Feuille 5'}</span></label>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {([['blank', isBr ? '[ P__ ] vazio' : '[ P__ ] vierge'], ['continuous', isBr ? 'Contínuo (P1..Pn)' : 'Continu (P1..Pn)'], ['per_sheet', isBr ? 'Por folha' : 'Par feuille']] as const).map(([mode, label]) => (
-            <label key={mode} className="inline-flex items-center gap-1 font-bold cursor-pointer">
-              <input type="radio" name="patNumMode" checked={numberingMode === mode} onChange={() => setNumberingMode(mode)} className="accent-[#9a3412]" />
-              <span className="text-[11px]">{label}</span>
-            </label>
+            <label key={mode} className="inline-flex items-center gap-1 font-bold cursor-pointer"><input type="radio" name="patNumMode" checked={numberingMode === mode} onChange={() => setNumberingMode(mode)} className="accent-[#9a3412]" /><span className="text-[11px]">{label}</span></label>
           ))}
         </div>
       </div>
 
       <div className="space-y-2">
         {VOCAL_PAPER_CART_ITEMS.map((item) => {
-          const qty = cart[item.key] ?? 0;
+          const qty = cart[item.key] ?? 0, active = qty > 0;
+          const cardCls = active ? 'bg-[#efe4cc] border-[#9a3412] text-[#1c1613] dark:bg-[#2a1f18] dark:border-[#c2410c] dark:text-[#f5ebd6]' : 'bg-[#f8f2e4] border-[#cbbba0] text-[#3a2e26] dark:bg-[#1b1511] dark:border-[#3d2f25] dark:text-[#d6c8b2]';
+          const badgeCls = active ? 'bg-[#faf5e8] text-[#1c1613] border-[#9a3412]/55 dark:bg-[#16120e] dark:text-[#f5ebd6] dark:border-[#c2410c]/70' : 'bg-[#efe6d0] text-[#4a3b31] border-[#b5a48b] dark:bg-[#14100d] dark:text-[#cbbba0] dark:border-[#4a392d]';
           return (
-            <div key={item.key} className={`p-2.5 rounded border-2 flex flex-wrap items-center justify-between gap-2 transition-all ${qty > 0 ? 'border-[#9a3412] bg-amber-500/10' : 'border-[var(--cordel-border-sub)] bg-[var(--cordel-surface)] opacity-80'}`}>
+            <div key={item.key} className={`p-2.5 rounded border-2 flex flex-wrap items-center justify-between gap-2 transition-colors ${cardCls}`}>
               <div className="min-w-[220px] flex-1">
-                <div className="flex items-center gap-2 font-bold"><span>{isBr ? item.titleBr : item.titleFr}</span><span className="px-1.5 py-0.2 text-[10px] border border-current rounded">[{item.code}]</span></div>
-                <p className="text-[10.5px] opacity-80 mt-0.5">{isBr ? item.descBr : item.descFr}</p>
+                <div className="flex items-center gap-2 font-bold"><span>{isBr ? item.titleBr : item.titleFr}</span><span className={`px-1.5 py-0.2 text-[10px] border rounded font-bold ${badgeCls}`}>[{item.code}]</span></div>
+                <p className={`text-[10.5px] mt-0.5 ${active ? 'text-[#4a3b31] dark:text-[#cbbba0]' : 'text-[#5c4b3e] dark:text-[#9c8c76]'}`}>{isBr ? item.descBr : item.descFr}</p>
               </div>
-              <div className="flex flex-wrap items-center gap-1.5">
-                <div className="inline-flex items-center border border-[var(--cordel-border-sub)] rounded overflow-hidden bg-[var(--cordel-surface)]">
-                  <button type="button" onClick={() => setQty(item.key, qty - 1)} className="px-2 py-1 font-black hover:bg-black/10 cursor-pointer">-</button>
+              <div className="flex flex-wrap items-center gap-1.5 select-none">
+                <div className="inline-flex items-center border border-[#9a3412]/40 dark:border-[#5c4333] rounded overflow-hidden bg-[#faf5e8] dark:bg-[#16120e] text-[#1c1613] dark:text-[#f5ebd6]">
+                  <button type="button" onClick={() => setQty(item.key, qty - 1)} className="px-2 py-1 font-black hover:bg-[#e5d5b5] dark:hover:bg-[#36281f] cursor-pointer">-</button>
                   <span className="w-8 text-center font-black">{qty}</span>
-                  <button type="button" onClick={() => setQty(item.key, qty + 1)} className="px-2 py-1 font-black hover:bg-black/10 cursor-pointer">+</button>
+                  <button type="button" onClick={() => setQty(item.key, qty + 1)} className="px-2 py-1 font-black hover:bg-[#e5d5b5] dark:hover:bg-[#36281f] cursor-pointer">+</button>
                 </div>
                 <div className="inline-flex items-center gap-1">
                   {[0, 1, 3, 6].map((preset) => (
-                    <button key={preset} type="button" onClick={() => setQty(item.key, preset)} className={`px-1.5 py-0.5 rounded text-[10px] font-bold border cursor-pointer ${qty === preset ? 'bg-[#9a3412] text-white border-[#9a3412]' : 'border-[var(--cordel-border-sub)] bg-[var(--cordel-surface)]'}`}>{preset}</button>
+                    <button key={preset} type="button" onClick={() => setQty(item.key, preset)} className={`px-1.5 py-0.5 rounded text-[10px] font-bold border cursor-pointer transition-colors ${qty === preset ? 'bg-[#9a3412] dark:bg-[#c2410c] text-white border-[#9a3412] dark:border-[#c2410c]' : 'border-[#bfa98a] dark:border-[#4a392d] bg-[#faf5e8] dark:bg-[#16120e] text-[#1c1613] dark:text-[#cbbba0] hover:bg-[#e5d5b5] dark:hover:bg-[#2a1f18]'}`}>{preset}</button>
                   ))}
                 </div>
-                <button type="button" onClick={() => setPreviewSheet(previewSheet === item.sheetType ? null : item.sheetType)} className="px-2 py-1 rounded cordel-btn font-bold flex items-center gap-1 cursor-pointer">
+                <button type="button" onClick={() => setPreviewSheet(previewSheet === item.sheetType ? null : item.sheetType)} className="px-2 py-1 rounded border border-[#9a3412]/45 dark:border-[#5c4333] bg-[#faf5e8] dark:bg-[#16120e] text-[#1c1613] dark:text-[#f5ebd6] hover:bg-[#9a3412] hover:text-white dark:hover:bg-[#c2410c] font-bold flex items-center gap-1 cursor-pointer transition-colors">
                   <Eye className="w-3.5 h-3.5" /><span>{isBr ? 'Prévia' : 'Aperçu'}</span>
                 </button>
               </div>
@@ -123,18 +104,18 @@ export const VocalPaperPrintTab: React.FC<VocalPaperPrintTabProps> = ({ project,
       </div>
 
       {previewSheet && (
-        <div className="p-2 rounded border-2 border-[#9a3412] bg-white text-black space-y-1.5">
-          <div className="flex items-center justify-between font-bold text-[11px]">
+        <div className="p-2 rounded border-2 border-[#9a3412] bg-white text-black space-y-1.5 select-none">
+          <div className="flex items-center justify-between font-bold text-[11px] bg-white text-black">
             <span>{isBr ? 'Pré-visualização A4 Paisagem (100 % P&B)' : 'Aperçu A4 Paysage (100 % Noir & Blanc)'} — {previewSheet}</span>
-            <button type="button" onClick={() => setPreviewSheet(null)} className="px-1.5 py-0.5 rounded border border-black font-bold flex items-center gap-1 cursor-pointer"><X className="w-3 h-3" /><span>Fermer</span></button>
+            <button type="button" onClick={() => setPreviewSheet(null)} className="px-2 py-0.5 rounded border border-black bg-stone-100 hover:bg-stone-200 text-black font-bold flex items-center gap-1 cursor-pointer"><X className="w-3 h-3" /><span>{isBr ? 'Fechar' : 'Fermer'}</span></button>
           </div>
-          <iframe title="Aperçu feuille A4 Paysage" srcDoc={renderSingleSheetPreviewHTML({ ...baseOpts, sheetType: previewSheet })} className="w-full h-64 border border-black rounded bg-white" />
+          <iframe title="Aperçu feuille A4 Paysage" srcDoc={renderSingleSheetPreviewHTML({ ...baseOpts, sheetType: previewSheet })} className="w-full h-64 border border-black rounded bg-white text-black" />
         </div>
       )}
 
-      <div className="flex flex-wrap items-center justify-between gap-2 p-2.5 rounded bg-amber-500/10 border border-amber-500/40">
-        <div className="flex items-center gap-2 text-[11px] font-bold"><Check className="w-4 h-4 text-emerald-700 dark:text-emerald-400 shrink-0" /><span>{isBr ? 'Abertura direta em A4 Paisagem • 100 % P&B monocromático.' : 'Ouverture directe en A4 Paysage • 100 % N&B monochrome strict.'}</span></div>
-        <button type="button" disabled={totalPages <= 0} onClick={handlePrintBatch} className="px-3.5 py-1.5 rounded bg-[#9a3412] hover:bg-[#7c2d12] disabled:opacity-40 text-white font-bold flex items-center gap-1.5 cursor-pointer">
+      <div className="flex flex-wrap items-center justify-between gap-2 p-2.5 rounded bg-[#efe4cc] text-[#1c1613] border border-[#9a3412]/40 dark:bg-[#241c16] dark:text-[#f5ebd6] dark:border-[#c2410c]/50">
+        <div className="flex items-center gap-2 text-[11px] font-bold"><Check className="w-4 h-4 text-emerald-800 dark:text-emerald-400 shrink-0" /><span>{isBr ? 'Abertura direta em A4 Paisagem • 100 % P&B monocromático.' : 'Ouverture directe en A4 Paysage • 100 % N&B monochrome strict.'}</span></div>
+        <button type="button" disabled={totalPages <= 0} onClick={handlePrintBatch} className="select-none px-3.5 py-1.5 rounded bg-[#9a3412] hover:bg-[#7c2d12] dark:bg-[#c2410c] dark:hover:bg-[#ea580c] disabled:opacity-40 text-white font-bold flex items-center gap-1.5 cursor-pointer">
           <Printer className="w-4 h-4" /><span>{isBr ? `Imprimir lote selecionado (${totalPages} folha(s) A4 Paisagem)` : `Imprimer le lot sélectionné (${totalPages} feuille${totalPages > 1 ? 's' : ''} A4 Paysage)`}</span>
         </button>
       </div>

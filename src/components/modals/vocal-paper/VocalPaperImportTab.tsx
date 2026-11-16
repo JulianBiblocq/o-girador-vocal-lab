@@ -1,7 +1,7 @@
 /**
  * VocalPaperImportTab.tsx
- * Onglet « Photographier / Importer mes Feuilles (Multi-pages) » de l'Atelier Papier du Chant (< 138 lignes).
- * Inclut le guidage et verrouillage orthographique par la fiche existante d'Organizador (sélection ou détection auto).
+ * Onglet « Photographier / Importer mes Feuilles (Multi-pages) » de l'Atelier Papier du Chant (< 142 lignes).
+ * Contraste Jour / Nuit Cordel intégral sans texte fantôme.
  */
 import React, { useEffect, useRef, useState } from 'react';
 import { Camera, Plus, Trash2, CheckCircle2, RefreshCw, Key, Upload } from 'lucide-react';
@@ -24,6 +24,9 @@ export interface VocalPaperImportTabProps {
   onProjectImported: (updated: ToadaProject) => void;
 }
 
+const INPUT_CLS = 'px-2 py-1 rounded border border-[#9a3412]/35 dark:border-[#5c4333] bg-[#faf5e8] dark:bg-[#16120e] text-[#1c1613] dark:text-[#f5ebd6] font-bold';
+const PANEL_CLS = 'p-2 rounded border border-[#9a3412]/30 dark:border-[#4a392d] bg-[#efe6d0] dark:bg-[#211a15] text-[#1c1613] dark:text-[#f5ebd6]';
+
 export const VocalPaperImportTab: React.FC<VocalPaperImportTabProps> = ({ project, groupId, isBr = false, onProjectImported }) => {
   const dual = resolveProjectDualScale(project, isBr ? 'br' : 'fr');
   const fileRef = useRef<HTMLInputElement>(null);
@@ -35,12 +38,10 @@ export const VocalPaperImportTab: React.FC<VocalPaperImportTabProps> = ({ projec
   const [bpm, setBpm] = useState(project.bpm || 85);
   const [sungKey, setSungKey] = useState(dual.sungScaleLabel || 'Do Majeur');
   const [troupeKey, setTroupeKey] = useState(dual.troupeScaleLabel || 'Do Majeur');
-  const [syncOrganizador, setSyncOrganizador] = useState(false);
-  const [syncSequenciador, setSyncSequenciador] = useState(false);
+  const [syncOrganizador, setSyncOrganizador] = useState(false), [syncSequenciador, setSyncSequenciador] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
   const [scanResult, setScanResult] = useState<VocalPaperBatchScanResult | null>(null);
-  const [statusMsg, setStatusMsg] = useState<string | null>(null);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [statusMsg, setStatusMsg] = useState<string | null>(null), [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [showKeyInput, setShowKeyInput] = useState(() => !getStoredOpticalApiKey());
   const [apiKeyDraft, setApiKeyDraft] = useState(() => getStoredOpticalApiKey() || '');
 
@@ -105,37 +106,37 @@ export const VocalPaperImportTab: React.FC<VocalPaperImportTabProps> = ({ projec
 
   return (
     <div className="space-y-2.5 text-xs font-mono">
-      <div className="cordel-card-sm p-2 rounded flex flex-wrap items-center justify-between gap-2">
+      <div className={`${PANEL_CLS} flex flex-wrap items-center justify-between gap-2`}>
         <span className="font-bold text-[10px] uppercase">{isBr ? 'Referência Organizador (Trava Ortográfica) :' : 'Fiche de référence Organizador (Verrouillage orthographique) :'}</span>
-        <select value={selectedDocId} onChange={(e) => handleSelectOrganizadorDoc(e.target.value)} className="px-2 py-1 rounded border border-[var(--cordel-border-sub)] bg-[var(--cordel-surface)] font-bold">
+        <select value={selectedDocId} onChange={(e) => handleSelectOrganizadorDoc(e.target.value)} className={INPUT_CLS}>
           <option value="auto">{isBr ? 'Detecção automática pelo título' : 'Détection automatique par le titre'}</option>
           {orgDocs.map((d) => <option key={d.id} value={d.id}>{d.titre} ({d.bpmDefaut || 88} BPM)</option>)}
         </select>
       </div>
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 cordel-card-sm p-2 rounded">
-        <label className="flex flex-col gap-0.5"><span className="font-bold text-[10px]">TITRE TOADA</span><input value={title} onChange={(e) => setTitle(e.target.value)} className="px-2 py-1 rounded border border-[var(--cordel-border-sub)] bg-[var(--cordel-surface)] font-bold" /></label>
-        <label className="flex flex-col gap-0.5"><span className="font-bold text-[10px]">TEMPO (BPM)</span><input type="number" min={35} max={220} value={bpm} onChange={(e) => setBpm(Number(e.target.value) || 85)} className="px-2 py-1 rounded border border-[var(--cordel-border-sub)] bg-[var(--cordel-surface)] font-bold" /></label>
-        <label className="flex flex-col gap-0.5"><span className="font-bold text-[10px]">CHANTÉ EN</span><input value={sungKey} onChange={(e) => setSungKey(e.target.value)} className="px-2 py-1 rounded border border-[var(--cordel-border-sub)] bg-[var(--cordel-surface)] font-bold" /></label>
-        <label className="flex flex-col gap-0.5"><span className="font-bold text-[10px]">TONALITÉ TROUPE</span><input value={troupeKey} onChange={(e) => setTroupeKey(e.target.value)} className="px-2 py-1 rounded border border-[var(--cordel-border-sub)] bg-[var(--cordel-surface)] font-bold" /></label>
+      <div className={`grid grid-cols-2 sm:grid-cols-4 gap-2 ${PANEL_CLS}`}>
+        <label className="flex flex-col gap-0.5"><span className="font-bold text-[10px] text-[#4a3b31] dark:text-[#cbbba0]">TITRE TOADA</span><input value={title} onChange={(e) => setTitle(e.target.value)} className={INPUT_CLS} /></label>
+        <label className="flex flex-col gap-0.5"><span className="font-bold text-[10px] text-[#4a3b31] dark:text-[#cbbba0]">TEMPO (BPM)</span><input type="number" min={35} max={220} value={bpm} onChange={(e) => setBpm(Number(e.target.value) || 85)} className={INPUT_CLS} /></label>
+        <label className="flex flex-col gap-0.5"><span className="font-bold text-[10px] text-[#4a3b31] dark:text-[#cbbba0]">CHANTÉ EN</span><input value={sungKey} onChange={(e) => setSungKey(e.target.value)} className={INPUT_CLS} /></label>
+        <label className="flex flex-col gap-0.5"><span className="font-bold text-[10px] text-[#4a3b31] dark:text-[#cbbba0]">TONALITÉ TROUPE</span><input value={troupeKey} onChange={(e) => setTroupeKey(e.target.value)} className={INPUT_CLS} /></label>
       </div>
-      <div className="p-2.5 rounded border-2 border-dashed border-[var(--cordel-border-sub)] bg-[var(--cordel-surface)] space-y-2">
+      <div className="p-2.5 rounded border-2 border-dashed border-[#9a3412]/40 dark:border-[#5c4333] bg-[#efe6d0] dark:bg-[#211a15] text-[#1c1613] dark:text-[#f5ebd6] space-y-2">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="font-bold">{isBr ? `Lote de Fotos (${photos.length} folha(s))` : `Lot de Photos (${photos.length} feuille(s) : Séquence + Patterns)`}</div>
-          <div className="flex items-center gap-1.5">
-            <button type="button" onClick={() => setShowKeyInput((v) => !v)} className="px-2 py-1 cordel-btn rounded font-bold flex items-center gap-1 cursor-pointer"><Key className="w-3.5 h-3.5" /><span>{isBr ? 'Chave óptica' : 'Clé optique'}</span></button>
-            <button type="button" onClick={() => fileRef.current?.click()} className="px-2.5 py-1 rounded bg-[#9a3412] text-white font-bold flex items-center gap-1 cursor-pointer"><Plus className="w-3.5 h-3.5" /><span>{isBr ? 'Adicionar foto(s)' : 'Ajouter photo(s)'}</span></button>
+          <div className="flex items-center gap-1.5 select-none">
+            <button type="button" onClick={() => setShowKeyInput((v) => !v)} className="px-2 py-1 rounded border border-[#9a3412]/45 dark:border-[#5c4333] bg-[#faf5e8] dark:bg-[#16120e] text-[#1c1613] dark:text-[#f5ebd6] font-bold flex items-center gap-1 cursor-pointer"><Key className="w-3.5 h-3.5" /><span>{isBr ? 'Chave óptica' : 'Clé optique'}</span></button>
+            <button type="button" onClick={() => fileRef.current?.click()} className="px-2.5 py-1 rounded bg-[#9a3412] dark:bg-[#c2410c] text-white font-bold flex items-center gap-1 cursor-pointer"><Plus className="w-3.5 h-3.5" /><span>{isBr ? 'Adicionar foto(s)' : 'Ajouter photo(s)'}</span></button>
             <input ref={fileRef} type="file" accept="image/*" multiple onChange={handleAddFiles} className="hidden" />
           </div>
         </div>
-        {showKeyInput && <div className="flex items-center gap-2 p-1.5 rounded bg-amber-500/10 border border-amber-500/40"><input type="password" value={apiKeyDraft} onChange={(e) => setApiKeyDraft(e.target.value)} placeholder="Clé d'accès optique..." className="flex-1 px-2 py-1 rounded border border-[var(--cordel-border-sub)] bg-[var(--cordel-surface)]" /><button type="button" onClick={() => { saveStoredOpticalApiKey(apiKeyDraft); setShowKeyInput(false); }} className="px-2 py-1 cordel-btn rounded font-bold cursor-pointer">OK</button></div>}
-        {photos.length === 0 ? <div onClick={() => fileRef.current?.click()} className="py-3 text-center opacity-75 cursor-pointer hover:opacity-100"><Camera className="w-5 h-5 mx-auto mb-1 text-[#9a3412] dark:text-amber-300" /><div className="font-bold">{isBr ? 'Clique para fotografar ou selecionar as folhas' : 'Cliquez pour photographier ou sélectionner vos feuilles (Séquence + Patterns P1..Pn)'}</div></div> : <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">{photos.map((ph, idx) => <div key={ph.id} className="p-1.5 rounded border border-[var(--cordel-border-sub)] bg-black/5 flex flex-col gap-1"><img src={ph.processedDataUrl} alt={ph.fileName} className="h-16 w-full object-cover rounded border border-black/20" /><div className="flex items-center justify-between text-[10px] font-bold"><span>Page {idx + 1} ({ph.detectedCornerCount}/4 ■)</span><button type="button" onClick={() => setPhotos((p) => p.filter((x) => x.id !== ph.id))} className="text-red-600 cursor-pointer"><Trash2 className="w-3.5 h-3.5" /></button></div></div>)}</div>}
+        {showKeyInput && <div className="flex items-center gap-2 p-1.5 rounded bg-[#efe4cc] text-[#1c1613] border border-[#9a3412]/40 dark:bg-[#241c16] dark:text-[#f5ebd6] dark:border-[#c2410c]/50"><input type="password" value={apiKeyDraft} onChange={(e) => setApiKeyDraft(e.target.value)} placeholder="Clé d'accès optique..." className={`flex-1 ${INPUT_CLS}`} /><button type="button" onClick={() => { saveStoredOpticalApiKey(apiKeyDraft); setShowKeyInput(false); }} className="select-none px-2.5 py-1 rounded bg-[#9a3412] dark:bg-[#c2410c] text-white font-bold cursor-pointer">OK</button></div>}
+        {photos.length === 0 ? <div onClick={() => fileRef.current?.click()} className="py-3 text-center text-[#4a3b31] dark:text-[#cbbba0] cursor-pointer hover:text-[#1c1613] dark:hover:text-[#f5ebd6] select-none"><Camera className="w-5 h-5 mx-auto mb-1 text-[#9a3412] dark:text-[#fdba74]" /><div className="font-bold">{isBr ? 'Clique para fotografar ou selecionar as folhas' : 'Cliquez pour photographier ou sélectionner vos feuilles (Séquence + Patterns P1..Pn)'}</div></div> : <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">{photos.map((ph, idx) => <div key={ph.id} className="p-1.5 rounded border border-[#9a3412]/35 dark:border-[#4a392d] bg-[#faf5e8] dark:bg-[#16120e] text-[#1c1613] dark:text-[#f5ebd6] flex flex-col gap-1"><img src={ph.processedDataUrl} alt={ph.fileName} className="h-16 w-full object-cover rounded border border-black/20 bg-white" /><div className="flex items-center justify-between text-[10px] font-bold"><span>Page {idx + 1} ({ph.detectedCornerCount}/4 ■)</span><button type="button" onClick={() => setPhotos((p) => p.filter((x) => x.id !== ph.id))} className="text-red-700 dark:text-red-400 cursor-pointer"><Trash2 className="w-3.5 h-3.5" /></button></div></div>)}</div>}
       </div>
-      <div className="flex flex-wrap items-center justify-between gap-2 cordel-card-sm p-2 rounded">
+      <div className={`flex flex-wrap items-center justify-between gap-2 select-none ${PANEL_CLS}`}>
         <div className="flex flex-wrap items-center gap-3"><label className="inline-flex items-center gap-1.5 font-bold cursor-pointer"><input type="checkbox" checked={syncOrganizador} onChange={(e) => setSyncOrganizador(e.target.checked)} className="accent-[#9a3412]" /><span>Sync Organizador</span></label><label className="inline-flex items-center gap-1.5 font-bold cursor-pointer"><input type="checkbox" checked={syncSequenciador} onChange={(e) => setSyncSequenciador(e.target.checked)} className="accent-[#9a3412]" /><span>Sync Sequenciador</span></label></div>
-        <div className="flex items-center gap-2"><button type="button" disabled={photos.length === 0 || isScanning} onClick={handleRunOpticalScan} className="px-3 py-1.5 rounded cordel-btn font-bold flex items-center gap-1.5 cursor-pointer disabled:opacity-50"><RefreshCw className={`w-3.5 h-3.5 ${isScanning ? 'animate-spin' : ''}`} /><span>{isBr ? 'Ler manuscrito' : 'Lire le manuscrit'}</span></button>{scanResult && <button type="button" disabled={isScanning} onClick={handleApplyToProject} className="px-3 py-1.5 rounded bg-emerald-700 text-white font-bold flex items-center gap-1.5 cursor-pointer"><Upload className="w-3.5 h-3.5" /><span>{isBr ? 'Aplicar ao projeto' : 'Injecter dans le projet'}</span></button>}</div>
+        <div className="flex items-center gap-2"><button type="button" disabled={photos.length === 0 || isScanning} onClick={handleRunOpticalScan} className="px-3 py-1.5 rounded border border-[#9a3412]/45 dark:border-[#5c4333] bg-[#faf5e8] dark:bg-[#16120e] text-[#1c1613] dark:text-[#f5ebd6] hover:bg-[#9a3412] hover:text-white dark:hover:bg-[#c2410c] font-bold flex items-center gap-1.5 cursor-pointer disabled:opacity-50"><RefreshCw className={`w-3.5 h-3.5 ${isScanning ? 'animate-spin' : ''}`} /><span>{isBr ? 'Ler manuscrito' : 'Lire le manuscrit'}</span></button>{scanResult && <button type="button" disabled={isScanning} onClick={handleApplyToProject} className="px-3 py-1.5 rounded bg-emerald-700 hover:bg-emerald-800 text-white font-bold flex items-center gap-1.5 cursor-pointer"><Upload className="w-3.5 h-3.5" /><span>{isBr ? 'Aplicar ao projeto' : 'Injecter dans le projet'}</span></button>}</div>
       </div>
-      {statusMsg && <div className="p-2 rounded bg-emerald-500/15 border border-emerald-600/40 text-emerald-900 dark:text-emerald-200 font-bold flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4 shrink-0" /><span>{statusMsg}</span></div>}
-      {errorMsg && <div className="p-2 rounded bg-red-500/15 border border-red-600/40 text-red-800 dark:text-red-200 font-bold">{errorMsg}</div>}
+      {statusMsg && <div className="p-2 rounded bg-emerald-100 dark:bg-emerald-950/60 border border-emerald-700/40 dark:border-emerald-500/40 text-emerald-950 dark:text-emerald-200 font-bold flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-800 dark:text-emerald-400" /><span>{statusMsg}</span></div>}
+      {errorMsg && <div className="p-2 rounded bg-red-100 dark:bg-red-950/60 border border-red-700/40 dark:border-red-500/40 text-red-950 dark:text-red-200 font-bold">{errorMsg}</div>}
     </div>
   );
 };
