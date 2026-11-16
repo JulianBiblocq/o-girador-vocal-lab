@@ -1,6 +1,7 @@
 /**
  * LivretPrise.tsx
- * Livret 2 : Cabine d'enregistrement autour de « A Fita — Cabine » + tiroir d'options avancées (< 120 lignes).
+ * Livret 2 : Cabine d'enregistrement autour de « A Fita — Cabine », Onde Live/Enregistrée,
+ * Témoin Micro 1er plan, [▶ Réécouter] et tiroir d'options avancées (< 130 lignes).
  */
 import React, { useMemo, useCallback, useState, useEffect } from 'react';
 import { RotateCcw, Scissors, Music } from 'lucide-react';
@@ -14,7 +15,9 @@ import { CabineMonitoringAndPunchBar } from './CabineMonitoringAndPunchBar';
 import type { ComfortMonitoringPreset } from '../../audio/ComfortMonitoringNode';
 import { getActiveBackingTrack, subscribeBackingTrack } from '../../utils/backingTrackStorage';
 import { CabineTimelineRibbon } from './CabineTimelineRibbon';
-import { RecordActionButton } from './RecordActionButton';
+import { CabineTransportRow } from './CabineTransportRow';
+import { patternHasAnyAudio } from './cabineTimelineDrawer';
+import { useCabineLiveWaveAndMic } from './useCabineLiveWaveAndMic';
 import { CuePatternSelector } from './CuePatternSelector';
 import { CordelAccordion } from '../common/CordelAccordion';
 import { PatternVariantSelector } from './PatternVariantSelector';
@@ -61,33 +64,50 @@ export const LivretPrise: React.FC = () => {
     project, loadProject, engine, recorder, listeningMode, selectedDeviceId, selectedOutputDeviceId, activeLivret,
   });
 
+  const isRecordingAny = isCycleActive || isContinuousActive;
+  const { livePeakBinsRef, sampleAnalyserPeak, micBarFillRef, micClipDotRef, isMicProbeActive, startIdleProbe, stopIdleProbe, resetClipBadge, isReplaying, toggleReplay } = useCabineLiveWaveAndMic({
+    recorder, selectedDeviceId, isRecordingAny, activePattern, recordedSampleRate,
+  });
+
   const effectiveCuePattern = useMemo(
     () => (cueMode === 'none' ? null : cueMode === 'auto_previous' ? getPreviousConductorPattern() : project.patterns.find((p) => p.id === cueMode) ?? null),
     [cueMode, getPreviousConductorPattern, project.patterns]
   );
 
-  const isRecordingAny = isCycleActive || isContinuousActive;
   const hasRecording = activeVariant.recordingResult !== null && activeVariant.recordingResult.pcm.length > 0;
+  const hasExistingAudio = patternHasAnyAudio(activePattern);
   const recordedCount = Object.values(activePattern.variants || {}).filter((v) => v.recordingResult !== null).length;
 
   const handleReset = useCallback(async () => {
     const ok = await confirmAsync({ title: t('resetRecordingTitle'), message: t('resetRecordingConfirm'), confirmLabel: t('dialogConfirm'), cancelLabel: t('dialogCancel'), variant: 'warning' });
-    if (ok) updateVariant(activePattern.id, activeVariant.variantKey, { recordingResult: null });
-  }, [t, updateVariant, activePattern.id, activeVariant.variantKey]);
+    if (ok) { updateVariant(activePattern.id, activeVariant.variantKey, { recordingResult: null }); updatePattern(activePattern.id, { recordingResult: null, rawAudioSamples: null }); }
+  }, [t, updateVariant, updatePattern, activePattern.id, activeVariant.variantKey]);
+
+  const onStartOrStopRecord = useCallback(() => {
+    stopIdleProbe(); resetClipBadge();
+    if (takeMode === 'pattern') handleToggleRecord(); else handleToggleContinuous();
+  }, [stopIdleProbe, resetClipBadge, takeMode, handleToggleRecord, handleToggleContinuous]);
 
   return (
     <div className="flex flex-col gap-5 w-full max-w-5xl mx-auto my-2">
       <TakeModeSelector mode={takeMode} onChangeMode={setTakeMode} disabled={isRecordingAny} />
       {takeMode !== 'pattern' && <ContinuousPrompterBanner info={prompterInfo} isActive={isContinuousActive} />}
 
-      <AFitaFrame title={t('fitaTitleCabine')} isSpinning={isRecordingAny} showPatternNav={takeMode === 'pattern'}>
+      <AFitaFrame title={t('fitaTitleCabine')} isSpinning={isRecordingAny || isReplaying} showPatternNav={takeMode === 'pattern'}>
         <CabineTimelineRibbon
           frameless engine={engine} isActive={isRecordingAny} takeMode={takeMode} project={project} activePattern={activePattern}
           cuePattern={effectiveCuePattern} beatsPerMeasure={beatsPerMeasure} isPunchIn={Boolean(punchMeasureIndex && punchMeasureIndex >= 1 && hasRecording)}
-          counterRoleCueEnabled={counterRoleCueEnabled} onToggleCounterRoleCue={() => setCounterRoleCueEnabled((v) => !v)} getContinuousLiveStatus={getContinuousLiveStatus}
+          counterRoleCueEnabled={counterRoleCueEnabled} onToggleCounterRoleCue={() => setCounterRoleCueEnabled((v) => !v)}
+          getContinuousLiveStatus={getContinuousLiveStatus} livePeakBinsRef={livePeakBinsRef} sampleLivePeak={sampleAnalyserPeak}
         >
-          <RecordActionButton isCycleActive={takeMode === 'pattern' ? isCycleActive : isContinuousActive} measuresCount={measuresCount} onToggleRecord={takeMode === 'pattern' ? handleToggleRecord : handleToggleContinuous} />
-          {hasRecording && (
+          <CabineTransportRow
+            isCycleActive={takeMode === 'pattern' ? isCycleActive : isContinuousActive} measuresCount={measuresCount}
+            hasExistingAudio={hasExistingAudio} isReplaying={isReplaying} isMicProbeActive={isMicProbeActive}
+            micBarFillRef={micBarFillRef} micClipDotRef={micClipDotRef}
+            onToggleMicProbe={() => { resetClipBadge(); if (isMicProbeActive) stopIdleProbe(); else startIdleProbe(); }}
+            onStartRecord={onStartOrStopRecord} onToggleReplay={toggleReplay}
+          />
+          {hasExistingAudio && (
             <div className="flex flex-wrap items-center justify-center gap-2 pt-2 border-t border-[var(--cordel-border-sub)]">
               <button type="button" onClick={() => setActiveLivret('calage')} className="cordel-btn-primary px-3 py-1.5 text-xs font-mono font-bold flex items-center gap-1.5 cursor-pointer"><Scissors className="w-3.5 h-3.5" /><span>{t('fanion3Short')}</span></button>
               <button type="button" onClick={() => setActiveLivret('melodia')} className="cordel-btn px-3 py-1.5 text-xs font-mono font-bold flex items-center gap-1.5 cursor-pointer"><Music className="w-3.5 h-3.5 text-theme-accent" /><span>{t('fanion4Short')}</span></button>

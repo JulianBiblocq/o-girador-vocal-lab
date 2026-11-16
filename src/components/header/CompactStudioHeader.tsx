@@ -47,7 +47,7 @@ export const CompactStudioHeader: React.FC<Props> = ({
   const lexCount = project.toadaMeta?.notesLexique?.length || 0;
 
   return (
-    <header className="relative z-40 w-full cordel-card px-3 py-2 flex flex-wrap items-center justify-between gap-2">
+    <header className="relative z-40 w-full cordel-card px-4 py-2 flex flex-wrap items-center justify-between gap-2">
       <div className="flex items-center gap-2.5 flex-wrap">
         <BrandHeaderLogo />
         <ToadaLibraryDropdown onOpenOrganizador={() => setIsOrganizadorOpen(true)} groupName={groupId || undefined} />

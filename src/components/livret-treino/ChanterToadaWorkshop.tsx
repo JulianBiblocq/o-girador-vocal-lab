@@ -1,5 +1,5 @@
 /**
- * ChanterToadaWorkshop.tsx — Atelier Karaoké 60 FPS (0 Render Thrashing via refs), Paliers 75➔88➔100%, Jauge Roda & Diagnostic (< 138 lignes).
+ * ChanterToadaWorkshop.tsx — Atelier Letra ao Vivo 60 FPS (0 Render Thrashing via refs), Paliers 75➔88➔100%, Jauge Roda & Diagnostic (< 138 lignes).
  */
 import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import { useToadaProject } from '../../context/ToadaProjectContext';

@@ -1,34 +1,20 @@
 /**
  * cabineTimelineDrawer.ts
- * Construction et rendu Canvas 60 FPS bilingue (FR / PT-BR) du Ruban des Mesures à Bille Rebondissante (< 135 lignes).
+ * Construction et rendu Canvas 60 FPS bilingue (FR / PT-BR) du Ruban des Mesures à Bille Rebondissante (< 120 lignes).
  */
 import type { ToadaProject, VocalPatternItem, VocalRole } from '../../types/toadaProject.types';
-import { getPatternT1OffsetSec, resolvePatternAnacrusisBeats } from '../../utils/anacrusisTimingHelper';
+import { resolvePatternAnacrusisBeats } from '../../utils/anacrusisTimingHelper';
 import { buildConductorRoleTimeline } from '../../utils/conductorRoleTimelineBuilder';
 import { CONTINUOUS_LEAD_IN_MEASURES } from '../../audio/continuousCueHelper';
+import { CABINE_WAVE_BINS_PER_BEAT, patternHasAnyAudio, extractMeasureWaveform, drawMeasureWaveformsOnBox } from './cabineWaveformHelper';
+
+export { CABINE_WAVE_BINS_PER_BEAT, patternHasAnyAudio, extractMeasureWaveform };
 
 export interface TimelineMeasureBox {
   measureIndex: number; label: string; subLabel?: string; kind: 'preroll' | 'cue' | 'sung' | 'tail';
   role?: VocalRole; beatsCount: number; startBeatGlobal: number;
-  anacrusisStartBeatInMeasure?: number; callInBeatsInMeasure: number[]; measureLyrics?: string; waveformBins?: Float32Array;
-}
-
-export function extractMeasureWaveform(pat: VocalPatternItem | null | undefined, m1: number, bpmCount: number, bins = 20): Float32Array | undefined {
-  const rec = pat?.variants?.[pat.activeVariantKey]?.recordingResult ?? pat?.recordingResult;
-  if (!pat || !rec?.pcm?.length) return undefined;
-  const mDur = bpmCount * (60 / (rec.recordedBpm || pat.bpm || pat.baseBpm || 88));
-  const t1 = getPatternT1OffsetSec(pat.hasAnacrusis !== false, mDur, rec.t1OffsetSec ?? pat.t1OffsetSec);
-  const s0 = Math.max(0, Math.floor((t1 + (m1 - 1) * mDur) * rec.sampleRate)), s1 = Math.min(rec.pcm.length, Math.floor((t1 + m1 * mDur) * rec.sampleRate));
-  if (s1 <= s0 + bins) return undefined;
-  const out = new Float32Array(bins), step = Math.max(1, Math.floor((s1 - s0) / bins));
-  let maxPk = 0.05;
-  for (let i = 0; i < bins; i++) {
-    let pk = 0, idx0 = s0 + i * step;
-    for (let j = 0; j < step && idx0 + j < s1; j++) pk = Math.max(pk, Math.abs(rec.pcm[idx0 + j]));
-    out[i] = pk; if (pk > maxPk) maxPk = pk;
-  }
-  for (let i = 0; i < bins; i++) out[i] = Math.min(1, out[i] / maxPk);
-  return out;
+  anacrusisStartBeatInMeasure?: number; callInBeatsInMeasure: number[]; measureLyrics?: string;
+  waveformBins?: Float32Array; anacrusisWaveformBins?: Float32Array;
 }
 
 export function buildCabineTimelineMeasures(params: {
@@ -39,18 +25,18 @@ export function buildCabineTimelineMeasures(params: {
   const isBr = lang === 'br', mPfx = isBr ? 'C' : 'M', preLbl = isBr ? 'PRÉ-CONTAGEM' : 'PRÉCOMPTE', cueLbl = isBr ? 'GUIA C' : 'TÉMOIN M';
   const measures: TimelineMeasureBox[] = [], callSet = new Set<number>(), anaSet = new Set<number>(), recSet = new Set<number>(), beatRange = Array.from({ length: B }, (_, i) => i + 1);
   if (takeMode === 'pattern') {
-    const hasCue = !isPunchIn && Boolean(cuePattern && (cuePattern.recordingResult?.pcm?.length || cuePattern.variants?.[cuePattern.activeVariantKey]?.recordingResult?.pcm?.length));
+    const hasCue = !isPunchIn && patternHasAnyAudio(cuePattern);
     const hasAna = !isPunchIn && activePattern.hasAnacrusis !== false, preRoll = isPunchIn ? 1 : (hasCue && cuePattern ? 1 + cuePattern.measuresCount : (hasAna ? 2 : 1));
     const t1B = preRoll * B, anaB = hasAna ? resolvePatternAnacrusisBeats(activePattern, B) : 0, entryB = Math.max(0, t1B - anaB), endB = (preRoll + activePattern.measuresCount) * B;
     if (entryB - 2 >= 0) callSet.add(entryB - 2); if (entryB - 1 >= 0) callSet.add(entryB - 1);
     for (let b = entryB; b < t1B; b++) anaSet.add(b); for (let b = entryB; b <= endB; b++) recSet.add(b);
     for (let m = 0; m < preRoll; m++) {
-      const sb = m * B, isCueM = Boolean(hasCue && cuePattern && m >= 1 && m <= cuePattern.measuresCount);
-      measures.push({ measureIndex: m, label: isCueM ? `${cueLbl}${m}` : preLbl, subLabel: isCueM ? cuePattern?.name : undefined, kind: isCueM ? 'cue' : 'preroll', role: isCueM ? cuePattern?.role : undefined, beatsCount: B, startBeatGlobal: sb, anacrusisStartBeatInMeasure: (m === preRoll - 1 && anaB > 0) ? B - anaB + 1 : undefined, callInBeatsInMeasure: beatRange.filter((b) => callSet.has(sb + b - 1)), measureLyrics: isCueM ? (cuePattern?.assignedLyricsText || cuePattern?.rawLineCode || '').replace(/\[[^\]]+\]/g, '').trim() : undefined, waveformBins: isCueM ? extractMeasureWaveform(cuePattern, m, B) : undefined });
+      const sb = m * B, isCueM = Boolean(hasCue && cuePattern && m >= 1 && m <= cuePattern.measuresCount), isAnaM = m === preRoll - 1 && anaB > 0;
+      measures.push({ measureIndex: m, label: isCueM ? `${cueLbl}${m}` : preLbl, subLabel: isCueM ? cuePattern?.name : undefined, kind: isCueM ? 'cue' : 'preroll', role: isCueM ? cuePattern?.role : undefined, beatsCount: B, startBeatGlobal: sb, anacrusisStartBeatInMeasure: isAnaM ? B - anaB + 1 : undefined, callInBeatsInMeasure: beatRange.filter((b) => callSet.has(sb + b - 1)), measureLyrics: isCueM ? (cuePattern?.assignedLyricsText || cuePattern?.rawLineCode || '').replace(/\[[^\]]+\]/g, '').trim() : undefined, waveformBins: isCueM ? extractMeasureWaveform(cuePattern, m, B) : undefined, anacrusisWaveformBins: isAnaM ? extractMeasureWaveform(activePattern, 0, B) : undefined });
     }
     const lyr = (activePattern.assignedLyricsText || activePattern.rawLineCode || '').replace(/\[[^\]]+\]/g, '').trim();
     for (let m = 1; m <= activePattern.measuresCount; m++) measures.push({ measureIndex: preRoll + m - 1, label: `${mPfx}${m}`, subLabel: activePattern.name, kind: 'sung', role: activePattern.role, beatsCount: B, startBeatGlobal: (preRoll + m - 1) * B, callInBeatsInMeasure: [], measureLyrics: m === 1 ? lyr : undefined, waveformBins: extractMeasureWaveform(activePattern, m, B) });
-    measures.push({ measureIndex: measures.length, label: '+T1', kind: 'tail', role: activePattern.role, beatsCount: 1, startBeatGlobal: endB, callInBeatsInMeasure: [] });
+    measures.push({ measureIndex: measures.length, label: '+T1', kind: 'tail', role: activePattern.role, beatsCount: 1, startBeatGlobal: endB, callInBeatsInMeasure: [], waveformBins: extractMeasureWaveform(activePattern, activePattern.measuresCount + 1, B, 8, 1 / B) });
   } else {
     const timeline = buildConductorRoleTimeline(project, takeMode, 0, CONTINUOUS_LEAD_IN_MEASURES), counterRole: VocalRole = takeMode === 'puxador' ? 'coro' : 'puxador';
     timeline.forEach((it, idx) => {
@@ -75,14 +61,18 @@ export function buildCabineTimelineMeasures(params: {
   return { measures, isRecordingBeat: (b: number) => recSet.has(b), isCallInBeat: (b: number) => callSet.has(b), isAnacrusisBeat: (b: number) => anaSet.has(b) };
 }
 
-export function drawCabineTimelineRibbon(ctx: CanvasRenderingContext2D, w: number, h: number, measures: TimelineMeasureBox[], curBeat: number, beatProg: number, isActive: boolean, isSliding4: boolean, lang: 'fr' | 'br' = 'fr'): void {
+export function drawCabineTimelineRibbon(
+  ctx: CanvasRenderingContext2D, w: number, h: number, measures: TimelineMeasureBox[],
+  curBeat: number, beatProg: number, isActive: boolean, isSliding4: boolean,
+  lang: 'fr' | 'br' = 'fr', livePeakBins?: Float32Array | null
+): void {
   ctx.clearRect(0, 0, w, h);
   const curMIdx = Math.max(0, measures.findIndex((m) => curBeat >= m.startBeatGlobal && curBeat < m.startBeatGlobal + m.beatsCount));
   const winStart = isSliding4 && measures.length > 4 ? Math.max(0, Math.min(measures.length - 4, curMIdx - 1)) : 0;
   const vis = isSliding4 && measures.length > 4 ? measures.slice(winStart, winStart + 4) : measures;
-  const padX = 8, gap = 6, topY = 18, boxH = h - 26, floorY = topY + boxH - 22;
+  const padX = 8, gap = 6, topY = 18, boxH = h - 26, floorY = topY + boxH - 22, midY = topY + boxH * 0.50;
   const totalWeight = vis.reduce((s, m) => s + Math.max(1.15, m.beatsCount), 0), availW = Math.max(100, w - padX * 2 - gap * (vis.length - 1));
-  const beatCenters = new Map<number, { x: number; y: number }>();
+  const beatCenters = new Map<number, { x: number; y: number }>(), maxLiveBin = isActive ? Math.floor((curBeat + beatProg) * CABINE_WAVE_BINS_PER_BEAT) : -1;
   let xCursor = padX;
 
   for (const m of vis) {
@@ -91,11 +81,8 @@ export function drawCabineTimelineRibbon(ctx: CanvasRenderingContext2D, w: numbe
     ctx.strokeStyle = m.kind === 'preroll' ? '#475569' : roleHex; ctx.lineWidth = 1.5;
     ctx.beginPath(); ctx.roundRect(xCursor, topY, mw, boxH, 6); ctx.fill(); ctx.stroke();
 
-    if (m.waveformBins?.length) {
-      ctx.fillStyle = m.kind === 'cue' ? 'rgba(56,189,248,0.32)' : 'rgba(253,224,71,0.22)';
-      const bw = (mw - 8) / m.waveformBins.length, midY = topY + boxH * 0.52;
-      m.waveformBins.forEach((v, i) => { const bh = Math.max(3, v * (boxH * 0.48)); ctx.fillRect(xCursor + 4 + i * bw, midY - bh / 2, Math.max(1.5, bw - 1), bh); });
-    }
+    drawMeasureWaveformsOnBox(ctx, xCursor, mw, midY, boxH, m.kind, m.beatsCount, m.startBeatGlobal, m.waveformBins, m.anacrusisWaveformBins, m.anacrusisStartBeatInMeasure, livePeakBins, maxLiveBin);
+
     ctx.fillStyle = '#f8fafc'; ctx.font = 'bold 10px monospace';
     ctx.fillText(`${m.label}${m.subLabel ? ` • ${m.subLabel.slice(0, 12)}` : ''}`, xCursor + 5, topY + 12);
 

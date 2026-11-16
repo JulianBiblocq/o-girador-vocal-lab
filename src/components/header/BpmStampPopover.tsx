@@ -25,7 +25,14 @@ export const BpmStampPopover: React.FC = () => {
   const fileRef = useRef<HTMLInputElement>(null);
   const tapTimesRef = useRef<number[]>([]);
 
-  const bpm = activePattern.bpm ?? activePattern.baseBpm ?? project.bpm ?? DEFAULT_TOADA_BPM;
+  const globalBpm = project.bpm ?? DEFAULT_TOADA_BPM;
+  const bpm = activePattern.bpm ?? activePattern.baseBpm ?? globalBpm;
+  const hasBlockBpm = typeof activePattern.bpm === 'number' && Math.round(activePattern.bpm) !== Math.round(globalBpm);
+  const stampTitle = hasBlockBpm
+    ? (isBr
+      ? `Andamento próprio deste bloco (${bpm} BPM) — Andamento global da toada : ${globalBpm} BPM`
+      : `Tempo propre à ce motif (${bpm} BPM) — Tempo global du chant : ${globalBpm} BPM`)
+    : t('stampBpmTitle');
 
   useEffect(() => {
     setBackingTrack(getActiveBackingTrack(project.id));
@@ -74,11 +81,11 @@ export const BpmStampPopover: React.FC = () => {
       <button
         type="button"
         onClick={() => setIsOpen((prev) => !prev)}
-        title={t('stampBpmTitle')}
+        title={stampTitle}
         className="h-8 px-2.5 cordel-card-sm text-xs font-mono font-bold inline-flex items-center gap-1.5 hover:border-amber-500/70 transition-colors cursor-pointer"
       >
         <Drum className="w-3.5 h-3.5 text-[#9a3412] dark:text-amber-300 shrink-0" />
-        <span className="text-theme-ink font-black">{bpm} BPM</span>
+        <span className="text-theme-ink font-black">{bpm} BPM{hasBlockBpm ? ` • ${isBr ? 'bloco' : 'bloc'}` : ''}</span>
         {backingTrack?.enabled && <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 dark:bg-emerald-400" />}
         <ChevronDown className="w-3 h-3 opacity-60" />
       </button>

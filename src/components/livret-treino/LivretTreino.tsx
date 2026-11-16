@@ -1,6 +1,6 @@
 /**
  * LivretTreino.tsx
- * Espace Élève épuré en 5 ateliers Cordel : 1. Fiche & Paroles, 2. Karaoké, 3. Diction, 4. Mon Ambitus, 5. Jeux de Voix (< 95 lignes).
+ * Espace Élève épuré en 5 ateliers Cordel : 1. Fiche & Paroles, 2. Letra ao Vivo, 3. Diction, 4. Mon Ambitus, 5. Jeux de Voix (< 95 lignes).
  */
 import React, { useCallback, useEffect } from 'react';
 import { BookOpen, Mic, Volume2, Compass, Target } from 'lucide-react';

@@ -18,9 +18,19 @@ import { getSharedAudioContext, registerAudioKillSwitch, stopAllActiveAudioEngin
 import { CulturalInsightCard } from './CulturalInsightCard';
 import { StudentToadaQuizCard } from './StudentToadaQuizCard';
 
-function formatCleanLyric(raw?: string, fallback?: string): string {
+export function formatCleanLyric(raw?: string, fallback?: string): string {
   const txt = cleanHtmlText(raw || '', false).replace(/\[[^\]]+\]/g, ' ').replace(/\b0\b/g, ' ').replace(/_+/g, '').replace(/\s+/g, ' ').trim();
   return txt || fallback || '';
+}
+
+function normalizeForPhoneticComparison(str?: string): string {
+  return formatCleanLyric(str).toLowerCase().replace(/[.,;:!?¡¿…«»"“”'’()[\]\-–—]+/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+export function shouldDisplayPhoneticLine(lyricText?: string, phoneticText?: string): boolean {
+  const normPhon = normalizeForPhoneticComparison(phoneticText);
+  if (!normPhon) return false;
+  return normPhon !== normalizeForPhoneticComparison(lyricText);
 }
 
 export const StudentToadaSheetPanel: React.FC = () => {
@@ -106,7 +116,7 @@ export const StudentToadaSheetPanel: React.FC = () => {
                   <span className={`px-2 py-0.5 text-[10px] font-mono font-black uppercase rounded text-white shrink-0 mt-0.5 ${isPux ? 'bg-[#9a3412]' : 'bg-[#0f766e]'}`}>{isPux ? t('rolePuxador') : t('roleCoro')}</span>
                   <div className="flex flex-col min-w-0">
                     <span className="font-serif text-sm sm:text-base text-theme-ink leading-snug">{cleanText || t('studentNoLyricsYet')}</span>
-                    {pat.assignedPhoneticText && <span className="text-[11px] font-mono italic text-[var(--cordel-secondary-text)]">[Phon.] {pat.assignedPhoneticText}</span>}
+                    {shouldDisplayPhoneticLine(cleanText, pat.assignedPhoneticText) && <span className="text-[11px] font-mono italic text-[var(--cordel-secondary-text)]">[Phon.] {pat.assignedPhoneticText}</span>}
                   </div>
                 </div>
                 {hasAudio && (

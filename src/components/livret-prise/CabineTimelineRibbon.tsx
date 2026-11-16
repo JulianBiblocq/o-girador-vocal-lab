@@ -1,11 +1,11 @@
 /**
  * CabineTimelineRibbon.tsx
- * Ruban Unique bilingue (FR / PT-BR) des Mesures à Bille Rebondissante (60 FPS, ResizeObserver 0 Layout Thrashing) (< 130 lignes).
+ * Ruban Unique bilingue (FR / PT-BR) des Mesures à Bille Rebondissante & Onde Live 60 FPS (0 Layout/Render Thrashing) (< 135 lignes).
  */
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import type { MetronomeEngine } from '../../audio/MetronomeEngine';
 import type { ToadaProject, VocalPatternItem } from '../../types/toadaProject.types';
-import { buildCabineTimelineMeasures, drawCabineTimelineRibbon } from './cabineTimelineDrawer';
+import { CABINE_WAVE_BINS_PER_BEAT, patternHasAnyAudio, buildCabineTimelineMeasures, drawCabineTimelineRibbon } from './cabineTimelineDrawer';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { Headphones, Radio, Crosshair } from 'lucide-react';
 
@@ -15,13 +15,16 @@ export interface CabineTimelineRibbonProps {
   beatsPerMeasure: number; isPunchIn?: boolean; counterRoleCueEnabled: boolean;
   onToggleCounterRoleCue: () => void;
   getContinuousLiveStatus: () => { isRunning: boolean; currentBeatGlobal: number; beatProgress: number; totalBeats: number };
+  livePeakBinsRef?: React.RefObject<Float32Array | null>;
+  sampleLivePeak?: () => number;
   frameless?: boolean;
   children?: React.ReactNode;
 }
 
 export const CabineTimelineRibbon: React.FC<CabineTimelineRibbonProps> = ({
   engine, isActive, takeMode, project, activePattern, cuePattern, beatsPerMeasure,
-  isPunchIn = false, counterRoleCueEnabled, onToggleCounterRoleCue, getContinuousLiveStatus, frameless = false, children,
+  isPunchIn = false, counterRoleCueEnabled, onToggleCounterRoleCue, getContinuousLiveStatus,
+  livePeakBinsRef, sampleLivePeak, frameless = false, children,
 }) => {
   const { language } = useLanguage(), isBr = language === 'br';
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -37,7 +40,7 @@ export const CabineTimelineRibbon: React.FC<CabineTimelineRibbonProps> = ({
   const counterRoleRecordedCount = useMemo(() => {
     if (takeMode === 'pattern') return 0;
     const counterRole = takeMode === 'puxador' ? 'coro' : 'puxador';
-    return project.patterns.filter((p) => p.role === counterRole && Boolean(p.recordingResult?.pcm?.length || p.variants?.[p.activeVariantKey]?.recordingResult?.pcm?.length)).length;
+    return project.patterns.filter((p) => p.role === counterRole && patternHasAnyAudio(p)).length;
   }, [takeMode, project.patterns]);
 
   useEffect(() => {
@@ -58,8 +61,7 @@ export const CabineTimelineRibbon: React.FC<CabineTimelineRibbonProps> = ({
     let rafId: number | null = null, lastPhase: typeof livePhase = 'idle';
 
     const renderFrame = () => {
-      const dpr = window.devicePixelRatio || 1;
-      const w = widthRef.current, h = 116;
+      const dpr = window.devicePixelRatio || 1, w = widthRef.current, h = 116;
       if (canvas.width !== Math.floor(w * dpr) || canvas.height !== Math.floor(h * dpr)) {
         canvas.width = Math.floor(w * dpr); canvas.height = Math.floor(h * dpr);
       }
@@ -78,7 +80,14 @@ export const CabineTimelineRibbon: React.FC<CabineTimelineRibbonProps> = ({
         }
         const nextPhase: typeof livePhase = !running ? 'idle' : timelineData.isCallInBeat(curBeat) ? 'call' : timelineData.isAnacrusisBeat(curBeat) ? 'anacrusis' : timelineData.isRecordingBeat(curBeat) ? 'recording' : 'preroll';
         if (nextPhase !== lastPhase) { lastPhase = nextPhase; setLivePhase(nextPhase); }
-        drawCabineTimelineRibbon(ctx, w, h, timelineData.measures, curBeat, beatProg, running, takeMode !== 'pattern', language);
+        if (running && sampleLivePeak) {
+          const pk = sampleLivePeak();
+          if ((nextPhase === 'anacrusis' || nextPhase === 'recording') && livePeakBinsRef?.current) {
+            const bIdx = Math.floor((curBeat + beatProg) * CABINE_WAVE_BINS_PER_BEAT);
+            if (bIdx >= 0 && bIdx < livePeakBinsRef.current.length && pk > livePeakBinsRef.current[bIdx]) livePeakBinsRef.current[bIdx] = pk;
+          }
+        }
+        drawCabineTimelineRibbon(ctx, w, h, timelineData.measures, curBeat, beatProg, running, takeMode !== 'pattern', language, livePeakBinsRef?.current);
         ctx.restore();
       }
       if (isActive) rafId = requestAnimationFrame(renderFrame);
@@ -86,7 +95,7 @@ export const CabineTimelineRibbon: React.FC<CabineTimelineRibbonProps> = ({
 
     renderFrame();
     return () => { if (rafId !== null) cancelAnimationFrame(rafId); };
-  }, [isActive, takeMode, engine, getContinuousLiveStatus, timelineData, language, resizeTick]);
+  }, [isActive, takeMode, engine, getContinuousLiveStatus, timelineData, language, resizeTick, livePeakBinsRef, sampleLivePeak]);
 
   return (
     <div className={frameless ? 'flex flex-col gap-2.5 w-full' : 'cordel-card p-3 flex flex-col gap-2.5 w-full'}>

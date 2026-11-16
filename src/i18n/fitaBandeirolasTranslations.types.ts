@@ -60,4 +60,8 @@ export interface FitaBandeirolasTranslations {
   studentQuizScoreBadge: string;
   studentQuizResetBtn: string;
   studentNoLyricsYet: string;
+  cabineReplayBtn: string;
+  cabineMicReady: string;
+  cabineMicClip: string;
+  cabineMicTestHint: string;
 }
