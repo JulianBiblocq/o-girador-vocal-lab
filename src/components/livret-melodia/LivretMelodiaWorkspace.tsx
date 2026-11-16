@@ -45,7 +45,7 @@ export const LivretMelodiaWorkspace: React.FC<LivretMelodiaWorkspaceProps> = ({
   const hasStoredScale = Boolean(project.sungScaleRoot || project.toadaMeta?.tonaliteDefaut);
   const [tonic, setTonic] = useState(() => hasStoredScale ? dualScale.sungScaleRoot : initialScale.tonic);
   const [scaleType, setScaleType] = useState<ScaleType>(() => hasStoredScale ? dualScale.sungScaleMode : 'chromatic');
-  const customPitchClasses = activePattern.pack?.customPitchClasses ?? null;
+  const customPitchClasses = project.customPitchClasses ?? null;
   const transpositionSemitones = dualScale.transpositionSemitones, listenTarget: 'sung' | 'troupe' = project.previewListenTarget ?? (transpositionSemitones !== 0 ? 'troupe' : 'sung');
   const alignedCount = useMemo(() => project.patterns.filter(checkPatternIsAligned).length, [project.patterns]);
   useEffect(() => {

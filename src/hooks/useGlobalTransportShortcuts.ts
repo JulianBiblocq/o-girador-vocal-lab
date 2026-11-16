@@ -1,6 +1,6 @@
 /**
  * useGlobalTransportShortcuts.ts
- * Raccourcis clavier studio souverains (Espace, */R, Alt+Flèches, Alt+1..6, Escape) (< 105 lignes).
+ * Raccourcis clavier studio souverains (Espace, Pavé * ou R, Alt+Flèches, Alt+1..6, Escape) (< 105 lignes).
  * Filtre intelligent isTextEditingElement afin de ne jamais bloquer la saisie des syllabes Letra.
  */
 import { useEffect } from 'react';

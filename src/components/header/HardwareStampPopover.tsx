@@ -85,7 +85,7 @@ export const HardwareStampPopover: React.FC = () => {
             </button>
           )}
 
-          <MicGainAssistantCard inputDeviceId={selectedDeviceId} />
+          <MicGainAssistantCard selectedDeviceId={selectedDeviceId} compact />
 
           {isMidiConnected && (
             <div className="px-2 py-1 rounded bg-emerald-500/15 border border-emerald-500/40 text-emerald-800 dark:text-emerald-300 text-[11px] font-bold flex items-center gap-1.5">

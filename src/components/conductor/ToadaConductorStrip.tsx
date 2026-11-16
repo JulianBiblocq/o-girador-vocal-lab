@@ -53,8 +53,8 @@ export const ToadaConductorStrip: React.FC<{ outputDeviceId?: string; isManualSt
               <button type="button" onClick={() => addSlot()} className="px-2 py-0.5 text-[11px] font-bold font-mono cordel-card-sm rounded flex items-center gap-1 cursor-pointer">
                 <Plus className="w-3 h-3 text-theme-accent" /><span>{t('addConductorBlock')}</span>
               </button>
-              <button type="button" onClick={() => addSlot(2)} className="px-2 py-0.5 text-[11px] font-bold font-mono cordel-card-sm rounded flex items-center gap-1 cursor-pointer text-amber-800 dark:text-amber-300" title={t('conductorAddSilenceBtn')}>
-                <VolumeX className="w-3 h-3" /><span>{t('conductorAddSilenceBtn')}</span>
+              <button type="button" onClick={() => addSlot(2)} className="px-2 py-0.5 text-[11px] font-bold font-mono cordel-card-sm rounded flex items-center gap-1 cursor-pointer text-amber-800 dark:text-amber-300" title={t('conductorAddSilenceBtn').replace(/^🔇\s*/, '')}>
+                <VolumeX className="w-3 h-3" /><span>{t('conductorAddSilenceBtn').replace(/^🔇\s*/, '')}</span>
               </button>
             </>
           )}

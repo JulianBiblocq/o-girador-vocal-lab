@@ -23,7 +23,7 @@ const MODES: Array<{ key: ScaleType; fr: string; br: string }> = [
 ];
 
 export const TonalityStampPopover: React.FC = () => {
-  const { project, activePattern, loadProject, updatePattern } = useToadaProject();
+  const { project, loadProject } = useToadaProject();
   const { engine, selectedOutputDeviceId } = useAudioHardware();
   const { t, language } = useLanguage(), isBr = language === 'br';
   const [isOpen, setIsOpen] = useState(false), [lastMode, setLastMode] = useState<ScaleType>('natural_minor');
@@ -42,7 +42,7 @@ export const TonalityStampPopover: React.FC = () => {
   const isLocked = sungMode !== 'chromatic';
   useEffect(() => { if (sungMode !== 'chromatic') setLastMode(sungMode); }, [sungMode]);
 
-  const allowedSet = buildAllowedPitchClasses(sungRoot, sungMode, activePattern.pack?.customPitchClasses ?? null);
+  const allowedSet = buildAllowedPitchClasses(sungRoot, sungMode, project.customPitchClasses ?? null);
   const pitchHz = sanitizePitchHz(project.referencePitchHz ?? project.toadaMeta?.referencePitchHz ?? DEFAULT_REFERENCE_PITCH_HZ);
   const listenTarget = project.previewListenTarget ?? (shiftSt !== 0 ? 'troupe' : 'sung');
   const stBadge = shiftSt === 0 ? '0 st' : `${shiftSt > 0 ? '+' : ''}${shiftSt} st`;
@@ -99,7 +99,7 @@ export const TonalityStampPopover: React.FC = () => {
           {isLocked && (
             <div className="flex items-center gap-1 flex-wrap pt-1 border-t border-[var(--cordel-border-sub)]">
               {solfege.map((lbl, pc) => (
-                <button key={pc} type="button" onClick={() => { if (!activePattern.pack) return; const next = new Set(allowedSet); if (next.has(pc) && next.size > 1) next.delete(pc); else next.add(pc); updatePattern(activePattern.id, { pack: { ...activePattern.pack, customPitchClasses: Array.from(next).sort((a, b) => a - b) } }); }} className={`px-1.5 py-0.5 rounded text-[10px] font-bold cursor-pointer border ${allowedSet.has(pc) ? 'bg-emerald-700 text-white border-emerald-500' : 'bg-stone-500/10 text-theme-ink/45 border-transparent'}`}>{lbl}</button>
+                <button key={pc} type="button" onClick={() => { const next = new Set(allowedSet); if (next.has(pc) && next.size > 1) next.delete(pc); else next.add(pc); loadProject({ ...project, customPitchClasses: Array.from(next).sort((a, b) => a - b) }); }} className={`px-1.5 py-0.5 rounded text-[10px] font-bold cursor-pointer border ${allowedSet.has(pc) ? 'bg-emerald-700 text-white border-emerald-500' : 'bg-stone-500/10 text-theme-ink/45 border-transparent'}`}>{lbl}</button>
               ))}
             </div>
           )}

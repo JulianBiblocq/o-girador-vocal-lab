@@ -100,7 +100,7 @@ export const BpmStampPopover: React.FC = () => {
             <span className="opacity-75">{isBr ? 'Aplicar a :' : 'Appliquer à :'}</span>
             <div className="inline-flex rounded cordel-card-sm p-0.5">
               <button type="button" onClick={() => setApplyScope('all')} className={`px-2 py-0.5 rounded font-bold cursor-pointer ${applyScope === 'all' ? 'bg-theme-wood text-[var(--cordel-on-primary)]' : 'opacity-70'}`}>{isBr ? 'Toda a Toada' : 'Toute la Toada'}</button>
-              <button type="button" onClick={() => setApplyScope('current')} className={`px-2 py-0.5 rounded font-bold cursor-pointer ${applyScope === 'current' ? 'bg-theme-wood text-[var(--cordel-on-primary)]' : 'opacity-70'}`}>{isBr ? 'Este bloco' : 'Ce bloc'}</button>
+              <button type="button" onClick={() => setApplyScope('active')} className={`px-2 py-0.5 rounded font-bold cursor-pointer ${applyScope === 'active' ? 'bg-theme-wood text-[var(--cordel-on-primary)]' : 'opacity-70'}`}>{isBr ? 'Este bloco' : 'Ce bloc'}</button>
             </div>
           </div>
 

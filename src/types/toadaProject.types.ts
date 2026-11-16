@@ -115,6 +115,7 @@ export interface ToadaProject {
   globalHarmonyGrid?: PatternHarmonyGrid;
   sungScaleRoot?: string;
   sungScaleMode?: string;
+  customPitchClasses?: number[] | null;
   transpositionSemitones?: number;
   troupeScaleRoot?: string;
   grammarVersion?: number;
