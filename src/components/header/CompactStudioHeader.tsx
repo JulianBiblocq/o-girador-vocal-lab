@@ -3,7 +3,7 @@
  * En-tête compact 1 ligne Studio (3 poinçons + Sync) et En-tête Dédié Élève épuré (< 125 lignes).
  */
 import React, { useState } from 'react';
-import { Sun, Moon, Download, Headphones, ArrowLeft, BookOpen } from 'lucide-react';
+import { Sun, Moon, Download, Headphones, ArrowLeft, BookOpen, Compass } from 'lucide-react';
 import { useToadaProject } from '../../context/ToadaProjectContext';
 import { useOrganizadorAuth } from '../../hooks/useOrganizadorAuth';
 import { useOrganizadorDeepLink } from '../../hooks/useOrganizadorDeepLink';
@@ -58,6 +58,15 @@ export const CompactStudioHeader: React.FC<Props> = ({
           <BpmStampPopover />
           <TonalityStampPopover />
           <HardwareStampPopover />
+          <button
+            type="button"
+            onClick={() => useVocalTransportStore.getState().setDictationModalOpen(true)}
+            title={t('dialOpenDictationTitle')}
+            className="h-8 px-2.5 cordel-card-sm text-xs font-mono font-bold inline-flex items-center gap-1.5 cursor-pointer hover:border-amber-500/60"
+          >
+            <Compass className="w-3.5 h-3.5 text-[#9a3412] dark:text-amber-300" />
+            <span className="hidden lg:inline">{t('dialOpenDictationBtn')}</span>
+          </button>
         </div>
       )}
 

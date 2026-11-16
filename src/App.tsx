@@ -12,6 +12,7 @@ import { LivretContentRenderer } from './components/navigation/LivretContentRend
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { CordelDialogModal } from './components/ui/CordelDialogModal';
 import { AppUpdateBanner } from './components/common/AppUpdateBanner';
+import { MestreNoteDictationModal } from './components/dictation/MestreNoteDictationModal';
 import { useGlobalTransportShortcuts } from './hooks/useGlobalTransportShortcuts';
 import { useVocalLabMidi } from './hooks/useVocalLabMidi';
 import { usePwaInstall } from './hooks/usePwaInstall';
@@ -94,6 +95,7 @@ export const App: React.FC = () => (
       <ToadaProjectProvider>
         <AudioHardwareProvider>
           <AppContent />
+          <MestreNoteDictationModal />
           <CordelDialogModal />
           <AppUpdateBanner />
         </AudioHardwareProvider>

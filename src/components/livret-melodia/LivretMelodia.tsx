@@ -69,6 +69,7 @@ export const LivretMelodia: React.FC<LivretMelodiaProps> = (props) => {
       tessitura: activePattern.tessitura, assignedLyricsText: activePattern.assignedLyricsText,
       timeAnchors: freshAnchors, lowCutEnabled: activeVariant?.lowCutEnabled ?? activePattern.lowCutEnabled ?? true,
       enableTonePolish: (activeVariant?.enableTonePolish ?? activePattern.enableTonePolish) !== false,
+      referenceMidiNotes: activePattern.referenceMidiNotes,
     });
 
     const preserveMidi = Boolean(activePattern.midiLocked && checkPatternHasMidi(activePattern));
@@ -106,7 +107,7 @@ export const LivretMelodia: React.FC<LivretMelodiaProps> = (props) => {
     <div className="flex flex-col gap-3 w-full max-w-6xl mx-auto my-2">
       <TwinPatternsManagerBar />
       <ScaleProposalBanner proposal={scaleProposal} onApplyScale={handleApplyScale} onKeepUncertain={handleApplyScale} onDisengageFreeMode={() => { loadProject(applyDetectedScaleToProject(project, scaleProposal?.tonic || 'A', 'chromatic', scaleProposal?.referencePitch)); setScaleProposal(null); }} onDismiss={() => setScaleProposal(null)} />
-      <LivretMelodiaWorkspace key={`${project.id}-${activePattern.id}`} {...props} initialPack={pack} cleanPCM={activePattern.rawAudioSamples} sampleRate={sampleRate} totalDurationSec={totalDurationSec} beatsPerMeasure={beatsPerMeasure} measuresCount={activePattern.measuresCount} pitchCurve={activePattern.pitchCurve} outputDeviceId={selectedOutputDeviceId} pitchShiftSemitones={activeVariant?.pitchShiftSemitones ?? 0} onAnalyzeFullProjectScale={handleAnalyzeFullProjectScale} />
+      <LivretMelodiaWorkspace key={`${project.id}-${activePattern.id}-${(activePattern.referenceMidiNotes || []).join(',')}`} {...props} initialPack={pack} cleanPCM={activePattern.rawAudioSamples} sampleRate={sampleRate} totalDurationSec={totalDurationSec} beatsPerMeasure={beatsPerMeasure} measuresCount={activePattern.measuresCount} pitchCurve={activePattern.pitchCurve} outputDeviceId={selectedOutputDeviceId} pitchShiftSemitones={activeVariant?.pitchShiftSemitones ?? 0} onAnalyzeFullProjectScale={handleAnalyzeFullProjectScale} />
     </div>
   );
 };

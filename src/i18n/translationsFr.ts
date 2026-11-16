@@ -9,6 +9,7 @@ import { tessituraTranslationsFr } from './tessituraTranslationsFr'; import { ha
 import { cloudToadaTranslationsFr } from './cloudToadaTranslationsFr'; import { lexiconTranslationsFr } from './lexiconTranslationsFr';
 import { livretNavTranslationsFr } from './livretNavTranslationsFr'; import { uiPolishTranslationsFr } from './uiPolishTranslationsFr';
 import { fitaBandeirolasTranslationsFr } from './fitaBandeirolasTranslationsFr';
+import { pitchDialTranslationsFr } from './pitchDialTranslationsFr';
 
 export const translationsFr: VocalLabTranslations = {
   appTitle: 'O Girador — Cantador', appSubtitle: 'Atelier Vocal - Prosodie & Chant Maracatu', themeToggle: 'Changer de thème (Clair / Sombre)',
@@ -120,6 +121,6 @@ export const translationsFr: VocalLabTranslations = {
   melodynePurgeToast: 'Son brut du Livret 1 rétabli (zones Melodyne purgées)',
   pwaInstallBtn: 'Installer',
 
-  ...cloudToadaTranslationsFr, ...lexiconTranslationsFr, ...livretNavTranslationsFr, ...uiPolishTranslationsFr, ...fitaBandeirolasTranslationsFr,
+  ...cloudToadaTranslationsFr, ...lexiconTranslationsFr, ...livretNavTranslationsFr, ...uiPolishTranslationsFr, ...fitaBandeirolasTranslationsFr, ...pitchDialTranslationsFr,
   ...slicerTranslationsFr, ...toadaSheetTranslationsFr, ...treinoSubTranslationsFr, ...variantTranslationsFr, ...tessituraTranslationsFr, ...harmonyTranslationsFr,
 };

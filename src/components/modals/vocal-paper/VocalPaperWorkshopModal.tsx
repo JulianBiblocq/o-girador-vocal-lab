@@ -4,8 +4,10 @@
  * 1. Imprimer Feuilles Vierges (100 % N&B), 2. Photographier / Importer mes Feuilles (Multi-pages), 3. Guide & Conventions (< 120 lignes).
  */
 import React, { useState } from 'react';
-import { Printer, Camera, BookOpen, X } from 'lucide-react';
+import { Printer, Camera, BookOpen, Compass, X } from 'lucide-react';
 import type { ToadaProject } from '../../../types/toadaProject.types';
+import { useVocalTransportStore } from '../../../stores/useVocalTransportStore';
+import { useLanguage } from '../../../i18n/LanguageContext';
 import { VocalPaperPrintTab, triggerVocalSheetPrint } from './VocalPaperPrintTab';
 import { VocalPaperImportTab } from './VocalPaperImportTab';
 
@@ -21,6 +23,7 @@ export interface VocalPaperWorkshopModalProps {
 export const VocalPaperWorkshopModal: React.FC<VocalPaperWorkshopModalProps> = ({
   isOpen, onClose, project, groupId, isBr = false, onProjectUpdate,
 }) => {
+  const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState<'print' | 'import' | 'guide'>('print');
   if (!isOpen) return null;
 
@@ -41,7 +44,13 @@ export const VocalPaperWorkshopModal: React.FC<VocalPaperWorkshopModalProps> = (
               </p>
             </div>
           </div>
-          <button type="button" onClick={onClose} className="p-1.5 rounded cordel-btn cursor-pointer"><X className="w-4 h-4" /></button>
+          <div className="flex items-center gap-1.5">
+            <button type="button" onClick={() => useVocalTransportStore.getState().setDictationModalOpen(true)} title={t('dialOpenDictationTitle')} className="px-2.5 py-1.5 rounded cordel-btn text-xs font-mono font-bold inline-flex items-center gap-1.5 cursor-pointer">
+              <Compass className="w-3.5 h-3.5 text-[#9a3412] dark:text-amber-300" />
+              <span>{t('dialOpenDictationBtn')}</span>
+            </button>
+            <button type="button" onClick={onClose} className="p-1.5 rounded cordel-btn cursor-pointer"><X className="w-4 h-4" /></button>
+          </div>
         </div>
 
         <div className="px-4 pt-2.5 border-b border-[var(--cordel-border-sub)] bg-[var(--cordel-surface)] flex flex-wrap gap-1.5 font-mono text-xs">

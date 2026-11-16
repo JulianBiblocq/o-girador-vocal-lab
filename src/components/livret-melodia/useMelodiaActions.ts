@@ -40,6 +40,7 @@ export function useMelodiaActions(p: UseMelodiaActionsParams) {
     const snapped = reanalyzeNotesOnAlignedSyllables({
       steps: p.allSteps, pitchCurve: freshCurve, gridStartSec: p.hasAnac ? 0 : p.t1OffsetSec,
       stepDurationSec: stepDur, tonic: ton, scaleType: sc, allowedPitchClasses: allowed,
+      referenceMidiNotes: p.activePattern.referenceMidiNotes, pcm: p.rawPCM, sampleRate: p.sampleRate,
     });
     p.commitCurrentSnapshot({ steps: snapped, rawPitchCurve: freshCurve });
     p.handleUpdateSteps(snapped, true);
@@ -72,6 +73,7 @@ export function useMelodiaActions(p: UseMelodiaActionsParams) {
       const reanalyzed = reanalyzeNotesOnAlignedSyllables({
         steps: combinedSteps, pitchCurve: freshCurve, gridStartSec: hasAnac ? 0 : (pat.t1OffsetSec ?? 0.15),
         stepDurationSec: stepDur, tonic: p.tonic, scaleType: p.scaleType, allowedPitchClasses: allowed,
+        referenceMidiNotes: pat.referenceMidiNotes, pcm, sampleRate: sr,
       });
       analyzedPhrases++;
       totalDoubts += reanalyzed.filter((s) => s.active && !s.isTie && s.note !== '───' && s.isUncertain).length;

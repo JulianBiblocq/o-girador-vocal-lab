@@ -1,5 +1,6 @@
 /**
- * StudentTrainerEngine.ts — Moteur d'entraînement vocal Web Audio Studio Élève 2.0 (Trace pitch 60 FPS Bayésienne, Projection Roda, WSOLA) (< 138 lignes).
+ * StudentTrainerEngine.ts — Moteur d'entraînement vocal Web Audio Studio Élève 2.0
+ * (Trace pitch 60 FPS Bayésienne, Projection Roda, WSOLA et mode 'drone_click' Bourdon + Clic sans clavier) (< 130 lignes).
  */
 import { getSharedAudioContext, registerAudioKillSwitch, stopAllActiveAudioEngines } from './sharedAudioContext';
 import { VocalRecorderEngine } from './VocalRecorderEngine';
@@ -10,17 +11,21 @@ import { detectRealtimePitch } from './realtimePitchDetector';
 import { CausalStudentPitchTracker } from './studentPerformanceMatcher';
 import { extractCanonicalMestreBuffer, timeStretchConstantPitch } from './wsolaTimeStretcher';
 import { analyzeVocalProjectionFrame, computeSessionProjectionSummary, type RodaProjectionFrameResult, type SessionProjectionSummary } from './rodaResonanceAnalyzer';
+import { sharedTonicDrone } from './tonicDroneSynth';
+import { scheduleComparativePlaybackNodes, type ComparativePlaybackMode } from './studentComparativePlayer';
+import { midiToNoteName } from '../utils/noteUtils';
 import type { VocalPatternItem } from '../types/toadaProject.types';
 import type { HarmonyConfig } from '../types/harmony.types';
 import type { PitchCurvePoint } from '../types/vocalPack.types';
 import type { TrainerGuideMode, StudentRole, TrainerScope } from '../components/livret-treino/TrainerConfigBar';
 import { HarmonyPlayerEngine } from './harmony/HarmonyPlayerEngine';
 
-export type ComparativePlaybackMode = 'mix' | 'student' | 'mestre';
+export type { ComparativePlaybackMode };
 export interface StudentTrainingConfig {
   pattern: VocalPatternItem; cuePattern?: VocalPatternItem | null; baseBpm: number; bpm: number; speedRatio?: number;
   beatsPerMeasure: number; measuresCount: number; scope?: TrainerScope; studentRole: StudentRole; guideMode: TrainerGuideMode;
   deviceId?: string; outputDeviceId?: string; harmonyConfig?: HarmonyConfig; pitchShiftSemitones?: number;
+  troupeTonicRoot?: string; referencePitchHz?: number;
 }
 
 export class StudentTrainerEngine {
@@ -49,12 +54,20 @@ export class StudentTrainerEngine {
     const hasAnac = config.pattern.hasAnacrusis !== false, singingMeasures = (hasAnac ? 1 : 0) + config.measuresCount;
     const countdownSec = preRollMeasures * measureDur, singingSec = singingMeasures * measureDur;
     const startTime = this.ctx.currentTime + 0.08, singStartTime = startTime + countdownSec;
+    const allTargetSteps = [...(hasAnac ? (config.pattern.anacrusisSteps || []) : []), ...(config.pattern.mainSteps || [])];
+    const shiftSt = config.pitchShiftSemitones ?? 0;
+
     for (let b = 0; b < (preRollMeasures + singingMeasures) * config.beatsPerMeasure; b++) {
       scheduleWoodClick(this.ctx, startTime + b * beatDur, b % config.beatsPerMeasure === 0, this.activeNodes);
     }
-    scheduleReferencePitch(this.ctx, startTime, config.pattern.referencePitch || 'C4', measureDur * 0.85, this.activeNodes);
+    const firstActiveStep = allTargetSteps.find((s) => s.active && (s.midiNumber ?? 0) > 0 && s.note !== '───');
+    const precountRefNote = firstActiveStep?.midiNumber ? midiToNoteName(firstActiveStep.midiNumber + shiftSt) : (config.pattern.referencePitch || 'C4');
+    scheduleReferencePitch(this.ctx, startTime, precountRefNote, config.guideMode === 'drone_click' ? Math.min(0.65, measureDur * 0.5) : measureDur * 0.85, this.activeNodes);
+
+    if (config.guideMode === 'drone_click') await sharedTonicDrone.start(config.troupeTonicRoot || 'C', config.referencePitchHz ?? 440, 0.15);
     if (hasCue && config.cuePattern) this.cueHandle = scheduleCuePatternAudio(this.ctx, config.cuePattern, startTime, config.beatsPerMeasure, beatDur, config.bpm);
-    const shouldPlayMestreVoice = config.guideMode === 'accompanied' || (config.guideMode === 'autonomous' && config.studentRole !== 'all' && config.studentRole !== config.pattern.role);
+
+    const shouldPlayMestreVoice = config.guideMode === 'accompanied' || ((config.guideMode === 'autonomous' || config.guideMode === 'drone_click') && config.studentRole !== 'all' && config.studentRole !== config.pattern.role);
     if (shouldPlayMestreVoice) {
       const mestre = extractCanonicalMestreBuffer(config.pattern, config.baseBpm, config.beatsPerMeasure, sampleRate);
       if (mestre?.pcm.length) {
@@ -64,18 +77,17 @@ export class StudentTrainerEngine {
         src.start(singStartTime, hasAnac ? 0 : 0.15 / (config.speedRatio ?? 1.0)); this.activeNodes.push(src);
       }
     } else if (config.guideMode === 'voice_only') {
-      this.guideHandle = scheduleSecondaryTakeGuide(this.ctx, this.ctx.destination, config.pattern.anacrusisSteps || [], config.pattern.mainSteps || [], singStartTime, hasAnac ? measureDur : 0, config.bpm, config.pitchShiftSemitones ?? 0);
+      this.guideHandle = scheduleSecondaryTakeGuide(this.ctx, this.ctx.destination, config.pattern.anacrusisSteps || [], config.pattern.mainSteps || [], singStartTime, hasAnac ? measureDur : 0, config.bpm, shiftSt);
     }
-    if (config.harmonyConfig?.enabled && config.pattern.harmonyGrid) {
+    if (config.guideMode !== 'drone_click' && config.harmonyConfig?.enabled && config.pattern.harmonyGrid) {
       this.harmonyEngine.schedule(this.ctx, this.ctx.destination, {
         grid: config.pattern.harmonyGrid, bpm: config.bpm, beatsPerMeasure: config.beatsPerMeasure, measuresCount: config.measuresCount,
-        startTime: singStartTime, totalDurationSec: singingSec, hasAnacrusis: hasAnac, pitchShiftSemitones: config.pitchShiftSemitones,
+        startTime: singStartTime, totalDurationSec: singingSec, hasAnacrusis: hasAnac, pitchShiftSemitones: shiftSt,
         profile: config.harmonyConfig.profile, volume: config.harmonyConfig.volume, muteBass: config.harmonyConfig.muteBass,
       });
     }
     this.recorder.start(singStartTime, singingSec);
     const stepDurSec = beatDur / 4, timeBuf = new Float32Array(2048), freqBuf = new Float32Array(1024);
-    const allTargetSteps = [...(hasAnac ? (config.pattern.anacrusisSteps || []) : []), ...(config.pattern.mainSteps || [])];
     const tracker = new CausalStudentPitchTracker(), projectionFrames: RodaProjectionFrameResult[] = [];
     let prevMidi = 0;
     const tick = () => {
@@ -87,7 +99,8 @@ export class StudentTrainerEngine {
         if (this.liveAnalyser) {
           this.liveAnalyser.getFloatTimeDomainData(timeBuf); this.liveAnalyser.getFloatFrequencyData(freqBuf);
           const { pitchMidi, rms, clarity, zcr } = detectRealtimePitch(timeBuf, this.ctx.sampleRate);
-          livePt = tracker.update(elapsed, pitchMidi, rms, clarity ?? 0.85, zcr ?? 0.08, allTargetSteps[stepIdx]?.midiNumber || 0);
+          const tgtMidi = allTargetSteps[stepIdx]?.midiNumber ? allTargetSteps[stepIdx].midiNumber! + shiftSt : 0;
+          livePt = tracker.update(elapsed, pitchMidi, rms, clarity ?? 0.85, zcr ?? 0.08, tgtMidi);
           const trk = livePt?.midiFloat ?? 0, jitterCents = prevMidi > 0 && trk > 0 ? Math.min(120, Math.abs(trk - prevMidi) * 100) : 12;
           if (trk > 0) prevMidi = trk;
           liveProj = analyzeVocalProjectionFrame(freqBuf, this.ctx.sampleRate, this.liveAnalyser.fftSize, rms, jitterCents);
@@ -110,28 +123,13 @@ export class StudentTrainerEngine {
   ): Promise<void> {
     this.stop(); stopAllActiveAudioEngines('student-trainer'); registerAudioKillSwitch('student-trainer', () => { this.stop(); onEnded?.(); });
     this.ctx = await getSharedAudioContext();
-    const now = this.ctx.currentTime + 0.04; let maxDur = 0;
-    if ((mode === 'mix' || mode === 'student') && studentPCM.length > 0) {
-      const sBuf = this.ctx.createBuffer(1, studentPCM.length, studentSampleRate); sBuf.getChannelData(0).set(studentPCM);
-      const sSrc = this.ctx.createBufferSource(); sSrc.buffer = sBuf; sSrc.connect(this.ctx.destination);
-      sSrc.start(now); this.activeNodes.push(sSrc); maxDur = Math.max(maxDur, sBuf.duration);
-    }
-    if ((mode === 'mix' || mode === 'mestre') && pattern) {
-      const mestre = extractCanonicalMestreBuffer(pattern, baseBpm, 4, studentSampleRate);
-      if (mestre?.pcm.length) {
-        const stretched = timeStretchConstantPitch(mestre.pcm, mestre.sampleRate, speedRatio);
-        const mBuf = this.ctx.createBuffer(1, stretched.length, mestre.sampleRate); mBuf.getChannelData(0).set(stretched);
-        const mGain = this.ctx.createGain(); mGain.gain.value = mode === 'mix' ? 0.75 : 1.0;
-        const mSrc = this.ctx.createBufferSource(); mSrc.buffer = mBuf; mSrc.connect(mGain); mGain.connect(this.ctx.destination);
-        const offset = pattern.hasAnacrusis !== false ? 0 : 0.15 / speedRatio;
-        mSrc.start(now, offset); this.activeNodes.push(mSrc, mGain); maxDur = Math.max(maxDur, mBuf.duration - offset);
-      }
-    }
-    this.stopTimerId = window.setTimeout(() => { this.stop(); onEnded?.(); }, Math.max(100, (maxDur + 0.05) * 1000));
+    const { nodes, maxDurSec } = scheduleComparativePlaybackNodes(this.ctx, studentPCM, studentSampleRate, pattern, baseBpm, speedRatio, mode);
+    this.activeNodes.push(...nodes);
+    this.stopTimerId = window.setTimeout(() => { this.stop(); onEnded?.(); }, Math.max(100, (maxDurSec + 0.05) * 1000));
   }
 
   public stop(): void {
-    this.isRunning = false;
+    this.isRunning = false; sharedTonicDrone.stopImmediate();
     if (this.animId !== null) { cancelAnimationFrame(this.animId); this.animId = null; }
     if (this.stopTimerId !== null) { window.clearTimeout(this.stopTimerId); this.stopTimerId = null; }
     this.recorder.cleanup(); this.harmonyEngine.stop(); this.guideHandle?.stop(); this.cueHandle?.stop(); this.guideHandle = null; this.cueHandle = null;

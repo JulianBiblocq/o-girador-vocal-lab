@@ -1,11 +1,12 @@
 /**
  * pianoRollBricksDrawer.ts — Rendu Canvas des briques MIDI (binaire & triolets), liaisons legato de mélisme (`_`),
- * mode Rythme Replié, poignées VariAudio (0..100%) et courbes dorées (< 140 lignes).
+ * hachurage consonantique + silhouette d'onde interne, poignées VariAudio (0..100%) et courbes dorées (< 135 lignes).
  */
 import type { PitchCurvePoint, VocalStepData } from '../../types/vocalPack.types';
 import { getStepHorizontalBoundsPx, getStepTimeWindowSec, findLastTiedStepIndex } from '../../utils/tripletBeatHelper';
 import { midiToRowY } from './PianoRollKeyboard';
 import { drawMelismaLegatoSlurs } from './pianoRollMelismaSlur';
+import { drawBrickConsonantAndWaveOverlay } from './pianoRollBrickWaveDrawer';
 
 export interface DrawBricksParams {
   ctx: CanvasRenderingContext2D; allSteps: VocalStepData[]; stepW: number;
@@ -38,8 +39,6 @@ export function drawPianoRollBricks(params: DrawBricksParams): void {
     if (bounds.hidden || bounds.widthPx <= 0) { i = endIdx; continue; }
     const x = bounds.xPx, w = Math.max(4, bounds.widthPx - 2);
     const y = midiToRowY(midiNum, maxMidi, rowHeight) + 1.5, h = Math.max(4, rowHeight - 3);
-    const cutRatio = step.melodyneStartRatio !== undefined ? step.melodyneStartRatio : 0.25;
-    const cutW = Math.max(0, Math.min(w, w * cutRatio));
     const pullPct = Math.max(0, Math.min(100, Math.round(step.melodynePullPct ?? 0)));
     const isSel = selectedStepIdx !== undefined && selectedStepIdx !== null && selectedStepIdx >= i && selectedStepIdx <= endIdx;
     const isHov = hoveredBrickRootIdx === i, isUncertain = Boolean(step.isUncertain), isMelisma = Boolean(step.isMelisma || step.syllable?.trim() === '_');
@@ -52,16 +51,7 @@ export function drawPianoRollBricks(params: DrawBricksParams): void {
     ctx.beginPath(); ctx.roundRect(x, y, w, h, 3); ctx.fill(); ctx.stroke();
     if (isUncertain) ctx.setLineDash([]);
 
-    if (cutW > 2 && !isMelisma) {
-      ctx.save(); ctx.beginPath(); ctx.rect(x, y, cutW, h); ctx.clip();
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.35)'; ctx.fillRect(x, y, cutW, h);
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.16)'; ctx.lineWidth = 1;
-      for (let hx = x - h; hx < x + cutW + h; hx += 5) { ctx.beginPath(); ctx.moveTo(hx, y + h); ctx.lineTo(hx + h, y); ctx.stroke(); }
-      ctx.restore();
-      ctx.strokeStyle = '#38bdf8'; ctx.lineWidth = 1.2; ctx.setLineDash([2, 2]);
-      ctx.beginPath(); ctx.moveTo(x + cutW, y); ctx.lineTo(x + cutW, y + h); ctx.stroke(); ctx.setLineDash([]);
-    }
-
+    const cutW = drawBrickConsonantAndWaveOverlay(ctx, step, x, y, w, h, isMelisma);
     if (pullPct > 0) { ctx.fillStyle = '#fde047'; ctx.fillRect(x + cutW, y, Math.max(2, (w - cutW) * (pullPct / 100)), 3); }
     if (w > 12) { ctx.fillStyle = '#fde68a'; ctx.fillRect(x + w - 3, y + 2, 1.5, h - 4); }
     ctx.fillStyle = isUncertain ? '#fef08a' : '#ffffff'; ctx.font = 'bold 9.5px sans-serif';

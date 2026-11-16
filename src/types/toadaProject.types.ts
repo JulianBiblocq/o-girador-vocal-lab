@@ -82,6 +82,7 @@ export interface VocalPatternItem {
   troupeTransposedPCM?: Float32Array | null;
   troupeTransposedSemitones?: number;
   foldNotesView?: boolean;
+  referenceMidiNotes?: number[];
   stepStatus?: Partial<PatternStepStatus>;
 }
 

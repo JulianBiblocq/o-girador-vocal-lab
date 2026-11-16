@@ -4,7 +4,7 @@
  * Témoin Micro 1er plan, [▶ Réécouter] et tiroir d'options avancées (< 130 lignes).
  */
 import React, { useMemo, useCallback, useState, useEffect } from 'react';
-import { RotateCcw, Scissors, Music } from 'lucide-react';
+import { RotateCcw, Scissors, Music, Compass } from 'lucide-react';
 import { useToadaProject } from '../../context/ToadaProjectContext';
 import { useAudioHardware } from '../../context/AudioHardwareContext';
 import { useLanguage } from '../../i18n/LanguageContext';
@@ -93,7 +93,16 @@ export const LivretPrise: React.FC = () => {
       <TakeModeSelector mode={takeMode} onChangeMode={setTakeMode} disabled={isRecordingAny} />
       {takeMode !== 'pattern' && <ContinuousPrompterBanner info={prompterInfo} isActive={isContinuousActive} />}
 
-      <AFitaFrame title={t('fitaTitleCabine')} isSpinning={isRecordingAny || isReplaying} showPatternNav={takeMode === 'pattern'}>
+      <AFitaFrame
+        title={t('fitaTitleCabine')}
+        isSpinning={isRecordingAny || isReplaying}
+        showPatternNav={takeMode === 'pattern'}
+        headerRight={
+          <button type="button" onClick={() => useVocalTransportStore.getState().setDictationModalOpen(true)} title={t('dialOpenDictationTitle')} className="cordel-card-sm px-2.5 py-1 text-xs font-mono font-bold inline-flex items-center gap-1.5 cursor-pointer hover:border-amber-500/60">
+            <Compass className="w-3.5 h-3.5 text-[#9a3412] dark:text-amber-300" /><span>{t('dialOpenDictationBtn')}</span>
+          </button>
+        }
+      >
         <CabineTimelineRibbon
           frameless engine={engine} isActive={isRecordingAny} takeMode={takeMode} project={project} activePattern={activePattern}
           cuePattern={effectiveCuePattern} beatsPerMeasure={beatsPerMeasure} isPunchIn={Boolean(punchMeasureIndex && punchMeasureIndex >= 1 && hasRecording)}
