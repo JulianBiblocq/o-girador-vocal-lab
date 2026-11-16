@@ -23,7 +23,7 @@ export function renderFiducialCornersHTML(): string {
 }
 
 export function renderOpticalSheetCodeBadge(code: VocalSheetOpticalCode): string {
-  return `<span class="optical-sheet-code" style="display:inline-block;border:2px solid #000000;padding:0.5px 5px;font-family:monospace;font-size:7.8pt;font-weight:900;letter-spacing:0.4px;background:#ffffff;color:#000000;">[CODE: ${code}]</span>`;
+  return `<span class="optical-sheet-code" style="display:inline-block;white-space:nowrap;flex-shrink:0;border:2px solid #000000;padding:0.5px 5px;font-family:monospace;font-size:7.6pt;font-weight:900;letter-spacing:0.3px;background:#ffffff;color:#000000;">[CODE: ${code}]</span>`;
 }
 
 export function renderBwCheckbox(checked: boolean, label: string): string {
@@ -107,8 +107,13 @@ export function buildVocalPaperBatchDocumentHTML(
   for (let i = 0; i < guideCount; i++) pages.push(renderVocalSheetInstructionsHTML());
   for (let i = 0; i < tab4eCount; i++) {
     const startP = mode === 'continuous' ? nextPatNum : 1;
-    pages.push(renderVocalSheetTab4EHTML({ ...options, sheetType: 'tab_4e', patternsCount: 4, startPatternNumber: startP, patternNumberingMode: mode, blankPatternLabels: mode === 'blank' }));
-    if (mode === 'continuous') nextPatNum += 4;
+    const projPatterns = (options as any)?.project?.patterns;
+    const prefillFromProject = Boolean(options?.prefillFromProject || (options as any)?.prefillTab4EFromReference);
+    const prefillPatterns = options?.prefillPatterns || (Array.isArray(projPatterns)
+      ? projPatterns.map((p: any, idx: number) => ({ code: `P${idx + 1}`, lyricsText: p.assignedLyricsText || '', referenceMidiNotes: p.referenceMidiNotes || [] }))
+      : undefined);
+    pages.push(renderVocalSheetTab4EHTML({ ...options, sheetType: 'tab_4e', patternsCount: 5, startPatternNumber: startP, patternNumberingMode: mode, blankPatternLabels: mode === 'blank', prefillFromProject, prefillPatterns }));
+    if (mode === 'continuous') nextPatNum += 5;
   }
 
   return wrapVocalSheetA4Document(pages.join('\n'), 'landscape', `Lot Atelier Papier (${pages.length} feuilles A4)`);

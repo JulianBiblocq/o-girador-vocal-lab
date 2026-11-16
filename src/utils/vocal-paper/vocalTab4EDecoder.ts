@@ -30,7 +30,7 @@ export function decodeChantTab4EBlock(block: ScannedVocalPatternBlock): ScannedV
   if (!isTab4E) return block;
   if (Array.isArray(block.cells) && block.cells.length > 0 && !block.subdivisionLine) return block;
 
-  const durEvents = parseWeldedDurationTokens(block.subdivisionLine || '', false);
+  const durEvents = parseWeldedDurationTokens((block.subdivisionLine || '').replace(/\+/g, ' '), false);
   const noteTokens = String(block.notesLine || '').trim().split(/\s+/).filter(Boolean);
   const sylTokens = String(block.syllablesLine || '').trim().split(/\s+/).filter(Boolean);
 

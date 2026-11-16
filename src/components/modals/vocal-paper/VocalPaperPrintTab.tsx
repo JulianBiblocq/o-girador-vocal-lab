@@ -25,7 +25,7 @@ export const VOCAL_PAPER_CART_ITEMS: Array<{
   { key: 'notes', sheetType: 'notes_1m', code: 'CHANT-NOTES-1M', titleFr: 'Feuille 2 — Patterns & Notes (Clavier + Syllabes)', titleBr: 'Folha 2 — Padrões e Notas (Teclado + Sílabas)', descFr: '3 systèmes A4 Paysage (8 temps libres) : Piano Roll A (bas) ➔ G# (haut), TEMPS, OCT & SYLLABES.', descBr: '3 sistemas A4 Paisagem (8 tempos livres) : Piano Roll A (baixo) ➔ G# (alto), TEMPOS, OCT e SÍLABAS.' },
   { key: 'rhythm', sheetType: 'rhythm_only', code: 'CHANT-RYTHME', titleFr: 'Feuille 3 — Paroles & Rythme seul', titleBr: 'Folha 3 — Letra e Ritmo', descFr: '6 systèmes A4 Paysage (32 subdivisions) : bande TEMPS libre, RYTHME (5.5mm) + SYLLABES ouverte.', descBr: '6 sistemas A4 Paisagem (32 subdivisões) : faixa TEMPOS livre, RITMO (5.5mm) + SÍLABAS aberta.' },
   { key: 'instructions', sheetType: 'instructions', code: 'CHANT-GUIDE', titleFr: 'Feuille 4 — Guide & Instructions', titleBr: 'Folha 4 — Guia e Instruções', descFr: 'Mémo illustré A4 Paysage : grille 8 temps libres, traits (───), tirets "-" et élisions.', descBr: 'Resumo ilustrado A4 Paisagem : grade 8 tempos livres, traços (───), hífens "-" e elisões.' },
-  { key: 'tab4e', sheetType: 'tab_4e', code: 'CHANT-TAB-4E', titleFr: 'Feuille 5 — Tablature 4 Étages', titleBr: 'Folha 5 — Tablatura 4 Níveis', descFr: '4 systèmes A4 Paysage (4 bandes : TEMPS / SUBDIVISIONS soudées "/" / NOTES ou 0 / SYLLABES et _).', descBr: '4 sistemas A4 Paisagem (4 faixas : TEMPOS / SUBDIVISÕES soldadas "/" / NOTAS ou 0 / SÍLABAS e _).' },
+  { key: 'tab4e', sheetType: 'tab_4e', code: 'CHANT-TAB-4E', titleFr: 'Feuille 5 — Tablature 4 Étages', titleBr: 'Folha 5 — Tablatura 4 Níveis', descFr: '5 systèmes A4 Paysage (4 bandes : TEMPS / SUBDIV. 4, 2+2, 4/4 / NOTES ou 0 / SYLLABES et _).', descBr: '5 sistemas A4 Paisagem (4 faixas : TEMPOS / SUBDIV. 4, 2+2, 4/4 / NOTAS ou 0 / SÍLABAS e _).' },
 ];
 
 export function renderSingleSheetPreviewHTML(options: VocalPaperPrintOptions): string {
@@ -33,7 +33,7 @@ export function renderSingleSheetPreviewHTML(options: VocalPaperPrintOptions): s
   const inner = options.sheetType === 'sequence' ? renderVocalSheetSequenceHTML(options)
     : options.sheetType === 'notes_1m' || options.sheetType === 'notes_2m' ? renderVocalSheetNotesHTML({ ...options, patternsCount: 3, blankPatternLabels: isBlank })
     : options.sheetType === 'rhythm_only' ? renderVocalSheetRhythmHTML({ ...options, patternsCount: 6, blankPatternLabels: isBlank })
-    : options.sheetType === 'tab_4e' ? renderVocalSheetTab4EHTML({ ...options, patternsCount: 4, blankPatternLabels: isBlank })
+    : options.sheetType === 'tab_4e' ? renderVocalSheetTab4EHTML({ ...options, patternsCount: 5, blankPatternLabels: isBlank })
     : renderVocalSheetInstructionsHTML();
   return wrapVocalSheetA4Document(inner, 'landscape', `Aperçu — ${options.sheetType}`);
 }
@@ -85,16 +85,16 @@ export const VocalPaperPrintTab: React.FC<VocalPaperPrintTabProps> = ({ project,
               </div>
               <div className="flex flex-wrap items-center gap-1.5 select-none">
                 <div className="inline-flex items-center border border-[#9a3412]/40 dark:border-[#5c4333] rounded overflow-hidden bg-[#faf5e8] dark:bg-[#16120e] text-[#1c1613] dark:text-[#f5ebd6]">
-                  <button type="button" onClick={() => setQty(item.key, qty - 1)} className="px-2 py-1 font-black hover:bg-[#e5d5b5] dark:hover:bg-[#36281f] cursor-pointer">-</button>
-                  <span className="w-8 text-center font-black">{qty}</span>
-                  <button type="button" onClick={() => setQty(item.key, qty + 1)} className="px-2 py-1 font-black hover:bg-[#e5d5b5] dark:hover:bg-[#36281f] cursor-pointer">+</button>
+                  <button type="button" onClick={() => setQty(item.key, qty - 1)} className="select-none px-2 py-1 font-black hover:bg-[#e5d5b5] dark:hover:bg-[#36281f] cursor-pointer">-</button>
+                  <span className="select-none w-8 text-center font-black">{qty}</span>
+                  <button type="button" onClick={() => setQty(item.key, qty + 1)} className="select-none px-2 py-1 font-black hover:bg-[#e5d5b5] dark:hover:bg-[#36281f] cursor-pointer">+</button>
                 </div>
                 <div className="inline-flex items-center gap-1">
                   {[0, 1, 3, 6].map((preset) => (
-                    <button key={preset} type="button" onClick={() => setQty(item.key, preset)} className={`px-1.5 py-0.5 rounded text-[10px] font-bold border cursor-pointer transition-colors ${qty === preset ? 'bg-[#9a3412] dark:bg-[#c2410c] text-white border-[#9a3412] dark:border-[#c2410c]' : 'border-[#bfa98a] dark:border-[#4a392d] bg-[#faf5e8] dark:bg-[#16120e] text-[#1c1613] dark:text-[#cbbba0] hover:bg-[#e5d5b5] dark:hover:bg-[#2a1f18]'}`}>{preset}</button>
+                    <button key={preset} type="button" onClick={() => setQty(item.key, preset)} className={`select-none px-1.5 py-0.5 rounded text-[10px] font-bold border cursor-pointer transition-colors ${qty === preset ? 'bg-[#9a3412] dark:bg-[#c2410c] text-white border-[#9a3412] dark:border-[#c2410c]' : 'border-[#bfa98a] dark:border-[#4a392d] bg-[#faf5e8] dark:bg-[#16120e] text-[#1c1613] dark:text-[#cbbba0] hover:bg-[#e5d5b5] dark:hover:bg-[#2a1f18]'}`}>{preset}</button>
                   ))}
                 </div>
-                <button type="button" onClick={() => setPreviewSheet(previewSheet === item.sheetType ? null : item.sheetType)} className="px-2 py-1 rounded border border-[#9a3412]/45 dark:border-[#5c4333] bg-[#faf5e8] dark:bg-[#16120e] text-[#1c1613] dark:text-[#f5ebd6] hover:bg-[#9a3412] hover:text-white dark:hover:bg-[#c2410c] font-bold flex items-center gap-1 cursor-pointer transition-colors">
+                <button type="button" onClick={() => setPreviewSheet(previewSheet === item.sheetType ? null : item.sheetType)} className="select-none px-2 py-1 rounded border border-[#9a3412]/45 dark:border-[#5c4333] bg-[#faf5e8] dark:bg-[#16120e] text-[#1c1613] dark:text-[#f5ebd6] hover:bg-[#9a3412] hover:text-white dark:hover:bg-[#c2410c] font-bold flex items-center gap-1 cursor-pointer transition-colors">
                   <Eye className="w-3.5 h-3.5" /><span>{isBr ? 'Prévia' : 'Aperçu'}</span>
                 </button>
               </div>

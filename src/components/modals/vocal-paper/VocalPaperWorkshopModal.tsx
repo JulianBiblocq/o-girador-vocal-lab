@@ -46,7 +46,7 @@ export const VocalPaperWorkshopModal: React.FC<VocalPaperWorkshopModalProps> = (
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 p-3">
       <div className="w-full max-w-4xl max-h-[90vh] flex flex-col rounded-lg overflow-hidden shadow-2xl border-2 border-[#9a3412] dark:border-[#c2410c] bg-[#f4ecd8] dark:bg-[#16120e] text-[#1c1613] dark:text-[#f5ebd6]">
-        <div className="px-4 py-3 border-b-2 border-[var(--cordel-wood)] bg-[#efe6d0] dark:bg-[#211a15] flex items-center justify-between gap-2">
+        <div className="px-4 py-3 border-b-2 border-[#9a3412] dark:border-[#c2410c] bg-[#efe6d0] dark:bg-[#211a15] flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 font-mono">
             <Printer className="w-5 h-5 text-[#9a3412] dark:text-[#fdba74]" />
             <div>
@@ -61,11 +61,11 @@ export const VocalPaperWorkshopModal: React.FC<VocalPaperWorkshopModalProps> = (
             </div>
           </div>
           <div className="flex items-center gap-1.5 select-none">
-            <button type="button" onClick={() => useVocalTransportStore.getState().setDictationModalOpen(true)} title={t('dialOpenDictationTitle')} className="px-2.5 py-1.5 rounded cordel-btn text-xs font-mono font-bold inline-flex items-center gap-1.5 cursor-pointer">
+            <button type="button" onClick={() => useVocalTransportStore.getState().setDictationModalOpen(true)} title={t('dialOpenDictationTitle')} className="select-none px-2.5 py-1.5 rounded border border-[#bfa98a] dark:border-[#5c4333] bg-[#faf5e8] dark:bg-[#16120e] text-[#1c1613] dark:text-[#f5ebd6] hover:bg-[#e5d5b5] dark:hover:bg-[#2a1f18] text-xs font-mono font-bold inline-flex items-center gap-1.5 cursor-pointer transition-colors">
               <Compass className="w-3.5 h-3.5 text-[#9a3412] dark:text-[#fdba74]" />
               <span>{t('dialOpenDictationBtn')}</span>
             </button>
-            <button type="button" onClick={onClose} className="p-1.5 rounded cordel-btn cursor-pointer"><X className="w-4 h-4" /></button>
+            <button type="button" onClick={onClose} className="select-none p-1.5 rounded border border-[#bfa98a] dark:border-[#5c4333] bg-[#faf5e8] dark:bg-[#16120e] text-[#1c1613] dark:text-[#f5ebd6] hover:bg-[#e5d5b5] dark:hover:bg-[#2a1f18] cursor-pointer transition-colors"><X className="w-4 h-4" /></button>
           </div>
         </div>
 
@@ -104,8 +104,8 @@ export const VocalPaperWorkshopModal: React.FC<VocalPaperWorkshopModalProps> = (
                 <p className="text-[#3a2e26] dark:text-[#cbbba0]">Les feuilles de patterns sont neutres (<b>[Pattern : P1]</b>). C&apos;est sur la <b>Feuille 1 (Séquence)</b> que vous attribuez qui chante à chaque mesure sur les 2 lignes superposées : <b>Pux : P1 - P2 - X - X - P5</b> / <b>Cor : X - X - P3 - P4 - P5</b> (même code P5/P5 = Unisson ; P5/P6 = 2 voix ; X/X = [PAUSE 1M]).</p>
               </div>
               <div className="p-3 rounded border border-[#9a3412]/35 dark:border-[#4a392d] bg-[#efe4cc] dark:bg-[#241c16] text-[#1c1613] dark:text-[#f5ebd6] space-y-1.5">
-                <div className="font-black uppercase text-[#9a3412] dark:text-[#fdba74]">2. Syllabes, Tirets &quot;-&quot;, Élisions &quot;E&apos;O&quot; &amp; Tablature 4 Étages (CHANT-TAB-4E)</div>
-                <p className="text-[#3a2e26] dark:text-[#cbbba0]">Écrivez en <b>MAJUSCULES BÂTONS</b>. Sur la Feuille 5 (<b>CHANT-TAB-4E</b>), soudez les durées à cheval sur 2 temps avec <b>/</b> (ex: <b>4/4</b>), notez <b>0</b> pour un silence et <b>_</b> pour un mélisme.</p>
+                <div className="font-black uppercase text-[#9a3412] dark:text-[#fdba74]">2. Syllabes, Tirets &quot;-&quot;, Élisions &quot;E&apos;O&quot; &amp; Tablature 4 Étages (CHANT-TAB-4E • 5 systèmes/page)</div>
+                <p className="text-[#3a2e26] dark:text-[#cbbba0]">Écrivez en <b>MAJUSCULES BÂTONS</b>. Sur la Feuille 5 (<b>CHANT-TAB-4E</b>, 5 systèmes A4 Paysage), soudez les durées à cheval sur 2 temps avec <b>/</b> (ex: <b>4/4</b>), séparez 2 attaques par espace ou <b>+</b> (ex: <b>2+2</b>), notez <b>0</b> pour un silence et <b>_</b> pour un mélisme.</p>
               </div>
               <div className="p-3 rounded border border-[#9a3412]/35 dark:border-[#4a392d] bg-[#efe4cc] dark:bg-[#241c16] text-[#1c1613] dark:text-[#f5ebd6] flex items-center justify-between gap-2">
                 <div>

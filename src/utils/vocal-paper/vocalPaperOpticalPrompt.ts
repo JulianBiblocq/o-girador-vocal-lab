@@ -28,7 +28,7 @@ Analyse l'ensemble des photos de feuilles A4 Noir & Blanc fournies (repérées p
 - [CODE: CHANT-SEQ] : Feuille 1 (Séquence à 2 lignes superposées PUX et COR sur les mesures M1..M32).
 - [CODE: CHANT-NOTES-1M] / [CODE: CHANT-NOTES-2M] (3 systèmes complets [P1]..[P3] par page A4 Paysage) : Feuille 2 (Grille universelle à 8 colonnes de temps libres = 32 subdivisions, colonne gauche compacte 8.5mm avec lettres A..G seules, bande TEMPS de 5.5mm, bande OCT 3/4/5 de 5.5mm, clavier Piano Roll 12 demi-tons de 21.6mm où les notes MONTENT DU BAS (A, juste au-dessus de SYLLABES) VERS LE HAUT (G#, juste sous OCT), et bande SYLLABES ouverte de 11.5mm).
 - [CODE: CHANT-RYTHME] (6 systèmes par page A4 Paysage) : Feuille 3 (Grille universelle à 8 colonnes de temps libres [ P1..Pn ] : bande supérieure TEMPS vierge, bande centrale RYTHME divisée en 32 subdivisions 1..4 pour les traits horizontaux ───, et bande inférieure SYLLABES ouverte sans sous-cases).
-- [CODE: CHANT-TAB-4E] (4 systèmes par page A4 Paysage) : Feuille 5 (Tablature 4 étages : 1. TEMPS, 2. SUBDIVISIONS avec soudures '/' ex. '4/4' ou '1/4/3', 3. NOTES / 0 ex. 'C D F# A3 0', 4. SYLLABES / _ ex. 'MAR- CA- ÇÃO _'). Restitue "sheetCode": "CHANT-TAB-4E", "beatNumbers", "subdivisionLine", "notesLine" et "syllablesLine".${refBlock}
+- [CODE: CHANT-TAB-4E] (5 systèmes [P1]..[P5] par page A4 Paysage) : Feuille 5 (Tablature 4 étages : 1. TEMPS, 2. SUBDIVISIONS avec soudures '/' ex. '4/4', '2+2' ou '1/4/3', 3. NOTES / 0 ex. 'C D F# A3 0', 4. SYLLABES / _ ex. 'MAR- CA- ÇÃO _'). Restitue "sheetCode": "CHANT-TAB-4E", "beatNumbers", "subdivisionLine", "notesLine" et "syllablesLine".${refBlock}
 
 RÈGLES STRICTES D'EXTRACTION :
 1. SÉQUENCE (PUX / COR) :

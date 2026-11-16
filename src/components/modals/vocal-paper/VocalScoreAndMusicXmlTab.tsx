@@ -17,8 +17,8 @@ export interface VocalScoreAndMusicXmlTabProps {
   project: ToadaProject;
 }
 
-const PILL_IDLE = 'border-[#bfa98a] dark:border-[#4a392d] bg-[#faf5e8] dark:bg-[#16120e] text-[#1c1613] dark:text-[#cbbba0] hover:bg-[#e5d5b5] dark:hover:bg-[#2a1f18]';
-const PILL_ACTIVE = 'bg-[#9a3412] dark:bg-[#c2410c] text-white border-[#9a3412] dark:border-[#c2410c]';
+const PILL_IDLE = 'select-none border-[#bfa98a] dark:border-[#4a392d] bg-[#faf5e8] dark:bg-[#16120e] text-[#1c1613] dark:text-[#cbbba0] hover:bg-[#e5d5b5] dark:hover:bg-[#2a1f18]';
+const PILL_ACTIVE = 'select-none bg-[#9a3412] dark:bg-[#c2410c] text-white border-[#9a3412] dark:border-[#c2410c]';
 
 export const VocalScoreAndMusicXmlTab: React.FC<VocalScoreAndMusicXmlTabProps> = ({ project }) => {
   const { t, language } = useLanguage();

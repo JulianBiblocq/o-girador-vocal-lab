@@ -109,8 +109,8 @@ export const VocalPaperImportTab: React.FC<VocalPaperImportTabProps> = ({ projec
       <div className={`${PANEL_CLS} flex flex-wrap items-center justify-between gap-2`}>
         <span className="font-bold text-[10px] uppercase">{isBr ? 'Referência Organizador (Trava Ortográfica) :' : 'Fiche de référence Organizador (Verrouillage orthographique) :'}</span>
         <select value={selectedDocId} onChange={(e) => handleSelectOrganizadorDoc(e.target.value)} className={INPUT_CLS}>
-          <option value="auto">{isBr ? 'Detecção automática pelo título' : 'Détection automatique par le titre'}</option>
-          {orgDocs.map((d) => <option key={d.id} value={d.id}>{d.titre} ({d.bpmDefaut || 88} BPM)</option>)}
+          <option value="auto" className="bg-[#faf5e8] text-[#1c1613] dark:bg-[#16120e] dark:text-[#f5ebd6]">{isBr ? 'Detecção automática pelo título' : 'Détection automatique par le titre'}</option>
+          {orgDocs.map((d) => <option key={d.id} value={d.id} className="bg-[#faf5e8] text-[#1c1613] dark:bg-[#16120e] dark:text-[#f5ebd6]">{d.titre} ({d.bpmDefaut || 88} BPM)</option>)}
         </select>
       </div>
       <div className={`grid grid-cols-2 sm:grid-cols-4 gap-2 ${PANEL_CLS}`}>
