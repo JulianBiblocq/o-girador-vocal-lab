@@ -1,0 +1,63 @@
+/**
+ * fitaBandeirolasTranslations.types.ts
+ * Typage strict des traductions pour l'architecture Bandeirolas + A Fita + Page Élève (< 95 lignes).
+ */
+export interface FitaBandeirolasTranslations {
+  fanion1Short: string;
+  fanion2Short: string;
+  fanion3Short: string;
+  fanion4Short: string;
+  btnStudentPreview: string;
+  btnBackToStudio: string;
+  btnStudentMicHeadphones: string;
+  btnReglagesShort: string;
+  stampBpmTitle: string;
+  stampTonalityTitle: string;
+  stampHardwareTitle: string;
+  stampHardwareReady: string;
+  stampHardwareWarn: string;
+  stampDiapasonHzLabel: string;
+  stampSungKeyLabel: string;
+  stampTroupeKeyLabel: string;
+  stampAutoDetectBtn: string;
+  stampFreeChromaticBtn: string;
+  stampListenSungBtn: string;
+  stampListenTroupeBtn: string;
+  stampCalibrateNowBtn: string;
+  stampOpenAllSettingsBtn: string;
+  stampAmbitusCalibrateBtn: string;
+  stampBatuqueWavBtn: string;
+  syncExportBtnLabel: string;
+  syncPullOrganizadorItem: string;
+  syncPushOrganizadorItem: string;
+  syncPushSequenciadorItem: string;
+  syncPaperWorkshopItem: string;
+  syncLexiconItem: string;
+  syncExportWavItem: string;
+  fitaTitleConductor: string;
+  fitaTitleCabine: string;
+  fitaTitleMontage: string;
+  fitaTitleCompass: string;
+  fitaPrevPhrase: string;
+  fitaNextPhrase: string;
+  drawerStructureToolsTitle: string;
+  drawerCabineAdvancedTitle: string;
+  drawerCalageFiltersTitle: string;
+  drawerMelodiaAdvancedTitle: string;
+  drawerTreinoOptionsTitle: string;
+  drawerReglagesVariantsTitle: string;
+  studentTabSheet: string;
+  studentTabKaraoke: string;
+  studentTabDiction: string;
+  studentTabAmbitus: string;
+  studentTabGames: string;
+  studentSheetTitle: string;
+  studentStructureSummary: string;
+  studentListen100Btn: string;
+  studentListen75Btn: string;
+  studentStopAudioBtn: string;
+  studentQuizTitle: string;
+  studentQuizScoreBadge: string;
+  studentQuizResetBtn: string;
+  studentNoLyricsYet: string;
+}

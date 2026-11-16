@@ -86,12 +86,15 @@ export const SlicerMultiSection: React.FC<SlicerMultiSectionProps> = ({
   useEffect(() => {
     if (!playingSegmentId) return;
     let req: number;
-    const tick = () => {
-      const seg = segments.find((s) => s.id === playingSegmentId);
-      if (seg && engine.getIsPlaying()) { setPlayheadSec(seg.startSec + engine.getCurrentPlayheadSec()); req = requestAnimationFrame(tick); } else setPlayheadSec(-1);
-    };
+    const tick = () => { if (engine.getIsPlaying()) req = requestAnimationFrame(tick); else setPlayingSegmentId(null); };
     req = requestAnimationFrame(tick); return () => cancelAnimationFrame(req);
-  }, [playingSegmentId, engine, segments]);
+  }, [playingSegmentId, engine]);
+
+  const getLivePlayheadSec = useCallback(() => {
+    if (!playingSegmentId || !engine.getIsPlaying()) return playheadSec;
+    const seg = segments.find((s) => s.id === playingSegmentId);
+    return seg ? seg.startSec + engine.getCurrentPlayheadSec() : playheadSec;
+  }, [playingSegmentId, engine, segments, playheadSec]);
 
   const activeCount = segments.filter((s) => s.targetPatternId !== 'ignore').length;
 
@@ -111,7 +114,7 @@ export const SlicerMultiSection: React.FC<SlicerMultiSectionProps> = ({
         onClearSegments={() => onSegmentsChange([], gridOffsetSec)}
       />
       <SlicerSegmentWaveform
-        pcm={audio.pcm} durationSec={audio.durationSec} segments={segments} selectedSegmentId={selectedSegmentId} playheadSec={playheadSec} bpm={bpm} gridOffsetSec={gridOffsetSec} cascadeMove={cascadeMove}
+        pcm={audio.pcm} durationSec={audio.durationSec} segments={segments} selectedSegmentId={selectedSegmentId} playheadSec={playheadSec} getPlayheadSec={getLivePlayheadSec} isPlaying={Boolean(playingSegmentId)} bpm={bpm} gridOffsetSec={gridOffsetSec} cascadeMove={cascadeMove}
         onSegmentsChange={(s) => onSegmentsChange(s, gridOffsetSec)} onSelectSegment={setSelectedSegmentId} onSeek={setPlayheadSec} onGridOffsetChange={(off) => applyAlignment(gapMode, off)}
         onAddSegmentAtSec={(sec) => onSegmentsChange([...segments, { id: `seg-${Date.now()}`, startSec: sec, endSec: sec + 2 * measureDur, targetPatternId: 'ignore', measuresCount: 2, hasAnacrusis: true, hasTailBeat: true }], gridOffsetSec)}
       />

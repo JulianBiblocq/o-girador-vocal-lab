@@ -42,12 +42,12 @@ export function usePriseRecorder(params: UsePriseRecorderParams) {
     recordedSampleRate, setRecordedSampleRate, activeLivret, harmonyConfig,
     comfortPreset = 'off', comfortMix = 0.35, backingInHeadphones = true, punchMeasureIndex = null,
   } = params;
-  const [isCycleActive, setIsCycleActive] = useState(false);
-  const [peakDb, setPeakDb] = useState<number | null>(null), [hasClipped, setHasClipped] = useState(false);
+  const [isCycleActive, setIsCycleActive] = useState(false), [hasClipped, setHasClipped] = useState(false);
+  const peakDbRef = useRef<number | null>(null), peakListenerRef = useRef<((db: number | null) => void) | null>(null);
   const cueHandleRef = useRef<CuePlaybackHandle | null>(null), takeGuideRef = useRef<TakeGuideHandle | null>(null);
   const comfortRef = useRef<ComfortMonitoringHandle | null>(null), backingRef = useRef<BackingTrackPlaybackHandle | null>(null);
-  const punchLeadRef = useRef<{ stop: () => void } | null>(null);
-  const sessionTokenRef = useRef<number>(0), isMountedRef = useRef<boolean>(true), activeLivretRef = useRef<string>(activeLivret);
+  const punchLeadRef = useRef<{ stop: () => void } | null>(null), sessionTokenRef = useRef<number>(0);
+  const isMountedRef = useRef<boolean>(true), activeLivretRef = useRef<string>(activeLivret);
   activeLivretRef.current = activeLivret;
   const setIsRecording = useVocalTransportStore((s) => s.setIsRecording);
 
@@ -106,7 +106,7 @@ export function usePriseRecorder(params: UsePriseRecorderParams) {
     const captureStart = isPunchIn ? targetT1Time + latencySec : (targetT1Time - t1OffsetSec) + latencySec;
     const effectiveRecSec = isPunchIn ? measureDuration + (punchMeasureIndex === measuresCount ? beatDuration : 0) : totalRecordedSec;
 
-    recorder.setOnPeakUpdate((db, clipped) => { setPeakDb(db); if (clipped) setHasClipped(true); });
+    recorder.setOnPeakUpdate((db, clipped) => { peakDbRef.current = db; peakListenerRef.current?.(db); if (clipped) setHasClipped(true); });
     const srcNode = recorder.getSourceNode();
     if (listeningMode === 'headphones' && srcNode && comfortPreset !== 'off') comfortRef.current = createComfortMonitoringGraph(ctx, srcNode, comfortPreset, comfortMix);
     if (listeningMode === 'headphones' && backingInHeadphones) backingRef.current = scheduleBackingTrackOnContext(ctx, getActiveBackingTrack(), targetT1Time, effectiveBpm, effectiveRecSec);
@@ -137,6 +137,7 @@ export function usePriseRecorder(params: UsePriseRecorderParams) {
     return useVocalTransportStore.getState().registerHandlers({ toggleRecord: handleToggleRecord, stop: () => { if (isCycleActive) abortCycle(); } });
   }, [activeLivret, handleToggleRecord, isCycleActive, abortCycle, setIsRecording]);
   useEffect(() => { isMountedRef.current = true; return () => { isMountedRef.current = false; abortCycle(); }; }, [abortCycle]);
-  const resetClipIndicator = useCallback(() => { recorder.resetPeakHold(); setHasClipped(false); }, [recorder]);
-  return { isCycleActive, handleToggleRecord, peakDb, hasClipped, resetClipIndicator };
+  const registerPeakListener = useCallback((fn: ((db: number | null) => void) | null) => { peakListenerRef.current = fn; if (fn) fn(peakDbRef.current); }, []);
+  const resetClipIndicator = useCallback(() => { recorder.resetPeakHold(); peakDbRef.current = null; peakListenerRef.current?.(null); setHasClipped(false); }, [recorder]);
+  return { isCycleActive, handleToggleRecord, peakDb: null as number | null, registerPeakListener, hasClipped, resetClipIndicator };
 }

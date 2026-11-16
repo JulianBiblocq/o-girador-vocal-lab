@@ -14,7 +14,7 @@ import { PianoRollToolbar } from './PianoRollToolbar'; import { PianoRollKeyboar
 import { PianoRollCanvas } from './PianoRollCanvas'; import { PianoRollStickyHeader } from './PianoRollStickyHeader';
 import { FloatingSyllableInput } from './FloatingSyllableInput'; import { PianoRollSyllablesRow } from './PianoRollSyllablesRow';
 import { BeatRhythmPresetBar } from './BeatRhythmPresetBar'; import { PianoRollContextMenu } from './PianoRollContextMenu';
-import { UncertainNotesResolverBar } from './UncertainNotesResolverBar';
+import { UncertainNotesResolverBar } from './UncertainNotesResolverBar'; import { ChordGridBar } from '../common/ChordGridBar';
 import { Piano, Drum } from 'lucide-react';
 import type { PianoRollTool } from './pianoRollInteractions';
 
@@ -36,11 +36,11 @@ export interface PianoRollEditorProps {
   onUpdateRegionBounds?: (id: string, start: number, end: number) => void; onDeleteSelectedRegion?: () => void;
   selectedStepIdx?: number | null; onSelectStep?: (idx: number | null) => void;
   onBrickMoved?: (rootIdx: number, newSteps: VocalStepData[]) => void;
-  harmonyGrid?: PatternHarmonyGrid; onUpdateHarmonyGrid?: (grid: PatternHarmonyGrid) => void;
+  harmonyGrid?: PatternHarmonyGrid; onUpdateHarmonyGrid?: (grid: PatternHarmonyGrid) => void; showChordGrid?: boolean;
   pitchShiftSemitones?: number; allowedPitchClasses?: Set<number> | null; readOnly?: boolean; patternId?: string;
 }
 
-export const ROW_HEIGHT = 22, NOTES_VIEWPORT_HEIGHT = 330, FOLDED_RHYTHM_HEIGHT = 96;
+export const ROW_HEIGHT = 22, NOTES_VIEWPORT_HEIGHT = 320, FOLDED_RHYTHM_HEIGHT = 96;
 
 export const PianoRollEditor: React.FC<PianoRollEditorProps> = (p) => {
   const { t, language } = useLanguage();
@@ -114,6 +114,9 @@ export const PianoRollEditor: React.FC<PianoRollEditorProps> = (p) => {
 
       <div ref={horizScrollRef} className="w-full cordel-card overflow-x-auto overflow-y-hidden cordel-scrollbar rounded">
         <div style={{ width: `${64 + gridWidth}px` }} className="flex flex-col">
+          {p.showChordGrid && p.onUpdateHarmonyGrid && (
+            <ChordGridBar harmonyGrid={p.harmonyGrid} measuresCount={p.measuresCount || 2} beatsPerMeasure={p.beatsPerMeasure} hasAnacrusis={p.hasAnacrusis} onUpdateGrid={p.onUpdateHarmonyGrid} readOnly={p.readOnly} alignedGridWidth={gridWidth} keyboardOffsetPx={64} />
+          )}
           <PianoRollStickyHeader gridWidth={gridWidth} beatsPerMeasure={p.beatsPerMeasure} totalDurationSec={p.totalDurationSec} anacrusisDurationSec={p.anacrusisDurationSec} seekStartSec={p.seekStartSec} isPlaying={p.isPlaying} hasAnacrusis={p.hasAnacrusis} bpm={p.bpm} t1OffsetSec={t1OffsetSec} allSteps={p.allSteps} getPlayheadSec={p.getPlayheadSec} onSeek={p.onSeek} />
           <div ref={notesScrollRef} className="flex items-start relative overflow-y-auto overflow-x-hidden cordel-scrollbar" style={{ width: `${64 + gridWidth}px`, height: `${viewportHeight}px` }}>
             {isFolded ? (

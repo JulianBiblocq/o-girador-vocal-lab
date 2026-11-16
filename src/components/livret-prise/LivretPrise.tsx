@@ -51,7 +51,7 @@ export const LivretPrise: React.FC = () => {
   const effectivePitch = useMemo(() => transposePitchNote(referencePitch, activeVariant.pitchShiftSemitones), [referencePitch, activeVariant.pitchShiftSemitones]);
   const beatDuration = 60 / effectiveBpm;
 
-  const { isCycleActive, handleToggleRecord, peakDb, hasClipped, resetClipIndicator } = usePriseRecorder({
+  const { isCycleActive, handleToggleRecord, peakDb, registerPeakListener, hasClipped, resetClipIndicator } = usePriseRecorder({
     engine, recorder, activePattern, activeVariant, cueMode, getPreviousConductorPattern,
     projectPatterns: project.patterns, timeSignature, measuresCount, hasAnacrusis,
     beatsPerMeasure, beatDuration, effectiveBpm, effectivePitch, listeningMode,
@@ -92,7 +92,7 @@ export const LivretPrise: React.FC = () => {
         onChangeComfortPreset={setComfortPreset} onChangeComfortMix={setComfortMix}
         hasBackingTrack={hasBackingTrack} backingInHeadphones={backingInHeadphones} onToggleBackingInHeadphones={() => setBackingInHeadphones((v) => !v)}
         measuresCount={measuresCount} hasRecording={hasRecording} punchMeasureIndex={punchMeasureIndex} onChangePunchMeasureIndex={setPunchMeasureIndex}
-        peakDb={peakDb} hasClipped={hasClipped} onResetClipIndicator={resetClipIndicator} disabled={isRecordingAny}
+        peakDb={peakDb} registerPeakListener={registerPeakListener} hasClipped={hasClipped} onResetClipIndicator={resetClipIndicator} disabled={isRecordingAny}
       />
 
       <CabineTimelineRibbon

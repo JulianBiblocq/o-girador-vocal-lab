@@ -10,11 +10,12 @@ import { foldStudentPitchToTargetOctave } from '../../audio/studentPitchAnalyzer
 
 export interface MelodicHighwayCanvasProps {
   allSteps: VocalStepData[]; mestrePitchCurve?: PitchCurvePoint[]; studentPitchCurve: PitchCurvePoint[];
+  getLiveStudentCurve?: () => PitchCurvePoint[];
   totalDurationSec: number; beatsPerMeasure: number; hasAnacrusis: boolean; isPlaying: boolean; getPlayheadSec: () => number;
 }
 
 export const MelodicHighwayCanvas: React.FC<MelodicHighwayCanvasProps> = ({
-  allSteps, mestrePitchCurve = [], studentPitchCurve, totalDurationSec, beatsPerMeasure, hasAnacrusis, isPlaying, getPlayheadSec,
+  allSteps, mestrePitchCurve = [], studentPitchCurve, getLiveStudentCurve, totalDurationSec, beatsPerMeasure, hasAnacrusis, isPlaying, getPlayheadSec,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null), rafRef = useRef<number | null>(null);
   const activeMidis = allSteps.filter((s) => s.active && (s.midiNumber ?? 0) > 0).map((s) => s.midiNumber as number);
@@ -90,11 +91,12 @@ export const MelodicHighwayCanvas: React.FC<MelodicHighwayCanvasProps> = ({
       ctx.setLineDash([]);
     }
 
-    // 5. Trace vocale de l'élève (temps réel ou post-prise, repliée mod 12)
-    if (studentPitchCurve.length > 1 && totalDurationSec > 0) {
+    // 5. Trace vocale de l'élève (temps réel par ref sans re-render ou post-prise, repliée mod 12)
+    const activeCurve = isPlaying && getLiveStudentCurve ? getLiveStudentCurve() : studentPitchCurve;
+    if (activeCurve.length > 1 && totalDurationSec > 0) {
       ctx.lineWidth = 3;
-      for (let k = 0; k < studentPitchCurve.length - 1; k++) {
-        const p1 = studentPitchCurve[k], p2 = studentPitchCurve[k + 1];
+      for (let k = 0; k < activeCurve.length - 1; k++) {
+        const p1 = activeCurve[k], p2 = activeCurve[k + 1];
         if (Math.abs(p2.timeSec - p1.timeSec) > 0.08) continue;
         const stepIdx = Math.min(allSteps.length - 1, Math.max(0, Math.floor((p1.timeSec / totalDurationSec) * totalSteps)));
         const targetM = allSteps[stepIdx]?.active && (allSteps[stepIdx].midiNumber ?? 0) > 0 ? (allSteps[stepIdx].midiNumber ?? medianMidi) : medianMidi;
@@ -116,7 +118,7 @@ export const MelodicHighwayCanvas: React.FC<MelodicHighwayCanvasProps> = ({
       ctx.beginPath(); ctx.moveTo(xp, 0); ctx.lineTo(xp, height); ctx.stroke();
     }
     ctx.restore();
-  }, [allSteps, mestrePitchCurve, studentPitchCurve, totalDurationSec, beatsPerMeasure, hasAnacrusis, minMidi, maxMidi, minTarget, maxTarget, medianMidi, getPlayheadSec]);
+  }, [allSteps, mestrePitchCurve, studentPitchCurve, getLiveStudentCurve, isPlaying, totalDurationSec, beatsPerMeasure, hasAnacrusis, minMidi, maxMidi, minTarget, maxTarget, medianMidi, getPlayheadSec]);
 
   useEffect(() => {
     drawFrame();

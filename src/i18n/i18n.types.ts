@@ -8,6 +8,7 @@ import type { CloudToadaTranslations } from './cloudToadaTranslations.types';
 import type { LexiconTranslations } from './lexiconTranslations.types';
 import type { LivretNavTranslations } from './livretNavTranslations.types';
 import type { uiPolishTranslationsFr } from './uiPolishTranslationsFr';
+import type { FitaBandeirolasTranslations } from './fitaBandeirolasTranslations.types';
 
 export type Locale = 'fr' | 'br';
 export type TranslationParams = Record<string, string | number>;
@@ -106,6 +107,6 @@ export interface VocalLabTranslationsCore {
 }
 
 export type VocalLabTranslations = VocalLabTranslationsCore & SlicerTranslations & ToadaSheetTranslations &
-  TreinoSubTranslations & TessituraTranslations & HarmonyTranslations & CloudToadaTranslations & LexiconTranslations & LivretNavTranslations & UiPolishTranslations;
+  TreinoSubTranslations & TessituraTranslations & HarmonyTranslations & CloudToadaTranslations & LexiconTranslations & LivretNavTranslations & UiPolishTranslations & FitaBandeirolasTranslations;
 
 export type TranslationKey = keyof VocalLabTranslations;

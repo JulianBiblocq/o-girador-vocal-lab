@@ -1,26 +1,12 @@
 /**
  * useVocalLabMidi.ts
- * Integration Web MIDI API, MCU Transport DAW (Play, Stop, Rec, Rewind, FastFwd, Undo)
- * et pre-ecoute / saisie melodique au clavier maitre (< 130 lignes).
+ * Intégration Web MIDI API, MCU Transport DAW et pré-écoute au clavier maître sur sharedAudioContext (< 95 lignes).
  */
 import { useEffect } from 'react';
 import { useVocalTransportStore } from '../stores/useVocalTransportStore';
 import { midiToNoteName } from '../utils/noteUtils';
 import { playSingleSynthNote } from '../audio/synthVoiceHelper';
-
-let sharedAudioCtx: AudioContext | null = null;
-function getSharedAudioCtx(): AudioContext | null {
-  try {
-    if (!sharedAudioCtx || sharedAudioCtx.state === 'closed') {
-      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
-      if (AudioCtx) sharedAudioCtx = new AudioCtx();
-    }
-    if (sharedAudioCtx?.state === 'suspended') sharedAudioCtx.resume().catch(() => {});
-    return sharedAudioCtx;
-  } catch {
-    return null;
-  }
-}
+import { getSharedAudioContext } from '../audio/sharedAudioContext';
 
 export function useVocalLabMidi(): void {
   useEffect(() => {
@@ -38,7 +24,6 @@ export function useVocalLabMidi(): void {
 
       const store = useVocalTransportStore.getState();
 
-      // Interception Transport MCU (Notes 80 a 95 sur canal DAW / canal 1)
       if (note >= 80 && note <= 95) {
         if (note === 94) store.triggerPlayPause();
         else if (note === 93) store.triggerStop();
@@ -51,11 +36,9 @@ export function useVocalLabMidi(): void {
         return;
       }
 
-      // Notes musicales clavier maitre
-      const ctx = getSharedAudioCtx();
-      if (ctx) {
-        playSingleSynthNote(ctx, ctx.destination, note, ctx.currentTime, 0.35);
-      }
+      getSharedAudioContext()
+        .then((ctx) => playSingleSynthNote(ctx, ctx.destination, note, ctx.currentTime, 0.35))
+        .catch(() => {});
       store.triggerMidiNote(note, midiToNoteName(note), velocity);
     };
 
@@ -81,7 +64,7 @@ export function useVocalLabMidi(): void {
         setupInputs(access);
         access.onstatechange = () => setupInputs(access);
       },
-      (err) => console.warn('[useVocalLabMidi] Web MIDI non disponible :', err)
+      () => {}
     );
 
     const handleSimulatedMidi = (e: Event) => {

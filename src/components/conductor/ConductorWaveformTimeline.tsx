@@ -2,7 +2,7 @@
  * ConductorWaveformTimeline.tsx
  * Timeline Audio Visuelle continue (Puxador + Coro simultanés & correctedAudioSamples) (< 115 lignes).
  */
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useMemo } from 'react';
 import type { ToadaProject, VocalPatternItem } from '../../types/toadaProject.types';
 import { computeSlotsMeasureLayout } from './toadaTimingScheduler';
 import type { ToadaPlayerEngine } from './ToadaPlayerEngine';
@@ -19,7 +19,7 @@ export const ConductorWaveformTimeline: React.FC<ConductorWaveformTimelineProps>
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const playheadRef = useRef<HTMLDivElement>(null);
 
-  const layouts = computeSlotsMeasureLayout(project.slots, project.patterns);
+  const layouts = useMemo(() => computeSlotsMeasureLayout(project.slots, project.patterns), [project.slots, project.patterns]);
   const totalMeasures = layouts.length > 0
     ? layouts[layouts.length - 1].startMeasure + layouts[layouts.length - 1].advanceMeasures + 1
     : 8;

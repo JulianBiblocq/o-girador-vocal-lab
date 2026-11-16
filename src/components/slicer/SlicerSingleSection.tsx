@@ -18,6 +18,7 @@ interface SlicerSingleSectionProps {
   beatPegs: number[];
   targetPegs: number[];
   playheadSec: number;
+  getPlayheadSec?: () => number;
   isPlaying: boolean;
   loop: boolean;
   witnessClick: boolean;
@@ -49,7 +50,7 @@ interface SlicerSingleSectionProps {
 
 export const SlicerSingleSection: React.FC<SlicerSingleSectionProps> = (props) => {
   const {
-    audio, patterns, trimIn, trimOut, beatPegs, targetPegs, playheadSec,
+    audio, patterns, trimIn, trimOut, beatPegs, targetPegs, playheadSec, getPlayheadSec,
     isPlaying, loop, witnessClick, phraseBpm, warpPct, measures, hasAnacrusis,
     role, patternName, targetPatternId, isExtracting, lastExtracted,
     onTrimChange, onPegsChange, onTogglePlay, onToggleLoop, onToggleWitnessClick,
@@ -62,7 +63,7 @@ export const SlicerSingleSection: React.FC<SlicerSingleSectionProps> = (props) =
       <SlicerWaveformCanvas
         pcm={audio.pcm} sampleRate={audio.sampleRate} durationSec={audio.durationSec}
         trimInSec={trimIn} trimOutSec={trimOut} beatPegs={beatPegs} targetPegs={targetPegs}
-        playheadSec={playheadSec} beatsPerMeasure={4}
+        playheadSec={playheadSec} getPlayheadSec={getPlayheadSec} isPlaying={isPlaying} beatsPerMeasure={4}
         onTrimChange={onTrimChange} onPegsChange={onPegsChange}
       />
       <SlicerTransportBar
