@@ -1,13 +1,13 @@
 /**
  * LivretMelodia.tsx
- * Livret 4 : Melodia & Letra (Piano Roll, Letra, Melodyne & Boussole de pattern) (< 120 lignes).
- * Auto-extraction à la volée dès la sélection d'un pattern disposant d'un audio enregistré.
+ * Livret 4 : Melodia & Letra autour de « A Fita — Boussole » et du Piano Roll (< 115 lignes).
  */
 import React, { useEffect, useState, useCallback } from 'react';
 import type { VocalPackExport, PitchCurvePoint, VocalStepData } from '../../types/vocalPack.types';
 import { useToadaProject } from '../../context/ToadaProjectContext';
 import { useAudioHardware } from '../../context/AudioHardwareContext';
-import { PatternCompassBar, resolvePatternAudioSource, checkPatternHasMidi } from '../common/PatternCompassBar';
+import { resolvePatternAudioSource, checkPatternHasMidi } from '../common/PatternCompassBar';
+import { AFitaCompassStrip } from '../fita/AFitaCompassStrip';
 import { TwinPatternsManagerBar } from '../common/TwinPatternsManagerBar';
 import { MelodiaEmptyNotice } from './MelodiaEmptyNotice';
 import { LivretMelodiaWorkspace } from './LivretMelodiaWorkspace';
@@ -83,12 +83,12 @@ export const LivretMelodia: React.FC<LivretMelodiaProps> = (props) => {
 
   const pack = props.initialPack ?? activePattern.pack;
   if (!hasAudio && !pack) {
-    return <div className="flex flex-col gap-3 w-full"><PatternCompassBar /><TwinPatternsManagerBar /><MelodiaEmptyNotice /></div>;
+    return <div className="flex flex-col gap-3 w-full max-w-6xl mx-auto my-2"><AFitaCompassStrip /><TwinPatternsManagerBar /><MelodiaEmptyNotice /></div>;
   }
   if (!pack || !activePattern.rawAudioSamples) {
     return (
-      <div className="flex flex-col gap-3 w-full">
-        <PatternCompassBar />
+      <div className="flex flex-col gap-3 w-full max-w-6xl mx-auto my-2">
+        <AFitaCompassStrip />
         <div className="cordel-card p-8 flex flex-col items-center justify-center text-center gap-2">
           <div className="w-8 h-8 rounded-full border-2 border-theme-accent border-t-transparent animate-spin" />
           <p className="text-xs font-mono text-[var(--cordel-secondary-text)]">Extraction du pitch et des briques MIDI en cours...</p>
@@ -103,30 +103,10 @@ export const LivretMelodia: React.FC<LivretMelodiaProps> = (props) => {
   const totalDurationSec = getPatternTotalDurationSec(activePattern.hasAnacrusis !== false, activePattern.measuresCount, measureDuration, 0.25, beatDuration);
 
   return (
-    <div className="flex flex-col gap-3 w-full">
-      <PatternCompassBar />
+    <div className="flex flex-col gap-3 w-full max-w-6xl mx-auto my-2">
       <TwinPatternsManagerBar />
-      <ScaleProposalBanner
-        proposal={scaleProposal}
-        onApplyScale={handleApplyScale}
-        onKeepUncertain={handleApplyScale}
-        onDisengageFreeMode={() => { loadProject(applyDetectedScaleToProject(project, scaleProposal?.tonic || 'A', 'chromatic', scaleProposal?.referencePitch)); setScaleProposal(null); }}
-        onDismiss={() => setScaleProposal(null)}
-      />
-      <LivretMelodiaWorkspace
-        key={`${project.id}-${activePattern.id}`}
-        {...props}
-        initialPack={pack}
-        cleanPCM={activePattern.rawAudioSamples}
-        sampleRate={sampleRate}
-        totalDurationSec={totalDurationSec}
-        beatsPerMeasure={beatsPerMeasure}
-        measuresCount={activePattern.measuresCount}
-        pitchCurve={activePattern.pitchCurve}
-        outputDeviceId={selectedOutputDeviceId}
-        pitchShiftSemitones={activeVariant?.pitchShiftSemitones ?? 0}
-        onAnalyzeFullProjectScale={handleAnalyzeFullProjectScale}
-      />
+      <ScaleProposalBanner proposal={scaleProposal} onApplyScale={handleApplyScale} onKeepUncertain={handleApplyScale} onDisengageFreeMode={() => { loadProject(applyDetectedScaleToProject(project, scaleProposal?.tonic || 'A', 'chromatic', scaleProposal?.referencePitch)); setScaleProposal(null); }} onDismiss={() => setScaleProposal(null)} />
+      <LivretMelodiaWorkspace key={`${project.id}-${activePattern.id}`} {...props} initialPack={pack} cleanPCM={activePattern.rawAudioSamples} sampleRate={sampleRate} totalDurationSec={totalDurationSec} beatsPerMeasure={beatsPerMeasure} measuresCount={activePattern.measuresCount} pitchCurve={activePattern.pitchCurve} outputDeviceId={selectedOutputDeviceId} pitchShiftSemitones={activeVariant?.pitchShiftSemitones ?? 0} onAnalyzeFullProjectScale={handleAnalyzeFullProjectScale} />
     </div>
   );
 };

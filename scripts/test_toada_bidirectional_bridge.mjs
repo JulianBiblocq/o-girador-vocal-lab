@@ -163,7 +163,7 @@ const files = [
   'src/utils/toadaConductorGenerator.ts',
   'src/utils/toadaTxtReconstitutor.ts',
   'src/services/organizadorToadaPublisher.ts',
-  'src/components/header/SaveAndExportDropdown.tsx'
+  'src/components/header/SyncAndExportDropdown.tsx'
 ];
 
 for (const f of files) {
