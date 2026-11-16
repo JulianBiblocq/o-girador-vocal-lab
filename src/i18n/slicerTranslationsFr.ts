@@ -46,6 +46,8 @@ export const slicerTranslationsFr = {
   slicerOptionNewPattern: '+ Créer un nouveau bloc',
   slicerExistingPatternsGroup: 'Blocs existants de la Toada',
   slicerAssigningProgress: 'Découpe & Analyse en cours...',
+  slicerAnalyzingStepProgress: 'Analyse {current} / {total}...',
+  dspWorkerBusyBadge: 'Calcul audio...',
   slicerExecuteBatchAssignBtn: 'Découper et Assigner aux blocs ({count})',
   slicerAssignSuccessToast: '{count} bloc(s) mis à jour avec succès à partir de l\'audio découpé !',
   slicerDuplicateTargetAlert: 'Doublon de cible',

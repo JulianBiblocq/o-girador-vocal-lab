@@ -7,7 +7,7 @@ import type { ToadaProject } from '../../types/toadaProject.types';
 import type { MetronomeEngine, ListeningMode } from '../../audio/MetronomeEngine';
 import type { VocalRecorderEngine } from '../../audio/VocalRecorderEngine';
 import { ContinuousTakeSession, type ContinuousPrompterSlotInfo } from '../../audio/continuousTakeRecorder';
-import { sliceContinuousTake } from '../../utils/continuousTakeSlicer';
+import { sliceContinuousTakeAsync } from '../../utils/continuousTakeSlicer';
 import type { TakeRecordingMode } from './TakeModeSelector';
 import { useVocalTransportStore } from '../../stores/useVocalTransportStore';
 import { registerAudioKillSwitch, stopAllActiveAudioEngines } from '../../audio/sharedAudioContext';
@@ -40,20 +40,19 @@ export function useContinuousTakeController(params: UseContinuousTakeControllerP
     setIsRecording(false);
   }, [recorder, engine, setIsRecording]);
 
-  const handleFinishContinuous = useCallback((pcm: Float32Array, sampleRate: number, marginBeforeM0Sec: number) => {
+  const handleFinishContinuous = useCallback(async (pcm: Float32Array, sampleRate: number, marginBeforeM0Sec: number) => {
     if (takeMode === 'pattern') return;
     const targetRole = takeMode;
-    const { updatedPatterns, processedCount } = sliceContinuousTake(project, targetRole, pcm, sampleRate, marginBeforeM0Sec);
-
-    loadProject({ ...project, patterns: updatedPatterns });
     setIsContinuousActive(false);
     setPrompterInfo(null);
-
+    setIsRecording(false);
+    const { updatedPatterns, processedCount } = await sliceContinuousTakeAsync(project, targetRole, pcm, sampleRate, marginBeforeM0Sec);
+    loadProject({ ...project, patterns: updatedPatterns });
     const roleLabel = targetRole === 'puxador' ? 'Puxador' : 'Coro';
     window.dispatchEvent(new CustomEvent('app-toast', {
       detail: { message: `Prise continue ${roleLabel} : ${processedCount} patterns découpés et calés !`, type: 'success' },
     }));
-  }, [takeMode, project, loadProject]);
+  }, [takeMode, project, loadProject, setIsRecording]);
 
   const handleToggleContinuous = useCallback(async () => {
     if (takeMode === 'pattern') return;

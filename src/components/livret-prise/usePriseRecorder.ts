@@ -13,12 +13,11 @@ import { getSavedLatencyOffsetMs } from '../../utils/latencyStorage';
 import { useVocalTransportStore } from '../../stores/useVocalTransportStore';
 import { NO_ANACRUSIS_PRE_MARGIN_SEC, getPatternTotalDurationSec, resolvePatternAnacrusisBeats } from '../../utils/anacrusisTimingHelper';
 import { registerAudioKillSwitch, stopAllActiveAudioEngines } from '../../audio/sharedAudioContext';
-import { autoSnapT1ToVocalOnset } from '../../audio/vocalOnsetDetector';
-import { rebuildCanonicalCleanAudio } from '../../audio/melodicExtractionHelper';
 import { createComfortMonitoringGraph, type ComfortMonitoringPreset, type ComfortMonitoringHandle } from '../../audio/ComfortMonitoringNode';
 import { getActiveBackingTrack } from '../../utils/backingTrackStorage';
 import { scheduleBackingTrackOnContext, type BackingTrackPlaybackHandle } from '../../audio/BackingTrackEngine';
-import { mergePunchInMeasure, schedulePunchInLeadInAudio } from '../../audio/punchInMerger';
+import { schedulePunchInLeadInAudio } from '../../audio/punchInMerger';
+import { commitRecordedTakeNonBlocking } from './commitTakeAsyncHelper';
 
 export interface UsePriseRecorderParams {
   engine: MetronomeEngine; recorder: VocalRecorderEngine; activePattern: VocalPatternItem; activeVariant: VocalAudioVariant;
@@ -60,26 +59,12 @@ export function usePriseRecorder(params: UsePriseRecorderParams) {
   }, [engine, recorder, setIsRecording, stopAuxHandles]);
 
   const commitRecordedTake = useCallback((rawCapturedPcm: Float32Array, sr: number, t1OffsetSec: number, totalRecordedSec: number) => {
-    const existingRec = activeVariant.recordingResult;
-    const isPunchIn = Boolean(punchMeasureIndex && punchMeasureIndex >= 1 && existingRec?.pcm?.length);
-    const measureDuration = beatsPerMeasure * beatDuration;
-    const pcm = isPunchIn && existingRec && punchMeasureIndex
-      ? mergePunchInMeasure({ existingPCM: existingRec.pcm, punchPCM: rawCapturedPcm, sampleRate: sr, targetMeasureIndex: punchMeasureIndex, measuresCount, measureDurationSec: measureDuration, t1OffsetSec: existingRec.t1OffsetSec ?? t1OffsetSec })
-      : rawCapturedPcm;
-    const finalTotalSec = isPunchIn && existingRec ? existingRec.pcm.length / sr : totalRecordedSec;
-    const snappedT1 = isPunchIn && existingRec?.t1OffsetSec !== undefined ? existingRec.t1OffsetSec
-      : autoSnapT1ToVocalOnset({ pcm, sampleRate: sr, bpm: effectiveBpm, timeAnchors: activePattern.timeAnchors, hasAnacrusis, beatsPerMeasure, expectedT1Sec: t1OffsetSec });
-    const cleanPCM = rebuildCanonicalCleanAudio({ rawPCM: pcm, sampleRate: sr, bpm: effectiveBpm, measuresCount, beatsPerMeasure, hasAnacrusis, trimStartSec: 0, trimEndSec: finalTotalSec, t1OffsetSec: snappedT1, lowCutEnabled: activeVariant.lowCutEnabled, enableTonePolish: activeVariant.enableTonePolish !== false });
-    const recResult = { pcm, sampleRate: sr, recordedBpm: effectiveBpm, t1OffsetSec: snappedT1 };
-    const varUpdates: Partial<VocalAudioVariant> = { recordingResult: recResult, t1OffsetSec: snappedT1, trimStartSec: 0, trimEndSec: finalTotalSec };
-    const isMainTake = activeVariant.speedRatio === 1.0 && activeVariant.pitchShiftSemitones === 0;
-    const patUpdates: Partial<VocalPatternItem> = {
-      ...(isMainTake ? { recordingResult: recResult, t1OffsetSec: snappedT1, trimStartSec: 0, trimEndSec: finalTotalSec, rawAudioSamples: cleanPCM } : { t1OffsetSec: snappedT1 }),
-      pack: null, isMidiInitialized: false, midiLocked: false, hasCanonicalAlignment: false as any, correctedAudioSamples: null,
-    };
-    if (updatePatternAndVariant) updatePatternAndVariant(activePattern.id, activeVariant.variantKey, patUpdates, varUpdates);
-    else { updateVariant(activePattern.id, activeVariant.variantKey, varUpdates); updatePattern?.(activePattern.id, patUpdates); }
-  }, [activePattern.id, activePattern.timeAnchors, activeVariant, punchMeasureIndex, effectiveBpm, hasAnacrusis, beatsPerMeasure, beatDuration, measuresCount, updatePatternAndVariant, updateVariant, updatePattern]);
+    commitRecordedTakeNonBlocking({
+      rawCapturedPcm, sampleRate: sr, t1OffsetSec, totalRecordedSec, activePattern, activeVariant,
+      punchMeasureIndex, effectiveBpm, effectivePitch, timeSignature, measuresCount, hasAnacrusis,
+      beatsPerMeasure, beatDuration, updateVariant, updatePattern, updatePatternAndVariant,
+    });
+  }, [activePattern, activeVariant, punchMeasureIndex, effectiveBpm, effectivePitch, timeSignature, hasAnacrusis, beatsPerMeasure, beatDuration, measuresCount, updatePatternAndVariant, updateVariant, updatePattern]);
 
   const handleToggleRecord = useCallback(async () => {
     const measureDuration = beatsPerMeasure * beatDuration;

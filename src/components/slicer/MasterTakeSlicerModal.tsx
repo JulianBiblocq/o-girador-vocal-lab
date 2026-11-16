@@ -9,7 +9,7 @@ import { SlicerAudioEngine } from '../../audio/slicerAudioEngine';
 import { stopAllActiveAudioEngines } from '../../audio/sharedAudioContext';
 import { analyzeBeatPegs, piecewiseTimeWarp } from '../../audio/piecewiseTimeWarper';
 import { extractPatternFromMaster } from '../../utils/masterTakeExtractor';
-import { executeBatchAssign } from '../../utils/slicerBatchAssigner';
+import { executeBatchAssignAsync } from '../../utils/slicerBatchAssigner';
 import { detectVocalPhrases } from '../../audio/silenceDetector';
 import { buildOrganizadorSlices, calculateInitialMasterGridOffsetSec } from '../../utils/slicerAlignmentHelper';
 import { getRoleSlicerSession, setRoleSlicerSession, computeRoleReadinessCounts } from '../../utils/slicerSessionStore';
@@ -27,7 +27,8 @@ export const MasterTakeSlicerModal: React.FC<SlicerModalProps> = ({ isOpen, onCl
   const { project, addPattern, updatePattern, loadProject } = useToadaProject(), { t } = useLanguage();
   const [mode, setMode] = useState<SlicerWorkMode>('multi'), [activeRole, setActiveRole] = useState<VocalRole>(defaultRole);
   const [audio, setAudio] = useState<DecodedAudioResult | null>(null), [segments, setSegments] = useState<SliceSegment[]>([]);
-  const [isAssigning, setIsAssigning] = useState(false), [gridOffsetSec, setGridOffsetSec] = useState(0.1), [postAssignBanner, setPostAssignBanner] = useState<PostAssignBannerState | null>(null);
+  const [isAssigning, setIsAssigning] = useState(false), [assignProgress, setAssignProgress] = useState<{ current: number; total: number } | null>(null);
+  const [gridOffsetSec, setGridOffsetSec] = useState(0.1), [postAssignBanner, setPostAssignBanner] = useState<PostAssignBannerState | null>(null);
   const [trimIn, setTrimIn] = useState(0), [trimOut, setTrimOut] = useState(8), [beatPegs, setBeatPegs] = useState<number[]>([]), [warpPct, setWarpPct] = useState(0);
   const [customBpm, setCustomBpm] = useState<number | undefined>(undefined), [role, setRole] = useState<VocalRole>(defaultRole), [patternName, setPatternName] = useState('Puxador 1');
   const [targetPatternId, setTargetPatternId] = useState<string>('new'), [measures, setMeasures] = useState<1 | 2 | 3 | 4>(2), [hasAnacrusis, setHasAnacrusis] = useState(true);
@@ -80,15 +81,15 @@ export const MasterTakeSlicerModal: React.FC<SlicerModalProps> = ({ isOpen, onCl
   useEffect(() => () => { engine.stop(); }, [engine]);
   const handleBatchAssign = async () => {
     if (!audio || isAssigning) return;
-    setIsAssigning(true);
+    setIsAssigning(true); setAssignProgress(null);
     try {
-      const res = executeBatchAssign({ project, masterPCM: audio.pcm, sampleRate: audio.sampleRate, segments, loadProject });
+      const res = await executeBatchAssignAsync({ project, masterPCM: audio.pcm, sampleRate: audio.sampleRate, segments, loadProject, onProgress: (current, total) => setAssignProgress({ current, total }) });
       window.dispatchEvent(new CustomEvent('app-toast', { detail: { message: t('slicerAssignSuccessToast', { count: res.processedCount }), type: 'success' } }));
       const nextCounts = computeRoleReadinessCounts(res.updatedProject.patterns), otherRole: VocalRole = activeRole === 'puxador' ? 'coro' : 'puxador';
       const otherTotal = otherRole === 'coro' ? nextCounts.coroTotalCount : nextCounts.puxTotalCount, otherReady = otherRole === 'coro' ? nextCounts.coroRecordedCount : nextCounts.puxRecordedCount;
       if (otherTotal > 0 && otherReady < otherTotal) setPostAssignBanner({ assignedRole: activeRole, assignedCount: res.processedCount, nextRole: otherRole });
       else { setPostAssignBanner(null); onClose(); }
-    } finally { setIsAssigning(false); }
+    } finally { setIsAssigning(false); setAssignProgress(null); }
   };
   const handleSinglePlay = async () => {
     if (!audio) return;
@@ -127,7 +128,7 @@ export const MasterTakeSlicerModal: React.FC<SlicerModalProps> = ({ isOpen, onCl
           <div className="flex flex-col gap-2.5">
             <SlicerModeTabs mode={mode} onModeChange={setMode} />
             {mode === 'multi' ? (
-              <SlicerMultiSection project={project} audio={audio} segments={segments} onSegmentsChange={handleSegmentsChange} patterns={project.patterns} defaultRole={activeRole} roleCounts={roleCounts} hasPuxadorMaster={hasPuxadorMaster} hasCoroMaster={hasCoroMaster} postAssignBanner={postAssignBanner} onSelectRoleSession={handleSelectRoleSession} onLoadRoleFile={handleLoadRoleFile} onCloseModal={onClose} isAssigning={isAssigning} onExecuteBatchAssign={handleBatchAssign} engine={engine} onProjectUpdate={loadProject} initialGridOffsetSec={gridOffsetSec} />
+              <SlicerMultiSection project={project} audio={audio} segments={segments} onSegmentsChange={handleSegmentsChange} patterns={project.patterns} defaultRole={activeRole} roleCounts={roleCounts} hasPuxadorMaster={hasPuxadorMaster} hasCoroMaster={hasCoroMaster} postAssignBanner={postAssignBanner} onSelectRoleSession={handleSelectRoleSession} onLoadRoleFile={handleLoadRoleFile} onCloseModal={onClose} isAssigning={isAssigning} assignProgressText={assignProgress ? t('slicerAnalyzingStepProgress', assignProgress) : null} onExecuteBatchAssign={handleBatchAssign} engine={engine} onProjectUpdate={loadProject} initialGridOffsetSec={gridOffsetSec} />
             ) : (
               <SlicerSingleSection audio={audio} patterns={project.patterns} trimIn={trimIn} trimOut={trimOut} beatPegs={beatPegs} targetPegs={targetPegs} playheadSec={-1} getPlayheadSec={() => (isPlaying && engine.getIsPlaying() ? trimIn + engine.getCurrentPlayheadSec() : -1)} isPlaying={isPlaying} loop={loop} witnessClick={witnessClick} phraseBpm={phraseBpm} warpPct={warpPct} measures={measures} hasAnacrusis={hasAnacrusis} role={role} patternName={patternName} targetPatternId={targetPatternId} isExtracting={isExtracting} lastExtracted={lastExtracted} onTrimChange={(s, e) => { setTrimIn(s); setTrimOut(e); }} onPegsChange={setBeatPegs} onTogglePlay={handleSinglePlay} onToggleLoop={() => { const n = !loop; setLoop(n); engine.setLoop(n); }} onToggleWitnessClick={() => { const n = !witnessClick; setWitnessClick(n); engine.setWitnessClick(n); }} onPlantPeg={() => { const cur = isPlaying && engine.getIsPlaying() ? trimIn + engine.getCurrentPlayheadSec() : trimIn + 0.1; setBeatPegs((p) => [...p, cur].filter((x) => x >= trimIn && x <= trimOut).sort((a, b) => a - b)); }} onClearPegs={() => setBeatPegs([])} onBpmNudge={(d) => setCustomBpm(Math.max(30, Math.min(240, phraseBpm + d)))} onWarpPctChange={setWarpPct} onMeasuresChange={setMeasures} onHasAnacrusisChange={setHasAnacrusis} onTargetPatternChange={setTargetPatternId} onRoleChange={setRole} onNameChange={setPatternName} onExtract={handleSingleExtract} />
             )}

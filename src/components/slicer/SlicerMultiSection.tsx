@@ -22,7 +22,7 @@ interface SlicerMultiSectionProps {
   project: ToadaProject; audio: DecodedAudioResult; segments: SliceSegment[]; patterns: VocalPatternItem[];
   defaultRole: VocalRole; roleCounts: RoleReadinessCounts; hasPuxadorMaster: boolean; hasCoroMaster: boolean;
   postAssignBanner?: PostAssignBannerState | null; onSelectRoleSession: (role: VocalRole) => void;
-  onLoadRoleFile: (role: VocalRole) => void; onCloseModal?: () => void; isAssigning: boolean;
+  onLoadRoleFile: (role: VocalRole) => void; onCloseModal?: () => void; isAssigning: boolean; assignProgressText?: string | null;
   engine: SlicerAudioEngine; initialGridOffsetSec?: number;
   onSegmentsChange: (segments: SliceSegment[], nextGridOffsetSec?: number) => void;
   onExecuteBatchAssign: () => void; onProjectUpdate?: (p: ToadaProject) => void;
@@ -30,7 +30,7 @@ interface SlicerMultiSectionProps {
 export const SlicerMultiSection: React.FC<SlicerMultiSectionProps> = ({
   project, audio, segments, onSegmentsChange, patterns, defaultRole, roleCounts,
   hasPuxadorMaster, hasCoroMaster, postAssignBanner, onSelectRoleSession, onLoadRoleFile, onCloseModal,
-  isAssigning, engine, initialGridOffsetSec, onExecuteBatchAssign, onProjectUpdate,
+  isAssigning, assignProgressText, engine, initialGridOffsetSec, onExecuteBatchAssign, onProjectUpdate,
 }) => {
   const { t } = useLanguage();
   const [selectedSegmentId, setSelectedSegmentId] = useState<string | null>(null), [playingSegmentId, setPlayingSegmentId] = useState<string | null>(null);
@@ -136,7 +136,7 @@ export const SlicerMultiSection: React.FC<SlicerMultiSectionProps> = ({
         }}
       />
       <button type="button" onClick={onExecuteBatchAssign} disabled={isAssigning || activeCount === 0} className={`w-full sm:w-auto sm:min-w-[320px] self-end py-2.5 px-6 cordel-btn-primary flex items-center justify-center gap-2 text-xs font-black tracking-wider uppercase cursor-pointer transition-colors bg-emerald-700 hover:bg-emerald-600 text-white shadow-md ${activeCount === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}>
-        {isAssigning ? (<><Loader2 className="w-4 h-4 animate-spin text-[#f4ecd8]" /><span>{t('slicerAssigningProgress')}</span></>) : (<><Check className="w-4 h-4 text-[#f4ecd8]" /><span>{t('slicerExecuteBatchAssignBtn', { count: activeCount })}</span></>)}
+        {isAssigning ? (<><Loader2 className="w-4 h-4 animate-spin text-[#f4ecd8]" /><span>{assignProgressText || t('slicerAssigningProgress')}</span></>) : (<><Check className="w-4 h-4 text-[#f4ecd8]" /><span>{t('slicerExecuteBatchAssignBtn', { count: activeCount })}</span></>)}
       </button>
     </div>
   );

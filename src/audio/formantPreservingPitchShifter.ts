@@ -50,11 +50,7 @@ function phaseLockedPitchShiftRaw(pcm: Float32Array, sampleRate: number, pitchRa
         if (dot > bestCorr) { bestCorr = dot; bestIn = cand; }
       }
     }
-    for (let i = 0; i < winLen; i++) {
-      const w = hann[i];
-      stretched[synPos + i] += pcm[bestIn + i] * w;
-      norm[synPos + i] += w * w;
-    }
+    for (let i = 0; i < winLen; i++) { const w = hann[i]; stretched[synPos + i] += pcm[bestIn + i] * w; norm[synPos + i] += w * w; }
     prevBestIn = bestIn; synPos += ha;
   }
   for (let i = 0; i < stretchedLen; i++) if (norm[i] > 1e-5) stretched[i] /= norm[i];
@@ -115,14 +111,21 @@ export function shiftVocalPitchFormantPreserved(pcm: Float32Array, sampleRate: n
   return blendUnvoicedTransientsAtUnityRatio(pcm, formantOut, sampleRate, frames, 4);
 }
 
-export function getOrComputeTroupeTransposedPCM(pcm: Float32Array, sampleRate: number, transpositionSemitones: number): Float32Array {
-  if (!pcm || pcm.length === 0 || !transpositionSemitones) return pcm;
-  const key = `${sampleRate}_${transpositionSemitones.toFixed(2)}`;
+export function peekCachedTroupePCM(pcm: Float32Array, sr: number, st: number): Float32Array | null {
+  if (!pcm || pcm.length === 0 || !st) return pcm;
+  const hit = troupePcmCache.get(pcm)?.get(`${sr}_${st.toFixed(2)}`);
+  return hit && hit.length === pcm.length ? hit : null;
+}
+export function storeCachedTroupePCM(pcm: Float32Array, sr: number, st: number, res: Float32Array): void {
+  if (!pcm || pcm.length === 0 || !st) return;
   let map = troupePcmCache.get(pcm);
   if (!map) { map = new Map(); troupePcmCache.set(pcm, map); }
-  const cached = map.get(key);
-  if (cached && cached.length === pcm.length) return cached;
+  map.set(`${sr}_${st.toFixed(2)}`, res);
+}
+export function getOrComputeTroupeTransposedPCM(pcm: Float32Array, sampleRate: number, transpositionSemitones: number): Float32Array {
+  const hit = peekCachedTroupePCM(pcm, sampleRate, transpositionSemitones);
+  if (hit) return hit;
   const computed = shiftVocalPitchFormantPreserved(pcm, sampleRate, transpositionSemitones);
-  map.set(key, computed);
+  storeCachedTroupePCM(pcm, sampleRate, transpositionSemitones, computed);
   return computed;
 }

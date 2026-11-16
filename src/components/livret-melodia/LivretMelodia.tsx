@@ -14,7 +14,7 @@ import { LivretMelodiaWorkspace } from './LivretMelodiaWorkspace';
 import { ScaleProposalBanner } from '../common/ScaleProposalBanner';
 import { analyzeFullProjectScale, applyDetectedScaleToProject, type ProjectScaleAnalysisResult } from '../../audio/projectScaleAnalyzer';
 import type { ScaleType } from '../../audio/scaleQuantizer';
-import { extractPatternMelodicData } from '../../audio/melodicExtractionHelper';
+import { extractMelodicDataInWorker, isVocalDspCancelled } from '../../workers/vocalDspWorkerClient';
 import { extractProjectRawLyricsSource } from '../../audio/livretResetHelper';
 import { resolveFreshTimeAnchors } from '../../utils/timeAnchorParser';
 import { getBeatsPerMeasure, transposePitchNote } from '../../utils/musicalMath';
@@ -60,7 +60,8 @@ export const LivretMelodia: React.FC<LivretMelodiaProps> = (props) => {
     const rawT1 = activeVariant?.t1OffsetSec ?? activePattern.t1OffsetSec ?? activePattern.recordingResult?.t1OffsetSec;
     const freshAnchors = resolveFreshTimeAnchors(activePattern.rawLineCode, activePattern.timeAnchors, beatsPerMeasure, !hasAnacrusis, activePattern.assignedLyricsText, extractProjectRawLyricsSource(project, activePattern));
 
-    const res = extractPatternMelodicData({
+    let cancelled = false;
+    extractMelodicDataInWorker({
       rawPCM: resolvedPCM, sampleRate, bpm: effectiveBpm, timeSignature: project.timeSignature,
       measuresCount: activePattern.measuresCount, beatsPerMeasure, beatResolutions,
       hasAnacrusis, trimStartSec: activeVariant?.trimStartSec ?? activePattern.trimStartSec ?? 0,
@@ -70,16 +71,18 @@ export const LivretMelodia: React.FC<LivretMelodiaProps> = (props) => {
       timeAnchors: freshAnchors, lowCutEnabled: activeVariant?.lowCutEnabled ?? activePattern.lowCutEnabled ?? true,
       enableTonePolish: (activeVariant?.enableTonePolish ?? activePattern.enableTonePolish) !== false,
       referenceMidiNotes: activePattern.referenceMidiNotes,
-    });
-
-    const preserveMidi = Boolean(activePattern.midiLocked && checkPatternHasMidi(activePattern));
-    updatePattern(activePattern.id, {
-      pack: res.pack, rawAudioSamples: res.cleanPCM, rawPitchCurve: res.pitchCurve,
-      pitchCurve: res.pitchCurve, timeAnchors: freshAnchors,
-      anacrusisSteps: preserveMidi ? (activePattern.anacrusisSteps || []) : res.anacrusisSteps,
-      mainSteps: preserveMidi ? (activePattern.mainSteps || []) : res.mainSteps,
-      isMidiInitialized: true, midiLocked: preserveMidi, correctedAudioSamples: null,
-    });
+    }, { dedupeKey: `melodia_init_${activePattern.id}` }).then((res) => {
+      if (cancelled) return;
+      const preserveMidi = Boolean(activePattern.midiLocked && checkPatternHasMidi(activePattern));
+      updatePattern(activePattern.id, {
+        pack: res.pack, rawAudioSamples: res.cleanPCM, rawPitchCurve: res.pitchCurve,
+        pitchCurve: res.pitchCurve, timeAnchors: freshAnchors,
+        anacrusisSteps: preserveMidi ? (activePattern.anacrusisSteps || []) : res.anacrusisSteps,
+        mainSteps: preserveMidi ? (activePattern.mainSteps || []) : res.mainSteps,
+        isMidiInitialized: true, midiLocked: preserveMidi, correctedAudioSamples: null,
+      });
+    }).catch((err) => { if (!isVocalDspCancelled(err)) console.warn('[LivretMelodia] Worker error:', err); });
+    return () => { cancelled = true; };
   }, [hasAudio, resolvedPCM, isMelodiaReady, activePattern, activeVariant, project, sampleRate, updatePattern]);
 
   const pack = props.initialPack ?? activePattern.pack;

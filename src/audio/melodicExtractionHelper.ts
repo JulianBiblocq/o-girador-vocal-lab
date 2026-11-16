@@ -5,6 +5,7 @@
 import type { VocalPackExport, PitchCurvePoint, VocalStepData, TimeSignatureString } from '../types/vocalPack.types';
 import type { TessituraRange } from '../types/tessitura.types';
 import type { TimeAnchor } from '../types/toadaDocument.types';
+import type { EffectiveVocalBounds } from '../utils/ambitusStorage';
 import { createPaddedPreviewBuffer, audioBufferToWavBase64 } from '../utils/wavEncoder';
 import { extractContinuousPitchCurve } from './pitchExtractor';
 import { quantizePitchToSteps } from './pitchToStepsQuantizer';
@@ -20,8 +21,8 @@ export interface ExtractMelodicParams {
   rawPCM: Float32Array; sampleRate: number; bpm: number; timeSignature: TimeSignatureString;
   measuresCount: number; beatsPerMeasure: number; beatResolutions: number[]; hasAnacrusis: boolean;
   trimStartSec?: number; trimEndSec?: number; referencePitch: string; pitchShiftSemitones?: number;
-  tessitura?: TessituraRange; assignedLyricsText?: string; timeAnchors?: TimeAnchor[];
-  lowCutEnabled?: boolean; enableTonePolish?: boolean; t1OffsetSec?: number; referenceMidiNotes?: number[] | null;
+  tessitura?: TessituraRange; vocalBounds?: Partial<EffectiveVocalBounds>; assignedLyricsText?: string; timeAnchors?: TimeAnchor[];
+  lowCutEnabled?: boolean; enableTonePolish?: boolean; t1OffsetSec?: number; referenceMidiNotes?: number[] | null; createdAt?: string;
 }
 
 export interface ExtractMelodicResult {
@@ -69,7 +70,7 @@ export function extractPatternMelodicData(params: ExtractMelodicParams): Extract
     lowCutEnabled, true, enableTonePolish, rawT1OffsetSec, cleanT1OffsetSec
   );
 
-  const rawCurve = extractContinuousPitchCurve(cleanPCM, { sampleRate, totalDurationSec, trimStartSec: cleanTrimStart, trimEndSec: cleanTrimEnd, tessitura });
+  const rawCurve = extractContinuousPitchCurve(cleanPCM, { sampleRate, totalDurationSec, trimStartSec: cleanTrimStart, trimEndSec: cleanTrimEnd, tessitura, vocalBounds: params.vocalBounds });
   const pitchCurve = maskSibilantsInPitchCurve(rawCurve, cleanPCM, sampleRate);
   const effectiveAnchors = resolveFreshTimeAnchors(undefined, timeAnchors, beatsPerMeasure, !hasAnacrusis, assignedLyricsText);
 
@@ -98,7 +99,7 @@ export function extractPatternMelodicData(params: ExtractMelodicParams): Extract
   const audioBase64 = audioBufferToWavBase64(cleanPCM, sampleRate);
   const pack: VocalPackExport = {
     schemaVersion: '1.0',
-    metadata: { bpm, timeSignature, measuresCount, beatResolutions, referencePitch, createdAt: new Date().toISOString() },
+    metadata: { bpm, timeSignature, measuresCount, beatResolutions, referencePitch, createdAt: params.createdAt ?? new Date().toISOString() },
     alignment: { startOffsetSec: alignment.startOffsetSec, anacrusis: { ...alignment.anacrusis, steps: anacrusisSteps }, nudgeMs: 0 },
     grid: { steps: mainSteps, totalSteps: mainSteps.length },
     audio: { format: 'wav', sampleRate, channels: 1, durationSec: totalDurationSec, audioBase64, nudgeMs: 0, trim: { startSec: cleanTrimStart, endSec: cleanTrimEnd } },

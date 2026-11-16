@@ -20,7 +20,8 @@ import { decodeAudioFile } from '../../utils/directAudioImporter';
 import { getPatternTotalDurationSec, getPatternT1OffsetSec } from '../../utils/anacrusisTimingHelper';
 import { getBeatsPerMeasure, transposePitchNote } from '../../utils/musicalMath';
 import { getDefaultBeatResolutions } from '../../utils/alignmentMath';
-import { extractPatternMelodicData, rebuildCanonicalCleanAudio } from '../../audio/melodicExtractionHelper';
+import { rebuildCanonicalCleanAudio } from '../../audio/melodicExtractionHelper';
+import { extractMelodicDataInWorker, isVocalDspCancelled } from '../../workers/vocalDspWorkerClient';
 import { autoSnapT1ToVocalOnset } from '../../audio/vocalOnsetDetector';
 
 export const LivretCalage: React.FC = () => {
@@ -28,29 +29,20 @@ export const LivretCalage: React.FC = () => {
   const { selectedOutputDeviceId, recordedSampleRate, setRecordedSampleRate } = useAudioHardware();
   const setActiveLivret = useVocalTransportStore((s) => s.setActiveLivret);
   const { t, language } = useLanguage(), isBr = language === 'br';
-
-  const [isSlicerOpen, setIsSlicerOpen] = useState(false);
-  const [localNudgeMs, setLocalNudgeMs] = useState(0);
+  const [isSlicerOpen, setIsSlicerOpen] = useState(false), [localNudgeMs, setLocalNudgeMs] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const rawPCM = activeVariant.recordingResult?.pcm ?? null;
-  const sampleRate = activeVariant.recordingResult?.sampleRate ?? recordedSampleRate;
-  const bpm = activePattern.bpm ?? activePattern.baseBpm ?? project.bpm ?? 88;
-  const effectiveBpm = Math.max(30, Math.round(bpm * activeVariant.speedRatio));
+  const rawPCM = activeVariant.recordingResult?.pcm ?? null, sampleRate = activeVariant.recordingResult?.sampleRate ?? recordedSampleRate;
+  const bpm = activePattern.bpm ?? activePattern.baseBpm ?? project.bpm ?? 88, effectiveBpm = Math.max(30, Math.round(bpm * activeVariant.speedRatio));
   const effectivePitch = transposePitchNote(activePattern.referencePitch ?? 'C4', activeVariant.pitchShiftSemitones);
   const timeSignature = project.timeSignature, measuresCount = activePattern.measuresCount;
   const beatsPerMeasure = getBeatsPerMeasure(timeSignature), hasAnacrusis = activePattern.hasAnacrusis !== false;
-  const beatResolutions = getDefaultBeatResolutions(timeSignature), beatDuration = 60 / effectiveBpm;
-  const measureDuration = beatsPerMeasure * beatDuration;
+  const beatResolutions = getDefaultBeatResolutions(timeSignature), beatDuration = 60 / effectiveBpm, measureDuration = beatsPerMeasure * beatDuration;
   const totalDurationSec = getPatternTotalDurationSec(hasAnacrusis, measuresCount, measureDuration, 0.25, beatDuration);
   const audioDurationSec = rawPCM ? rawPCM.length / sampleRate : 0;
   const isLongAudio = rawPCM !== null && (audioDurationSec > 10 || audioDurationSec > totalDurationSec * 1.8);
   const curT1 = activeVariant.t1OffsetSec ?? activePattern.t1OffsetSec ?? activePattern.recordingResult?.t1OffsetSec;
-
-  const activeAudio = useMemo(
-    () => (!rawPCM || !isLongAudio ? null : { pcm: rawPCM, sampleRate, durationSec: audioDurationSec, fileName: `${activePattern.name}.wav` }),
-    [rawPCM, isLongAudio, sampleRate, audioDurationSec, activePattern.name]
-  );
+  const activeAudio = useMemo(() => (!rawPCM || !isLongAudio ? null : { pcm: rawPCM, sampleRate, durationSec: audioDurationSec, fileName: `${activePattern.name}.wav` }), [rawPCM, isLongAudio, sampleRate, audioDurationSec, activePattern.name]);
 
   const syncCalageState = useCallback((nextTrimStart: number, nextTrimEnd: number, nextT1: number, lowCut = activeVariant.lowCutEnabled, polish = activeVariant.enableTonePolish !== false) => {
     if (!rawPCM) return;
@@ -74,13 +66,14 @@ export const LivretCalage: React.FC = () => {
     if (res.durationSec > 10 || res.durationSec > totalDurationSec * 1.8) setIsSlicerOpen(true);
   }, [activePattern.id, activePattern.timeAnchors, activeVariant.variantKey, hasAnacrusis, measureDuration, effectiveBpm, beatsPerMeasure, measuresCount, totalDurationSec, updatePatternAndVariant, setRecordedSampleRate]);
 
-  const handlePackReady = useCallback((_pack: unknown, meta?: { trimStartSec: number; trimEndSec: number; t1OffsetSec: number }) => {
+  const handlePackReady = useCallback(async (_pack: unknown, meta?: { trimStartSec: number; trimEndSec: number; t1OffsetSec: number }) => {
     if (!rawPCM) return;
-    const trimStartSec = meta?.trimStartSec ?? activeVariant.trimStartSec, trimEndSec = meta?.trimEndSec ?? activeVariant.trimEndSec;
-    const rawT1 = meta?.t1OffsetSec ?? curT1;
-    const res = extractPatternMelodicData({ rawPCM, sampleRate, bpm: effectiveBpm, timeSignature, measuresCount, beatsPerMeasure, beatResolutions, hasAnacrusis, trimStartSec, trimEndSec, t1OffsetSec: rawT1, referencePitch: effectivePitch, pitchShiftSemitones: activeVariant.pitchShiftSemitones, tessitura: activePattern.tessitura, assignedLyricsText: activePattern.assignedLyricsText, timeAnchors: activePattern.timeAnchors, lowCutEnabled: activeVariant.lowCutEnabled, enableTonePolish: activeVariant.enableTonePolish !== false, referenceMidiNotes: activePattern.referenceMidiNotes });
-    updatePatternAndVariant(activePattern.id, activeVariant.variantKey, { pack: res.pack, rawAudioSamples: res.cleanPCM, rawPitchCurve: res.pitchCurve, pitchCurve: res.pitchCurve, anacrusisSteps: res.anacrusisSteps, mainSteps: res.mainSteps, trimStartSec, trimEndSec, t1OffsetSec: rawT1, isMidiInitialized: true, midiLocked: false, hasCanonicalAlignment: true as any, correctedAudioSamples: null, melodyneRegions: [], stepStatus: { ...(activePattern.stepStatus || {}), recorded: true, trimmed: true } }, { trimStartSec, trimEndSec, t1OffsetSec: rawT1 });
-    setActiveLivret('melodia');
+    const trimStartSec = meta?.trimStartSec ?? activeVariant.trimStartSec, trimEndSec = meta?.trimEndSec ?? activeVariant.trimEndSec, rawT1 = meta?.t1OffsetSec ?? curT1;
+    try {
+      const res = await extractMelodicDataInWorker({ rawPCM, sampleRate, bpm: effectiveBpm, timeSignature, measuresCount, beatsPerMeasure, beatResolutions, hasAnacrusis, trimStartSec, trimEndSec, t1OffsetSec: rawT1, referencePitch: effectivePitch, pitchShiftSemitones: activeVariant.pitchShiftSemitones, tessitura: activePattern.tessitura, assignedLyricsText: activePattern.assignedLyricsText, timeAnchors: activePattern.timeAnchors, lowCutEnabled: activeVariant.lowCutEnabled, enableTonePolish: activeVariant.enableTonePolish !== false, referenceMidiNotes: activePattern.referenceMidiNotes }, { dedupeKey: `calage_extract_${activePattern.id}` });
+      updatePatternAndVariant(activePattern.id, activeVariant.variantKey, { pack: res.pack, rawAudioSamples: res.cleanPCM, rawPitchCurve: res.pitchCurve, pitchCurve: res.pitchCurve, anacrusisSteps: res.anacrusisSteps, mainSteps: res.mainSteps, trimStartSec, trimEndSec, t1OffsetSec: rawT1, isMidiInitialized: true, midiLocked: false, hasCanonicalAlignment: true as any, correctedAudioSamples: null, melodyneRegions: [], stepStatus: { ...(activePattern.stepStatus || {}), recorded: true, trimmed: true } }, { trimStartSec, trimEndSec, t1OffsetSec: rawT1 });
+      setActiveLivret('melodia');
+    } catch (err) { if (!isVocalDspCancelled(err)) console.warn('[LivretCalage] Worker error:', err); }
   }, [rawPCM, sampleRate, effectiveBpm, timeSignature, measuresCount, beatsPerMeasure, beatResolutions, hasAnacrusis, activeVariant, curT1, effectivePitch, activePattern, updatePatternAndVariant, setActiveLivret]);
 
   return (
