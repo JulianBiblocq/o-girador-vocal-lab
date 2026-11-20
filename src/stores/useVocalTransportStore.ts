@@ -19,10 +19,10 @@ export interface LivretTransportHandlers {
 
 export interface VocalTransportState {
   activeLivret: LivretType; viewRoleMode: ViewRoleMode; userPermissions: VocalUserPermissions | null;
-  treinoSubTab: TreinoSubTab; isRecording: boolean; isPlaying: boolean; isDictationModalOpen: boolean;
+  treinoSubTab: TreinoSubTab; isRecording: boolean; isPlaying: boolean; isDictationModalOpen: boolean; isRecoveryModalOpen: boolean;
   isMidiConnected: boolean; activeMidiDeviceName: string | null; handlers: LivretTransportHandlers;
   setActiveLivret: (livret: LivretType) => void; setViewRoleMode: (mode: ViewRoleMode) => void;
-  setDictationModalOpen: (open: boolean) => void;
+  setDictationModalOpen: (open: boolean) => void; setRecoveryModalOpen: (open: boolean) => void;
   setUserPermissions: (perms: VocalUserPermissions | null) => void; setTreinoSubTab: (tab: TreinoSubTab) => void;
   setIsRecording: (rec: boolean) => void; setIsPlaying: (playing: boolean) => void;
   setMidiConnection: (connected: boolean, deviceName?: string | null) => void;
@@ -41,9 +41,10 @@ const initialMode = getInitialRoleMode();
 let state: VocalTransportState = {
   activeLivret: initialMode === 'eleve' ? 'treino' : 'structure',
   viewRoleMode: initialMode, userPermissions: null, treinoSubTab: 'fiche_paroles',
-  isRecording: false, isPlaying: false, isDictationModalOpen: false, isMidiConnected: false, activeMidiDeviceName: null, handlers: {},
+  isRecording: false, isPlaying: false, isDictationModalOpen: false, isRecoveryModalOpen: false, isMidiConnected: false, activeMidiDeviceName: null, handlers: {},
 
   setDictationModalOpen: (open) => { if (state.isDictationModalOpen !== open) { state = { ...state, isDictationModalOpen: open }; notify(); } },
+  setRecoveryModalOpen: (open) => { if (state.isRecoveryModalOpen !== open) { state = { ...state, isRecoveryModalOpen: open }; notify(); } },
   setTreinoSubTab: (tab) => { if (state.treinoSubTab !== tab) { state = { ...state, treinoSubTab: tab }; notify(); } },
   setActiveLivret: (livret) => {
     if (state.activeLivret === livret) return;

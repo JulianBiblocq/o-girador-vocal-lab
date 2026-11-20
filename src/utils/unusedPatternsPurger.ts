@@ -94,8 +94,12 @@ export function purgeUnusedPatternsFromProject(project: ToadaProject): {
   };
 }
 
-export async function deleteOrphanPatternWavsFromStorage(toadaId: string, patternIds: string[]): Promise<number> {
-  if (!toadaId || !patternIds || patternIds.length === 0) return 0;
+export async function deleteOrphanPatternWavsFromStorage(
+  toadaId: string,
+  patternIds: string[],
+  options?: { purgeFromCloudStorage?: boolean }
+): Promise<number> {
+  if (!options?.purgeFromCloudStorage || !toadaId || !patternIds || patternIds.length === 0) return 0;
   let deletedCount = 0;
   try {
     const [{ ref, deleteObject }, { storage }] = await Promise.all([import('firebase/storage'), import('../services/firebaseClient')]);

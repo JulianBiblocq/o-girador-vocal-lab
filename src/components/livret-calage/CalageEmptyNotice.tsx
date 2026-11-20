@@ -6,6 +6,7 @@ import React from 'react';
 import { Mic, Upload, Scissors } from 'lucide-react';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { useVocalTransportStore } from '../../stores/useVocalTransportStore';
+import { RecoverTakeIcon } from '../icons/CordelActionIcons';
 
 interface CalageEmptyNoticeProps {
   onDirectImport: () => void;
@@ -57,6 +58,15 @@ export const CalageEmptyNotice: React.FC<CalageEmptyNoticeProps> = ({ onDirectIm
         >
           <Scissors className="w-4 h-4 text-theme-wood" />
           <span>{t('calageOpenSlicerBtn')}</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => useVocalTransportStore.getState().setRecoveryModalOpen(true)}
+          className="cordel-btn px-3 py-2 text-xs font-mono font-bold flex items-center gap-2 cursor-pointer text-[#9a3412] dark:text-amber-300"
+        >
+          <RecoverTakeIcon className="w-4 h-4" />
+          <span>{t('recoveryOpenBtn')}</span>
         </button>
       </div>
     </div>

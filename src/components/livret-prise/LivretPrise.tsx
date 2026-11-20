@@ -4,18 +4,19 @@
  * Témoin Micro 1er plan, [▶ Réécouter] et tiroir d'options avancées (< 130 lignes).
  */
 import React, { useMemo, useCallback, useState, useEffect } from 'react';
-import { RotateCcw, Scissors, Music, Compass } from 'lucide-react';
+import { Compass } from 'lucide-react';
 import { useToadaProject } from '../../context/ToadaProjectContext';
 import { useAudioHardware } from '../../context/AudioHardwareContext';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { useVocalTransportStore } from '../../stores/useVocalTransportStore';
-import { confirmAsync } from '../../stores/useCordelDialogStore';
+import { useResetAllProjectTakes } from '../../hooks/useResetAllProjectTakes';
 import { AFitaFrame } from '../fita/AFitaFrame';
 import { CabineMonitoringAndPunchBar } from './CabineMonitoringAndPunchBar';
 import type { ComfortMonitoringPreset } from '../../audio/ComfortMonitoringNode';
 import { getActiveBackingTrack, subscribeBackingTrack } from '../../utils/backingTrackStorage';
 import { CabineTimelineRibbon } from './CabineTimelineRibbon';
 import { CabineTransportRow } from './CabineTransportRow';
+import { CabineTakeActionsRow } from './CabineTakeActionsRow';
 import { patternHasAnyAudio } from './cabineTimelineDrawer';
 import { useCabineLiveWaveAndMic } from './useCabineLiveWaveAndMic';
 import { CuePatternSelector } from './CuePatternSelector';
@@ -65,7 +66,7 @@ export const LivretPrise: React.FC = () => {
   });
 
   const isRecordingAny = isCycleActive || isContinuousActive;
-  const { livePeakBinsRef, sampleAnalyserPeak, micBarFillRef, micClipDotRef, isMicProbeActive, startIdleProbe, stopIdleProbe, resetClipBadge, isReplaying, toggleReplay } = useCabineLiveWaveAndMic({
+  const { livePeakBinsRef, sampleAnalyserPeak, micLevelRef, isMicProbeActive, startIdleProbe, stopIdleProbe, isReplaying, toggleReplay } = useCabineLiveWaveAndMic({
     recorder, selectedDeviceId, isRecordingAny, activePattern, recordedSampleRate,
   });
 
@@ -76,17 +77,13 @@ export const LivretPrise: React.FC = () => {
 
   const hasRecording = activeVariant.recordingResult !== null && activeVariant.recordingResult.pcm.length > 0;
   const hasExistingAudio = patternHasAnyAudio(activePattern);
+  const { hasAnyProjectTake, handleResetAllTakes } = useResetAllProjectTakes(project, loadProject);
   const recordedCount = Object.values(activePattern.variants || {}).filter((v) => v.recordingResult !== null).length;
 
-  const handleReset = useCallback(async () => {
-    const ok = await confirmAsync({ title: t('resetRecordingTitle'), message: t('resetRecordingConfirm'), confirmLabel: t('dialogConfirm'), cancelLabel: t('dialogCancel'), variant: 'warning' });
-    if (ok) { updateVariant(activePattern.id, activeVariant.variantKey, { recordingResult: null }); updatePattern(activePattern.id, { recordingResult: null, rawAudioSamples: null }); }
-  }, [t, updateVariant, updatePattern, activePattern.id, activeVariant.variantKey]);
-
   const onStartOrStopRecord = useCallback(() => {
-    stopIdleProbe(); resetClipBadge();
+    stopIdleProbe();
     if (takeMode === 'pattern') handleToggleRecord(); else handleToggleContinuous();
-  }, [stopIdleProbe, resetClipBadge, takeMode, handleToggleRecord, handleToggleContinuous]);
+  }, [stopIdleProbe, takeMode, handleToggleRecord, handleToggleContinuous]);
 
   return (
     <div className="flex flex-col gap-5 w-full max-w-5xl mx-auto my-2">
@@ -112,17 +109,16 @@ export const LivretPrise: React.FC = () => {
           <CabineTransportRow
             isCycleActive={takeMode === 'pattern' ? isCycleActive : isContinuousActive} measuresCount={measuresCount}
             hasExistingAudio={hasExistingAudio} isReplaying={isReplaying} isMicProbeActive={isMicProbeActive}
-            micBarFillRef={micBarFillRef} micClipDotRef={micClipDotRef}
-            onToggleMicProbe={() => { resetClipBadge(); if (isMicProbeActive) stopIdleProbe(); else startIdleProbe(); }}
+            micLevelRef={micLevelRef}
+            onToggleMicProbe={() => { if (isMicProbeActive) stopIdleProbe(); else startIdleProbe(); }}
             onStartRecord={onStartOrStopRecord} onToggleReplay={toggleReplay}
           />
-          {hasExistingAudio && (
-            <div className="flex flex-wrap items-center justify-center gap-2 pt-2 border-t border-[var(--cordel-border-sub)]">
-              <button type="button" onClick={() => setActiveLivret('calage')} className="cordel-btn-primary px-3 py-1.5 text-xs font-mono font-bold flex items-center gap-1.5 cursor-pointer"><Scissors className="w-3.5 h-3.5" /><span>{t('fanion3Short')}</span></button>
-              <button type="button" onClick={() => setActiveLivret('melodia')} className="cordel-btn px-3 py-1.5 text-xs font-mono font-bold flex items-center gap-1.5 cursor-pointer"><Music className="w-3.5 h-3.5 text-theme-accent" /><span>{t('fanion4Short')}</span></button>
-              <button type="button" onClick={handleReset} className="cordel-card-sm px-2.5 py-1.5 text-[11px] font-mono text-red-600 dark:text-red-400 flex items-center gap-1 cursor-pointer"><RotateCcw className="w-3 h-3" /><span>{t('resetRecordingTitle')}</span></button>
-            </div>
-          )}
+          <CabineTakeActionsRow
+            activePatternId={activePattern.id} activeVariantKey={activeVariant.variantKey}
+            hasExistingAudio={hasExistingAudio} hasAnyProjectTake={hasAnyProjectTake} disabled={isRecordingAny}
+            onOpenCalage={() => setActiveLivret('calage')} onOpenMelodia={() => setActiveLivret('melodia')}
+            updateVariant={updateVariant} updatePattern={updatePattern} onResetAllTakes={handleResetAllTakes}
+          />
         </CabineTimelineRibbon>
       </AFitaFrame>
 

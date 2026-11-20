@@ -3,31 +3,18 @@
  * Service de re-synchronisation unifiée non destructive depuis Firestore Organizador & Sequenciador `/toada_packs` (< 140 lignes).
  * Apparie par cardIndex (puis clé normalisée), recalcule l'alignement syllabique et synchronise transpositionSemitones / troupeKey.
  */
-import { type ToadaProject, type VocalPatternItem, DEFAULT_TOADA_BPM } from '../types/toadaProject.types';
+import { type ToadaProject, DEFAULT_TOADA_BPM } from '../types/toadaProject.types';
 import { fetchOrganizadorToadas, fetchOrganizadorToadaById, fetchToadaPackById, type ToadaDocument } from '../services/firebaseClient';
 import { normalizeSongTitle } from './varalSongFilter';
 import { parseToadaDocument } from './toadaSheetParser';
 import { generateToadaFromSheet } from './toadaConductorGenerator';
-import { buildNormalizedPatternKey } from './timeAnchorParser';
 import { getBeatsPerMeasure } from './musicalMath';
 import { getDefaultBeatResolutions } from './alignmentMath';
 import { extractPatternMelodicData } from '../audio/melodicExtractionHelper';
 import { parseStoredScaleString } from '../audio/projectScaleAnalyzer';
 import { applyDualScaleToProject, computeSemitoneDistance, resolveProjectDualScale } from './scaleTranspositionHelper';
-
-function findMatchingExistingPattern(newPat: VocalPatternItem, newIdx: number, existingPatterns: VocalPatternItem[], usedIds: Set<string>): VocalPatternItem | undefined {
-  const targetCardIdx = newPat.cardIndex ?? newIdx;
-  const byCardAndRole = existingPatterns.find((p, idx) => !usedIds.has(p.id) && (p.cardIndex ?? idx) === targetCardIdx && p.role === newPat.role);
-  if (byCardAndRole) return byCardAndRole;
-
-  const targetKey = buildNormalizedPatternKey(newPat.role, newPat.assignedLyricsText || '', newPat.timeAnchors);
-  const byNormKey = existingPatterns.find((p) => !usedIds.has(p.id) && buildNormalizedPatternKey(p.role, p.assignedLyricsText || '', p.timeAnchors) === targetKey);
-  if (byNormKey) return byNormKey;
-
-  const byRoleAndName = existingPatterns.find((p) => !usedIds.has(p.id) && p.role === newPat.role && p.name === newPat.name);
-  if (byRoleAndName) return byRoleAndName;
-  return existingPatterns.find((p, idx) => !usedIds.has(p.id) && (p.cardIndex ?? idx) === targetCardIdx);
-}
+import { buildSyncedPatternMatchMap, mergeCloudOnlyMatchedPattern } from './patternTakeMatcher';
+import { resolveCanonicalToadaPackId } from './toadaPackIdResolver';
 
 export function applySequenciadorPackTranspositionToProject(
   project: ToadaProject,
@@ -57,11 +44,10 @@ export function mergeSyncedToadaDocIntoProject(
 
   const beatsPerMeasure = getBeatsPerMeasure(freshProject.timeSignature);
   const defaultResolutions = getDefaultBeatResolutions(freshProject.timeSignature);
-  const usedIds = new Set<string>();
+  const matchMap = buildSyncedPatternMatchMap(freshProject.patterns, project.patterns);
 
-  freshProject.patterns = freshProject.patterns.map((newPat, idx) => {
-    const matched = findMatchingExistingPattern(newPat, idx, project.patterns, usedIds);
-    if (matched) usedIds.add(matched.id);
+  freshProject.patterns = freshProject.patterns.map((newPat) => {
+    const matched = matchMap.get(newPat.id);
 
     if (matched && matched.recordingResult && matched.recordingResult.pcm?.length > 0) {
       const rec = matched.recordingResult;
@@ -92,6 +78,7 @@ export function mergeSyncedToadaDocIntoProject(
         isMidiInitialized: true, midiLocked: true,
       };
     }
+    if (matched) return mergeCloudOnlyMatchedPattern(newPat, matched, targetBpm);
     return { ...newPat, baseBpm: targetBpm, bpm: targetBpm };
   });
 
@@ -124,7 +111,9 @@ export async function syncProjectWithOrganizador(
       const cleanTitle = normalizeSongTitle(projectTitle);
       doc = all.find((d) => normalizeSongTitle(d.titre) === cleanTitle) ?? null;
     }
-    const cloudPack = await fetchToadaPackById(project.id).catch(() => null);
+    const canonicalPackId = resolveCanonicalToadaPackId(project, doc || undefined);
+    const cloudPack = (await fetchToadaPackById(canonicalPackId).catch(() => null))
+      || (canonicalPackId !== project.id ? await fetchToadaPackById(project.id).catch(() => null) : null);
     if (cloudPack && doc) {
       if (cloudPack.transpositionSemitones !== undefined) doc.transpositionSemitones = cloudPack.transpositionSemitones;
       if (cloudPack.toadaMeta?.tonaliteDefaut) doc.tonaliteDefaut = cloudPack.toadaMeta.tonaliteDefaut;

@@ -14,6 +14,7 @@ import { CordelAccordion } from '../common/CordelAccordion';
 import { WaveformTrimEditor } from '../livret-prise/WaveformTrimEditor';
 import { LatencyNudgeBar } from '../livret-prise/LatencyNudgeBar';
 import { CalageEmptyNotice } from './CalageEmptyNotice';
+import { RecoverTakeIcon } from '../icons/CordelActionIcons';
 import { LongAudioSlicerBanner } from './LongAudioSlicerBanner';
 import { MasterTakeSlicerModal } from '../slicer/MasterTakeSlicerModal';
 import { decodeAudioFile } from '../../utils/directAudioImporter';
@@ -86,6 +87,9 @@ export const LivretCalage: React.FC = () => {
         title={t('fitaTitleMontage')}
         headerRight={
           <>
+            <button type="button" onClick={() => useVocalTransportStore.getState().setRecoveryModalOpen(true)} title={t('recoveryOpenBtn')} className="cordel-card-sm px-2.5 py-1 text-xs font-mono font-bold inline-flex items-center gap-1.5 cursor-pointer text-[#9a3412] dark:text-amber-300">
+              <RecoverTakeIcon className="w-3.5 h-3.5" /><span>{t('recoveryOpenBtn')}</span>
+            </button>
             <button type="button" onClick={() => fileInputRef.current?.click()} title={t('calageDirectImportBtn')} className="cordel-card-sm px-2.5 py-1 text-xs font-mono font-bold inline-flex items-center gap-1.5 cursor-pointer">
               <Upload className="w-3.5 h-3.5 text-theme-accent" /><span>{isBr ? 'Importar' : 'Importer'}</span>
             </button>
