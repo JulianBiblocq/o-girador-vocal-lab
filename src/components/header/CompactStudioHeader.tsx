@@ -3,7 +3,7 @@
  * En-tête compact 1 ligne Studio (3 poinçons + Sync) et En-tête Dédié Élève épuré (< 125 lignes).
  */
 import React, { useState } from 'react';
-import { Sun, Moon, Download, Headphones, ArrowLeft, BookOpen, Compass } from 'lucide-react';
+import { Sun, Moon, Headphones, ArrowLeft, BookOpen, Compass } from 'lucide-react';
 import { useToadaProject } from '../../context/ToadaProjectContext';
 import { useOrganizadorAuth } from '../../hooks/useOrganizadorAuth';
 import { useOrganizadorDeepLink } from '../../hooks/useOrganizadorDeepLink';
@@ -17,6 +17,7 @@ import { TonalityStampPopover } from './TonalityStampPopover';
 import { HardwareStampPopover } from './HardwareStampPopover';
 import { SyncAndExportDropdown } from './SyncAndExportDropdown';
 import { UserAvatarMenu } from './UserAvatarMenu';
+import { PwaInstallButton } from './PwaInstallButton';
 import { OrganizadorToadaModal } from '../modals/OrganizadorToadaModal';
 import { ToadaLexiconModal } from '../lexicon/ToadaLexiconModal';
 
@@ -103,11 +104,7 @@ export const CompactStudioHeader: React.FC<Props> = ({
           <SyncAndExportDropdown project={project} groupId={groupId} isUserLoggedIn={Boolean(currentUser)} onProjectUpdate={loadProject} onOpenLexicon={() => setIsLexiconOpen(true)} />
         )}
 
-        {!isInstalled && (
-          <button type="button" onClick={onTriggerInstall} title={t('pwaInstallBtn')} className="h-8 w-8 cordel-card-sm inline-flex items-center justify-center cursor-pointer">
-            <Download className="w-3.5 h-3.5 text-theme-accent" />
-          </button>
-        )}
+        <PwaInstallButton isInstalled={isInstalled} onInstall={onTriggerInstall} />
 
         <div className="h-8 cordel-card-sm inline-flex items-center p-0.5 text-[11px] font-mono select-none">
           <button type="button" onClick={() => setLocale('fr')} className={`h-full px-2 font-bold flex items-center justify-center cursor-pointer rounded ${locale === 'fr' ? 'bg-theme-wood text-[var(--cordel-on-primary)]' : 'opacity-65 hover:opacity-100'}`}>FR</button>

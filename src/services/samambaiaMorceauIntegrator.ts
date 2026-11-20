@@ -1,12 +1,13 @@
 /**
  * samambaiaMorceauIntegrator.ts
- * Récupération des morceaux sauvegardés du répertoire du groupe actif (Sequenciador `presets`)
- * et intégration directe de la Toada Cantador calée au BPM maître du morceau Sequenciador (< 130 lignes).
+ * Récupération des morceaux sauvegardés du répertoire du groupe actif (Sequenciador `presets`),
+ * intégration de la Toada Cantador avec ID unique et nettoyage automatique de `toada-default` après migration (< 138 lignes).
  */
 import { collection, doc, getDocs, limit, query, setDoc, updateDoc, where, addDoc } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import type { ToadaProject } from '../types/toadaProject.types';
 import { publishToadaToSequencer } from './cloudToadaPublisher';
+import { cleanupLegacyDefaultPackIfUnreferenced } from './cloudToadaStorageCleaner';
 import { parseSequenciadorPresetData, encodeSequenciadorPresetData } from '../utils/lzStringCodec';
 import {
   type SamambaiaMorceauSummary, normalizeMorceauTitle,
@@ -14,6 +15,7 @@ import {
 } from '../utils/sequenciadorPresetBuilder';
 import { getEcosystemAppUrl } from '../utils/ecosystemUrls';
 import { resolveActiveTenantContext, buildGroupCandidates } from './activeTenantResolver';
+import { isLegacyDefaultToadaId, resolveCanonicalToadaPackId } from '../utils/toadaPackIdResolver';
 
 function detectHasVocalToada(parsed: Record<string, any> | null, rawDoc: Record<string, any>): boolean {
   if (rawDoc?.toadaPackId || parsed?.metadata?.toadaPackId) return true;
@@ -68,22 +70,23 @@ export interface IntegrateMorceauOptions {
 
 export interface IntegrateMorceauResult {
   presetId: string; morceauName: string; sequenciadorBpm: number; recordedBpm: number;
-  sequenciadorMorceauUrl: string; exportedPatternsCount: number; savedMegabytes: string; updatedProject: ToadaProject;
+  sequenciadorMorceauUrl: string; exportedPatternsCount: number; uploadedWavsCount: number;
+  purgedCloudFilesCount: number; savedMegabytes: string; updatedProject: ToadaProject;
 }
 
 export async function integrateToadaIntoSamambaiaMorceau(
   project: ToadaProject, options: IntegrateMorceauOptions, onProgress?: (msg: string) => void
 ): Promise<IntegrateMorceauResult> {
   const target = options.targetMorceau;
+  const wasTargetLegacyDefault = target?.toadaPackId === 'toada-default';
+  const canonicalProject: ToadaProject = { ...project, id: resolveCanonicalToadaPackId(project) };
   const sequenciadorBpm = target ? target.bpm : Math.max(30, Math.round(Number(options.createNewMorceau?.bpm || project.bpm || 96)));
   const morceauName = target ? target.name : (options.createNewMorceau?.name?.trim() || project.title || 'Nouvelle Toada');
-  const firstPat = project.patterns[0];
+  const firstPat = canonicalProject.patterns[0];
   const recordedBpm = Math.round(Number((firstPat as any)?.recordedBpm || firstPat?.recordingResult?.recordedBpm || firstPat?.baseBpm || project.bpm || sequenciadorBpm));
 
-  // 1. Publication du pack Toada avec pack.bpm = sequenciadorBpm et préservation de recordedBpm sur chaque pattern
-  const pubRes = await publishToadaToSequencer(project, onProgress, sequenciadorBpm);
+  const pubRes = await publishToadaToSequencer(canonicalProject, onProgress, sequenciadorBpm, { purgeStorageOrphans: true });
 
-  // 2. Injection dans le Preset Sequenciador sans jamais modifier le BPM maître de Sequenciador
   onProgress?.(`Intégration dans le morceau "${morceauName}" (${sequenciadorBpm} BPM)...`);
   const basePreset = target?.parsedPreset || {
     bpm: sequenciadorBpm, timeSig: project.timeSignature || '4/4', totalMeasures: 8, tracks: [],
@@ -102,28 +105,28 @@ export async function integrateToadaIntoSamambaiaMorceau(
     visibility: target?.rawDoc?.visibility || 'mestre_group', ownerId: resolvedUid, updatedAt: Date.now(),
   };
 
-  if (finalPresetId) {
-    await setDoc(doc(db, 'presets', finalPresetId), presetPayload, { merge: true });
-  } else {
-    presetPayload.createdAt = Date.now();
-    finalPresetId = (await addDoc(collection(db, 'presets'), presetPayload)).id;
+  if (finalPresetId) await setDoc(doc(db, 'presets', finalPresetId), presetPayload, { merge: true });
+  else { presetPayload.createdAt = Date.now(); finalPresetId = (await addDoc(collection(db, 'presets'), presetPayload)).id; }
+
+  let extraPurged = 0;
+  if (wasTargetLegacyDefault && !isLegacyDefaultToadaId(pubRes.toadaId)) {
+    extraPurged = await cleanupLegacyDefaultPackIfUnreferenced(pubRes.toadaId);
   }
 
-  // 3. Synchronisation retour du BPM vers Organizador (/documents) et Cantador (sans écraser recordedBpm)
-  const docId = project.toadaMeta?.id || (project.source === 'organizador' ? project.id : undefined);
-  if (docId) {
-    try {
-      await updateDoc(doc(db, 'documents', docId), {
-        bpmDefaut: sequenciadorBpm, bpm: sequenciadorBpm, lienSequenceurId: finalPresetId,
-        tonaliteDefaut: pubRes.publishedPack.troupeKey, updatedAt: new Date().toISOString(),
-      });
-    } catch { /* ignore */ }
+  const docId = project.toadaMeta?.id;
+  if (docId && !isLegacyDefaultToadaId(docId)) {
+    await updateDoc(doc(db, 'documents', docId), {
+      cantadorToadaId: pubRes.toadaId, cantadorValidated: true, bpmDefaut: sequenciadorBpm,
+      bpm: sequenciadorBpm, lienSequenceurId: finalPresetId, tonaliteDefaut: pubRes.publishedPack.troupeKey, updatedAt: new Date().toISOString(),
+    }).catch(() => {});
   }
 
-  const updatedProject = applySequenciadorBpmBackToProject(project, sequenciadorBpm, finalPresetId);
+  const synced = applySequenciadorBpmBackToProject(canonicalProject, sequenciadorBpm, finalPresetId);
+  const updatedProject: ToadaProject = { ...synced, id: pubRes.toadaId, toadaMeta: { ...(synced.toadaMeta || {}), cantadorToadaId: pubRes.toadaId } };
   return {
     presetId: finalPresetId, morceauName, sequenciadorBpm, recordedBpm,
     sequenciadorMorceauUrl: `${getEcosystemAppUrl('sequenciador')}/?loadPreset=${encodeURIComponent(finalPresetId)}`,
-    exportedPatternsCount: pubRes.exportedPatternsCount, savedMegabytes: pubRes.savedMegabytes, updatedProject,
+    exportedPatternsCount: pubRes.exportedPatternsCount, uploadedWavsCount: pubRes.uploadedWavsCount,
+    purgedCloudFilesCount: pubRes.purgedCloudFilesCount + extraPurged, savedMegabytes: pubRes.savedMegabytes, updatedProject,
   };
 }

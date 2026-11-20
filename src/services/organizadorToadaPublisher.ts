@@ -14,29 +14,19 @@ import { resolveProjectDualScale } from '../utils/scaleTranspositionHelper';
 import { resolveActiveTenantContext } from './activeTenantResolver';
 import { sanitizePitchHz } from '../utils/pitchHzContract';
 import { VOCAL_GRAMMAR_VERSION, normalizeToadaTextV1ToV2 } from '../utils/vocalGrammarV2';
+import { resolveCanonicalToadaPackId } from '../utils/toadaPackIdResolver';
 import { syncLightweightToadaPackToFirestore } from './lightToadaPackPublisher';
 
 export interface OrganizadorPublishPayloadResult {
-  payload: Record<string, any>;
-  rawTxtCode: string;
-  parolesOriginales: string;
-  resolvedBpm: number;
-  formattedScaleLabel: string;
-  tonaliteChanteeOrigine: string;
-  transpositionSemitones: number;
-  scaleRoot: string;
-  scaleMode: string;
-  targetGroupId: string;
+  payload: Record<string, any>; rawTxtCode: string; parolesOriginales: string; resolvedBpm: number;
+  formattedScaleLabel: string; tonaliteChanteeOrigine: string; transpositionSemitones: number;
+  scaleRoot: string; scaleMode: string; targetGroupId: string;
 }
 
-export function buildOrganizadorDocumentPayload(
-  project: ToadaProject,
-  groupId?: string | null
-): OrganizadorPublishPayloadResult {
+export function buildOrganizadorDocumentPayload(project: ToadaProject, groupId?: string | null): OrganizadorPublishPayloadResult {
   const { rawTxtCode: rawReconstituted, cleanHtml } = reconstituteToadaTxt(project, { upgradeToV2: true });
   const rawTxtCode = normalizeToadaTextV1ToV2(rawReconstituted, { grammarVersion: VOCAL_GRAMMAR_VERSION });
-  const rawGroupId = String(groupId || project.toadaMeta?.groupId || '').trim();
-  const targetGroupId = rawGroupId.toLowerCase();
+  const targetGroupId = String(groupId || project.toadaMeta?.groupId || '').trim().toLowerCase();
 
   const existingLexicon = project.toadaMeta?.notesLexique || [];
   const notesLexique = existingLexicon.length > 0 ? existingLexicon : detectToadaLexicon(project);
@@ -67,7 +57,7 @@ export function buildOrganizadorDocumentPayload(
     referencePitchHz: sanitizePitchHz(project.referencePitchHz ?? meta.referencePitchHz),
     tonaliteChanteeOrigine, transpositionSemitones,
     sungScaleRoot: dualScale.sungScaleRoot, sungScaleMode: dualScale.sungScaleMode, troupeScaleRoot: dualScale.troupeScaleRoot,
-    scaleRoot, scaleMode, cantadorToadaId: project.id, cantadorValidated: true,
+    scaleRoot, scaleMode, cantadorToadaId: resolveCanonicalToadaPackId(project), cantadorValidated: true,
     traduction: meta.traduction || '', anecdote: meta.anecdote || '', notesLexique, questionsQcm,
     harmonyGrid: resolvedHarmony, globalHarmonyGrid: resolvedHarmony,
     quizCount: questionsQcm.length, lexiqueCount: notesLexique.length,
@@ -117,25 +107,28 @@ export async function publishToadaToOrganizador(
 
   const existingDocId = project.toadaMeta?.id;
   if (existingDocId) {
+    const packId = resolveCanonicalToadaPackId(project, { id: existingDocId });
+    payload.cantadorToadaId = packId;
     try {
       await updateDoc(doc(db, 'documents', existingDocId), payload);
-      await syncLightweightToadaPackToFirestore(project, existingDocId, targetGroupId).catch(() => {});
-      return { success: true, documentId: existingDocId, cantadorToadaId: project.id, bpm: resolvedBpm, scaleLabel: formattedScaleLabel };
+      await syncLightweightToadaPackToFirestore({ ...project, id: packId }, existingDocId, targetGroupId).catch(() => {});
+      return { success: true, documentId: existingDocId, cantadorToadaId: packId, bpm: resolvedBpm, scaleLabel: formattedScaleLabel };
     } catch {}
   }
 
   const newDocRef = await addDoc(collection(db, 'documents'), payload);
-  await syncLightweightToadaPackToFirestore(project, newDocRef.id, targetGroupId).catch(() => {});
+  const newPackId = resolveCanonicalToadaPackId(project, { id: newDocRef.id });
+  await syncLightweightToadaPackToFirestore({ ...project, id: newPackId }, newDocRef.id, targetGroupId).catch(() => {});
   const repId = project.toadaMeta?.repertoireId;
   if (repId) {
     try {
       await updateDoc(doc(db, 'associations', targetGroupId, 'repertoire', repId), {
-        cantadorToadaId: project.id, toadaDocId: newDocRef.id, bpmDefaut: resolvedBpm,
+        cantadorToadaId: newPackId, toadaDocId: newDocRef.id, bpmDefaut: resolvedBpm,
         tonaliteDefaut: formattedScaleLabel, tonaliteChanteeOrigine, transpositionSemitones,
       });
     } catch {}
   }
-  return { success: true, documentId: newDocRef.id, cantadorToadaId: project.id, bpm: resolvedBpm, scaleLabel: formattedScaleLabel };
+  return { success: true, documentId: newDocRef.id, cantadorToadaId: newPackId, bpm: resolvedBpm, scaleLabel: formattedScaleLabel };
 }
 
 export const publishProjectToOrganizador = publishToadaToOrganizador;

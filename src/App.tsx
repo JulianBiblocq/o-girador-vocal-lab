@@ -13,6 +13,7 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { CordelDialogModal } from './components/ui/CordelDialogModal';
 import { AppUpdateBanner } from './components/common/AppUpdateBanner';
 import { MestreNoteDictationModal } from './components/dictation/MestreNoteDictationModal';
+import { TakeRecoveryModal } from './components/recovery/TakeRecoveryModal';
 import { useGlobalTransportShortcuts } from './hooks/useGlobalTransportShortcuts';
 import { useVocalLabMidi } from './hooks/useVocalLabMidi';
 import { usePwaInstall } from './hooks/usePwaInstall';
@@ -96,6 +97,7 @@ export const App: React.FC = () => (
         <AudioHardwareProvider>
           <AppContent />
           <MestreNoteDictationModal />
+          <TakeRecoveryModal />
           <CordelDialogModal />
           <AppUpdateBanner />
         </AudioHardwareProvider>

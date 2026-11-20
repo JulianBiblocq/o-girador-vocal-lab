@@ -8,7 +8,7 @@ import { useToadaProject } from '../../context/ToadaProjectContext';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { PatternCardItem } from './PatternCardItem';
 import { confirmAsync, alertAsync } from '../../stores/useCordelDialogStore';
-import { getPatternUsageCount, getUnusedPatternsSummary, purgeUnusedPatternsFromProject, deleteOrphanPatternWavsFromStorage } from '../../utils/unusedPatternsPurger';
+import { getPatternUsageCount, getUnusedPatternsSummary, purgeUnusedPatternsFromProject } from '../../utils/unusedPatternsPurger';
 import { saveProjectToIndexedDB } from '../../utils/projectAutoSave';
 import { useActionFeedback } from '../common/useActionFeedback';
 import { ArrowLeftRight, Trash2, Check } from 'lucide-react';
@@ -34,8 +34,8 @@ export const PatternLibraryBar: React.FC<{ isManualStructureEdit?: boolean }> = 
     const ok = await confirmAsync({
       title: isBr ? 'Purgar padrões não utilizados na linha do tempo' : 'Purger les patterns inutilisés dans la Timeline',
       message: isBr
-        ? `Estes ${unusedSummary.count} padrões (${unusedSummary.formattedMegabytes} Mo) não são usados na linha do tempo e seus arquivos .wav órfãos serão removidos:\n\n${listNames}`
-        : `Ces ${unusedSummary.count} patterns (${unusedSummary.formattedMegabytes} Mo) ne sont plus utilisés dans la Frise Conducteur et leurs fichiers .wav orphelins seront nettoyés :\n\n${listNames}`,
+        ? `Estes ${unusedSummary.count} padrões (${unusedSummary.formattedMegabytes} Mo) não são usados na linha do tempo (os backups .wav do Cloud são preservados):\n\n${listNames}`
+        : `Ces ${unusedSummary.count} patterns (${unusedSummary.formattedMegabytes} Mo) ne sont plus utilisés dans la Frise Conducteur (les sauvegardes .wav Cloud sont préservées) :\n\n${listNames}`,
       confirmLabel: isBr ? `Purgar (${unusedSummary.formattedMegabytes} Mo)` : `Purger (${unusedSummary.formattedMegabytes} Mo)`,
       cancelLabel: t('dialogCancel'),
       variant: 'warning',
@@ -46,14 +46,13 @@ export const PatternLibraryBar: React.FC<{ isManualStructureEdit?: boolean }> = 
       const res = purgeUnusedPatternsFromProject(project);
       loadProject(res.updatedProject);
       await saveProjectToIndexedDB(res.updatedProject);
-      deleteOrphanPatternWavsFromStorage(project.id, res.purgedIds);
       const label = isBr ? `✓ ${res.formattedMegabytes} Mo liberados !` : `✓ ${res.formattedMegabytes} Mo libérés !`;
       window.dispatchEvent(new CustomEvent('app-toast', { detail: { type: 'success', message: label } }));
       await alertAsync({
         title: label,
         message: isBr
-          ? `${res.purgedIds.length} padrões não utilizados removidos da memória/IndexedDB e arquivos .wav órfãos limpos do Firebase Storage.`
-          : `${res.purgedIds.length} patterns inutilisés supprimés de la mémoire/IndexedDB et fichiers .wav orphelins nettoyés de Firebase Storage.`,
+          ? `${res.purgedIds.length} padrões não utilizados removidos da memória/IndexedDB (arquivos .wav no Firebase Storage preservados).`
+          : `${res.purgedIds.length} patterns inutilisés supprimés de la mémoire/IndexedDB (fichiers .wav Firebase Storage préservés).`,
         variant: 'info',
       });
       return label;

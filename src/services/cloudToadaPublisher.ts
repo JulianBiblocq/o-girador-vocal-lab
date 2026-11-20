@@ -1,7 +1,7 @@
 /**
  * cloudToadaPublisher.ts
- * Téléversement d'un unique fichier .wav maître 16-bit Mono par pattern actif (usageCount > 0),
- * zéro speedVariants (75%/88%), zéro double-trim, et publication dans Firestore `/toada_packs` (< 130 lignes).
+ * Téléversement dédupliqué d'un fichier .wav maître 16-bit Mono par buffer unique sur les patterns actifs (`usageCount > 0`),
+ * publication dans `/toada_packs/{packId}` et purge automatique des anciens `.wav` Storage de cette Toada (< 140 lignes).
  */
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { doc, setDoc } from 'firebase/firestore';
@@ -14,10 +14,12 @@ import { getPatternT1OffsetSec } from '../utils/anacrusisTimingHelper';
 import { resolveProjectDualScale } from '../utils/scaleTranspositionHelper';
 import { EXPORT_WAV_SAMPLE_RATE, slicePatternPcm, sanitizePatternForFirestore } from './toadaPublishHelpers';
 import { renderVoiceDspInWorker, encodeWavInWorker } from '../workers/vocalDspWorkerClient';
-import { getPatternUsageCount, getUnusedPatternsSummary, deleteOrphanPatternWavsFromStorage } from '../utils/unusedPatternsPurger';
+import { getPatternUsageCount, getUnusedPatternsSummary } from '../utils/unusedPatternsPurger';
 import { resolveActiveTenantContext } from './activeTenantResolver';
 import { sanitizePitchHz } from '../utils/pitchHzContract';
 import { VOCAL_GRAMMAR_VERSION } from '../utils/vocalGrammarV2';
+import { resolveCanonicalToadaPackId } from '../utils/toadaPackIdResolver';
+import { computeWavBufferFingerprint, extractStoragePathFromAudioUrl, purgeStalePackWavsFromStorage } from './cloudToadaStorageCleaner';
 
 export function removeUndefinedFields<T>(obj: T): T {
   if (obj === null || obj === undefined) return null as unknown as T;
@@ -30,19 +32,17 @@ export function removeUndefinedFields<T>(obj: T): T {
   return obj;
 }
 
-export function getSequenciadorUrl(toadaId: string): string {
-  return getSequenciadorToadaUrl(toadaId);
-}
+export const getSequenciadorUrl = (toadaId: string): string => getSequenciadorToadaUrl(toadaId);
 
 export function getActiveTimelinePatterns(project: ToadaProject): VocalPatternItem[] {
-  const used = (project.patterns || []).filter((p) => getPatternUsageCount(project, p.id) > 0);
-  return used.length > 0 ? used : (project.patterns || []);
+  if (!project.slots || project.slots.length === 0) return project.patterns || [];
+  return (project.patterns || []).filter((p) => getPatternUsageCount(project, p.id) > 0);
 }
 
 export function buildSequencerToadaPackDocument(
   project: ToadaProject, processedPatterns?: Record<string, any>[], targetSequenciadorBpm?: number, explicitGroupId?: string | null
 ): Record<string, any> {
-  const toadaId = project.id;
+  const toadaId = resolveCanonicalToadaPackId(project);
   const groupId = String(explicitGroupId || project.toadaMeta?.groupId || '').trim().toLowerCase() || undefined;
   const referencePitchHz = sanitizePitchHz(project.referencePitchHz ?? project.toadaMeta?.referencePitchHz);
   const recordedAtPitchHz = sanitizePitchHz(project.recordedAtPitchHz ?? referencePitchHz);
@@ -52,7 +52,7 @@ export function buildSequencerToadaPackDocument(
   const sourcePatterns = getActiveTimelinePatterns(project);
   const patterns = (processedPatterns ?? sourcePatterns.map((p) => {
     const recBpm = Number((p as any).recordedBpm || p.recordingResult?.recordedBpm || p.baseBpm || p.bpm || projectBpm);
-    return sanitizePatternForFirestore(p, (p as any).audioUrl, undefined, p.t1OffsetSec, undefined, shiftSt, {
+    return sanitizePatternForFirestore(p, p.audioUrl, undefined, p.t1OffsetSec, undefined, shiftSt, {
       sungKey: dualScale.sungScaleLabel, troupeKey: dualScale.troupeScaleLabel, ignoreMelodyPitch, recordedBpm: recBpm,
     });
   })).map((pat) => ({ ...pat, sungKey: pat.sungKey ?? dualScale.sungScaleLabel, troupeKey: pat.troupeKey ?? dualScale.troupeScaleLabel, transpositionSemitones: pat.transpositionSemitones ?? shiftSt, ignoreMelodyPitch }));
@@ -63,7 +63,7 @@ export function buildSequencerToadaPackDocument(
     sungKey: dualScale.sungScaleLabel, troupeKey: dualScale.troupeScaleLabel,
     sungScaleRoot: dualScale.sungScaleRoot, sungScaleMode: dualScale.sungScaleMode, troupeScaleRoot: dualScale.troupeScaleRoot, transpositionSemitones: shiftSt,
     project: {
-      id: project.id, title: project.title, groupId, bpm: projectBpm, timeSignature: project.timeSignature, grammarVersion: VOCAL_GRAMMAR_VERSION, referencePitchHz, recordedAtPitchHz, sequenciadorExportMode, ignoreMelodyPitch,
+      id: toadaId, title: project.title, groupId, bpm: projectBpm, timeSignature: project.timeSignature, grammarVersion: VOCAL_GRAMMAR_VERSION, referencePitchHz, recordedAtPitchHz, sequenciadorExportMode, ignoreMelodyPitch,
       sungKey: dualScale.sungScaleLabel, troupeKey: dualScale.troupeScaleLabel, transpositionSemitones: shiftSt,
       measuresCount: (project as any).measuresCount || 2, harmonyConfig: project.harmonyConfig ?? null, updatedAt: Date.now(),
     },
@@ -71,7 +71,7 @@ export function buildSequencerToadaPackDocument(
       title: project.title, toada: project.title, groupId, bpm: projectBpm, timeSignature: project.timeSignature, grammarVersion: VOCAL_GRAMMAR_VERSION, vocalGrammarVersion: VOCAL_GRAMMAR_VERSION, referencePitchHz, recordedAtPitchHz, sequenciadorExportMode, ignoreMelodyPitch,
       sungKey: dualScale.sungScaleLabel, troupeKey: dualScale.troupeScaleLabel, transpositionSemitones: shiftSt, publishedAt: Date.now(),
     },
-    toadaMeta: { ...(project.toadaMeta || {}), ...(groupId ? { groupId } : {}), grammarVersion: VOCAL_GRAMMAR_VERSION, referencePitchHz, bpmDefaut: projectBpm, tonaliteDefaut: dualScale.troupeScaleLabel, tonaliteChanteeOrigine: dualScale.sungScaleLabel, transpositionSemitones: shiftSt },
+    toadaMeta: { ...(project.toadaMeta || {}), cantadorToadaId: toadaId, ...(groupId ? { groupId } : {}), grammarVersion: VOCAL_GRAMMAR_VERSION, referencePitchHz, bpmDefaut: projectBpm, tonaliteDefaut: dualScale.troupeScaleLabel, tonaliteChanteeOrigine: dualScale.sungScaleLabel, transpositionSemitones: shiftSt },
     patterns, arrangementSlots: project.slots || [], slots: project.slots || [],
     harmonyConfig: project.harmonyConfig ?? null, globalHarmonyGrid: project.globalHarmonyGrid ?? null,
     createdAt: (project as any).createdAt || Date.now(), updatedAt: Date.now(),
@@ -79,22 +79,18 @@ export function buildSequencerToadaPackDocument(
 }
 
 export async function publishToadaToSequencer(
-  project: ToadaProject, onProgress?: (stepText: string) => void, targetSequenciadorBpm?: number
-): Promise<{ success: boolean; toadaId: string; sequenciadorUrl: string; exportedPatternsCount: number; savedMegabytes: string; publishedPack: Record<string, any> }> {
-  const toadaId = project.id, processedPatterns: Record<string, any>[] = [];
-  const projectBpm = Number(project.bpm || project.toadaMeta?.bpmDefaut || DEFAULT_TOADA_BPM);
-  const beatsPerMeasure = getBeatsPerMeasure(project.timeSignature);
+  project: ToadaProject, onProgress?: (stepText: string) => void, targetSequenciadorBpm?: number, options?: { purgeStorageOrphans?: boolean }
+): Promise<{ success: boolean; toadaId: string; sequenciadorUrl: string; exportedPatternsCount: number; uploadedWavsCount: number; purgedCloudFilesCount: number; savedMegabytes: string; publishedPack: Record<string, any> }> {
+  const toadaId = resolveCanonicalToadaPackId(project), normalizedProject = { ...project, id: toadaId };
+  const processedPatterns: Record<string, any>[] = [], uploadedByHash = new Map<string, { audioUrl: string; storagePath: string }>(), keptStoragePaths = new Set<string>();
+  const projectBpm = Number(project.bpm || project.toadaMeta?.bpmDefaut || DEFAULT_TOADA_BPM), beatsPerMeasure = getBeatsPerMeasure(project.timeSignature);
   const dualScale = resolveProjectDualScale(project, 'fr'), shiftSt = dualScale.transpositionSemitones;
   const ignoreMelodyPitch = (project.sequenciadorExportMode ?? 'rhythm_only') === 'rhythm_only';
-  const activePatterns = getActiveTimelinePatterns(project), unusedSummary = getUnusedPatternsSummary(project);
-
-  if (unusedSummary.count > 0 && activePatterns.length < project.patterns.length) {
-    deleteOrphanPatternWavsFromStorage(toadaId, unusedSummary.unusedPatternIds);
-  }
+  const activePatterns = getActiveTimelinePatterns(normalizedProject), unusedSummary = getUnusedPatternsSummary(normalizedProject);
 
   for (let i = 0; i < activePatterns.length; i++) {
     const p = activePatterns[i];
-    onProgress?.(`Téléversement audio maître (${i + 1}/${activePatterns.length})...`);
+    onProgress?.(`Préparation audio maître (${i + 1}/${activePatterns.length})...`);
     let audioUrl: string | undefined, slicedDurationSec: number | undefined, exportedT1OffsetSec: number | undefined, startOffsetSec: number | undefined;
     const masterVar = p.variants?.norm_norm || p.variants?.[p.activeVariantKey], rec = p.recordingResult ?? masterVar?.recordingResult;
     const recordedBpm = Number((p as any).recordedBpm || rec?.recordedBpm || p.baseBpm || p.bpm || projectBpm);
@@ -110,25 +106,31 @@ export async function publishToadaToSequencer(
       try {
         const sliced = slicePatternPcm(fullPcm, sampleRate, rawT1, rawTrimStart, rawTrimEnd);
         slicedDurationSec = sliced.slicedDurationSec; exportedT1OffsetSec = sliced.exportedT1OffsetSec; startOffsetSec = sliced.startOffsetSec;
-        const troupePcm = shiftSt !== 0
-          ? (await renderVoiceDspInWorker({ mode: 'formant_shift', pcm: sliced.slicedPcm, sampleRate, shiftSemitones: shiftSt })).processedPCM
-          : sliced.slicedPcm;
+        const troupePcm = shiftSt !== 0 ? (await renderVoiceDspInWorker({ mode: 'formant_shift', pcm: sliced.slicedPcm, sampleRate, shiftSemitones: shiftSt })).processedPCM : sliced.slicedPcm;
         const { wavArrayBuffer } = await encodeWavInWorker({ pcm: troupePcm, sampleRate, targetSampleRate: EXPORT_WAV_SAMPLE_RATE });
-        const storageRef = ref(storage, `vocalRecordings/${toadaId}_${p.id}.wav`);
-        await uploadBytes(storageRef, new Blob([wavArrayBuffer], { type: 'audio/wav' }), { contentType: 'audio/wav' });
-        audioUrl = await getDownloadURL(storageRef);
-      } catch (err) {
-        console.warn(`[cloudToadaPublisher] Échec upload audio maître ${p.id} :`, err);
-      }
+        const fingerprint = computeWavBufferFingerprint(wavArrayBuffer), cached = uploadedByHash.get(fingerprint);
+        if (cached) {
+          audioUrl = cached.audioUrl; keptStoragePaths.add(cached.storagePath);
+        } else {
+          const storagePath = `vocalRecordings/${toadaId}_${p.id}.wav`, storageRef = ref(storage, storagePath);
+          await uploadBytes(storageRef, new Blob([wavArrayBuffer], { type: 'audio/wav' }), { contentType: 'audio/wav' });
+          audioUrl = await getDownloadURL(storageRef);
+          uploadedByHash.set(fingerprint, { audioUrl, storagePath }); keptStoragePaths.add(storagePath);
+        }
+      } catch (err) { console.warn(`[cloudToadaPublisher] Échec upload audio maître ${p.id} :`, err); }
+    } else if (p.audioUrl) {
+      const existingPath = extractStoragePathFromAudioUrl(p.audioUrl);
+      if (existingPath) keptStoragePaths.add(existingPath);
     }
     processedPatterns.push(sanitizePatternForFirestore(p, audioUrl, slicedDurationSec, exportedT1OffsetSec, startOffsetSec, shiftSt, {
       sungKey: dualScale.sungScaleLabel, troupeKey: dualScale.troupeScaleLabel, ignoreMelodyPitch, recordedBpm,
     }));
   }
 
-  onProgress?.('Enregistrement du pack dans Firestore...');
+  onProgress?.('Enregistrement du pack et nettoyage Cloud...');
   const tenantCtx = await resolveActiveTenantContext(project.toadaMeta?.groupId);
-  const publishedPack = removeUndefinedFields(buildSequencerToadaPackDocument(project, processedPatterns, targetSequenciadorBpm, tenantCtx.groupId));
+  const publishedPack = removeUndefinedFields(buildSequencerToadaPackDocument(normalizedProject, processedPatterns, targetSequenciadorBpm, tenantCtx.groupId));
   await setDoc(doc(db, 'toada_packs', toadaId), publishedPack);
-  return { success: true, toadaId, sequenciadorUrl: getSequenciadorUrl(toadaId), exportedPatternsCount: activePatterns.length, savedMegabytes: unusedSummary.formattedMegabytes, publishedPack };
+  const purgedCloudFilesCount = options?.purgeStorageOrphans === false ? 0 : await purgeStalePackWavsFromStorage(toadaId, keptStoragePaths);
+  return { success: true, toadaId, sequenciadorUrl: getSequenciadorUrl(toadaId), exportedPatternsCount: activePatterns.length, uploadedWavsCount: uploadedByHash.size, purgedCloudFilesCount, savedMegabytes: unusedSummary.formattedMegabytes, publishedPack };
 }
