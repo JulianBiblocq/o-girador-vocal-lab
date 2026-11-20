@@ -81,8 +81,11 @@ export interface VocalPatternItem {
   timeAnchors?: TimeAnchor[]; exitBeat?: number; hasTailBeat?: boolean;
   troupeTransposedPCM?: Float32Array | null;
   troupeTransposedSemitones?: number;
+  audioUrl?: string;
   foldNotesView?: boolean;
   referenceMidiNotes?: number[];
+  isRhythmValidated?: boolean;
+  isNotesValidated?: boolean;
   stepStatus?: Partial<PatternStepStatus>;
 }
 
@@ -116,6 +119,7 @@ export interface ToadaProject {
   globalHarmonyGrid?: PatternHarmonyGrid;
   sungScaleRoot?: string;
   sungScaleMode?: string;
+  detectedScale?: unknown;
   customPitchClasses?: number[] | null;
   transpositionSemitones?: number;
   troupeScaleRoot?: string;

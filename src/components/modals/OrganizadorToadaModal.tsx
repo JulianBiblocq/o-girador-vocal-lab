@@ -51,9 +51,9 @@ export const OrganizadorToadaModal: React.FC<OrganizadorToadaModalProps> = ({
     return docs.filter((d) => d.titre.toLowerCase().includes(q) || (d.nacao && d.nacao.toLowerCase().includes(q)));
   }, [docs, search]);
 
-  const loadWithConfig = (parsed: any, bpmVal?: number, toastMsg?: string) => {
+  const loadWithConfig = (parsed: any, bpmVal?: number, toastMsg?: string, forceNewIfNoDoc = false) => {
     const targetBpm = bpmVal ?? parsed?.docMeta?.bpmDefaut ?? importBpm ?? DEFAULT_TOADA_BPM;
-    const opts = { bpm: targetBpm, defaultMeasuresCount: importMeasures, defaultHasAnacrusis: importHasAnacrusis };
+    const opts = { bpm: targetBpm, defaultMeasuresCount: importMeasures, defaultHasAnacrusis: importHasAnacrusis, forceNewIfNoDoc };
     loadProject(generateToadaFromSheet(project, parsed, opts));
     if (toastMsg) window.dispatchEvent(new CustomEvent('app-toast', { detail: { type: 'success', message: toastMsg } }));
     onClose();
@@ -63,7 +63,7 @@ export const OrganizadorToadaModal: React.FC<OrganizadorToadaModalProps> = ({
     const parsed = parseToadaDocument(doc, 'puxador');
     const docBpm = doc.bpmDefaut ?? parsed.docMeta?.bpmDefaut;
     if (docBpm) setImportBpm(docBpm);
-    loadWithConfig(parsed, docBpm, t('organizadorDocLoadedToast', { title: doc.titre }));
+    loadWithConfig(parsed, docBpm, t('organizadorDocLoadedToast', { title: doc.titre }), false);
   };
 
   const handleTxtFile = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -74,7 +74,7 @@ export const OrganizadorToadaModal: React.FC<OrganizadorToadaModalProps> = ({
       const res = parseToadaJsonOrText(ev.target?.result as string, 'puxador');
       const docBpm = res.parsed.docMeta?.bpmDefaut;
       if (docBpm) setImportBpm(docBpm);
-      loadWithConfig(res.parsed, docBpm, t('organizadorFileImportedToast', { name: f.name }));
+      loadWithConfig(res.parsed, docBpm, t('organizadorFileImportedToast', { name: f.name }), true);
     };
     r.readAsText(f);
   };

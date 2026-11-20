@@ -66,4 +66,7 @@ export const fitaBandeirolasTranslationsFr: FitaBandeirolasTranslations = {
   cabineMicReady: 'Micro actif',
   cabineMicClip: 'ÉCRÊTAGE !',
   cabineMicTestHint: 'Tester micro',
+  resetAllProjectTakesBtn: 'Réinitialiser toutes les prises du morceau',
+  resetAllProjectTakesConfirm: "Tous les sons enregistrés et les calages de ce morceau seront effacés en local. La structure, les paroles et les temps d'Organizador seront intégralement conservés.",
+  resetAllProjectTakesToast: 'Toutes les prises du morceau ont été réinitialisées en local.',
 };

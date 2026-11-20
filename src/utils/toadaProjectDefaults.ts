@@ -9,6 +9,7 @@ import type {
   VocalPatternItem,
   ToadaProject,
 } from '../types/toadaProject.types';
+import { generateFreshToadaPackId } from './toadaPackIdResolver';
 
 export const DEFAULT_TOADA_BPM = 88;
 
@@ -73,7 +74,7 @@ export function createDefaultToadaProject(): ToadaProject {
   const p1 = createDefaultVocalPattern('puxador', 'Appel 1', 2, DEFAULT_TOADA_BPM);
   const p2 = createDefaultVocalPattern('coro', 'Reponse Choeur', 2, DEFAULT_TOADA_BPM);
   return {
-    id: 'toada-default', title: 'Toada Sem Titulo', bpm: DEFAULT_TOADA_BPM, timeSignature: '4/4',
+    id: generateFreshToadaPackId(), title: 'Toada Sem Titulo', bpm: DEFAULT_TOADA_BPM, timeSignature: '4/4',
     patterns: [p1, p2],
     slots: [
       { slotId: 'slot-1', puxadorPatternId: p1.id, coroPatternId: null },

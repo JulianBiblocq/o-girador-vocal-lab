@@ -1,16 +1,16 @@
 /**
  * useManualSave.ts
- * Hook de sauvegarde manuelle forcée (IndexedDB + Cloud Firestore si connecté) (< 65 lignes).
- * Raccourci clavier universel Ctrl+S / Cmd+S et feedback ✓ Sauvegardé ! pendant 2500 ms.
+ * Hook de sauvegarde manuelle forcée 100 % locale (IndexedDB) tant que le morceau n'est pas exporté (< 60 lignes).
+ * Raccourci clavier universel Ctrl+S / Cmd+S et feedback pendant 2500 ms.
  */
 import { useState, useCallback, useEffect } from 'react';
 import type { ToadaProject } from '../types/toadaProject.types';
 import { saveProjectToIndexedDB } from '../utils/projectAutoSave';
 import { saveToadaToLibrary } from '../utils/toadaLibraryStorage';
-import { publishToadaToSequencer } from '../services/cloudToadaPublisher';
 import { useLanguage } from '../i18n/LanguageContext';
+import { resolveCanonicalToadaPackId } from '../utils/toadaPackIdResolver';
 
-export function useManualSave(project: ToadaProject, isUserLoggedIn: boolean) {
+export function useManualSave(project: ToadaProject, _isUserLoggedIn?: boolean) {
   const { t } = useLanguage();
   const [isSaving, setIsSaving] = useState(false);
   const [isSavedSuccess, setIsSavedSuccess] = useState(false);
@@ -19,27 +19,22 @@ export function useManualSave(project: ToadaProject, isUserLoggedIn: boolean) {
     if (isSaving) return;
     setIsSaving(true);
     try {
-      await saveProjectToIndexedDB(project);
-      await saveToadaToLibrary(project);
-      window.dispatchEvent(new CustomEvent('toada-saved', { detail: { id: project.id } }));
-
-      if (isUserLoggedIn) {
-        publishToadaToSequencer(project).catch((err) => {
-          console.warn('[useManualSave] Sync Cloud en arrière-plan :', err);
-        });
-      }
+      const normalized: ToadaProject = { ...project, id: resolveCanonicalToadaPackId(project) };
+      await saveProjectToIndexedDB(normalized);
+      await saveToadaToLibrary(normalized);
+      window.dispatchEvent(new CustomEvent('toada-saved', { detail: { id: normalized.id } }));
 
       setIsSavedSuccess(true);
       window.dispatchEvent(new CustomEvent('app-toast', {
-        detail: { type: 'success', message: `✓ ${t('toadaSavedToast')}` },
+        detail: { type: 'success', message: t('toadaSavedToast') },
       }));
       setTimeout(() => setIsSavedSuccess(false), 2500);
     } catch (err: any) {
-      console.error('[useManualSave] Erreur lors de la sauvegarde :', err);
+      console.error('[useManualSave] Erreur lors de la sauvegarde locale :', err);
     } finally {
       setIsSaving(false);
     }
-  }, [project, isUserLoggedIn, isSaving, t]);
+  }, [project, isSaving, t]);
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {

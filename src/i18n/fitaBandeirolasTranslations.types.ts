@@ -64,4 +64,7 @@ export interface FitaBandeirolasTranslations {
   cabineMicReady: string;
   cabineMicClip: string;
   cabineMicTestHint: string;
+  resetAllProjectTakesBtn: string;
+  resetAllProjectTakesConfirm: string;
+  resetAllProjectTakesToast: string;
 }

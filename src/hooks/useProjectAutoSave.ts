@@ -6,10 +6,11 @@
 import { useEffect, useRef } from 'react';
 import type { ToadaProject } from '../types/toadaProject.types';
 import { saveProjectToIndexedDB, loadProjectFromIndexedDB } from '../utils/projectAutoSave';
-import { saveToadaToLibrary } from '../utils/toadaLibraryStorage';
+import { saveToadaToLibrary, deleteToadaFromLibrary } from '../utils/toadaLibraryStorage';
 import { resolveFreshTimeAnchors, computeMeasuresCountFromAnchors } from '../utils/timeAnchorParser';
 import { extractProjectRawLyricsSource } from '../audio/livretResetHelper';
 import { getBeatsPerMeasure } from '../utils/musicalMath';
+import { isLegacyDefaultToadaId, resolveCanonicalToadaPackId } from '../utils/toadaPackIdResolver';
 
 const AUTOSAVE_DEBOUNCE_MS = 800;
 
@@ -48,9 +49,14 @@ export function useProjectAutoSave(
           const measuresCount = computeMeasuresCountFromAnchors(timeAnchors, isThetic ? false : pat.hasAnacrusis !== false, pat.measuresCount ?? 1);
           return { ...pat, timeAnchors, measuresCount };
         });
-        const hydrated = { ...saved, patterns: hydratedPatterns };
+        const wasLegacyId = isLegacyDefaultToadaId(saved.id);
+        const canonicalId = wasLegacyId ? resolveCanonicalToadaPackId(saved) : saved.id;
+        const hydrated = { ...saved, id: canonicalId, patterns: hydratedPatterns };
         lastSummarySigRef.current = getSummarySignature(hydrated);
         setProject(hydrated);
+        if (wasLegacyId) {
+          void deleteToadaFromLibrary('toada-default').then(() => Promise.all([saveProjectToIndexedDB(hydrated), saveToadaToLibrary(hydrated)]));
+        }
       }
       isHydratedRef.current = true;
     });

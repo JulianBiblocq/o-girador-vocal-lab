@@ -17,6 +17,7 @@ import { parseStoredScaleString } from '../../audio/projectScaleAnalyzer';
 import { alignScannedPatternsWithOrganizadorLyrics } from './vocalPaperLyricsAligner';
 import { normalizeScannedBlockToCanonical, mergeMultiLineScannedBlocks, isCellActive } from './vocalPaperBeatDecoder';
 import { alignStepsWithReferenceMidiNotes } from '../../audio/forcedMelodyAligner';
+import { resolveCanonicalToadaPackId } from '../toadaPackIdResolver';
 
 const SEMITONE_FROM_A3: Record<string, number> = {
   A: 0, LA: 0, BB: 1, 'A#': 1, SIB: 1, 'SI♭': 1, 'LA#': 1, B: 2, SI: 2,
@@ -130,7 +131,7 @@ export function convertVocalPaperScanToProject(
     });
   } else alignedPatterns.forEach((b, idx) => { const pat = getOrCreatePattern(b.code, 'puxador', false); if (pat) slots.push({ slotId: `slot-auto-${idx + 1}`, puxadorPatternId: pat.id, coroPatternId: null, advanceMeasures: pat.measuresCount }); });
   const nextProj: ToadaProject = {
-    ...currentProject, title, bpm, timeSignature, patterns: createdPatterns.length > 0 ? createdPatterns : currentProject.patterns,
+    ...currentProject, id: resolveCanonicalToadaPackId(currentProject, refDoc), title, bpm, timeSignature, patterns: createdPatterns.length > 0 ? createdPatterns : currentProject.patterns,
     slots: slots.length > 0 ? slots : currentProject.slots, activePatternId: createdPatterns[0]?.id || currentProject.activePatternId,
     sequenciadorExportMode: alignedPatterns.some((p) => !p.rhythmOnlyMode) ? 'full_notes' : 'rhythm_only',
   };

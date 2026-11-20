@@ -8,6 +8,7 @@ import { useLanguage } from '../../i18n/LanguageContext';
 import { useVocalTransportStore } from '../../stores/useVocalTransportStore';
 import { listSavedToadas, loadToadaFromLibrary, deleteToadaFromLibrary, type SavedToadaSummary } from '../../utils/toadaLibraryStorage';
 import { createDefaultToadaProject } from '../../types/toadaProject.types';
+import { isLegacyDefaultToadaId, resolveCanonicalToadaPackId } from '../../utils/toadaPackIdResolver';
 import { confirmAsync } from '../../stores/useCordelDialogStore';
 import { FolderKanban, ChevronDown, Plus, Scroll, Trash2 } from 'lucide-react';
 
@@ -62,7 +63,11 @@ export const ToadaLibraryDropdown: React.FC<Props> = ({ onOpenOrganizador, group
   const handleSelectToada = async (id: string) => {
     if (id === project.id) { setIsOpen(false); return; }
     const loaded = await loadToadaFromLibrary(id);
-    if (loaded) { loadProject(loaded); setIsOpen(false); }
+    if (loaded) {
+      const upgraded = isLegacyDefaultToadaId(loaded.id) ? { ...loaded, id: resolveCanonicalToadaPackId(loaded) } : loaded;
+      if (isLegacyDefaultToadaId(loaded.id)) void deleteToadaFromLibrary(id);
+      loadProject(upgraded); setIsOpen(false);
+    }
   };
 
   const handleDeleteToada = async (e: React.MouseEvent, item: SavedToadaSummary) => {

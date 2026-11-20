@@ -66,4 +66,7 @@ export const fitaBandeirolasTranslationsBr: FitaBandeirolasTranslations = {
   cabineMicReady: 'Mic ativo',
   cabineMicClip: 'SATURAÇÃO !',
   cabineMicTestHint: 'Testar mic',
+  resetAllProjectTakesBtn: 'Reiniciar todas as gravações da toada',
+  resetAllProjectTakesConfirm: 'Todos os sons gravados e os alinhamentos desta toada serão apagados localmente. A estrutura, as letras e os tempos do Organizador serão integralmente preservados.',
+  resetAllProjectTakesToast: 'Todas as gravações da toada foram reiniciadas localmente.',
 };

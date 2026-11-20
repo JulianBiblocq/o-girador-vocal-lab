@@ -7,6 +7,7 @@ import type { ParsedToadaSheetResult } from '../types/toadaDocument.types';
 import { DEFAULT_TOADA_BPM } from '../types/toadaProject.types';
 import { detectToadaLexicon } from './toadaLexiconDetector';
 import { generateQuizFromLexicon } from './toadaQuizGenerator';
+import { resolveCanonicalToadaPackId } from './toadaPackIdResolver';
 import {
   extractCleanFirstWord,
   buildPatternNameFromFirstWord,
@@ -19,10 +20,12 @@ export interface ToadaSheetGenOptions {
   bpm?: number;
   defaultMeasuresCount?: 1 | 2 | 3 | 4;
   defaultHasAnacrusis?: boolean;
+  forceNewIfNoDoc?: boolean;
 }
 
 export function generateToadaFromSheet(project: ToadaProject, parsed: ParsedToadaSheetResult, options?: ToadaSheetGenOptions): ToadaProject {
   const targetBpm = options?.bpm ?? parsed.docMeta?.bpmDefaut ?? project.bpm ?? DEFAULT_TOADA_BPM;
+  const resolvedId = resolveCanonicalToadaPackId(project, parsed.docMeta, { forceNewIfNoDoc: options?.forceNewIfNoDoc });
   const { patterns: newPatterns, slots: newSlots } = buildPatternsAndSlotsFromSegments(
     parsed.segments,
     targetBpm,
@@ -32,6 +35,7 @@ export function generateToadaFromSheet(project: ToadaProject, parsed: ParsedToad
   const globalHarmony = parsed.docMeta?.globalHarmonyGrid || parsed.docMeta?.harmonyGrid || project.globalHarmonyGrid;
   const generated: ToadaProject = {
     ...project,
+    id: resolvedId,
     source: 'organizador',
     title: parsed.docMeta?.titre || project.title,
     bpm: targetBpm,

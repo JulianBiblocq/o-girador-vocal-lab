@@ -10,6 +10,8 @@ import type { LivretNavTranslations } from './livretNavTranslations.types';
 import type { uiPolishTranslationsFr } from './uiPolishTranslationsFr';
 import type { FitaBandeirolasTranslations } from './fitaBandeirolasTranslations.types';
 import type { PitchDialTranslations } from './pitchDialTranslations.types';
+import type { PhaseBRecoveryTranslations } from './phaseBRecoveryTranslations.types';
+import type { ExportCleanupTranslations } from './exportCleanupTranslations.types';
 
 export type Locale = 'fr' | 'br';
 export type TranslationParams = Record<string, string | number>;
@@ -108,6 +110,6 @@ export interface VocalLabTranslationsCore {
 }
 
 export type VocalLabTranslations = VocalLabTranslationsCore & SlicerTranslations & ToadaSheetTranslations &
-  TreinoSubTranslations & TessituraTranslations & HarmonyTranslations & CloudToadaTranslations & LexiconTranslations & LivretNavTranslations & UiPolishTranslations & FitaBandeirolasTranslations & PitchDialTranslations;
+  TreinoSubTranslations & TessituraTranslations & HarmonyTranslations & CloudToadaTranslations & LexiconTranslations & LivretNavTranslations & UiPolishTranslations & FitaBandeirolasTranslations & PitchDialTranslations & PhaseBRecoveryTranslations & ExportCleanupTranslations;
 
 export type TranslationKey = keyof VocalLabTranslations;
