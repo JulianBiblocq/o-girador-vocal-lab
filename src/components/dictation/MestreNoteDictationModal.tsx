@@ -7,6 +7,7 @@ import React, { useCallback } from 'react';
 import { Compass, Mic, MicOff, Volume2, X } from 'lucide-react';
 import { useVocalTransportStore } from '../../stores/useVocalTransportStore';
 import { UnifiedPitchDialCanvas } from '../common/UnifiedPitchDialCanvas';
+import { MicLevelMeter } from '../common/MicLevelMeter';
 import { DictationNoteRibbon } from './DictationNoteRibbon';
 import { useMestreDictationController } from './useMestreDictationController';
 import { sharedTonicDrone } from '../../audio/tonicDroneSynth';
@@ -18,7 +19,7 @@ export const MestreNoteDictationModal: React.FC = () => {
   const c = useMestreDictationController(isOpen, close);
 
   if (!isOpen) return null;
-  const { t, language, activePattern, dual, refHz, keyView, setKeyView, isMicOn, toggleMic, isDroneOn, setIsDroneOn, curMidi, notes, setNotes, viewOffset, activeTonic, liveDialRef, playNoteWithFreeze, handlePlaySequence, handleAttach } = c;
+  const { t, language, activePattern, dual, refHz, keyView, setKeyView, isMicOn, toggleMic, isDroneOn, setIsDroneOn, curMidi, notes, setNotes, viewOffset, activeTonic, liveDialRef, micLevelRef, playNoteWithFreeze, handlePlaySequence, handleAttach } = c;
 
   return (
     <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/65 p-3">
@@ -48,6 +49,8 @@ export const MestreNoteDictationModal: React.FC = () => {
             </button>
           </div>
         </div>
+
+        <MicLevelMeter levelRef={micLevelRef} active={isMicOn} />
 
         <UnifiedPitchDialCanvas liveStateRef={liveDialRef} heightPx={190} onCenterTap={() => void playNoteWithFreeze(curMidi)} centerTapTitle={t('dialListenNoteTitle')} />
 

@@ -9,6 +9,7 @@ import { useToadaProject } from '../../context/ToadaProjectContext';
 import { useAudioHardware } from '../../context/AudioHardwareContext';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { UnifiedPitchDialCanvas, type UnifiedPitchDialLiveState } from '../common/UnifiedPitchDialCanvas';
+import { MicLevelMeter, type MicLevel } from '../common/MicLevelMeter';
 import { SlowNoteDetectorEngine } from '../../audio/slowNoteDetectorEngine';
 import { sharedTonicDrone, playReferenceNotePing } from '../../audio/tonicDroneSynth';
 import { registerTreinoKillSwitch } from '../../audio/maracatuVocalGameEngine';
@@ -34,7 +35,7 @@ export const StudentStepByStepTrainer: React.FC<StudentStepByStepTrainerProps> =
 
   const [curIdx, setCurIdx] = useState(0), [isMicOn, setIsMicOn] = useState(false), [isDroneOn, setIsDroneOn] = useState(false);
   const curIdxRef = useRef(0), targetsRef = useRef(targets), detectorRef = useRef<SlowNoteDetectorEngine | null>(null);
-  const gateRef = useRef(new SamePitchReImpulseGate());
+  const gateRef = useRef(new SamePitchReImpulseGate()), micLevelRef = useRef<MicLevel>({ rms: 0, peak: 0 });
   curIdxRef.current = curIdx; targetsRef.current = targets;
   const curTarget = targets[curIdx] ?? null, allValidated = targets.length > 0 && curIdx >= targets.length;
 
@@ -47,7 +48,7 @@ export const StudentStepByStepTrainer: React.FC<StudentStepByStepTrainerProps> =
   const stopAll = useCallback(() => {
     detectorRef.current?.stop(); detectorRef.current = null; setIsMicOn(false);
     sharedTonicDrone.stopImmediate(); setIsDroneOn(false);
-    liveDialRef.current.isVoiced = false; liveDialRef.current.holdProgress01 = 0;
+    liveDialRef.current.isVoiced = false; liveDialRef.current.holdProgress01 = 0; micLevelRef.current.rms = 0; micLevelRef.current.peak = 0;
   }, []);
 
   useEffect(() => {
@@ -66,12 +67,13 @@ export const StudentStepByStepTrainer: React.FC<StudentStepByStepTrainerProps> =
   useEffect(() => { const unreg = registerTreinoKillSwitch(stopAll); return () => { unreg(); stopAll(); }; }, [stopAll]);
 
   const toggleMic = useCallback(async () => {
-    if (isMicOn) { detectorRef.current?.stop(); detectorRef.current = null; setIsMicOn(false); return; }
+    if (isMicOn) { detectorRef.current?.stop(); detectorRef.current = null; setIsMicOn(false); micLevelRef.current.rms = 0; micLevelRef.current.peak = 0; return; }
     if (!sharedTonicDrone.isPlaying()) { await sharedTonicDrone.start(dual.troupeScaleRoot, refHz, 0.15); setIsDroneOn(true); }
     const det = new SlowNoteDetectorEngine(); detectorRef.current = det;
     const firstTgt = targetsRef.current[curIdxRef.current] ?? targetsRef.current[0];
     gateRef.current.prepareNextTarget(false);
     await det.start({ targetMidi: firstTgt?.targetMidi ?? 60, octaveInvariant: true, requiredHoldMs: 500, toleranceCents: 35, referencePitchHz: refHz, deviceId: selectedDeviceId }, (tk) => {
+      micLevelRef.current.rms = tk.rms; micLevelRef.current.peak = tk.peak;
       const idx = curIdxRef.current, tgt = targetsRef.current[idx];
       if (!tgt) { liveDialRef.current = { isVoiced: false, centsDelta: 0, holdProgress01: 1, primaryNoteLabel: '✓', secondaryLabel: '' }; return; }
       const armed = gateRef.current.observeTick(tk, 16);
@@ -118,6 +120,8 @@ export const StudentStepByStepTrainer: React.FC<StudentStepByStepTrainerProps> =
           );
         })}
       </div>
+
+      <MicLevelMeter levelRef={micLevelRef} active={isMicOn} />
 
       <UnifiedPitchDialCanvas liveStateRef={liveDialRef} heightPx={190} onCenterTap={() => { if (curTarget) void pingNote(curTarget.targetMidi); }} centerTapTitle={t('dialListenNoteTitle')} />
 

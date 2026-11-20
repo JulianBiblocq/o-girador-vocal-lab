@@ -5,7 +5,9 @@
  * et support Mode Dictée Libre vs Mode Cible Guidée (octaveInvariant mod 12) (< 135 lignes).
  */
 import { getSharedAudioContext, registerAudioKillSwitch } from './sharedAudioContext';
-import { detectRealtimePitch } from './realtimePitchDetector';
+import { LiveVocalTunerDetector } from './liveVocalTunerDetector';
+import { LIVE_WINDOW_SAMPLES } from './liveVocalPitchCore';
+import { openRawMicStream, stopMicStream } from './rawMicStream';
 import { analyzeFrameSibilantBreath } from './sibilantBreathMasker';
 import { foldStudentPitchToTargetOctave } from './studentPitchAnalyzer';
 import { getEffectiveVocalBounds } from '../utils/ambitusStorage';
@@ -19,17 +21,17 @@ export interface SlowNoteDetectorOptions {
 export interface SlowNoteTick {
   isVoiced: boolean; isFrozen: boolean; rawMidiFloat: number; stabilizedMidiFloat: number;
   displayedMidiNote: number; centsDelta: number; semitonesDelta: number;
-  holdProgress01: number; holdDurationMs: number; justValidatedMidi: number | null; rms: number;
+  holdProgress01: number; holdDurationMs: number; justValidatedMidi: number | null; rms: number; peak: number;
 }
 
 export class SlowNoteStabilizer {
   private windowSamples: Array<{ timeMs: number; midiFloat: number }> = [];
   private displayedNote = 0; private holdMs = 0; private lastTickMs = 0;
-  private frozenUntilMs = 0; private emittedInCurrentHold = false; private silenceAccumMs = 0;
+  private frozenUntilMs = 0; private emittedInCurrentHold = false; private silenceAccumMs = 0; private readonly tuner = new LiveVocalTunerDetector();
 
   public freezeForMs(durationMs: number, nowMs = performance.now()): void {
     this.frozenUntilMs = Math.max(this.frozenUntilMs, nowMs + Math.max(0, durationMs) + 120);
-    this.windowSamples = [];
+    this.windowSamples = []; this.tuner.reset();
   }
 
   public resetHold(): void { this.holdMs = 0; this.emittedInCurrentHold = false; }
@@ -39,12 +41,14 @@ export class SlowNoteStabilizer {
     this.lastTickMs = nowMs;
 
     if (nowMs < this.frozenUntilMs) {
-      return { isVoiced: false, isFrozen: true, rawMidiFloat: 0, stabilizedMidiFloat: this.displayedNote, displayedMidiNote: this.displayedNote, centsDelta: 0, semitonesDelta: 0, holdProgress01: 0, holdDurationMs: 0, justValidatedMidi: null, rms: 0 };
+      return { isVoiced: false, isFrozen: true, rawMidiFloat: 0, stabilizedMidiFloat: this.displayedNote, displayedMidiNote: this.displayedNote, centsDelta: 0, semitonesDelta: 0, holdProgress01: 0, holdDurationMs: 0, justValidatedMidi: null, rms: 0, peak: 0 };
     }
 
     const sib = analyzeFrameSibilantBreath(frame, sampleRate);
-    const det = sib.isSibilantOrBreath ? { pitchMidi: 0, freq: 0, rms: sib.rms } : detectRealtimePitch(frame, sampleRate, 0.012);
-    const rawMidi = det.freq > 0 ? 69 + 12 * Math.log2(det.freq / sanitizePitchHz(opts.referencePitchHz)) : 0;
+    const refHz = sanitizePitchHz(opts.referencePitchHz);
+    if (sib.isSibilantOrBreath) this.tuner.reset();
+    const det = sib.isSibilantOrBreath ? { freq: 0, rms: sib.rms, peak: 0 } : this.tuner.process(frame, sampleRate, refHz);
+    const rawMidi = det.freq > 0 ? 69 + 12 * Math.log2(det.freq / refHz) : 0;
     const bounds = getEffectiveVocalBounds();
     const minM = opts.minMidi ?? Math.max(34, bounds.minMidi - 5), maxM = opts.maxMidi ?? Math.min(86, bounds.maxMidi + 5);
     const validVoice = rawMidi >= minM && rawMidi <= maxM;
@@ -60,7 +64,7 @@ export class SlowNoteStabilizer {
 
     const reqMs = Math.max(120, opts.requiredHoldMs ?? 420);
     if (this.windowSamples.length < 2) {
-      return { isVoiced: false, isFrozen: false, rawMidiFloat: rawMidi, stabilizedMidiFloat: 0, displayedMidiNote: this.displayedNote, centsDelta: 0, semitonesDelta: 0, holdProgress01: Math.min(1, this.holdMs / reqMs), holdDurationMs: this.holdMs, justValidatedMidi: null, rms: det.rms };
+      return { isVoiced: false, isFrozen: false, rawMidiFloat: rawMidi, stabilizedMidiFloat: 0, displayedMidiNote: this.displayedNote, centsDelta: 0, semitonesDelta: 0, holdProgress01: Math.min(1, this.holdMs / reqMs), holdDurationMs: this.holdMs, justValidatedMidi: null, rms: det.rms, peak: det.peak };
     }
 
     const sorted = this.windowSamples.map((s) => s.midiFloat).sort((a, b) => a - b);
@@ -87,7 +91,7 @@ export class SlowNoteStabilizer {
     return {
       isVoiced: validVoice, isFrozen: false, rawMidiFloat: rawMidi, stabilizedMidiFloat: medFloat,
       displayedMidiNote: this.displayedNote, centsDelta, semitonesDelta,
-      holdProgress01: Math.min(1, this.holdMs / reqMs), holdDurationMs: this.holdMs, justValidatedMidi, rms: det.rms,
+      holdProgress01: Math.min(1, this.holdMs / reqMs), holdDurationMs: this.holdMs, justValidatedMidi, rms: det.rms, peak: det.peak,
     };
   }
 }
@@ -96,29 +100,32 @@ export class SlowNoteDetectorEngine {
   private stream: MediaStream | null = null; private src: MediaStreamAudioSourceNode | null = null;
   private analyser: AnalyserNode | null = null; private rafId: number | null = null;
   private unregKill: (() => void) | null = null; public readonly stabilizer = new SlowNoteStabilizer();
-  private opts: SlowNoteDetectorOptions = {};
+  private opts: SlowNoteDetectorOptions = {}; private generation = 0;
 
   public updateOptions(next: Partial<SlowNoteDetectorOptions>): void { this.opts = { ...this.opts, ...next }; }
   public freezeForMs(ms: number): void { this.stabilizer.freezeForMs(ms); }
   public resetHold(): void { this.stabilizer.resetHold(); }
 
   public async start(initialOpts: SlowNoteDetectorOptions, onTick: (tick: SlowNoteTick) => void): Promise<void> {
-    this.stop(); this.opts = { ...initialOpts }; this.stabilizer.resetHold();
+    this.stop(); const gen = this.generation; this.opts = { ...initialOpts }; this.stabilizer.resetHold();
     const ctx = await getSharedAudioContext(); if (ctx.state !== 'running') await ctx.resume();
-    this.stream = await navigator.mediaDevices.getUserMedia({ audio: this.opts.deviceId && this.opts.deviceId !== 'default' ? { deviceId: { exact: this.opts.deviceId }, echoCancellation: false, noiseSuppression: false, autoGainControl: false } : { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
-    this.src = ctx.createMediaStreamSource(this.stream); this.analyser = ctx.createAnalyser(); this.analyser.fftSize = 2048;
+    const stream = await openRawMicStream(this.opts.deviceId);
+    if (gen !== this.generation) { stopMicStream(stream); return; }
+    this.stream = stream;
+    this.src = ctx.createMediaStreamSource(this.stream); this.analyser = ctx.createAnalyser(); this.analyser.fftSize = LIVE_WINDOW_SAMPLES;
     this.src.connect(this.analyser);
-    const buf = new Float32Array(2048);
+    const buf = new Float32Array(LIVE_WINDOW_SAMPLES);
     this.unregKill = registerAudioKillSwitch('slow-note-detector', () => this.stop());
     const loop = () => { if (!this.analyser) return; this.analyser.getFloatTimeDomainData(buf); onTick(this.stabilizer.processFrame(buf, ctx.sampleRate, performance.now(), this.opts)); this.rafId = requestAnimationFrame(loop); };
     this.rafId = requestAnimationFrame(loop);
   }
 
   public stop(): void {
+    this.generation++;
     if (this.rafId !== null) { cancelAnimationFrame(this.rafId); this.rafId = null; }
     if (this.unregKill) { this.unregKill(); this.unregKill = null; }
     try { this.src?.disconnect(); } catch {} try { this.analyser?.disconnect(); } catch {}
-    if (this.stream) { this.stream.getTracks().forEach((t) => t.stop()); }
+    stopMicStream(this.stream);
     this.src = null; this.analyser = null; this.stream = null;
   }
 }

@@ -8,6 +8,8 @@ import type { VocalPatternItem } from '../../types/toadaProject.types';
 import type { VocalRecorderEngine } from '../../audio/VocalRecorderEngine';
 import { resolvePatternAudioSource } from '../common/PatternCompassBar';
 import { getSharedAudioContext, registerAudioKillSwitch, stopAllActiveAudioEngines } from '../../audio/sharedAudioContext';
+import { openRawMicStream, stopMicStream } from '../../audio/rawMicStream';
+import type { MicLevel } from '../common/MicLevelMeter';
 
 interface Params {
   recorder: VocalRecorderEngine;
@@ -19,8 +21,7 @@ interface Params {
 
 export function useCabineLiveWaveAndMic({ recorder, selectedDeviceId, isRecordingAny, activePattern, recordedSampleRate }: Params) {
   const livePeakBinsRef = useRef<Float32Array>(new Float32Array(768));
-  const micBarFillRef = useRef<HTMLDivElement | null>(null);
-  const micClipDotRef = useRef<HTMLSpanElement | null>(null);
+  const micLevelRef = useRef<MicLevel>({ rms: 0, peak: 0 });
   const [isReplaying, setIsReplaying] = useState(false);
   const [isMicProbeActive, setIsMicProbeActive] = useState(false);
 
@@ -44,8 +45,8 @@ export function useCabineLiveWaveAndMic({ recorder, selectedDeviceId, isRecordin
     if (probeRafRef.current !== null) { cancelAnimationFrame(probeRafRef.current); probeRafRef.current = null; }
     if (idleSourceRef.current) { try { idleSourceRef.current.disconnect(); } catch {} idleSourceRef.current = null; }
     if (analyserRef.current) { try { analyserRef.current.disconnect(); } catch {} analyserRef.current = null; }
-    if (idleStreamRef.current) { idleStreamRef.current.getTracks().forEach((t) => t.stop()); idleStreamRef.current = null; }
-    if (micBarFillRef.current) micBarFillRef.current.style.transform = 'scaleX(0)';
+    stopMicStream(idleStreamRef.current); idleStreamRef.current = null;
+    micLevelRef.current.rms = 0; micLevelRef.current.peak = 0;
     setIsMicProbeActive(false);
   }, []);
 
@@ -53,14 +54,10 @@ export function useCabineLiveWaveAndMic({ recorder, selectedDeviceId, isRecordin
     const an = analyserRef.current;
     if (!an) return 0;
     an.getFloatTimeDomainData(timeBufRef.current);
-    let pk = 0;
-    for (let i = 0; i < timeBufRef.current.length; i++) { const a = Math.abs(timeBufRef.current[i]); if (a > pk) pk = a; }
-    const ratio = Math.min(1, Math.pow(pk, 0.55) * 1.15);
-    if (micBarFillRef.current) {
-      micBarFillRef.current.style.transform = `scaleX(${ratio.toFixed(3)})`;
-      micBarFillRef.current.style.backgroundColor = pk >= 0.94 ? '#dc2626' : pk >= 0.65 ? '#f59e0b' : '#10b981';
-    }
-    if (pk >= 0.94 && micClipDotRef.current) micClipDotRef.current.style.display = 'inline-flex';
+    let pk = 0, sumSq = 0;
+    for (let i = 0; i < timeBufRef.current.length; i++) { const a = Math.abs(timeBufRef.current[i]); sumSq += a * a; if (a > pk) pk = a; }
+    const rms = Math.sqrt(sumSq / timeBufRef.current.length), lvl = micLevelRef.current;
+    lvl.rms = rms > lvl.rms ? rms : lvl.rms * 0.92 + rms * 0.08; lvl.peak = pk;
     return pk;
   }, []);
 
@@ -68,7 +65,7 @@ export function useCabineLiveWaveAndMic({ recorder, selectedDeviceId, isRecordin
     if (isRecordingAny || idleStreamRef.current) return;
     try {
       const ctx = await getSharedAudioContext();
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: selectedDeviceId && selectedDeviceId !== 'default' ? { deviceId: { exact: selectedDeviceId }, echoCancellation: false, noiseSuppression: false, autoGainControl: false } : { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
+      const stream = await openRawMicStream(selectedDeviceId);
       idleStreamRef.current = stream;
       const src = ctx.createMediaStreamSource(stream);
       const an = ctx.createAnalyser(); an.fftSize = 256;
@@ -91,7 +88,7 @@ export function useCabineLiveWaveAndMic({ recorder, selectedDeviceId, isRecordin
       }
       return () => { if (analyserRef.current) { try { analyserRef.current.disconnect(); } catch {} analyserRef.current = null; } };
     }
-    if (micBarFillRef.current) micBarFillRef.current.style.transform = 'scaleX(0)';
+    micLevelRef.current.rms = 0; micLevelRef.current.peak = 0;
     if (typeof navigator !== 'undefined' && navigator.permissions?.query) {
       navigator.permissions.query({ name: 'microphone' as PermissionName }).then((res) => { if (res.state === 'granted') startIdleProbe(); }).catch(() => {});
     }
@@ -117,7 +114,5 @@ export function useCabineLiveWaveAndMic({ recorder, selectedDeviceId, isRecordin
     replaySrcRef.current = src; setIsReplaying(true); src.start(0);
   }, [isReplaying, stopReplay, activePattern, recordedSampleRate]);
 
-  const resetClipBadge = useCallback(() => { if (micClipDotRef.current) micClipDotRef.current.style.display = 'none'; }, []);
-
-  return { livePeakBinsRef, sampleAnalyserPeak, micBarFillRef, micClipDotRef, isMicProbeActive, startIdleProbe, stopIdleProbe, resetClipBadge, isReplaying, toggleReplay, stopReplay };
+  return { livePeakBinsRef, sampleAnalyserPeak, micLevelRef, isMicProbeActive, startIdleProbe, stopIdleProbe, isReplaying, toggleReplay, stopReplay };
 }

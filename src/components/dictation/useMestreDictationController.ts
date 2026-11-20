@@ -7,6 +7,7 @@ import { useToadaProject } from '../../context/ToadaProjectContext';
 import { useAudioHardware } from '../../context/AudioHardwareContext';
 import { useLanguage } from '../../i18n/LanguageContext';
 import type { UnifiedPitchDialLiveState } from '../common/UnifiedPitchDialCanvas';
+import type { MicLevel } from '../common/MicLevelMeter';
 import { SlowNoteDetectorEngine } from '../../audio/slowNoteDetectorEngine';
 import { sharedTonicDrone, playReferenceNotePing, resolveTonicDroneMidi } from '../../audio/tonicDroneSynth';
 import { alignStepsWithReferenceMidiNotes, formatPaperNoteCode, formatSolfegeNoteWithOctave } from '../../audio/forcedMelodyAligner';
@@ -34,6 +35,7 @@ export function useMestreDictationController(isOpen: boolean, onClose: () => voi
   const detectorRef = useRef<SlowNoteDetectorEngine | null>(null);
   const seqTimerIdsRef = useRef<number[]>([]), lastShownMidiRef = useRef<number>(curMidi), viewOffsetRef = useRef(viewOffset);
   viewOffsetRef.current = viewOffset;
+  const micLevelRef = useRef<MicLevel>({ rms: 0, peak: 0 });
 
   const liveDialRef = useRef<UnifiedPitchDialLiveState>({
     isVoiced: false, centsDelta: 0, holdProgress01: 0,
@@ -51,16 +53,18 @@ export function useMestreDictationController(isOpen: boolean, onClose: () => voi
 
   const stopAllLocalAudio = useCallback(() => {
     seqTimerIdsRef.current.forEach((id) => window.clearTimeout(id)); seqTimerIdsRef.current = [];
-    detectorRef.current?.stop(); detectorRef.current = null; setIsMicOn(false);
+    detectorRef.current?.stop(); detectorRef.current = null; setIsMicOn(false); micLevelRef.current.rms = 0; micLevelRef.current.peak = 0;
     sharedTonicDrone.stopImmediate(); setIsDroneOn(false);
   }, []);
 
   useEffect(() => { if (!isOpen) stopAllLocalAudio(); return () => stopAllLocalAudio(); }, [isOpen, stopAllLocalAudio]);
 
   const toggleMic = useCallback(async () => {
-    if (isMicOn) { detectorRef.current?.stop(); detectorRef.current = null; setIsMicOn(false); liveDialRef.current.isVoiced = false; return; }
+    if (isMicOn) { detectorRef.current?.stop(); detectorRef.current = null; setIsMicOn(false); liveDialRef.current.isVoiced = false; micLevelRef.current.rms = 0; micLevelRef.current.peak = 0; return; }
     const det = new SlowNoteDetectorEngine(); detectorRef.current = det;
+    try {
     await det.start({ requiredHoldMs: 420, toleranceCents: 35, referencePitchHz: refHz, deviceId: selectedDeviceId }, (tk) => {
+      micLevelRef.current.rms = tk.rms; micLevelRef.current.peak = tk.peak;
       const m = tk.displayedMidiNote > 0 ? tk.displayedMidiNote : lastShownMidiRef.current, disp = m + viewOffsetRef.current;
       liveDialRef.current = {
         isVoiced: tk.isVoiced, isFrozen: tk.isFrozen, centsDelta: tk.centsDelta, holdProgress01: tk.holdProgress01,
@@ -70,6 +74,9 @@ export function useMestreDictationController(isOpen: boolean, onClose: () => voi
       if (tk.justValidatedMidi != null) setNotes((prev) => [...prev, tk.justValidatedMidi!]);
     });
     setIsMicOn(true);
+    } catch (err) {
+      console.warn('[Cherche-Notes] Micro indisponible :', err); det.stop(); detectorRef.current = null; setIsMicOn(false);
+    }
   }, [isMicOn, refHz, selectedDeviceId, language]);
 
   const playNoteWithFreeze = useCallback(async (sungMidi: number, durMs = 560) => {
@@ -110,5 +117,5 @@ export function useMestreDictationController(isOpen: boolean, onClose: () => voi
     onClose();
   }, [notes, project, activePattern, dual, language, loadProject, updatePattern, t, onClose]);
 
-  return { t, language, activePattern, dual, refHz, keyView, setKeyView, isMicOn, toggleMic, isDroneOn, setIsDroneOn, curMidi, notes, setNotes, viewOffset, activeTonic, liveDialRef, playNoteWithFreeze, handlePlaySequence, handleAttach };
+  return { t, language, activePattern, dual, refHz, keyView, setKeyView, isMicOn, toggleMic, isDroneOn, setIsDroneOn, curMidi, notes, setNotes, viewOffset, activeTonic, liveDialRef, micLevelRef, playNoteWithFreeze, handlePlaySequence, handleAttach };
 }
