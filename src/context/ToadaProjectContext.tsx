@@ -15,6 +15,7 @@ import { batchUpdateProjectBpm, batchUpdateProjectMeasures, batchUpdateProjectAn
 import { applyUpdatePatternStepStatus } from '../utils/projectProgressTracker';
 import { applySetActiveVariantKey, applyUpdateVariant, applyEnsureVariantExists } from '../utils/variantContextOps';
 import { usePatternSelection } from '../hooks/usePatternSelection';
+import { useSlotActions } from '../hooks/useSlotActions';
 import { useProjectAutoSave } from '../hooks/useProjectAutoSave';
 import { stopAllActiveAudioEngines } from '../audio/sharedAudioContext';
 
@@ -90,14 +91,7 @@ export const ToadaProjectProvider: React.FC<{ children: React.ReactNode }> = ({ 
     stopAllActiveAudioEngines();
     setProject({ ...p, activePatternId: p.patterns.some((pat) => pat.id === p.activePatternId) ? p.activePatternId : (p.patterns[0]?.id ?? '') });
   }, []);
-  const addSlot = useCallback((advanceMeasures?: number) => setProject((prev) => ({ ...prev, slots: [...prev.slots, { slotId: `slot-${Date.now().toString(36)}-${prev.slots.length}`, puxadorPatternId: null, coroPatternId: null, ...(typeof advanceMeasures === 'number' ? { advanceMeasures } : {}) }] })), []);
-  const removeSlot = useCallback((slotId: string) => setProject((prev) => (prev.slots.length <= 1 ? prev : { ...prev, slots: prev.slots.filter((s) => s.slotId !== slotId) })), []);
-  const updateSlot = useCallback((slotId: string, puxadorId: string | null, coroId: string | null, advanceMeasures?: number) => setProject((prev) => ({ ...prev, slots: prev.slots.map((s) => (s.slotId === slotId ? { ...s, puxadorPatternId: puxadorId, coroPatternId: coroId, ...(advanceMeasures !== undefined ? { advanceMeasures } : {}) } : s)) })), []);
-  const reorderSlots = useCallback((fromIndex: number, toIndex: number) => setProject((prev) => {
-    if (fromIndex === toIndex || fromIndex < 0 || fromIndex >= prev.slots.length || toIndex < 0 || toIndex >= prev.slots.length) return prev;
-    const nextSlots = [...prev.slots]; const [moved] = nextSlots.splice(fromIndex, 1); nextSlots.splice(toIndex, 0, moved);
-    return { ...prev, slots: nextSlots };
-  }), []);
+  const { addSlot, insertSlotAt, removeSlot, updateSlot, reorderSlots } = useSlotActions(setProject);
   const swapAllRoles = useCallback(() => setProject((prev) => swapProjectRoles(prev)), []);
   const duplicateVariation = useCallback((patternId: string): string => {
     let createdId = ''; setProject((prev) => { const res = duplicatePatternAsVariation(prev, patternId); createdId = res.newId; return res.updatedProject; }); return createdId;
@@ -129,11 +123,11 @@ export const ToadaProjectProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const value = useMemo(() => ({
     project, activePattern, activeVariant, cueMode, setActivePatternId, setActiveVariantKey, updateVariant, updatePatternAndVariant, ensureVariantExists,
     addPattern, updatePattern, removePattern, mirrorPatternToRole, injectPatternIntoTarget, unlinkPattern: handleUnlink,
-    loadProject, addSlot, removeSlot, updateSlot, reorderSlots, setCueMode, getPreviousConductorPattern, swapAllRoles, duplicateVariation,
+    loadProject, addSlot, insertSlotAt, removeSlot, updateSlot, reorderSlots, setCueMode, getPreviousConductorPattern, swapAllRoles, duplicateVariation,
     applyScope, setApplyScope, selectedPatternIds, toggleSelectPattern, selectAllPatterns, clearSelectedPatterns,
     updateScopedBpm, updateScopedMeasuresCount, updateScopedHasAnacrusis, updateScopedReferencePitch, updateScopedTimeSignature, updateScopedTessitura, updateHarmonyConfig, updateToadaMeta,
     togglePatternFoldNotes, setAllPatternsFoldNotes, setSequenciadorExportMode, updatePatternStepStatus,
-  }), [project, activePattern, activeVariant, cueMode, setActivePatternId, setActiveVariantKey, updateVariant, updatePatternAndVariant, ensureVariantExists, addPattern, updatePattern, removePattern, mirrorPatternToRole, injectPatternIntoTarget, handleUnlink, loadProject, addSlot, removeSlot, updateSlot, reorderSlots, setCueMode, getPreviousConductorPattern, swapAllRoles, duplicateVariation, applyScope, setApplyScope, selectedPatternIds, toggleSelectPattern, selectAllPatterns, clearSelectedPatterns, updateScopedBpm, updateScopedMeasuresCount, updateScopedHasAnacrusis, updateScopedReferencePitch, updateScopedTimeSignature, updateScopedTessitura, updateHarmonyConfig, updateToadaMeta, togglePatternFoldNotes, setAllPatternsFoldNotes, setSequenciadorExportMode, updatePatternStepStatus]);
+  }), [project, activePattern, activeVariant, cueMode, setActivePatternId, setActiveVariantKey, updateVariant, updatePatternAndVariant, ensureVariantExists, addPattern, updatePattern, removePattern, mirrorPatternToRole, injectPatternIntoTarget, handleUnlink, loadProject, addSlot, insertSlotAt, removeSlot, updateSlot, reorderSlots, setCueMode, getPreviousConductorPattern, swapAllRoles, duplicateVariation, applyScope, setApplyScope, selectedPatternIds, toggleSelectPattern, selectAllPatterns, clearSelectedPatterns, updateScopedBpm, updateScopedMeasuresCount, updateScopedHasAnacrusis, updateScopedReferencePitch, updateScopedTimeSignature, updateScopedTessitura, updateHarmonyConfig, updateToadaMeta, togglePatternFoldNotes, setAllPatternsFoldNotes, setSequenciadorExportMode, updatePatternStepStatus]);
 
   return <ToadaContext.Provider value={value}>{children}</ToadaContext.Provider>;
 };

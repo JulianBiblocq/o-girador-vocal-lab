@@ -27,6 +27,7 @@ export interface ToadaProjectContextValue {
   unlinkPattern: (patternId: string) => void;
   loadProject: (newProject: ToadaProject) => void;
   addSlot: (advanceMeasures?: number) => void;
+  insertSlotAt: (index: number, advanceMeasures?: number) => void;
   removeSlot: (slotId: string) => void;
   updateSlot: (slotId: string, puxadorId: string | null, coroId: string | null, advanceMeasures?: number) => void;
   reorderSlots: (fromIndex: number, toIndex: number) => void;
