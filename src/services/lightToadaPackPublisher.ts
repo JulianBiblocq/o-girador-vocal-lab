@@ -56,7 +56,7 @@ export function buildLightweightToadaScorePack(
   });
 
   return removeUndefinedFields({
-    id: toadaId, documentId, groupId: cleanGroupId, title: project.title,
+    id: toadaId, documentId, ...(cleanGroupId ? { groupId: cleanGroupId } : {}), title: project.title,
     status: 'valide', cantadorValidated: true, isLightScorePack: true,
     grammarVersion: VOCAL_GRAMMAR_VERSION, bpm, signature, timeSignature: signature, referencePitchHz,
     sungKey: dual.sungScaleLabel, troupeKey: dual.troupeScaleLabel,
