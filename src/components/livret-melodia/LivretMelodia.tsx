@@ -6,7 +6,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import type { VocalPackExport, PitchCurvePoint, VocalStepData } from '../../types/vocalPack.types';
 import { useToadaProject } from '../../context/ToadaProjectContext';
 import { useAudioHardware } from '../../context/AudioHardwareContext';
-import { resolvePatternAudioSource, checkPatternHasMidi } from '../common/PatternCompassBar';
+import { resolvePatternAudioSource, checkPatternHasMidi } from '../../utils/patternStatusHelper';
 import { AFitaCompassStrip } from '../fita/AFitaCompassStrip';
 import { TwinPatternsManagerBar } from '../common/TwinPatternsManagerBar';
 import { MelodiaEmptyNotice } from './MelodiaEmptyNotice';

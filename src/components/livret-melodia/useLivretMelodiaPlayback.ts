@@ -16,6 +16,7 @@ interface UseLivretMelodiaPlaybackProps {
   beatsPerMeasure: number;
   measuresCount: number;
   pitchShiftSemitones?: number;
+  referencePitchHz?: number;
   hasAnacrusis?: boolean;
   t1OffsetSec?: number;
   outputDeviceId?: string;
@@ -34,7 +35,7 @@ export function useLivretMelodiaPlayback(props: UseLivretMelodiaPlaybackProps) {
 
   const {
     cleanPCM, sampleRate, totalDurationSec, allSteps, bpm, beatsPerMeasure,
-    measuresCount, pitchShiftSemitones, hasAnacrusis, t1OffsetSec, outputDeviceId,
+    measuresCount, pitchShiftSemitones, referencePitchHz, hasAnacrusis, t1OffsetSec, outputDeviceId,
     harmonyGrid, harmonyConfig,
   } = props;
 
@@ -49,11 +50,11 @@ export function useLivretMelodiaPlayback(props: UseLivretMelodiaPlaybackProps) {
     setIsPlaying(true);
     await player.play({
       cleanPCM, sampleRate, totalDurationSec, allSteps, bpm, beatsPerMeasure,
-      playMode, clickEnabled, pitchShiftSemitones, seekStartSec, hasAnacrusis,
+      playMode, clickEnabled, pitchShiftSemitones, referencePitchHz, seekStartSec, hasAnacrusis,
       t1OffsetSec, outputDeviceId, harmonyGrid, harmonyConfig, measuresCount,
       onEnded: () => setIsPlaying(false),
     });
-  }, [player, isPlaying, cleanPCM, sampleRate, totalDurationSec, allSteps, bpm, beatsPerMeasure, playMode, clickEnabled, pitchShiftSemitones, seekStartSec, hasAnacrusis, t1OffsetSec, outputDeviceId, harmonyGrid, harmonyConfig, measuresCount]);
+  }, [player, isPlaying, cleanPCM, sampleRate, totalDurationSec, allSteps, bpm, beatsPerMeasure, playMode, clickEnabled, pitchShiftSemitones, referencePitchHz, seekStartSec, hasAnacrusis, t1OffsetSec, outputDeviceId, harmonyGrid, harmonyConfig, measuresCount]);
 
   const handleSeek = useCallback((sec: number) => {
     setSeekStartSec(sec);
@@ -61,12 +62,12 @@ export function useLivretMelodiaPlayback(props: UseLivretMelodiaPlaybackProps) {
       player.stop();
       player.play({
         cleanPCM, sampleRate, totalDurationSec, allSteps, bpm, beatsPerMeasure,
-        playMode, clickEnabled, pitchShiftSemitones, seekStartSec: sec, hasAnacrusis,
+        playMode, clickEnabled, pitchShiftSemitones, referencePitchHz, seekStartSec: sec, hasAnacrusis,
         t1OffsetSec, outputDeviceId, harmonyGrid, harmonyConfig, measuresCount,
         onEnded: () => setIsPlaying(false),
       });
     }
-  }, [isPlaying, player, cleanPCM, sampleRate, totalDurationSec, allSteps, bpm, beatsPerMeasure, playMode, clickEnabled, pitchShiftSemitones, hasAnacrusis, t1OffsetSec, outputDeviceId, harmonyGrid, harmonyConfig, measuresCount]);
+  }, [isPlaying, player, cleanPCM, sampleRate, totalDurationSec, allSteps, bpm, beatsPerMeasure, playMode, clickEnabled, pitchShiftSemitones, referencePitchHz, hasAnacrusis, t1OffsetSec, outputDeviceId, harmonyGrid, harmonyConfig, measuresCount]);
 
   return {
     player, playMode, setPlayMode, clickEnabled, setClickEnabled,

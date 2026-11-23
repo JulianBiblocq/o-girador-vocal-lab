@@ -6,7 +6,7 @@
 import { useRef, useState, useEffect, useCallback } from 'react';
 import type { VocalPatternItem } from '../../types/toadaProject.types';
 import type { VocalRecorderEngine } from '../../audio/VocalRecorderEngine';
-import { resolvePatternAudioSource } from '../common/PatternCompassBar';
+import { resolvePatternAudioSource } from '../../utils/patternStatusHelper';
 import { getSharedAudioContext, registerAudioKillSwitch, stopAllActiveAudioEngines } from '../../audio/sharedAudioContext';
 import { openRawMicStream, stopMicStream } from '../../audio/rawMicStream';
 import type { MicLevel } from '../common/MicLevelMeter';

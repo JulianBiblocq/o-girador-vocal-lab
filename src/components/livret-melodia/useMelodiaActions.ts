@@ -25,7 +25,7 @@ interface UseMelodiaActionsParams {
   regions: MelodyneRegion[]; clearAllRegions: () => void; deleteSelected: () => void;
   commitCurrentSnapshot: (partial?: any) => void; setAllSteps: (steps: VocalStepData[], commit?: boolean) => void;
   updatePattern: (id: string, partial: any) => void; handleUpdateSteps: (newSteps: VocalStepData[], commit?: boolean) => void;
-  t: (k: any) => string; rawTxtCode?: string;
+  t: (k: any, params?: any) => string; rawTxtCode?: string;
 }
 
 export function useMelodiaActions(p: UseMelodiaActionsParams) {
@@ -88,7 +88,7 @@ export function useMelodiaActions(p: UseMelodiaActionsParams) {
         return { ...pat, rawPitchCurve: hit.pitchCurve, pitchCurve: hit.pitchCurve, anacrusisSteps: anacSteps, mainSteps, pack: updatedPack, isMidiInitialized: true };
       });
       loadProj({ ...proj, patterns: updatedPatterns });
-      window.dispatchEvent(new CustomEvent('app-toast', { detail: { type: 'success', message: `Mélodie analysée sur ${byId.size} phrases (rythme conservé) — ${totalDoubts} note(s) en doute à vérifier.` } }));
+      window.dispatchEvent(new CustomEvent('app-toast', { detail: { type: 'success', message: p.t('melodiaFullSongAnalyzedToast', { phrases: byId.size, doubts: totalDoubts }) } }));
     }).catch((err) => { if (!isVocalDspCancelled(err)) console.warn('[useMelodiaActions] Batch error:', err); });
   }, [p, handleSnapToGreenLine]);
 

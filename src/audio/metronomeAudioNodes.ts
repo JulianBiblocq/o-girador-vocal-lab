@@ -97,12 +97,13 @@ export function scheduleReferencePitch(
   startTime: number,
   noteName: string,
   durationSec: number,
-  activeNodes: (AudioNode | AudioScheduledSourceNode)[]
+  activeNodes: (AudioNode | AudioScheduledSourceNode)[],
+  referencePitchHz?: number
 ): void {
   const osc = ctx.createOscillator();
   const filter = ctx.createBiquadFilter();
   const gain = ctx.createGain();
-  const freq = noteToFrequency(noteName);
+  const freq = noteToFrequency(noteName, referencePitchHz);
 
   osc.type = 'triangle';
   osc.frequency.setValueAtTime(freq, startTime);

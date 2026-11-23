@@ -18,8 +18,8 @@ export const ContinuousPrompterBanner: React.FC<ContinuousPrompterBannerProps> =
 
   const isPuxador = info.role === 'puxador';
   const isGap = Boolean(info.isRoleGap);
-  const gapRoleName = isPuxador ? 'CHŒUR' : 'PUXADOR';
-  const activeRoleName = isPuxador ? 'PUXADOR' : 'CHŒUR';
+  const gapRoleName = isPuxador ? t('prompterRoleChoir') : t('rolePuxador');
+  const activeRoleName = isPuxador ? t('rolePuxador') : t('prompterRoleChoir');
 
   return (
     <div className={`flex flex-col gap-2 p-3 rounded-lg border-2 text-white shadow-lg animate-fadeIn text-left ${
@@ -30,14 +30,14 @@ export const ContinuousPrompterBanner: React.FC<ContinuousPrompterBannerProps> =
           {isGap ? (
             <span className="px-2.5 py-0.5 rounded text-xs font-black uppercase tracking-wider bg-stone-700 text-amber-200 flex items-center gap-1.5">
               <VolumeX className="w-3.5 h-3.5 text-amber-400" />
-              <span>TROU DU {gapRoleName} ({info.gapMeasures ?? 1} M) — Écoutez / Respirez</span>
+              <span>{t('prompterRoleGapBadge', { role: gapRoleName, measures: info.gapMeasures ?? 1 })}</span>
             </span>
           ) : (
             <span className={`px-2.5 py-0.5 rounded text-xs font-black uppercase tracking-wider flex items-center gap-1.5 ${
               isPuxador ? 'bg-amber-500 text-stone-950' : 'bg-emerald-500 text-stone-950'
             }`}>
               <Mic className="w-3.5 h-3.5" />
-              <span>CHANTEZ ({activeRoleName})</span>
+              <span>{t('prompterSingNowBadge', { role: activeRoleName })}</span>
             </span>
           )}
           <span className="text-xs font-mono font-bold text-amber-200">
@@ -55,7 +55,7 @@ export const ContinuousPrompterBanner: React.FC<ContinuousPrompterBannerProps> =
         <div className="flex items-center gap-2">
           {isGap && typeof info.remainingBeatsToNextEntry === 'number' && (
             <span className="px-2 py-0.5 rounded bg-amber-500/25 border border-amber-400/60 text-amber-300 text-xs font-mono font-black">
-              Entrée dans {info.remainingBeatsToNextEntry} temps
+              {t('prompterEntryInBeats', { n: info.remainingBeatsToNextEntry })}
             </span>
           )}
           <span className="text-[10px] font-mono text-red-400 font-bold flex items-center gap-1 animate-pulse">
@@ -68,8 +68,8 @@ export const ContinuousPrompterBanner: React.FC<ContinuousPrompterBannerProps> =
         {isGap ? (
           <span className="text-stone-400 italic text-sm font-mono">
             {info.counterRoleLyrics
-              ? `(${gapRoleName} chante : « ${info.counterRoleLyrics} » — Ne chantez pas, préparez votre prochaine entrée)`
-              : `Pause Batuque (${info.gapMeasures ?? 1} M)`}
+              ? t('prompterCounterRoleSinging', { role: gapRoleName, lyrics: info.counterRoleLyrics })
+              : t('prompterBatuquePause', { measures: info.gapMeasures ?? 1 })}
           </span>
         ) : (
           info.lyrics ? `« ${info.lyrics} »` : <em>({t('continuousPrompterRest')})</em>

@@ -97,7 +97,7 @@ export const LivretReglages: React.FC = () => {
               <ListeningModePanel
                 listeningMode={listeningMode} onListeningModeChange={setListeningMode} referencePitch={referencePitch}
                 onReferencePitchChange={(p) => { updatePattern(activePattern.id, { referencePitch: p }); updateScopedReferencePitch(p); }}
-                onPlayReferencePreview={() => engine.playReferencePitchPreview(referencePitch, 1.5, selectedOutputDeviceId)}
+                onPlayReferencePreview={() => engine.playReferencePitchPreview(referencePitch, 1.5, selectedOutputDeviceId, project.referencePitchHz ?? pitchHz)}
               />
               <div className="cordel-card p-3 flex items-center justify-between gap-2 text-xs font-mono">
                 <span className="font-bold">{t('stampDiapasonHzLabel')} ({MIN_REFERENCE_PITCH_HZ}–{MAX_REFERENCE_PITCH_HZ} Hz)</span>

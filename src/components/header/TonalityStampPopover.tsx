@@ -88,7 +88,7 @@ export const TonalityStampPopover: React.FC = () => {
           </div>
 
           <div className="flex items-center justify-between gap-1.5">
-            <button type="button" onClick={() => engine.playReferencePitchPreview(listenTarget === 'troupe' ? dual.troupeReferencePitch : dual.sungReferencePitch, 1.4, selectedOutputDeviceId)} className="px-2 py-1 cordel-btn rounded font-bold inline-flex items-center gap-1 cursor-pointer">
+            <button type="button" onClick={() => engine.playReferencePitchPreview(listenTarget === 'troupe' ? dual.troupeReferencePitch : dual.sungReferencePitch, 1.4, selectedOutputDeviceId, project.referencePitchHz ?? pitchHz)} className="px-2 py-1 cordel-btn rounded font-bold inline-flex items-center gap-1 cursor-pointer">
               <Volume2 className="w-3.5 h-3.5 text-theme-accent" /><span>{dual.troupeSolfegeRoot}</span>
             </button>
             <button type="button" onClick={handleAutoDetect} className="px-2 py-1 rounded bg-amber-600/20 border border-amber-500/60 text-amber-900 dark:text-amber-200 font-bold inline-flex items-center gap-1 cursor-pointer">

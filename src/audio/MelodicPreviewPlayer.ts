@@ -18,7 +18,7 @@ export interface MelodicPlayOptions {
   cleanPCM: Float32Array; sampleRate: number; totalDurationSec: number;
   allSteps: VocalStepData[]; bpm: number; beatsPerMeasure: number;
   playMode: MelodicPlayMode; clickEnabled: boolean;
-  hasAnacrusis?: boolean; t1OffsetSec?: number; pitchShiftSemitones?: number;
+  hasAnacrusis?: boolean; t1OffsetSec?: number; pitchShiftSemitones?: number; referencePitchHz?: number;
   seekStartSec?: number; outputDeviceId?: string;
   harmonyGrid?: PatternHarmonyGrid; harmonyConfig?: HarmonyConfig;
   measuresCount?: number; onEnded?: () => void;
@@ -31,6 +31,7 @@ export class MelodicPreviewPlayer {
   private activeClickNodes: AudioNode[] = []; private harmonyEngine = new HarmonyPlayerEngine();
   private isPlaying = false; private playbackContextStartTime = 0; private totalDuration = 0;
   private seekStartSec = 0; private playRemainingDuration = 0; private stopTimerId: number | null = null;
+  private referencePitchHz?: number;
 
   public async play(options: MelodicPlayOptions): Promise<void> {
     this.stop();
@@ -39,7 +40,8 @@ export class MelodicPreviewPlayer {
     this.ctx = await getSharedAudioContext();
     if (options.outputDeviceId) await setSharedSinkId(options.outputDeviceId);
 
-    const { cleanPCM, sampleRate, totalDurationSec, allSteps, bpm, beatsPerMeasure, playMode, clickEnabled, pitchShiftSemitones, onEnded } = options;
+    const { cleanPCM, sampleRate, totalDurationSec, allSteps, bpm, beatsPerMeasure, playMode, clickEnabled, pitchShiftSemitones, referencePitchHz, onEnded } = options;
+    this.referencePitchHz = referencePitchHz;
     this.totalDuration = totalDurationSec;
     this.seekStartSec = Math.max(0, Math.min(totalDurationSec - 0.05, options.seekStartSec || 0));
     this.playRemainingDuration = totalDurationSec - this.seekStartSec;
@@ -50,13 +52,9 @@ export class MelodicPreviewPlayer {
 
     const audioBuffer = this.ctx.createBuffer(1, cleanPCM.length, sampleRate);
     audioBuffer.getChannelData(0).set(cleanPCM);
-    this.sourceNode = this.ctx.createBufferSource();
-    this.sourceNode.buffer = audioBuffer;
-    this.sourceNode.connect(this.voiceGainNode);
-
+    this.sourceNode = this.ctx.createBufferSource(); this.sourceNode.buffer = audioBuffer; this.sourceNode.connect(this.voiceGainNode);
     const now = this.ctx.currentTime + 0.03;
-    this.playbackContextStartTime = now;
-    this.isPlaying = true;
+    this.playbackContextStartTime = now; this.isPlaying = true;
     this.sourceNode.start(now, this.seekStartSec, this.playRemainingDuration);
 
     const beatDuration = 60 / bpm, stepDuration = beatDuration / 4;
@@ -65,7 +63,7 @@ export class MelodicPreviewPlayer {
     const effectiveSteps = (pitchShiftSemitones && pitchShiftSemitones !== 0)
       ? allSteps.map((s) => (s.active && (s.midiNumber ?? 0) > 0 && s.note !== '───') ? { ...s, midiNumber: (s.midiNumber ?? 60) + pitchShiftSemitones } : s)
       : allSteps;
-    this.synthNodes = scheduleMelodySteps(this.ctx, this.synthGainNode, effectiveSteps, stepDuration, now, this.seekStartSec, startOffsetSec);
+    this.synthNodes = scheduleMelodySteps(this.ctx, this.synthGainNode, effectiveSteps, stepDuration, now, this.seekStartSec, startOffsetSec, referencePitchHz);
 
     if (options.harmonyConfig?.enabled && options.harmonyGrid) {
       this.harmonyEngine.schedule(this.ctx, this.ctx.destination, {
@@ -89,9 +87,9 @@ export class MelodicPreviewPlayer {
   }
 
   public setPlayMode(mode: MelodicPlayMode, clickEnabled = true): void { this.applyGains(mode, clickEnabled); }
-  public async playNotePreview(midi: number): Promise<void> {
+  public async playNotePreview(midi: number, referencePitchHz?: number): Promise<void> {
     const ctx = await getSharedAudioContext();
-    playSingleSynthNote(ctx, ctx.destination, midi, ctx.currentTime, 0.18);
+    playSingleSynthNote(ctx, ctx.destination, midi, ctx.currentTime, 0.18, referencePitchHz ?? this.referencePitchHz);
   }
 
   public updateVoiceBuffer(newPCM: Float32Array, sampleRate: number): void {

@@ -1,0 +1,66 @@
+/**
+ * finishingPolishTranslations.types.ts
+ * Types i18n de finition v1.8.2 : Capture rythmique, Banc Slicer, Prompteur continu, Ambitus & Analyse Melodia (< 95 lignes).
+ */
+export interface FinishingPolishTranslations {
+  rhythmTapCountIn: string;
+  rhythmTapValidateBtn: string;
+  rhythmTapStartBtn: string;
+  rhythmTapHoldBtn: string;
+  rhythmTapMidiDetected: string;
+  rhythmTapMidiDetectedNamed: string;
+  rhythmTapSpaceReady: string;
+  rhythmTapUseMidiNotes: string;
+  rhythmTapAutoLatency: string;
+  rhythmTapShiftLeftBtn: string;
+  rhythmTapShiftLeftTitle: string;
+  rhythmTapShiftRightBtn: string;
+  rhythmTapShiftRightTitle: string;
+  rhythmTapRealignOnsetsBtn: string;
+  rhythmTapRealignOnsetsTitle: string;
+  slicerRoleSavedBanner: string;
+  slicerImportNextCoroBtn: string;
+  slicerImportNextPuxadorBtn: string;
+  slicerFinishAndCloseBtn: string;
+  slicerShowPuxadorTitle: string;
+  slicerShowCoroTitle: string;
+  slicerLoadPuxadorTitle: string;
+  slicerLoadPuxadorBtn: string;
+  slicerLoadCoroTitle: string;
+  slicerLoadCoroBtn: string;
+  slicerKeptBlocksBadge: string;
+  slicerAppliedFeedback: string;
+  slicerGapWithHolesBtn: string;
+  slicerGapChainedBtn: string;
+  slicerTotalDurationLabel: string;
+  slicerDropPuxadorMaster: string;
+  slicerDropCoroMaster: string;
+  prompterRoleChoir: string;
+  prompterRoleGapBadge: string;
+  prompterSingNowBadge: string;
+  prompterEntryInBeats: string;
+  prompterCounterRoleSinging: string;
+  prompterBatuquePause: string;
+  ambitusSingSirenWait: string;
+  ambitusPrepareBreathHint: string;
+  ambitusSirenSingBanner: string;
+  ambitusLiveNoteBadge: string;
+  ambitusTierLow: string;
+  ambitusTierMid: string;
+  ambitusTierHigh: string;
+  ambitusStartInCountdown: string;
+  ambitusStep2NeedleBtn: string;
+  ambitusNeedleIdlePrompt: string;
+  ambitusNeedleOnTarget: string;
+  ambitusNeedleUpOctave: string;
+  ambitusNeedleDownOctave: string;
+  ambitusNeedleUpOne: string;
+  ambitusNeedleUpMany: string;
+  ambitusNeedleDownOne: string;
+  ambitusNeedleDownMany: string;
+  ambitusNeedleTargetLabel: string;
+  ambitusNeedleSungLabel: string;
+  ambitusNeedleWaiting: string;
+  ambitusNeedleSweetSpotTitle: string;
+  melodiaFullSongAnalyzedToast: string;
+}

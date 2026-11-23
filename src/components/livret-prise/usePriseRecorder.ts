@@ -29,7 +29,7 @@ export interface UsePriseRecorderParams {
   updatePattern?: (patternId: string, partial: Partial<VocalPatternItem>) => void;
   updatePatternAndVariant?: (patternId: string, variantKey: string, p: Partial<VocalPatternItem>, v: Partial<VocalAudioVariant>) => void;
   recordedSampleRate: number; setRecordedSampleRate: (sr: number) => void; activeLivret: string;
-  harmonyConfig?: import('../../types/harmony.types').HarmonyConfig;
+  harmonyConfig?: import('../../types/harmony.types').HarmonyConfig; referencePitchHz?: number;
   comfortPreset?: ComfortMonitoringPreset; comfortMix?: number; backingInHeadphones?: boolean; punchMeasureIndex?: number | null;
 }
 
@@ -38,7 +38,7 @@ export function usePriseRecorder(params: UsePriseRecorderParams) {
     engine, recorder, activePattern, activeVariant, cueMode, getPreviousConductorPattern, projectPatterns,
     timeSignature, measuresCount, hasAnacrusis, beatsPerMeasure, beatDuration, effectiveBpm, effectivePitch,
     listeningMode, selectedDeviceId, selectedOutputDeviceId, updateVariant, updatePattern, updatePatternAndVariant,
-    recordedSampleRate, setRecordedSampleRate, activeLivret, harmonyConfig,
+    recordedSampleRate, setRecordedSampleRate, activeLivret, harmonyConfig, referencePitchHz,
     comfortPreset = 'off', comfortMix = 0.35, backingInHeadphones = true, punchMeasureIndex = null,
   } = params;
   const [isCycleActive, setIsCycleActive] = useState(false), [hasClipped, setHasClipped] = useState(false);
@@ -102,19 +102,19 @@ export function usePriseRecorder(params: UsePriseRecorderParams) {
     const isMainTake = activeVariant.speedRatio === 1.0 && activeVariant.pitchShiftSemitones === 0;
     if (!isMainTake && activePattern.midiLocked && activePattern.mainSteps?.length > 0 && listeningMode === 'headphones') {
       const guideAna = hasAnacrusis ? measureDuration : 0;
-      takeGuideRef.current = scheduleSecondaryTakeGuide(ctx, ctx.destination, activePattern.anacrusisSteps || [], activePattern.mainSteps || [], targetT1Time - guideAna, guideAna, effectiveBpm, activeVariant.pitchShiftSemitones);
+      takeGuideRef.current = scheduleSecondaryTakeGuide(ctx, ctx.destination, activePattern.anacrusisSteps || [], activePattern.mainSteps || [], targetT1Time - guideAna, guideAna, effectiveBpm, activeVariant.pitchShiftSemitones, referencePitchHz);
     }
     recorder.start(captureStart, effectiveRecSec); setIsCycleActive(true);
     const anacrusisBeats = resolvePatternAnacrusisBeats(activePattern, beatsPerMeasure);
     await engine.startCycle({
       bpm: effectiveBpm, timeSignature, measuresCount: (isPunchIn ? 1 : measuresCount) as 1 | 2 | 3 | 4, referencePitch: effectivePitch,
-      listeningMode, outputDeviceId: selectedOutputDeviceId, preRollMeasures,
+      listeningMode, outputDeviceId: selectedOutputDeviceId, preRollMeasures, referencePitchHz,
       harmonyGrid: activePattern.harmonyGrid, harmonyConfig, hasAnacrusis: isPunchIn ? false : hasAnacrusis, anacrusisBeats, pitchShiftSemitones: activeVariant.pitchShiftSemitones,
     }, () => {
       if (sessionTokenRef.current !== token) return;
       stopAuxHandles(); commitRecordedTake(recorder.stop(), sampleRate, t1OffsetSec, totalRecordedSec); setIsCycleActive(false);
     }, cycleStart);
-  }, [engine, recorder, isCycleActive, abortCycle, stopAuxHandles, commitRecordedTake, selectedDeviceId, selectedOutputDeviceId, effectiveBpm, timeSignature, measuresCount, effectivePitch, listeningMode, beatsPerMeasure, beatDuration, cueMode, getPreviousConductorPattern, projectPatterns, activePattern, activeVariant, recordedSampleRate, setRecordedSampleRate, hasAnacrusis, harmonyConfig, comfortPreset, comfortMix, backingInHeadphones, punchMeasureIndex]);
+  }, [engine, recorder, isCycleActive, abortCycle, stopAuxHandles, commitRecordedTake, selectedDeviceId, selectedOutputDeviceId, effectiveBpm, timeSignature, measuresCount, effectivePitch, listeningMode, beatsPerMeasure, beatDuration, cueMode, getPreviousConductorPattern, projectPatterns, activePattern, activeVariant, recordedSampleRate, setRecordedSampleRate, hasAnacrusis, harmonyConfig, referencePitchHz, comfortPreset, comfortMix, backingInHeadphones, punchMeasureIndex]);
 
   useEffect(() => {
     setIsRecording(isCycleActive);

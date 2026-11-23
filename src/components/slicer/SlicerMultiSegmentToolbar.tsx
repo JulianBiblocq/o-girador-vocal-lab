@@ -36,10 +36,9 @@ export const SlicerMultiSegmentToolbar: React.FC<SlicerMultiSegmentToolbarProps>
   onToggleMetronome, onBpmChange, onNudgeOffset, onToggleCascade, onAlignOrganizador, onSyncOrganizador,
   onDetectSilences, onAddSegment, onAddPauseSegment, onClearSegments,
 }) => {
-  const { t, language } = useLanguage();
-  const isBr = language === 'br';
-  const alignFeedback = useActionFeedback(isBr ? '✓ Aplicado !' : '✓ Appliqué !');
-  const syncFeedback = useActionFeedback(isBr ? '✓ Aplicado !' : '✓ Appliqué !');
+  const { t } = useLanguage();
+  const alignFeedback = useActionFeedback(t('slicerAppliedFeedback'));
+  const syncFeedback = useActionFeedback(t('slicerAppliedFeedback'));
 
   return (
     <div className="flex flex-col gap-1.5 p-2 bg-theme-bg/60 border border-theme-border/60 rounded text-xs font-mono">
@@ -68,9 +67,9 @@ export const SlicerMultiSegmentToolbar: React.FC<SlicerMultiSegmentToolbarProps>
 
           {onGapModeChange && (
             <div className="flex items-center border border-[var(--cordel-border-sub)] rounded overflow-hidden text-[11px]">
-              <button type="button" onClick={() => onGapModeChange('with_gaps')} className={`h-7 px-2 font-bold cursor-pointer transition-colors ${gapMode === 'with_gaps' ? 'bg-amber-600 text-white' : 'bg-[var(--cordel-subcard-bg)] text-theme-ink/75 hover:opacity-100'}`}>Avec les trous</button>
+              <button type="button" onClick={() => onGapModeChange('with_gaps')} className={`h-7 px-2 font-bold cursor-pointer transition-colors ${gapMode === 'with_gaps' ? 'bg-amber-600 text-white' : 'bg-[var(--cordel-subcard-bg)] text-theme-ink/75 hover:opacity-100'}`}>{t('slicerGapWithHolesBtn')}</button>
               <button type="button" onClick={() => onGapModeChange('chained')} className={`h-7 px-2 font-bold cursor-pointer transition-colors border-l border-[var(--cordel-border-sub)] flex items-center gap-1 ${gapMode === 'chained' ? 'bg-emerald-700 text-white' : 'bg-[var(--cordel-subcard-bg)] text-theme-ink/75 hover:opacity-100'}`}>
-                <Link2 className="w-3 h-3" /><span>Phrases à la suite</span>
+                <Link2 className="w-3 h-3" /><span>{t('slicerGapChainedBtn')}</span>
               </button>
             </div>
           )}
@@ -121,7 +120,7 @@ export const SlicerMultiSegmentToolbar: React.FC<SlicerMultiSegmentToolbarProps>
             <Trash2 className="w-3 h-3" /><span className="hidden sm:inline">{t('slicerClearSegmentsBtn')}</span>
           </button>
         </div>
-        <span className="text-[11px] text-[var(--cordel-secondary-text)]">Total ({activeRole === 'puxador' ? 'Puxador' : 'Coro'}) : <strong>{durationSec.toFixed(1)}s</strong></span>
+        <span className="text-[11px] text-[var(--cordel-secondary-text)]">{t('slicerTotalDurationLabel', { role: activeRole === 'puxador' ? 'Puxador' : 'Coro' })} <strong>{durationSec.toFixed(1)}s</strong></span>
       </div>
     </div>
   );

@@ -5,6 +5,7 @@
  */
 import React, { useState, useRef, useEffect } from 'react';
 import { Volume2, Play, Check, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useAudioHardware } from '../../context/AudioHardwareContext';
 import { midiToNoteName } from '../../utils/noteUtils';
 import { validateAmbitusNote, type ValidationSample } from '../../audio/ambitusValidator';
 import type { AmbitusAudioEngine } from '../../audio/ambitusAudioEngine';
@@ -23,6 +24,7 @@ export const AmbitusWizardStepToneCheck: React.FC<AmbitusWizardStepToneCheckProp
   stage, currentMidi, medianMidi, onSetCurrentMidi, engine, isTesting, setIsTesting,
   samples, setSamples, setFeedback, onValidateAndNext, t,
 }) => {
+  const { selectedDeviceId } = useAudioHardware();
   const [phase, setPhase] = useState<'idle' | 'listen' | 'sing'>('idle');
   const [livePitchMidi, setLivePitchMidi] = useState<number>(0), [progress, setProgress] = useState(0);
   const phaseRef = useRef<'idle' | 'listen' | 'sing'>('idle'), liveSamplesRef = useRef<ValidationSample[]>([]);
@@ -37,9 +39,9 @@ export const AmbitusWizardStepToneCheck: React.FC<AmbitusWizardStepToneCheckProp
     let active = true;
     engine.startListening((tick) => {
       if (active && phaseRef.current === 'idle') setLivePitchMidi(tick.pitchMidi);
-    }, 300).catch(() => {});
+    }, 300, selectedDeviceId).catch(() => {});
     return () => { active = false; if (phaseRef.current === 'idle') engine.stopListening(true); };
-  }, [engine, isTesting]);
+  }, [engine, isTesting, selectedDeviceId]);
 
   const handleListenFree = async () => {
     if (isTesting) return;
@@ -64,7 +66,7 @@ export const AmbitusWizardStepToneCheck: React.FC<AmbitusWizardStepToneCheckProp
           setSamples(liveSamplesRef.current);
         }
       }
-    }, 3.8);
+    }, 3.8, selectedDeviceId);
 
     await engine.startContinuousTone(currentMidi, 0.42);
     setTimeout(() => { setPhase('sing'); engine.setContinuousToneGain(0.18); }, 1200);

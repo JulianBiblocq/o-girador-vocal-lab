@@ -3,6 +3,7 @@
  * connecté dynamiquement à la Toada active (BPM, troupeKey, referencePitchHz), Cadran 60 FPS & Endurance (< 138 lignes).
  */
 import { getSharedAudioContext, registerAudioKillSwitch, stopAllActiveAudioEngines } from './sharedAudioContext';
+import { openRawMicStream, stopMicStream } from './rawMicStream';
 import { playSingleSynthNote, type SynthScheduledNode } from './synthVoiceHelper';
 import { scheduleWoodClick } from './metronomeAudioNodes';
 import { detectRealtimePitch } from './realtimePitchDetector';
@@ -47,11 +48,11 @@ export class MaracatuVocalGameEngine {
   async startGame(
     gameId: MaracatuGameId, targetMidi: number, bpm: number,
     onTick: (tick: GameLiveTick) => void, onComplete: (res: VocalGameEvaluation) => void,
-    referencePitchHz = 440
+    referencePitchHz = 440, deviceId?: string
   ): Promise<void> {
     this.stop(); stopAllActiveAudioEngines('maracatu-game'); registerAudioKillSwitch('maracatu-game', () => this.stop());
     const ctx = await getSharedAudioContext();
-    this.micStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
+    this.micStream = await openRawMicStream(deviceId);
     this.micSource = ctx.createMediaStreamSource(this.micStream);
     this.analyser = ctx.createAnalyser(); this.analyser.fftSize = 2048;
     this.micSource.connect(this.analyser);
@@ -60,7 +61,7 @@ export class MaracatuVocalGameEngine {
     const singBeats = gameId === 'o_chamado' || gameId === 'a_voz_na_roda' ? 12 : gameId === 'voz_no_passo' ? 8 : 6;
     const singSec = singBeats * beatDur, startTime = ctx.currentTime + 0.06;
     for (let b = 0; b < 4 + singBeats; b++) scheduleWoodClick(ctx, startTime + b * beatDur, b % 4 === 0, this.activeNodes);
-    this.synthNodes.push(playSingleSynthNote(ctx, ctx.destination, targetMidi, startTime, precountSec * 0.78));
+    this.synthNodes.push(playSingleSynthNote(ctx, ctx.destination, targetMidi, startTime, precountSec * 0.78, referencePitchHz));
 
     const timeBuf = new Float32Array(this.analyser.fftSize), freqBuf = new Float32Array(this.analyser.frequencyBinCount);
     const samples: VocalGameSample[] = [];
@@ -126,6 +127,6 @@ export class MaracatuVocalGameEngine {
     this.activeNodes = [];
     if (this.micSource) { try { this.micSource.disconnect(); } catch {} this.micSource = null; }
     if (this.analyser) { try { this.analyser.disconnect(); } catch {} this.analyser = null; }
-    if (this.micStream) { this.micStream.getTracks().forEach((t) => t.stop()); this.micStream = null; }
+    stopMicStream(this.micStream); this.micStream = null;
   }
 }

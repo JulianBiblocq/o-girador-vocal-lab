@@ -19,7 +19,7 @@ export interface MetronomeConfig {
   bpm: number; timeSignature: TimeSignatureString; measuresCount: number; referencePitch: string;
   listeningMode: ListeningMode; outputDeviceId?: string; preRollMeasures?: number;
   harmonyGrid?: PatternHarmonyGrid; harmonyConfig?: HarmonyConfig;
-  hasAnacrusis?: boolean; anacrusisBeats?: number; pitchShiftSemitones?: number;
+  hasAnacrusis?: boolean; anacrusisBeats?: number; pitchShiftSemitones?: number; referencePitchHz?: number;
 }
 
 export class MetronomeEngine {
@@ -75,10 +75,10 @@ export class MetronomeEngine {
     this.isRunning = false;
   }
 
-  public async playReferencePitchPreview(noteName: string, durationSec = 1.5, outputDeviceId?: string): Promise<void> {
+  public async playReferencePitchPreview(noteName: string, durationSec = 1.5, outputDeviceId?: string, referencePitchHz?: number): Promise<void> {
     this.stop();
     const ctx = await this.initContext(outputDeviceId);
-    scheduleReferencePitch(ctx, ctx.currentTime, noteName, durationSec, this.activeNodes);
+    scheduleReferencePitch(ctx, ctx.currentTime, noteName, durationSec, this.activeNodes, referencePitchHz);
   }
 
   public getCycleStatus(): CycleStatus {
@@ -108,7 +108,7 @@ export class MetronomeEngine {
       }
     }
 
-    scheduleReferencePitch(ctx, start, config.referencePitch, this.beatsPerMeasure * this.beatDurationSec, this.activeNodes);
+    scheduleReferencePitch(ctx, start, config.referencePitch, this.beatsPerMeasure * this.beatDurationSec, this.activeNodes, config.referencePitchHz);
 
     if (config.harmonyConfig?.enabled && config.harmonyGrid) {
       this.harmonyEngine.schedule(ctx, ctx.destination, {

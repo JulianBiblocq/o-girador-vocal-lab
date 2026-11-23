@@ -11,7 +11,7 @@ import { useAudioHardware } from '../../context/AudioHardwareContext';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { resolveProjectDualScale } from '../../utils/scaleTranspositionHelper';
 import { cleanHtmlText } from '../../utils/htmlLyricsHelper';
-import { resolvePatternAudioSource } from '../common/PatternCompassBar';
+import { resolvePatternAudioSource } from '../../utils/patternStatusHelper';
 import { getOrComputeTroupeTransposedPCM } from '../../audio/formantPreservingPitchShifter';
 import { timeStretchConstantPitch } from '../../audio/wsolaTimeStretcher';
 import { getSharedAudioContext, registerAudioKillSwitch, stopAllActiveAudioEngines } from '../../audio/sharedAudioContext';

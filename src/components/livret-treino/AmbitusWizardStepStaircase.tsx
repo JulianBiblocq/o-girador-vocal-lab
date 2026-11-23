@@ -4,6 +4,7 @@
  */
 import React, { useState, useMemo, useEffect } from 'react';
 import { Volume2, Play, Check } from 'lucide-react';
+import { useAudioHardware } from '../../context/AudioHardwareContext';
 import { buildAmbitusStaircase } from '../../audio/ambitusSweepAndStairs';
 import { midiToNoteName } from '../../utils/noteUtils';
 import type { AmbitusAudioEngine } from '../../audio/ambitusAudioEngine';
@@ -27,6 +28,7 @@ export const AmbitusWizardStepStaircase: React.FC<AmbitusWizardStepStaircaseProp
   lowestMidi, highestMidi, engine, isTesting, setIsTesting,
   samples, setSamples, setFeedback, onCompleteStaircase, t,
 }) => {
+  const { selectedDeviceId } = useAudioHardware();
   const plan = useMemo(() => buildAmbitusStaircase(lowestMidi, highestMidi, 5), [lowestMidi, highestMidi]);
   const [activeStepIdx, setActiveStepIdx] = useState<number | null>(null);
   const [verifiedSteps, setVerifiedSteps] = useState<boolean[]>([false, false, false, false, false]);
@@ -64,7 +66,7 @@ export const AmbitusWizardStepStaircase: React.FC<AmbitusWizardStepStaircaseProp
           setVerifiedSteps([...vSteps]);
         }
       }
-    }, plan.steps.length * 1.8);
+    }, plan.steps.length * 1.8, selectedDeviceId);
 
     for (let i = 0; i < plan.steps.length; i++) {
       currentIdx = i;

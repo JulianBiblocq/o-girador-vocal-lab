@@ -18,7 +18,8 @@ export function scheduleSecondaryTakeGuide(
   cycleStart: number,
   countdownSec: number,
   effectiveBpm: number,
-  pitchShiftSemitones: number
+  pitchShiftSemitones: number,
+  referencePitchHz?: number
 ): TakeGuideHandle {
   const stepDurationSec = (60 / effectiveBpm) / 4;
   const guideGain = ctx.createGain();
@@ -33,12 +34,12 @@ export function scheduleSecondaryTakeGuide(
 
   const nodes: SynthScheduledNode[] = [];
   if (anacrusisSteps && anacrusisSteps.length > 0) {
-    const anaNodes = scheduleMelodySteps(ctx, guideGain, transposeSteps(anacrusisSteps), stepDurationSec, cycleStart);
+    const anaNodes = scheduleMelodySteps(ctx, guideGain, transposeSteps(anacrusisSteps), stepDurationSec, cycleStart, 0, 0, referencePitchHz);
     nodes.push(...anaNodes);
   }
 
   if (mainSteps && mainSteps.length > 0) {
-    const mainNodes = scheduleMelodySteps(ctx, guideGain, transposeSteps(mainSteps), stepDurationSec, cycleStart + countdownSec);
+    const mainNodes = scheduleMelodySteps(ctx, guideGain, transposeSteps(mainSteps), stepDurationSec, cycleStart + countdownSec, 0, 0, referencePitchHz);
     nodes.push(...mainNodes);
   }
 

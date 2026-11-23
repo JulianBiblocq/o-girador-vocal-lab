@@ -6,6 +6,7 @@
 import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { useToadaProject } from '../../context/ToadaProjectContext';
+import { useAudioHardware } from '../../context/AudioHardwareContext';
 import { MaracatuVocalGameEngine, registerTreinoKillSwitch, extractToadaVocalGameContext, loadEnduranceBestSec } from '../../audio/maracatuVocalGameEngine';
 import type { MaracatuGameId, VocalGameEvaluation } from '../../audio/vocalGameAnalyzers';
 import type { RodaProjectionStatus } from '../../audio/rodaResonanceAnalyzer';
@@ -20,7 +21,7 @@ import { MaracatuGameEvaluationCard } from './MaracatuGameEvaluationCard';
 import { Play, Square, Volume2, Music, Trophy, CheckCircle2 } from 'lucide-react';
 
 export const MaracatuVocalGames: React.FC = () => {
-  const { t, language } = useLanguage(), { project, activePattern } = useToadaProject();
+  const { t, language } = useLanguage(), { project, activePattern } = useToadaProject(), { selectedDeviceId } = useAudioHardware();
   const engine = useMemo(() => new MaracatuVocalGameEngine(), []);
   const profile = useMemo(() => loadVocalProfile(), []);
   const fallbackMidi = useMemo(() => (profile ? noteNameToMidi(profile.vocalProfile.comfortCenterNote) : undefined), [profile]);
@@ -77,8 +78,8 @@ export const MaracatuVocalGames: React.FC = () => {
       setBestEnduranceSec(loadEnduranceBestSec());
       if (res.projectionScorePct !== undefined) setLiveProjPct(res.projectionScorePct);
       if (res.projectionStatus) setLiveProjStatus(res.projectionStatus);
-    }, ctx.referencePitchHz);
-  }, [isRunning, engine, gameId, targetMidi, bpm, beatDur, syllable, language, isEnduranceGame, ctx.referencePitchHz, t]);
+    }, ctx.referencePitchHz, selectedDeviceId);
+  }, [isRunning, engine, gameId, targetMidi, bpm, beatDur, syllable, language, isEnduranceGame, ctx.referencePitchHz, selectedDeviceId, t]);
 
   const goalText = gameId === 'tir_franc' ? t('game1Goal') : gameId === 'o_chamado' ? t('game2Goal') : gameId === 'voz_no_passo' ? t('game3Goal') : t('game4Goal');
   const instrText = gameId === 'tir_franc' ? t('game1Instruction') : gameId === 'o_chamado' ? t('game2Instruction') : gameId === 'voz_no_passo' ? t('game3Instruction') : t('game4Instruction');

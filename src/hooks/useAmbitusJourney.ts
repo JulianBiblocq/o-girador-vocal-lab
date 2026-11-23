@@ -4,6 +4,7 @@
  * Strictement < 120 lignes.
  */
 import { useState, useMemo, useRef, useCallback, useEffect } from 'react';
+import { useAudioHardware } from '../context/AudioHardwareContext';
 import { AmbitusAudioEngine } from '../audio/ambitusAudioEngine';
 import { MIN_PROJECTION_RMS, type ValidationSample } from '../audio/ambitusValidator';
 import { analyzeAmbitusSweep, buildAmbitusStaircase } from '../audio/ambitusSweepAndStairs';
@@ -14,6 +15,7 @@ import { syncVocalProfileToOrganizador } from '../services/vocalProfileSyncServi
 import type { AmbitusStage } from '../components/livret-treino/AmbitusStageBar';
 
 export function useAmbitusJourney(t: (k: any, p?: any) => string) {
+  const { selectedDeviceId } = useAudioHardware();
   const engine = useMemo(() => new AmbitusAudioEngine(), []);
   const saved = useMemo(() => loadVocalProfile(), []);
 
@@ -71,35 +73,26 @@ export function useAmbitusJourney(t: (k: any, p?: any) => string) {
     const sweepDur = 6.0;
     let lastUiUpdateMs = 0;
     const stopFn = await engine.startListening((tick) => {
-      if (tick.pitchMidi > 0) {
-        liveArr.push({ timeSec: +(tick.progressRatio * sweepDur).toFixed(2), pitchMidi: tick.pitchMidi, rms: tick.rms });
-      }
+      if (tick.pitchMidi > 0) liveArr.push({ timeSec: +(tick.progressRatio * sweepDur).toFixed(2), pitchMidi: tick.pitchMidi, rms: tick.rms });
       const nowMs = performance.now();
       if (nowMs - lastUiUpdateMs >= 95) {
-        lastUiUpdateMs = nowMs;
-        setSweepProgress(Math.round(tick.progressRatio * 100));
+        lastUiUpdateMs = nowMs; setSweepProgress(Math.round(tick.progressRatio * 100));
         setSweepRemainingSec(Math.max(0, +(sweepDur * (1 - tick.progressRatio)).toFixed(1)));
         setSweepLiveMidi(tick.pitchMidi);
         if (tick.pitchMidi > 0) setSamples([...liveArr]);
       }
-    }, sweepDur);
+    }, sweepDur, selectedDeviceId);
 
     timerRef.current = window.setTimeout(async () => {
       const recorded = await stopFn();
       setSweepCountdown(null); setIsTesting(false); setSamples(recorded);
       const res = analyzeAmbitusSweep(recorded, MIN_PROJECTION_RMS);
-      setLowestMidi(res.candidateLowMidi);
-      setMedianMidi(res.candidateMedianMidi);
-      setHighestMidi(res.candidateHighMidi);
-      setCurrentMidi(res.candidateMedianMidi);
+      setLowestMidi(res.candidateLowMidi); setMedianMidi(res.candidateMedianMidi); setHighestMidi(res.candidateHighMidi); setCurrentMidi(res.candidateMedianMidi);
       createVocalProfilePayload(res.candidateLowMidi, res.candidateHighMidi, 90, true);
       setCompletedStages((prev) => (prev.includes('sweep') ? prev : [...prev, 'sweep']));
-      setFeedback({
-        text: `${t('ambitusSweepDonePrompt', { low: midiToNoteName(res.candidateLowMidi), high: midiToNoteName(res.candidateHighMidi) })} • Médiane confort : ${midiToNoteName(res.candidateMedianMidi)}`,
-        isGood: true,
-      });
+      setFeedback({ text: `${t('ambitusSweepDonePrompt', { low: midiToNoteName(res.candidateLowMidi), high: midiToNoteName(res.candidateHighMidi) })} • ${midiToNoteName(res.candidateMedianMidi)}`, isGood: true });
     }, sweepDur * 1000 + 100);
-  }, [isTesting, engine, t]);
+  }, [isTesting, engine, selectedDeviceId, t]);
 
   const onCompleteStaircase = useCallback(async (recorded: ValidationSample[]) => {
     setCompletedStages((p) => (p.includes('staircase') ? p : [...p, 'staircase']));

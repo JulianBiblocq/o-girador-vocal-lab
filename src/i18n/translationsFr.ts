@@ -12,6 +12,7 @@ import { fitaBandeirolasTranslationsFr } from './fitaBandeirolasTranslationsFr';
 import { pitchDialTranslationsFr } from './pitchDialTranslationsFr';
 import { phaseBRecoveryTranslationsFr } from './phaseBRecoveryTranslationsFr';
 import { exportCleanupTranslationsFr } from './exportCleanupTranslationsFr';
+import { finishingPolishTranslationsFr } from './finishingPolishTranslationsFr';
 
 export const translationsFr: VocalLabTranslations = {
   appTitle: 'O Girador — Cantador', appSubtitle: 'Atelier Vocal - Prosodie & Chant Maracatu', themeToggle: 'Changer de thème (Clair / Sombre)',
@@ -123,6 +124,6 @@ export const translationsFr: VocalLabTranslations = {
   melodynePurgeToast: 'Son brut du Livret 1 rétabli (zones Melodyne purgées)',
   pwaInstallBtn: 'Installer',
 
-  ...cloudToadaTranslationsFr, ...lexiconTranslationsFr, ...livretNavTranslationsFr, ...uiPolishTranslationsFr, ...fitaBandeirolasTranslationsFr, ...pitchDialTranslationsFr, ...phaseBRecoveryTranslationsFr, ...exportCleanupTranslationsFr,
+  ...cloudToadaTranslationsFr, ...lexiconTranslationsFr, ...livretNavTranslationsFr, ...uiPolishTranslationsFr, ...fitaBandeirolasTranslationsFr, ...pitchDialTranslationsFr, ...phaseBRecoveryTranslationsFr, ...exportCleanupTranslationsFr, ...finishingPolishTranslationsFr,
   ...slicerTranslationsFr, ...toadaSheetTranslationsFr, ...treinoSubTranslationsFr, ...variantTranslationsFr, ...tessituraTranslationsFr, ...harmonyTranslationsFr,
 };

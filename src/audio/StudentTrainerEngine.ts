@@ -24,16 +24,13 @@ export type { ComparativePlaybackMode };
 export interface StudentTrainingConfig {
   pattern: VocalPatternItem; cuePattern?: VocalPatternItem | null; baseBpm: number; bpm: number; speedRatio?: number;
   beatsPerMeasure: number; measuresCount: number; scope?: TrainerScope; studentRole: StudentRole; guideMode: TrainerGuideMode;
-  deviceId?: string; outputDeviceId?: string; harmonyConfig?: HarmonyConfig; pitchShiftSemitones?: number;
-  troupeTonicRoot?: string; referencePitchHz?: number;
+  deviceId?: string; outputDeviceId?: string; harmonyConfig?: HarmonyConfig; pitchShiftSemitones?: number; troupeTonicRoot?: string; referencePitchHz?: number;
 }
-
 export class StudentTrainerEngine {
   private ctx: AudioContext | null = null; private recorder = new VocalRecorderEngine();
   private isRunning = false; private animId: number | null = null; private stopTimerId: number | null = null;
   private activeNodes: (AudioNode | AudioScheduledSourceNode)[] = []; private harmonyEngine = new HarmonyPlayerEngine();
-  private guideHandle: TakeGuideHandle | null = null; private cueHandle: CuePlaybackHandle | null = null;
-  private liveStream: MediaStream | null = null; private liveAnalyser: AnalyserNode | null = null;
+  private guideHandle: TakeGuideHandle | null = null; private cueHandle: CuePlaybackHandle | null = null; private liveAnalyser: AnalyserNode | null = null;
 
   public async startTraining(
     config: StudentTrainingConfig,
@@ -42,31 +39,22 @@ export class StudentTrainerEngine {
   ): Promise<void> {
     this.stop(); stopAllActiveAudioEngines('student-trainer'); registerAudioKillSwitch('student-trainer', () => this.stop());
     this.ctx = await getSharedAudioContext(); this.isRunning = true;
-    const sampleRate = await this.recorder.prepare(this.ctx, config.deviceId);
-    try {
-      this.liveStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
-      const micSrc = this.ctx.createMediaStreamSource(this.liveStream);
-      this.liveAnalyser = this.ctx.createAnalyser(); this.liveAnalyser.fftSize = 2048;
-      micSrc.connect(this.liveAnalyser); this.activeNodes.push(micSrc);
-    } catch {}
+    const sampleRate = await this.recorder.prepare(this.ctx, config.deviceId), micSrc = this.recorder.getSourceNode();
+    if (micSrc) { this.liveAnalyser = this.ctx.createAnalyser(); this.liveAnalyser.fftSize = 2048; micSrc.connect(this.liveAnalyser); }
     const beatDur = 60 / config.bpm, measureDur = config.beatsPerMeasure * beatDur, hasCue = config.scope === 'toada' && !!config.cuePattern;
     const preRollMeasures = hasCue && config.cuePattern ? 1 + config.cuePattern.measuresCount : 1;
     const hasAnac = config.pattern.hasAnacrusis !== false, singingMeasures = (hasAnac ? 1 : 0) + config.measuresCount;
     const countdownSec = preRollMeasures * measureDur, singingSec = singingMeasures * measureDur;
-    const startTime = this.ctx.currentTime + 0.08, singStartTime = startTime + countdownSec;
+    const startTime = this.ctx.currentTime + 0.08, singStartTime = startTime + countdownSec, shiftSt = config.pitchShiftSemitones ?? 0;
     const allTargetSteps = [...(hasAnac ? (config.pattern.anacrusisSteps || []) : []), ...(config.pattern.mainSteps || [])];
-    const shiftSt = config.pitchShiftSemitones ?? 0;
-
     for (let b = 0; b < (preRollMeasures + singingMeasures) * config.beatsPerMeasure; b++) {
       scheduleWoodClick(this.ctx, startTime + b * beatDur, b % config.beatsPerMeasure === 0, this.activeNodes);
     }
     const firstActiveStep = allTargetSteps.find((s) => s.active && (s.midiNumber ?? 0) > 0 && s.note !== '───');
     const precountRefNote = firstActiveStep?.midiNumber ? midiToNoteName(firstActiveStep.midiNumber + shiftSt) : (config.pattern.referencePitch || 'C4');
-    scheduleReferencePitch(this.ctx, startTime, precountRefNote, config.guideMode === 'drone_click' ? Math.min(0.65, measureDur * 0.5) : measureDur * 0.85, this.activeNodes);
-
+    scheduleReferencePitch(this.ctx, startTime, precountRefNote, config.guideMode === 'drone_click' ? Math.min(0.65, measureDur * 0.5) : measureDur * 0.85, this.activeNodes, config.referencePitchHz);
     if (config.guideMode === 'drone_click') await sharedTonicDrone.start(config.troupeTonicRoot || 'C', config.referencePitchHz ?? 440, 0.15);
     if (hasCue && config.cuePattern) this.cueHandle = scheduleCuePatternAudio(this.ctx, config.cuePattern, startTime, config.beatsPerMeasure, beatDur, config.bpm);
-
     const shouldPlayMestreVoice = config.guideMode === 'accompanied' || ((config.guideMode === 'autonomous' || config.guideMode === 'drone_click') && config.studentRole !== 'all' && config.studentRole !== config.pattern.role);
     if (shouldPlayMestreVoice) {
       const mestre = extractCanonicalMestreBuffer(config.pattern, config.baseBpm, config.beatsPerMeasure, sampleRate);
@@ -77,7 +65,7 @@ export class StudentTrainerEngine {
         src.start(singStartTime, hasAnac ? 0 : 0.15 / (config.speedRatio ?? 1.0)); this.activeNodes.push(src);
       }
     } else if (config.guideMode === 'voice_only') {
-      this.guideHandle = scheduleSecondaryTakeGuide(this.ctx, this.ctx.destination, config.pattern.anacrusisSteps || [], config.pattern.mainSteps || [], singStartTime, hasAnac ? measureDur : 0, config.bpm, shiftSt);
+      this.guideHandle = scheduleSecondaryTakeGuide(this.ctx, this.ctx.destination, config.pattern.anacrusisSteps || [], config.pattern.mainSteps || [], singStartTime, hasAnac ? measureDur : 0, config.bpm, shiftSt, config.referencePitchHz);
     }
     if (config.guideMode !== 'drone_click' && config.harmonyConfig?.enabled && config.pattern.harmonyGrid) {
       this.harmonyEngine.schedule(this.ctx, this.ctx.destination, {
@@ -136,6 +124,5 @@ export class StudentTrainerEngine {
     for (const n of this.activeNodes) { try { if ('stop' in n) (n as AudioScheduledSourceNode).stop(); n.disconnect(); } catch {} }
     this.activeNodes = [];
     if (this.liveAnalyser) { try { this.liveAnalyser.disconnect(); } catch {} this.liveAnalyser = null; }
-    if (this.liveStream) { this.liveStream.getTracks().forEach((t) => t.stop()); this.liveStream = null; }
   }
 }

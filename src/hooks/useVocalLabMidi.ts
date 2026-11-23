@@ -2,13 +2,18 @@
  * useVocalLabMidi.ts
  * Intégration Web MIDI API, MCU Transport DAW et pré-écoute au clavier maître sur sharedAudioContext (< 95 lignes).
  */
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useVocalTransportStore } from '../stores/useVocalTransportStore';
+import { useToadaProject } from '../context/ToadaProjectContext';
 import { midiToNoteName } from '../utils/noteUtils';
 import { playSingleSynthNote } from '../audio/synthVoiceHelper';
 import { getSharedAudioContext } from '../audio/sharedAudioContext';
 
-export function useVocalLabMidi(): void {
+export function useVocalLabMidi(overridePitchHz?: number): void {
+  const { project } = useToadaProject();
+  const pitchHzRef = useRef<number | undefined>(overridePitchHz ?? project.referencePitchHz ?? project.toadaMeta?.referencePitchHz);
+  pitchHzRef.current = overridePitchHz ?? project.referencePitchHz ?? project.toadaMeta?.referencePitchHz;
+
   useEffect(() => {
     if (typeof window === 'undefined' || !navigator.requestMIDIAccess) return;
 
@@ -37,7 +42,7 @@ export function useVocalLabMidi(): void {
       }
 
       getSharedAudioContext()
-        .then((ctx) => playSingleSynthNote(ctx, ctx.destination, note, ctx.currentTime, 0.35))
+        .then((ctx) => playSingleSynthNote(ctx, ctx.destination, note, ctx.currentTime, 0.35, pitchHzRef.current))
         .catch(() => {});
       store.triggerMidiNote(note, midiToNoteName(note), velocity);
     };

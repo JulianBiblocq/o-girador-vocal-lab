@@ -5,6 +5,7 @@
  * Strictement < 125 lignes (Anti-Monolithe Rule 6.A).
  */
 import { getSharedAudioContext } from './sharedAudioContext';
+import { openRawMicStream, stopMicStream } from './rawMicStream';
 import { playSustainedReferenceMidi, type SustainedSynthController } from './ambitusSynthPlayer';
 import { detectRealtimePitch } from './realtimePitchDetector';
 import type { ValidationSample } from './ambitusValidator';
@@ -58,14 +59,13 @@ export class AmbitusAudioEngine {
 
   async startListening(
     onTick: (tick: AmbitusLiveTick) => void,
-    targetDurationSec = 2.0
+    targetDurationSec = 2.0,
+    deviceId?: string
   ): Promise<() => Promise<ValidationSample[]>> {
     const ctx = await getSharedAudioContext();
     this.stopListening(false);
 
-    this.micStream = await navigator.mediaDevices.getUserMedia({
-      audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false },
-    });
+    this.micStream = await openRawMicStream(deviceId);
     this.micSource = ctx.createMediaStreamSource(this.micStream);
     this.analyser = ctx.createAnalyser();
     this.analyser.fftSize = 2048;
@@ -102,9 +102,7 @@ export class AmbitusAudioEngine {
     if (this.rafId !== null) { cancelAnimationFrame(this.rafId); this.rafId = null; }
     if (this.micSource) { try { this.micSource.disconnect(); } catch {} this.micSource = null; }
     if (this.analyser) { try { this.analyser.disconnect(); } catch {} this.analyser = null; }
-    if (this.micStream) { this.micStream.getTracks().forEach((t) => t.stop()); this.micStream = null; }
-    if (stopSynth) {
-      this.stopReferenceNote();
-    }
+    stopMicStream(this.micStream); this.micStream = null;
+    if (stopSynth) this.stopReferenceNote();
   }
 }

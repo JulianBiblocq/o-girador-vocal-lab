@@ -31,7 +31,7 @@ export const AmbitusFinderPanel: React.FC = () => {
 
   const liveNoteStr = j.sweepLiveMidi >= 30
     ? `${midiToNoteName(Math.round(j.sweepLiveMidi))} (${Math.round(midiToFrequency(j.sweepLiveMidi, refPitchHz))} Hz)`
-    : 'Chantez la sirène...';
+    : t('ambitusSingSirenWait');
 
   return (
     <div className="space-y-4">
@@ -52,24 +52,24 @@ export const AmbitusFinderPanel: React.FC = () => {
             {j.isTesting && j.sweepCountdown !== null && j.sweepCountdown > 0 && (
               <div className="p-3 rounded border border-amber-500/50 bg-amber-500/15 text-center animate-pulse">
                 <div className="text-2xl font-black font-mono text-amber-500">{j.sweepCountdown}...</div>
-                <div className="text-xs font-bold text-[var(--cordel-text)]">Préparez votre souffle en partant de votre note la plus grave !</div>
+                <div className="text-xs font-bold text-[var(--cordel-text)]">{t('ambitusPrepareBreathHint')}</div>
               </div>
             )}
 
             {j.isTesting && j.sweepCountdown === 0 && (
               <div className="p-3 rounded border border-[#0f766e]/40 bg-[#0f766e]/10 space-y-2">
                 <div className="flex flex-wrap items-center justify-between gap-2 text-xs font-mono font-bold">
-                  <span className="text-[#0f766e] dark:text-[#2dd4bf]">CHANTEZ ! Sirène Grave ➔ Aigu</span>
-                  <span className="px-2 py-0.5 rounded bg-[var(--cordel-surface)] border border-[var(--cordel-border-sub)]">Note : {liveNoteStr}</span>
+                  <span className="text-[#0f766e] dark:text-[#2dd4bf]">{t('ambitusSirenSingBanner')}</span>
+                  <span className="px-2 py-0.5 rounded bg-[var(--cordel-surface)] border border-[var(--cordel-border-sub)]">{t('ambitusLiveNoteBadge', { note: liveNoteStr })}</span>
                   <span>{j.sweepRemainingSec.toFixed(1)}s ({j.sweepProgress}%)</span>
                 </div>
                 <div className="w-full h-3 bg-[var(--cordel-surface)] rounded-full overflow-hidden border border-[var(--cordel-border-panel)]">
                   <div className="h-full bg-gradient-to-r from-amber-600 via-teal-600 to-emerald-500 transition-all duration-100" style={{ width: `${j.sweepProgress}%` }} />
                 </div>
                 <div className="grid grid-cols-3 gap-1 text-[10px] font-mono text-center">
-                  <span className={`py-0.5 rounded border ${j.sweepProgress < 30 ? 'bg-amber-600 text-white border-amber-500 font-bold' : 'opacity-55 border-transparent'}`}>0–30% : Grave</span>
-                  <span className={`py-0.5 rounded border ${j.sweepProgress >= 30 && j.sweepProgress < 70 ? 'bg-teal-700 text-white border-teal-500 font-bold' : 'opacity-55 border-transparent'}`}>30–70% : Médium</span>
-                  <span className={`py-0.5 rounded border ${j.sweepProgress >= 70 ? 'bg-emerald-600 text-white border-emerald-400 font-bold' : 'opacity-55 border-transparent'}`}>70–100% : Aigu</span>
+                  <span className={`py-0.5 rounded border ${j.sweepProgress < 30 ? 'bg-amber-600 text-white border-amber-500 font-bold' : 'opacity-55 border-transparent'}`}>{t('ambitusTierLow')}</span>
+                  <span className={`py-0.5 rounded border ${j.sweepProgress >= 30 && j.sweepProgress < 70 ? 'bg-teal-700 text-white border-teal-500 font-bold' : 'opacity-55 border-transparent'}`}>{t('ambitusTierMid')}</span>
+                  <span className={`py-0.5 rounded border ${j.sweepProgress >= 70 ? 'bg-emerald-600 text-white border-emerald-400 font-bold' : 'opacity-55 border-transparent'}`}>{t('ambitusTierHigh')}</span>
                 </div>
               </div>
             )}
@@ -82,14 +82,14 @@ export const AmbitusFinderPanel: React.FC = () => {
                 className="flex-1 sm:flex-none sm:min-w-[240px] px-5 py-2.5 cordel-btn-primary font-bold text-xs flex items-center justify-center gap-2 cursor-pointer shadow-md rounded"
               >
                 <Play className="w-4 h-4 fill-current" />
-                <span>{j.isTesting ? (j.sweepCountdown && j.sweepCountdown > 0 ? `Départ dans ${j.sweepCountdown}...` : `${t('ambitusHoldProgress', { percent: j.sweepProgress })} (${j.sweepRemainingSec.toFixed(1)}s)`) : t('ambitusSweepBtn')}</span>
+                <span>{j.isTesting ? (j.sweepCountdown && j.sweepCountdown > 0 ? t('ambitusStartInCountdown', { n: j.sweepCountdown }) : `${t('ambitusHoldProgress', { percent: j.sweepProgress })} (${j.sweepRemainingSec.toFixed(1)}s)`) : t('ambitusSweepBtn')}</span>
               </button>
               {j.completedStages.includes('sweep') && !j.isTesting && (
                 <button
                   type="button" onClick={() => handleSelectStage('low_test')}
                   className="px-5 py-2.5 border border-[var(--cordel-coro)] bg-[var(--cordel-coro)] text-[#f4ecd8] font-bold text-xs flex items-center gap-1.5 cursor-pointer rounded shadow-md"
                 >
-                  <Check className="w-4 h-4" /><span>Étape 2 : L'Aiguille ({midiToNoteName(j.medianMidi)}) ➔</span>
+                  <Check className="w-4 h-4" /><span>{t('ambitusStep2NeedleBtn', { note: midiToNoteName(j.medianMidi) })}</span>
                 </button>
               )}
             </div>

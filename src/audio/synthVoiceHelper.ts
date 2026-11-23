@@ -22,13 +22,14 @@ export interface LegatoSegment {
 export function playLegatoSynthPhrase(
   ctx: AudioContext,
   dest: AudioNode,
-  segments: LegatoSegment[]
+  segments: LegatoSegment[],
+  referencePitchHz?: number
 ): SynthScheduledNode {
   const first = segments[0], last = segments[segments.length - 1];
   const startTime = first.startSec, durationSec = Math.max(0.015, last.endSec - startTime);
   const osc = ctx.createOscillator(), gain = ctx.createGain(), filter = ctx.createBiquadFilter();
 
-  const f0 = midiToFrequency(first.midi);
+  const f0 = midiToFrequency(first.midi, referencePitchHz);
   osc.type = 'triangle';
   osc.frequency.setValueAtTime(f0, startTime);
   filter.type = 'lowpass';
@@ -36,7 +37,7 @@ export function playLegatoSynthPhrase(
   filter.Q.setValueAtTime(0.8, startTime);
 
   for (let k = 1; k < segments.length; k++) {
-    const prevFreq = midiToFrequency(segments[k - 1].midi), nextFreq = midiToFrequency(segments[k].midi);
+    const prevFreq = midiToFrequency(segments[k - 1].midi, referencePitchHz), nextFreq = midiToFrequency(segments[k].midi, referencePitchHz);
     const tGlideStart = Math.max(startTime, segments[k].startSec - 0.008);
     const tGlideEnd = Math.min(last.endSec, segments[k].startSec + 0.028);
     osc.frequency.setValueAtTime(prevFreq, tGlideStart);
@@ -71,9 +72,10 @@ export function playSingleSynthNote(
   dest: AudioNode,
   midi: number,
   startTime: number,
-  durationSec: number
+  durationSec: number,
+  referencePitchHz?: number
 ): SynthScheduledNode {
-  return playLegatoSynthPhrase(ctx, dest, [{ midi, startSec: startTime, endSec: startTime + durationSec }]);
+  return playLegatoSynthPhrase(ctx, dest, [{ midi, startSec: startTime, endSec: startTime + durationSec }], referencePitchHz);
 }
 
 export function scheduleMelodySteps(
@@ -83,7 +85,8 @@ export function scheduleMelodySteps(
   stepDurationSec: number,
   startTime: number,
   seekStartSec = 0,
-  startOffsetSec = 0
+  startOffsetSec = 0,
+  referencePitchHz?: number
 ): SynthScheduledNode[] {
   const nodes: SynthScheduledNode[] = [];
   const beatDurationSec = stepDurationSec * 4;
@@ -114,7 +117,7 @@ export function scheduleMelodySteps(
           endSec: startTime + (seg.winEnd - seekStartSec),
         }));
 
-      if (activeChain.length > 0) nodes.push(playLegatoSynthPhrase(ctx, dest, activeChain));
+      if (activeChain.length > 0) nodes.push(playLegatoSynthPhrase(ctx, dest, activeChain, referencePitchHz));
       i = curIdx;
     } else {
       i++;

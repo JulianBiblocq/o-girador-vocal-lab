@@ -57,7 +57,7 @@ export const LivretPrise: React.FC = () => {
     projectPatterns: project.patterns, timeSignature, measuresCount, hasAnacrusis,
     beatsPerMeasure, beatDuration, effectiveBpm, effectivePitch, listeningMode,
     selectedDeviceId, selectedOutputDeviceId, updateVariant, updatePattern, updatePatternAndVariant, recordedSampleRate,
-    setRecordedSampleRate, activeLivret, harmonyConfig: project.harmonyConfig,
+    setRecordedSampleRate, activeLivret, harmonyConfig: project.harmonyConfig, referencePitchHz: project.referencePitchHz,
     comfortPreset, comfortMix, backingInHeadphones, punchMeasureIndex,
   });
 
@@ -132,7 +132,7 @@ export const LivretPrise: React.FC = () => {
             peakDb={peakDb} registerPeakListener={registerPeakListener} hasClipped={hasClipped} onResetClipIndicator={resetClipIndicator} disabled={isRecordingAny}
           />
           <CuePatternSelector disabled={isRecordingAny} />
-          <PatternVariantSelector baseBpm={bpm} referencePitch={referencePitch} disabled={isRecordingAny} onPlayPitchPreview={(p) => engine.playReferencePitchPreview(p, 1.5, selectedOutputDeviceId)} />
+          <PatternVariantSelector baseBpm={bpm} referencePitch={referencePitch} disabled={isRecordingAny} onPlayPitchPreview={(p) => engine.playReferencePitchPreview(p, 1.5, selectedOutputDeviceId, project.referencePitchHz)} />
         </div>
       </CordelAccordion>
     </div>
